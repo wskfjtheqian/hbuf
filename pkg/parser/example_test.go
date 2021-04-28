@@ -6,8 +6,8 @@ package parser_test
 
 import (
 	"fmt"
-	"go/parser"
-	"go/token"
+	"hbuf/pkg/parser"
+	"hbuf/pkg/token"
 )
 
 func ExampleParseFile() {
@@ -15,6 +15,7 @@ func ExampleParseFile() {
 	src := []byte("" +
 		"package parser \n" +
 		"import \"/home/yttx_heqian/develop/go/hbuf/pkg/parser/parser.go\" \n" +
+		"import \"/home/yttx_heqian/develop/go/hbuf/pkg/parser/11.go\" \n" +
 		"data NAME{ \n" +
 		"  String Name = 16 `json\"name\"` \n" +
 		"  String[] Info = 0 \n" +

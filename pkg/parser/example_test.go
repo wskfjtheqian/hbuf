@@ -13,7 +13,7 @@ import (
 func ExampleParseFile() {
 	fset := token.NewFileSet() // positions are relative to fset
 	src := []byte("" +
-		"package \"parser\" \n" +
+		"package parser \n" +
 		"import \"/home/yttx_heqian/develop/go/hbuf/pkg/parser/parser.go\" \n" +
 		"data NAME{ \n" +
 		"  String Name = 16 `json\"name\"` \n" +
@@ -46,7 +46,4 @@ func ExampleParseFile() {
 	}
 
 	// output:
-	//
-	// "fmt"
-	// "time"
 }

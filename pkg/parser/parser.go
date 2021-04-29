@@ -85,9 +85,6 @@ func (p *parser) init(fset *token.FileSet, filename string, src []byte, mode Mod
 	p.next()
 }
 
-// ----------------------------------------------------------------------------
-// Scoping support
-
 func (p *parser) openScope() {
 	p.topScope = ast.NewScope(p.topScope)
 }
@@ -488,6 +485,11 @@ func (p *parser) advance(to map[token.Token]bool) {
 	}
 }
 
+var declStart = map[token.Token]bool{
+	token.DATA:   true,
+	token.SERVER: true,
+}
+
 var exprEnd = map[token.Token]bool{
 	token.COMMA:     true,
 	token.COLON:     true,
@@ -617,33 +619,26 @@ func (p *parser) parseType() ast.Expr {
 }
 
 // If the result is an identifier, it is not resolved.
-func (p *parser) parseTypeName() ast.Expr {
+func (p *parser) parseTypeName() *ast.Ident {
 	if p.trace {
 		defer un(trace(p, "TypeName"))
 	}
 
 	ident := p.parseIdent()
-
 	return ident
 }
 
-func (p *parser) parseArrayType() ast.Expr {
+func (p *parser) parseArrayType(elt *ast.Ident) ast.Expr {
 	if p.trace {
 		defer un(trace(p, "ArrayType"))
 	}
-
-	lbrack := p.expect(token.LBRACK)
-	p.exprLev++
-	var len ast.Expr
-	// always permit ellipsis for more fault-tolerant parsing
-	if p.tok != token.RBRACK {
-		len = p.parseRhs()
+	p.expect(token.LBRACK)
+	var len ast.BasicLit
+	if p.tok == token.INT {
+		len = ast.BasicLit{ValuePos: p.pos, Kind: p.tok, Value: p.lit}
 	}
-	p.exprLev--
 	p.expect(token.RBRACK)
-	elt := p.parseType()
-
-	return &ast.ArrayType{Lbrack: lbrack, Len: len, Elt: elt}
+	return &ast.ArrayType{Lbrack: elt.Pos(), Len: len, Elt: elt}
 }
 
 func (p *parser) makeIdentList(list []ast.Expr) []*ast.Ident {
@@ -668,35 +663,23 @@ func (p *parser) parseFieldDecl(scope *ast.Scope) *ast.Field {
 	}
 
 	doc := p.leadComment
-
-	// 1st FieldDecl
-	// A type name used as an anonymous field looks like a field identifier.
-	var list []ast.Expr
-	for {
-		list = append(list, p.parseVarType(false))
-		if p.tok != token.COMMA {
-			break
-		}
-		p.next()
+	typ := p.parseVarType(false)
+	if p.tok != token.IDENT {
+		p.error(p.pos, "not find Name")
+		return nil
 	}
+	name := p.parseIdent()
+	println(name.Name)
 
-	typ := p.tryVarType(false)
-
-	// analyze case
-	var idents []*ast.Ident
-	if typ != nil {
-		// IdentifierList Type
-		idents = p.makeIdentList(list)
-	} else {
-		// ["*"] TypeName (AnonymousField)
-		typ = list[0] // we always have at least one element
-		if n := len(list); n > 1 {
-			p.errorExpected(p.pos, "type")
-			typ = &ast.BadExpr{From: p.pos, To: p.pos}
-		} else if !isTypeName(deref(typ)) {
-			p.errorExpected(typ.Pos(), "anonymous field")
-			typ = &ast.BadExpr{From: typ.Pos(), To: p.safePos(typ.End())}
+	if p.tok == token.ASSIGN {
+		p.next()
+		if p.tok != token.INT {
+			p.error(p.pos, "not find int")
+			return nil
 		}
+		id := ast.BasicLit{ValuePos: p.pos, Kind: p.tok, Value: p.lit}
+		println(id.Value)
+		p.next()
 	}
 
 	// Tag
@@ -708,32 +691,41 @@ func (p *parser) parseFieldDecl(scope *ast.Scope) *ast.Field {
 
 	p.expectSemi() // call before accessing p.linecomment
 
-	field := &ast.Field{Doc: doc, Names: idents, Type: typ, Tag: tag, Comment: p.lineComment}
-	p.declare(field, nil, scope, ast.Var, idents...)
+	field := &ast.Field{Doc: doc, Name: name, Type: typ, Tag: tag, Comment: p.lineComment}
+	p.declare(field, nil, scope, ast.Var, name)
 	p.resolve(typ)
 
 	return field
 }
 
-func (p *parser) parseDataType() *ast.StructType {
+func (p *parser) parseDataType() *ast.DataType {
 	if p.trace {
 		defer un(trace(p, "DataType"))
 	}
 
 	pos := p.expect(token.DATA)
+	if p.tok != token.IDENT {
+		p.error(pos, "Data not found Name")
+		return nil
+	}
+	name := p.parseIdent()
+	extends, done := p.parseExtend()
+	if done {
+		return nil
+	}
+
 	lbrace := p.expect(token.LBRACE)
 	scope := ast.NewScope(nil) // struct scope
 	var list []*ast.Field
-	for p.tok == token.IDENT || p.tok == token.LPAREN {
-		// a field declaration cannot start with a '(' but we accept
-		// it here for more robust parsing and better error messages
-		// (parseFieldDecl will check and complain if necessary)
+	for p.tok != token.RBRACE {
 		list = append(list, p.parseFieldDecl(scope))
 	}
 	rbrace := p.expect(token.RBRACE)
 
-	return &ast.StructType{
-		Struct: pos,
+	return &ast.DataType{
+		Struct:  pos,
+		Name:    name,
+		Extends: extends,
 		Fields: &ast.FieldList{
 			Opening: lbrace,
 			List:    list,
@@ -742,20 +734,39 @@ func (p *parser) parseDataType() *ast.StructType {
 	}
 }
 
+///解析继承的
+func (p *parser) parseExtend() ([]*ast.Extend, bool) {
+	var extends []*ast.Extend
+	if p.tok == token.COLON {
+		for p.tok == token.COLON || p.tok == token.COMMA {
+			p.next()
+			if p.tok != token.IDENT {
+				p.error(p.pos, "Data not found Extend Name")
+				return nil, true
+			}
+			extends = append(extends, &ast.Extend{
+				Name:   p.parseIdent(),
+				Extend: p.pos,
+			})
+		}
+	}
+	return extends, false
+}
+
 // If the result is an identifier, it is not resolved.
 func (p *parser) tryVarType(isParam bool) ast.Expr {
-	//if isParam && p.tok == token.ELLIPSIS {
-	//	pos := p.pos
-	//	p.next()
-	//	typ := p.tryIdentOrType() // don't use parseType so we can provide better error message
-	//	if typ != nil {
-	//		p.resolve(typ)
-	//	} else {
-	//		p.error(pos, "'...' parameter is missing type")
-	//		typ = &ast.BadExpr{From: pos, To: p.pos}
-	//	}
-	//	return &ast.Ellipsis{Ellipsis: pos, Elt: typ}
-	//}
+	if isParam {
+		pos := p.pos
+		p.next()
+		typ := p.tryIdentOrType() // don't use parseType so we can provide better error message
+		if typ != nil {
+			p.resolve(typ)
+		} else {
+			p.error(pos, "'...' parameter is missing type")
+			typ = &ast.BadExpr{From: pos, To: p.pos}
+		}
+		return &ast.Ellipsis{Ellipsis: pos, Elt: typ}
+	}
 	return p.tryIdentOrType()
 }
 
@@ -775,7 +786,6 @@ func (p *parser) parseParameterList(scope *ast.Scope, ellipsisOk bool) (params [
 	if p.trace {
 		defer un(trace(p, "ParameterList"))
 	}
-
 	// 1st ParameterDecl
 	// A list of identifiers looks like a list of type names.
 	var list []ast.Expr
@@ -793,31 +803,31 @@ func (p *parser) parseParameterList(scope *ast.Scope, ellipsisOk bool) (params [
 	// analyze case
 	if typ := p.tryVarType(ellipsisOk); typ != nil {
 		// IdentifierList Type
-		idents := p.makeIdentList(list)
-		field := &ast.Field{Names: idents, Type: typ}
-		params = append(params, field)
-		// Go spec: The scope of an identifier denoting a function
-		// parameter or result variable is the function body.
-		p.declare(field, nil, scope, ast.Var, idents...)
-		p.resolve(typ)
-		if !p.atComma("parameter list", token.RPAREN) {
-			return
-		}
-		p.next()
-		for p.tok != token.RPAREN && p.tok != token.EOF {
-			idents := p.parseIdentList()
-			typ := p.parseVarType(ellipsisOk)
-			field := &ast.Field{Names: idents, Type: typ}
-			params = append(params, field)
-			// Go spec: The scope of an identifier denoting a function
-			// parameter or result variable is the function body.
-			p.declare(field, nil, scope, ast.Var, idents...)
-			p.resolve(typ)
-			if !p.atComma("parameter list", token.RPAREN) {
-				break
-			}
-			p.next()
-		}
+		//idents := p.makeIdentList(list)
+		//field := &ast.Field{Names: idents, Type: typ}
+		//params = append(params, field)
+		//// Go spec: The scope of an identifier denoting a function
+		//// parameter or result variable is the function body.
+		//p.declare(field, nil, scope, ast.Var, idents...)
+		//p.resolve(typ)
+		//if !p.atComma("parameter list", token.RPAREN) {
+		//	return
+		//}
+		//p.next()
+		//for p.tok != token.RPAREN && p.tok != token.EOF {
+		//	idents := p.parseIdentList()
+		//	typ := p.parseVarType(ellipsisOk)
+		//	field := &ast.Field{Names: idents, Type: typ}
+		//	params = append(params, field)
+		//	// Go spec: The scope of an identifier denoting a function
+		//	// parameter or result variable is the function body.
+		//	p.declare(field, nil, scope, ast.Var, idents...)
+		//	p.resolve(typ)
+		//	if !p.atComma("parameter list", token.RPAREN) {
+		//		break
+		//	}
+		//	p.next()
+		//}
 		return
 	}
 
@@ -891,28 +901,28 @@ func (p *parser) parseMethodSpec(scope *ast.Scope) *ast.Field {
 	if p.trace {
 		defer un(trace(p, "MethodSpec"))
 	}
+	//
+	//doc := p.leadComment
+	//var idents []*ast.Ident
+	//var typ ast.Expr
+	//x := p.parseTypeName()
+	//if ident, isIdent := x.(*ast.Ident); isIdent && p.tok == token.LPAREN {
+	//	// method
+	//	idents = []*ast.Ident{ident}
+	//	scope := ast.NewScope(nil) // method scope
+	//	params, results := p.parseSignature(scope)
+	//	typ = &ast.FuncType{Func: token.NoPos, Params: params, Results: results}
+	//} else {
+	//	// embedded interface
+	//	typ = x
+	//	p.resolve(typ)
+	//}
+	//p.expectSemi() // call before accessing p.linecomment
+	//
+	//spec := &ast.Field{Doc: doc, Type: typ, Comment: p.lineComment}
+	//p.declare(spec, nil, scope, ast.Fun, idents...)
 
-	doc := p.leadComment
-	var idents []*ast.Ident
-	var typ ast.Expr
-	x := p.parseTypeName()
-	if ident, isIdent := x.(*ast.Ident); isIdent && p.tok == token.LPAREN {
-		// method
-		idents = []*ast.Ident{ident}
-		scope := ast.NewScope(nil) // method scope
-		params, results := p.parseSignature(scope)
-		typ = &ast.FuncType{Func: token.NoPos, Params: params, Results: results}
-	} else {
-		// embedded interface
-		typ = x
-		p.resolve(typ)
-	}
-	p.expectSemi() // call before accessing p.linecomment
-
-	spec := &ast.Field{Doc: doc, Names: idents, Type: typ, Comment: p.lineComment}
-	p.declare(spec, nil, scope, ast.Fun, idents...)
-
-	return spec
+	return nil
 }
 
 func (p *parser) parseServerType() *ast.InterfaceType {
@@ -939,46 +949,54 @@ func (p *parser) parseServerType() *ast.InterfaceType {
 	}
 }
 
-func (p *parser) parseMapType() *ast.MapType {
+func (p *parser) parseMapType(value *ast.Ident) *ast.MapType {
 	if p.trace {
 		defer un(trace(p, "MapType"))
 	}
 
-	pos := p.expect(token.SERVER)
-	p.expect(token.LBRACK)
+	p.expect(token.LSS)
 	key := p.parseType()
-	p.expect(token.RBRACK)
-	value := p.parseType()
+	p.expect(token.GTR)
 
-	return &ast.MapType{Map: pos, Key: key, Value: value}
+	return &ast.MapType{Map: value.Pos(), Key: key, Value: value}
 }
 
 // If the result is an identifier, it is not resolved.
 func (p *parser) tryIdentOrType() ast.Expr {
-	switch p.tok {
-	case token.IDENT:
-		return p.parseTypeName()
-	case token.LBRACK:
-		return p.parseArrayType()
-	case token.DATA:
-		return p.parseDataType()
-	//case token.FUNC:
-	//	typ, _ := p.parseFuncType()
-	//	return typ
-	case token.SERVER:
-		return p.parseServerType()
-	//case token.MAP:
-	//	return p.parseMapType()
-	case token.LPAREN:
-		lparen := p.pos
-		p.next()
-		typ := p.parseType()
-		rparen := p.expect(token.RPAREN)
-		return &ast.ParenExpr{Lparen: lparen, X: typ, Rparen: rparen}
+	if p.tok != token.IDENT {
+		defer un(trace(p, "TypeName"))
 	}
+	typ := p.parseTypeName()
+	if p.tok == token.LBRACK {
+		return p.parseArrayType(typ)
+	} else if p.tok == token.LSS {
+		return p.parseMapType(typ)
+	}
+	//
+	//switch p.tok {
+	//case token.IDENT:
+	//	return
+	//case token.LBRACK:
+	//	return p.parseArrayType()
+	//case token.DATA:
+	//	return p.parseDataType()
+	////case token.FUNC:
+	////	typ, _ := p.parseFuncType()
+	////	return typ
+	//case token.SERVER:
+	//	return p.parseServerType()
+	////case token.MAP:
+	////	return p.parseMapType()
+	//case token.LPAREN:
+	//	lparen := p.pos
+	//	p.next()
+	//	typ := p.parseType()
+	//	rparen := p.expect(token.RPAREN)
+	//	return &ast.ParenExpr{Lparen: lparen, X: typ, Rparen: rparen}
+	//}
 
 	// no type found
-	return nil
+	return typ
 }
 
 func (p *parser) tryType() ast.Expr {
@@ -1343,7 +1361,7 @@ func isLiteralType(x ast.Expr) bool {
 		_, isIdent := t.X.(*ast.Ident)
 		return isIdent
 	case *ast.ArrayType:
-	case *ast.StructType:
+	case *ast.DataType:
 	case *ast.MapType:
 	default:
 		return false // all other nodes are not legal composite literal types
@@ -1837,10 +1855,11 @@ func (p *parser) parseDecl(sync map[token.Token]bool) ast.Decl {
 	switch p.tok {
 	//case token.CONST, token.VAR:
 	//	f = p.parseValueSpec
-	//
-	//case token.TYPE:
-	//	f = p.parseTypeSpec
-	//
+
+	case token.DATA:
+		p.parseDataType()
+		return nil
+
 	//case token.FUNC:
 	//	return p.parseFuncDecl()
 
@@ -1861,29 +1880,11 @@ func (p *parser) parseFile() *ast.File {
 	if p.trace {
 		defer un(trace(p, "File"))
 	}
-
-	// Don't bother parsing the rest if we had errors scanning the first token.
-	// Likely not a Go source file at all.
 	if p.errors.Len() != 0 {
 		return nil
 	}
 
-	// package clause
-	doc := p.leadComment
-	pos := p.expect(token.PACKAGE)
-	// Go spec: The package clause is not a declaration;
-	// the package name does not appear in any scope.
-	ident := p.parseIdent()
-	if ident.Name == "_" && p.mode&DeclarationErrors != 0 {
-		p.error(p.pos, "invalid package name _")
-	}
-	p.expectSemi()
-
-	// Don't bother parsing the rest if we had errors parsing the package clause.
-	// Likely not a Go source file at all.
-	if p.errors.Len() != 0 {
-		return nil
-	}
+	pos := p.parsePackageSpec()
 
 	p.openScope()
 	p.pkgScope = p.topScope
@@ -1897,7 +1898,7 @@ func (p *parser) parseFile() *ast.File {
 		if p.mode&ImportsOnly == 0 {
 			// rest of package body
 			for p.tok != token.EOF {
-				//decls = append(decls, p.parseDecl(declStart))
+				decls = append(decls, p.parseDecl(declStart))
 			}
 		}
 	}
@@ -1918,13 +1919,43 @@ func (p *parser) parseFile() *ast.File {
 	}
 
 	return &ast.File{
-		Doc:        doc,
+		//Doc:        doc,
 		Package:    pos,
-		Name:       ident,
 		Decls:      decls,
 		Scope:      p.pkgScope,
 		Imports:    p.imports,
 		Unresolved: p.unresolved[0:i],
 		Comments:   p.comments,
+	}
+}
+func (p *parser) parsePackageSpec() *ast.PackageSpec {
+	pos := p.expect(token.PACKAGE)
+	if p.trace {
+		defer un(trace(p, "PackageSpec"))
+	}
+
+	var ident *ast.Ident
+	switch p.tok {
+	case token.IDENT:
+		ident = p.parseIdent()
+	}
+
+	var path string
+	if p.tok == token.STRING {
+		path = p.lit
+		if !isValidImport(path) {
+			p.error(pos, "invalid import path: "+path)
+		}
+		p.next()
+	} else {
+		p.expect(token.STRING) // use expect() error handling
+	}
+	p.expectSemi() // call before accessing p.linecomment
+
+	return &ast.PackageSpec{
+		Doc:     p.lineComment,
+		Name:    ident,
+		Path:    &ast.BasicLit{ValuePos: pos, Kind: token.STRING, Value: path},
+		Comment: p.lineComment,
 	}
 }

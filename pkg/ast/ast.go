@@ -196,16 +196,17 @@ func isDirective(c string) bool {
 //
 type Field struct {
 	Doc     *CommentGroup // associated documentation; or nil
-	Names   []*Ident      // field/method/parameter names; or nil
+	Name    *Ident        // field/method/parameter names; or nil
 	Type    Expr          // field/method/parameter type
+	Id      *BasicLit     // field tag; or nil
 	Tag     *BasicLit     // field tag; or nil
 	Comment *CommentGroup // line comments; or nil
 }
 
 func (f *Field) Pos() token.Pos {
-	if len(f.Names) > 0 {
-		return f.Names[0].Pos()
-	}
+	//if len(f.Name) > 0 {
+	//	return f.Names[0].Pos()
+	//}
 	return f.Type.Pos()
 }
 
@@ -249,17 +250,17 @@ func (f *FieldList) End() token.Pos {
 
 // NumFields returns the number of parameters or struct fields represented by a FieldList.
 func (f *FieldList) NumFields() int {
-	n := 0
-	if f != nil {
-		for _, g := range f.List {
-			m := len(g.Names)
-			if m == 0 {
-				m = 1
-			}
-			n += m
-		}
-	}
-	return n
+	//n := 0
+	//if f != nil {
+	//	for _, g := range f.List {
+	//		m := len(g.Names)
+	//		if m == 0 {
+	//			m = 1
+	//		}
+	//		n += m
+	//	}
+	//}
+	return 0
 }
 
 // An expression is represented by a tree consisting of one
@@ -425,11 +426,19 @@ type (
 		Elt    Expr      // element type
 	}
 
-	// A StructType node represents a struct type.
-	StructType struct {
+	// A DataType node represents a struct type.
+	DataType struct {
 		Struct     token.Pos  // position of "struct" keyword
 		Fields     *FieldList // list of field declarations
 		Incomplete bool       // true if (source) fields are missing in the Fields list
+		Name       *Ident
+		Extends    []*Extend
+	}
+
+	// A DataType node represents a struct type.
+	Extend struct {
+		Extend token.Pos // position of "struct" keyword
+		Name   *Ident
 	}
 
 	// Pointer types are represented via StarExpr nodes.
@@ -488,7 +497,7 @@ func (x *UnaryExpr) Pos() token.Pos      { return x.OpPos }
 func (x *BinaryExpr) Pos() token.Pos     { return x.X.Pos() }
 func (x *KeyValueExpr) Pos() token.Pos   { return x.Key.Pos() }
 func (x *ArrayType) Pos() token.Pos      { return x.Lbrack }
-func (x *StructType) Pos() token.Pos     { return x.Struct }
+func (x *DataType) Pos() token.Pos       { return x.Struct }
 func (x *FuncType) Pos() token.Pos {
 	if x.Func.IsValid() || x.Params == nil { // see issue 3870
 		return x.Func
@@ -521,7 +530,7 @@ func (x *UnaryExpr) End() token.Pos      { return x.X.End() }
 func (x *BinaryExpr) End() token.Pos     { return x.Y.End() }
 func (x *KeyValueExpr) End() token.Pos   { return x.Value.End() }
 func (x *ArrayType) End() token.Pos      { return x.Elt.End() }
-func (x *StructType) End() token.Pos     { return x.Fields.End() }
+func (x *DataType) End() token.Pos       { return x.Fields.End() }
 func (x *FuncType) End() token.Pos {
 	if x.Results != nil {
 		return x.Results.End()
@@ -553,7 +562,7 @@ func (*BinaryExpr) exprNode()     {}
 func (*KeyValueExpr) exprNode()   {}
 
 func (*ArrayType) exprNode()     {}
-func (*StructType) exprNode()    {}
+func (*DataType) exprNode()      {}
 func (*FuncType) exprNode()      {}
 func (*InterfaceType) exprNode() {}
 func (*MapType) exprNode()       {}
@@ -883,6 +892,14 @@ type (
 		EndPos  token.Pos     // end of spec (overrides Path.Pos if nonzero)
 	}
 
+	PackageSpec struct {
+		Doc     *CommentGroup // associated documentation; or nil
+		Name    *Ident        // local package name (including "."); or nil
+		Path    *BasicLit     // import path
+		Comment *CommentGroup // line comments; or nil
+		EndPos  token.Pos     // end of spec (overrides Path.Pos if nonzero)
+	}
+
 	// A ValueSpec node represents a constant or variable declaration
 	// (ConstSpec or VarSpec production).
 	//
@@ -1031,9 +1048,8 @@ func (*FuncDecl) declNode() {}
 // are "free-floating" (see also issues #18593, #20744).
 //
 type File struct {
-	Doc        *CommentGroup   // associated documentation; or nil
-	Package    token.Pos       // position of "package" keyword
-	Name       *Ident          // package name
+	Doc        *CommentGroup // associated documentation; or nil
+	Package    *PackageSpec
 	Decls      []Decl          // top-level declarations; or nil
 	Scope      *Scope          // package scope (this file only)
 	Imports    []*ImportSpec   // imports in this file
@@ -1041,12 +1057,12 @@ type File struct {
 	Comments   []*CommentGroup // list of all comments in the source file
 }
 
-func (f *File) Pos() token.Pos { return f.Package }
+func (f *File) Pos() token.Pos { return f.Package.EndPos }
 func (f *File) End() token.Pos {
 	if n := len(f.Decls); n > 0 {
 		return f.Decls[n-1].End()
 	}
-	return f.Name.End()
+	return f.Package.EndPos
 }
 
 // A Package node represents a set of source files

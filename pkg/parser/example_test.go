@@ -13,12 +13,14 @@ import (
 func ExampleParseFile() {
 	fset := token.NewFileSet() // positions are relative to fset
 	src := []byte("" +
-		"package parser \n" +
+		"package \"parser\" \n" +
+		"//引用parser.go \n" +
 		"import \"/home/yttx_heqian/develop/go/hbuf/pkg/parser/parser.go\" \n" +
+		"//引用11.go \n" +
 		"import \"/home/yttx_heqian/develop/go/hbuf/pkg/parser/11.go\" \n" +
-		"data NAME{ \n" +
+		"data NAME : Na,Nb { \n" +
 		"  String Name = 16 `json\"name\"` \n" +
-		"  String[] Info = 0 \n" +
+		"  String[12] Info = 0 \n" +
 		"  String<int> other = 0 \n" +
 		"} \n" +
 		"\n " +
@@ -35,15 +37,19 @@ func ExampleParseFile() {
 		"} \n")
 
 	// Parse src but stop after processing the imports.
-	f, err := parser.ParseFile(fset, "", src, parser.ImportsOnly)
+	f, err := parser.ParseFile(fset, "", src, parser.AllErrors)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	// Print the imports from the file's AST.
+	fmt.Println("package" + f.Package.Path.Value)
 	for _, s := range f.Imports {
-		fmt.Println(s.Path.Value)
+		fmt.Println("import" + s.Path.Value)
+	}
+
+	for _, s := range f.Comments {
+		fmt.Println(s.Text())
 	}
 
 	// output:

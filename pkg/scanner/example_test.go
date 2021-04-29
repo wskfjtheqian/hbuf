@@ -13,6 +13,7 @@ func ExampleScanner_Scan() {
 	// src is the input that we want to tokenize.
 	src := []byte("" +
 		"package \"parser\" \n" +
+		"//解析数据 \n" +
 		"import \"/home/yttx_heqian/develop/go/hbuf/pkg/parser/parser.go\" \n" +
 		"data NAME{ \n" +
 		"  String Name = 16 `json\"name\"` \n" +

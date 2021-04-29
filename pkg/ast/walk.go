@@ -70,7 +70,7 @@ func Walk(v Visitor, node Node) {
 		if n.Doc != nil {
 			Walk(v, n.Doc)
 		}
-		walkIdentList(v, n.Names)
+		//walkIdentList(v, n.Names)
 		Walk(v, n.Type)
 		if n.Tag != nil {
 			Walk(v, n.Tag)
@@ -157,7 +157,7 @@ func Walk(v Visitor, node Node) {
 		}
 		Walk(v, n.Elt)
 
-	case *StructType:
+	case *DataType:
 		Walk(v, n.Fields)
 
 	case *FuncType:
@@ -349,7 +349,7 @@ func Walk(v Visitor, node Node) {
 		if n.Doc != nil {
 			Walk(v, n.Doc)
 		}
-		Walk(v, n.Name)
+		//Walk(v, n.Name)
 		walkDeclList(v, n.Decls)
 		// don't walk n.Comments - they have been
 		// visited already through the individual

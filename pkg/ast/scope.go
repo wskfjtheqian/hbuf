@@ -93,11 +93,11 @@ func (obj *Object) Pos() token.Pos {
 	name := obj.Name
 	switch d := obj.Decl.(type) {
 	case *Field:
-		for _, n := range d.Names {
-			if n.Name == name {
-				return n.Pos()
-			}
-		}
+		//for _, n := range d.Names {
+		//	if n.Name == name {
+		//		return n.Pos()
+		//	}
+		//}
 	case *ImportSpec:
 		if d.Name != nil && d.Name.Name == name {
 			return d.Name.Pos()

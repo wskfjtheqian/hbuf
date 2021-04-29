@@ -75,37 +75,37 @@ func fieldName(x Expr) *Ident {
 }
 
 func filterFieldList(fields *FieldList, filter Filter, export bool) (removedFields bool) {
-	if fields == nil {
-		return false
-	}
-	list := fields.List
-	j := 0
-	for _, f := range list {
-		keepField := false
-		if len(f.Names) == 0 {
-			// anonymous field
-			name := fieldName(f.Type)
-			keepField = name != nil && filter(name.Name)
-		} else {
-			n := len(f.Names)
-			f.Names = filterIdentList(f.Names, filter)
-			if len(f.Names) < n {
-				removedFields = true
-			}
-			keepField = len(f.Names) > 0
-		}
-		if keepField {
-			if export {
-				filterType(f.Type, filter, export)
-			}
-			list[j] = f
-			j++
-		}
-	}
-	if j < len(list) {
-		removedFields = true
-	}
-	fields.List = list[0:j]
+	//if fields == nil {
+	//	return false
+	//}
+	//list := fields.List
+	//j := 0
+	//for _, f := range list {
+	//	keepField := false
+	//	if len(f.Names) == 0 {
+	//		// anonymous field
+	//		name := fieldName(f.Type)
+	//		keepField = name != nil && filter(name.Name)
+	//	} else {
+	//		n := len(f.Names)
+	//		f.Names = filterIdentList(f.Names, filter)
+	//		if len(f.Names) < n {
+	//			removedFields = true
+	//		}
+	//		keepField = len(f.Names) > 0
+	//	}
+	//	if keepField {
+	//		if export {
+	//			filterType(f.Type, filter, export)
+	//		}
+	//		list[j] = f
+	//		j++
+	//	}
+	//}
+	//if j < len(list) {
+	//	removedFields = true
+	//}
+	//fields.List = list[0:j]
 	return
 }
 
@@ -158,7 +158,7 @@ func filterType(typ Expr, f Filter, export bool) bool {
 		return filterType(t.X, f, export)
 	case *ArrayType:
 		return filterType(t.Elt, f, export)
-	case *StructType:
+	case *DataType:
 		if filterFieldList(t.Fields, f, export) {
 			t.Incomplete = true
 		}
@@ -365,8 +365,8 @@ func MergePackageFiles(pkg *Package, mode MergeMode) *File {
 	// CommentGroup - the collected package documentation. In general
 	// there should be only one file with a package comment; but it's
 	// better to collect extra comments than drop them on the floor.
-	var doc *CommentGroup
-	var pos token.Pos
+	//var doc *CommentGroup
+	//var pos token.Pos
 	if ndocs > 0 {
 		list := make([]*Comment, ndocs-1) // -1: no separator before first group
 		i := 0
@@ -382,15 +382,15 @@ func MergePackageFiles(pkg *Package, mode MergeMode) *File {
 					list[i] = c
 					i++
 				}
-				if f.Package > pos {
-					// Keep the maximum package clause position as
-					// position for the package clause of the merged
-					// files.
-					pos = f.Package
-				}
+				//if f.Package > pos {
+				//	// Keep the maximum package clause position as
+				//	// position for the package clause of the merged
+				//	// files.
+				//	pos = f.Package
+				//}
 			}
 		}
-		doc = &CommentGroup{list}
+		//doc = &CommentGroup{list}
 	}
 
 	// Collect declarations from all package files.
@@ -493,5 +493,6 @@ func MergePackageFiles(pkg *Package, mode MergeMode) *File {
 	}
 
 	// TODO(gri) need to compute unresolved identifiers!
-	return &File{doc, pos, NewIdent(pkg.Name), decls, pkg.Scope, imports, nil, comments}
+	//return &File{doc, pos, NewIdent(pkg.Name), decls, pkg.Scope, imports, nil, comments}
+	return nil
 }

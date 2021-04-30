@@ -678,10 +678,6 @@ func (p *parser) parseTypeList() (list []ast.Expr) {
 	return
 }
 
-// ----------------------------------------------------------------------------
-// Declarations
-type parseSpecFunction func(doc *ast.CommentGroup, keyword token.Token, iota int) ast.Spec
-
 func isValidImport(lit string) bool {
 	const illegalChars = `!"#$%&'()*,:;<=>?[\]^{|}` + "`\uFFFD"
 	s, _ := strconv.Unquote(lit) // hbuf/pkg/scanner returns a legal string literal

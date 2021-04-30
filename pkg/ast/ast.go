@@ -432,29 +432,23 @@ type (
 		Fields     *FieldList // list of field declarations
 		Incomplete bool       // true if (source) fields are missing in the Fields list
 		Name       *Ident
-		Extends    []*Extend
+		Extends    []*Ident
 	}
-
-	// A DataType node represents a struct type.
-	Extend struct {
-		Extend token.Pos // position of "struct" keyword
-		Name   *Ident
-	}
-
-	// Pointer types are represented via StarExpr nodes.
 
 	// A FuncType node represents a function type.
 	FuncType struct {
-		Func    token.Pos  // position of "func" keyword (token.NoPos if there is no "func")
-		Params  *FieldList // (incoming) parameters; non-nil
-		Results *FieldList // (outgoing) results; or nil
+		Func   token.Pos  // position of "func" keyword (token.NoPos if there is no "func")
+		Params *FieldList // (incoming) parameters; non-nil
+		Result *Expr
 	}
 
-	// An InterfaceType node represents an interface type.
-	InterfaceType struct {
+	// An ServerType node represents an interface type.
+	ServerType struct {
 		Interface  token.Pos  // position of "interface" keyword
 		Methods    *FieldList // list of methods
 		Incomplete bool       // true if (source) methods are missing in the Methods list
+		Name       *Ident
+		Extends    []*Ident
 	}
 
 	// A MapType node represents a map type.
@@ -504,9 +498,9 @@ func (x *FuncType) Pos() token.Pos {
 	}
 	return x.Params.Pos() // interface method declarations have no "func" keyword
 }
-func (x *InterfaceType) Pos() token.Pos { return x.Interface }
-func (x *MapType) Pos() token.Pos       { return x.Map }
-func (x *ChanType) Pos() token.Pos      { return x.Begin }
+func (x *ServerType) Pos() token.Pos { return x.Interface }
+func (x *MapType) Pos() token.Pos    { return x.Map }
+func (x *ChanType) Pos() token.Pos   { return x.Begin }
 
 func (x *BadExpr) End() token.Pos { return x.To }
 func (x *Ident) End() token.Pos   { return token.Pos(int(x.NamePos) + len(x.Name)) }
@@ -532,14 +526,11 @@ func (x *KeyValueExpr) End() token.Pos   { return x.Value.End() }
 func (x *ArrayType) End() token.Pos      { return x.Elt.End() }
 func (x *DataType) End() token.Pos       { return x.Fields.End() }
 func (x *FuncType) End() token.Pos {
-	if x.Results != nil {
-		return x.Results.End()
-	}
 	return x.Params.End()
 }
-func (x *InterfaceType) End() token.Pos { return x.Methods.End() }
-func (x *MapType) End() token.Pos       { return x.Value.End() }
-func (x *ChanType) End() token.Pos      { return x.Value.End() }
+func (x *ServerType) End() token.Pos { return x.Methods.End() }
+func (x *MapType) End() token.Pos    { return x.Value.End() }
+func (x *ChanType) End() token.Pos   { return x.Value.End() }
 
 // exprNode() ensures that only expression/type nodes can be
 // assigned to an Expr.
@@ -561,12 +552,12 @@ func (*UnaryExpr) exprNode()      {}
 func (*BinaryExpr) exprNode()     {}
 func (*KeyValueExpr) exprNode()   {}
 
-func (*ArrayType) exprNode()     {}
-func (*DataType) exprNode()      {}
-func (*FuncType) exprNode()      {}
-func (*InterfaceType) exprNode() {}
-func (*MapType) exprNode()       {}
-func (*ChanType) exprNode()      {}
+func (*ArrayType) exprNode()  {}
+func (*DataType) exprNode()   {}
+func (*FuncType) exprNode()   {}
+func (*ServerType) exprNode() {}
+func (*MapType) exprNode()    {}
+func (*ChanType) exprNode()   {}
 
 // ----------------------------------------------------------------------------
 // Convenience functions for Idents

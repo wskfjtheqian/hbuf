@@ -164,11 +164,11 @@ func Walk(v Visitor, node Node) {
 		if n.Params != nil {
 			Walk(v, n.Params)
 		}
-		if n.Results != nil {
-			Walk(v, n.Results)
-		}
+		//if n.Results != nil {
+		//	Walk(v, n.Results)
+		//}
 
-	case *InterfaceType:
+	case *ServerType:
 		Walk(v, n.Methods)
 
 	case *MapType:

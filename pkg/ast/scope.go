@@ -75,46 +75,18 @@ func NewObj(kind ObjKind, name string) *Object {
 // The result may be an invalid position if it cannot be computed
 // (obj.Decl may be nil or not correct).
 func (obj *Object) Pos() token.Pos {
-	name := obj.Name
-	switch d := obj.Decl.(type) {
-	case *Field:
-		//for _, n := range d.Names {
-		//	if n.Name == name {
-		//		return n.Pos()
-		//	}
-		//}
-	case *ImportSpec:
-		if d.Name != nil && d.Name.Name == name {
-			return d.Name.Pos()
-		}
-		return d.Path.Pos()
-	case *ValueSpec:
-		for _, n := range d.Names {
-			if n.Name == name {
-				return n.Pos()
-			}
-		}
-	case *TypeSpec:
-		if d.Name.Name == name {
-			return d.Name.Pos()
-		}
-	case *FuncDecl:
-		if d.Name.Name == name {
-			return d.Name.Pos()
-		}
-	case *LabeledStmt:
-		if d.Label.Name == name {
-			return d.Label.Pos()
-		}
-	case *AssignStmt:
-		for _, x := range d.Lhs {
-			if ident, isIdent := x.(*Ident); isIdent && ident.Name == name {
-				return ident.Pos()
-			}
-		}
-	case *Scope:
-		// predeclared object - nothing to do for now
-	}
+	//name := obj.Name
+	//switch d := obj.Decl.(type) {
+	//case *Field:
+	//	//for _, n := range d.Names {
+	//	//	if n.Name == name {
+	//	//		return n.Pos()
+	//	//	}
+	//	//}
+	//case *ImportSpec:
+	//case *Scope:
+	//	// predeclared object - nothing to do for now
+	//}
 	return token.NoPos
 }
 
@@ -125,21 +97,19 @@ type ObjKind int
 const (
 	Bad ObjKind = iota // for error handling
 	Pkg                // package
-	Con                // constant
-	Typ                // type
-	Var                // variable
-	Fun                // function or method
-	Lbl                // label
+	Data
+	Server
+	Method // function or method
+	Var
 )
 
 var objKindStrings = [...]string{
-	Bad: "bad",
-	Pkg: "package",
-	Con: "const",
-	Typ: "type",
-	Var: "var",
-	Fun: "func",
-	Lbl: "label",
+	Bad:    "bad",
+	Pkg:    "package",
+	Data:   "data",
+	Server: "server",
+	Method: "method",
+	Var:    "var",
 }
 
 func (kind ObjKind) String() string { return objKindStrings[kind] }

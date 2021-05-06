@@ -264,6 +264,13 @@ type (
 		Params *FieldList // (incoming) parameters; non-nil
 		Result *Expr
 	}
+	EnumType struct {
+		Enum    token.Pos
+		Name    *Ident
+		Items   []*Ident
+		Opening token.Pos
+		Closing token.Pos
+	}
 )
 
 func (x *BadExpr) Pos() token.Pos  { return x.From }
@@ -284,8 +291,10 @@ func (x *FuncType) Pos() token.Pos {
 	}
 	return x.Params.Pos() // interface method declarations have no "func" keyword
 }
-func (x *ServerType) Pos() token.Pos   { return x.Interface }
-func (x *MapType) Pos() token.Pos      { return x.Map }
+func (x *ServerType) Pos() token.Pos { return x.Interface }
+func (x *MapType) Pos() token.Pos    { return x.Map }
+func (x *EnumType) Pos() token.Pos   { return x.Enum }
+
 func (x *BadExpr) End() token.Pos      { return x.To }
 func (x *Ident) End() token.Pos        { return token.Pos(int(x.NamePos) + len(x.Name)) }
 func (x *BasicLit) End() token.Pos     { return token.Pos(int(x.ValuePos) + len(x.Value)) }
@@ -293,24 +302,23 @@ func (x *FuncLit) End() token.Pos      { return x.Type.End() }
 func (x *CompositeLit) End() token.Pos { return x.Rbrace + 1 }
 func (x *ArrayType) End() token.Pos    { return x.Elt.End() }
 func (x *DataType) End() token.Pos     { return x.Fields.End() }
-func (x *FuncType) End() token.Pos {
-	return x.Params.End()
-}
-func (x *ServerType) End() token.Pos { return x.Methods.End() }
-func (x *MapType) End() token.Pos    { return x.Value.End() }
-func (*BadExpr) exprNode()           {}
-func (*Ident) exprNode()             {}
-func (*BasicLit) exprNode()          {}
-func (*FuncLit) exprNode()           {}
-func (*CompositeLit) exprNode()      {}
-func (*ArrayType) exprNode()         {}
-func (*DataType) exprNode()          {}
-func (*FuncType) exprNode()          {}
-func (*ServerType) exprNode()        {}
-func (*MapType) exprNode()           {}
+func (x *FuncType) End() token.Pos     { return x.Params.End() }
+func (x *ServerType) End() token.Pos   { return x.Methods.End() }
+func (x *MapType) End() token.Pos      { return x.Value.End() }
+func (x *EnumType) End() token.Pos     { return x.Items[len(x.Items)-1].End() }
 
-func NewIdent(name string) *Ident  { return &Ident{token.NoPos, name, nil} }
-func IsExported(name string) bool  { return token.IsExported(name) }
+func (*BadExpr) exprNode()      {}
+func (*Ident) exprNode()        {}
+func (*BasicLit) exprNode()     {}
+func (*FuncLit) exprNode()      {}
+func (*CompositeLit) exprNode() {}
+func (*ArrayType) exprNode()    {}
+func (*DataType) exprNode()     {}
+func (*FuncType) exprNode()     {}
+func (*ServerType) exprNode()   {}
+func (*MapType) exprNode()      {}
+func (*EnumType) exprNode()     {}
+
 func (id *Ident) IsExported() bool { return token.IsExported(id.Name) }
 func (id *Ident) String() string {
 	if id != nil {

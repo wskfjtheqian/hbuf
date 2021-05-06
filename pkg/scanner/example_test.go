@@ -31,7 +31,13 @@ func ExampleScanner_Scan() {
 		"\n" +
 		"server GetAge : GetName{ \n" +
 		"   Int age(int Id) \n" +
-		"} \n")
+		"} \n" +
+		"\n" +
+		"enum Type{ \n" +
+		"   New" +
+		"   Old" +
+		"} \n" +
+		"")
 
 	// Initialize the
 	var s Scanner                                   // positions are relative to fset

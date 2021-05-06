@@ -20,15 +20,12 @@ const (
 	literal_end
 
 	operator_beg
-	EQL    // ==
-	ASSIGN // =
-
-	LSS    // <
-	LPAREN // (
-	LBRACK // [
-	LBRACE // {
-	COMMA  // ,
-
+	ASSIGN    // =
+	LSS       // <
+	LPAREN    // (
+	LBRACK    // [
+	LBRACE    // {
+	COMMA     // ,
 	GTR       // >
 	RPAREN    // )
 	RBRACK    // ]
@@ -38,11 +35,11 @@ const (
 	operator_end
 
 	keyword_beg
-
 	IMPORT
 	PACKAGE
 	DATA
 	SERVER
+	ENUM
 	keyword_end
 )
 
@@ -56,7 +53,6 @@ var tokens = [...]string{
 	INT:    "INT",
 	STRING: "STRING",
 
-	EQL:    "==",
 	LSS:    "<",
 	GTR:    ">",
 	ASSIGN: "=",
@@ -76,6 +72,7 @@ var tokens = [...]string{
 
 	DATA:   "data",
 	SERVER: "server",
+	ENUM:   "enum",
 }
 
 func (tok Token) String() string {
@@ -97,7 +94,7 @@ const (
 
 func (op Token) Precedence() int {
 	switch op {
-	case EQL, LSS, GTR:
+	case LSS, GTR:
 	}
 	return LowestPrec
 }

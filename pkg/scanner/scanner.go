@@ -782,7 +782,7 @@ scanAgain:
 				lit = comment
 			}
 		case '=':
-			tok = s.switch2(token.ASSIGN, token.EQL)
+			tok = token.ASSIGN
 		default:
 			// next reports unexpected BOMs - don't repeat
 			if ch != bom {

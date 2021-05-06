@@ -1,4 +1,4 @@
-package format
+package golang
 
 import (
 	"go/printer"

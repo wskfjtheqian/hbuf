@@ -1,4 +1,4 @@
-package format
+package golang
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-func ExampleFormat_format() {
+func ExampleGolang_out() {
 	fset := token.NewFileSet() // positions are relative to fset
 	src := []byte("" +
 		"package \"parser\" \n" +
@@ -34,7 +34,6 @@ func ExampleFormat_format() {
 		"   Int age(int Id = 1,String key = 2) \n" +
 		"} \n")
 
-	// Parse src but stop after processing the imports.
 	f, err := parser.ParseFile(fset, "", src, parser.AllErrors)
 	if err != nil {
 		fmt.Println(err)

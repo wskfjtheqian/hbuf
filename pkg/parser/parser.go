@@ -576,7 +576,16 @@ func (p *parser) parseParameterList(scope *ast.Scope, ellipsisOk bool) (params [
 		typ := p.parseVarType(ellipsisOk)
 		name := p.parseIdent()
 
-		list = append(list, &ast.Field{Name: name, Type: typ})
+		var id *ast.BasicLit
+		if p.tok == token.ASSIGN {
+			p.next()
+			if p.tok != token.INT {
+				p.errorExpected(p.pos, "not find int")
+			}
+			id = &ast.BasicLit{ValuePos: p.pos, Kind: p.tok, Value: p.lit}
+			p.next()
+		}
+		list = append(list, &ast.Field{Name: name, Type: typ, Id: id})
 		if p.tok != token.COMMA {
 			break
 		}
@@ -757,6 +766,39 @@ func (p *parser) parseDataSpec(doc *ast.CommentGroup) ast.Spec {
 	return spec
 }
 
+func (p *parser) parseEnumSpec(doc *ast.CommentGroup) ast.Spec {
+	if p.trace {
+		defer un(trace(p, "EnumType"))
+	}
+
+	p.expect(token.ENUM)
+	name := p.parseIdent()
+
+	lbrace := p.expect(token.LBRACE)
+	var list []*ast.Ident
+	for p.tok == token.IDENT {
+		list = append(list, p.parseIdent())
+		p.next()
+	}
+	rbrace := p.expect(token.RBRACE)
+
+	spec := &ast.TypeSpec{Doc: doc, Name: name}
+	p.declare(spec, nil, p.topScope, ast.Server, name)
+	if p.tok == token.ASSIGN {
+		spec.Assign = p.pos
+		p.next()
+	}
+	spec.Type = &ast.EnumType{
+		Name:    name,
+		Opening: lbrace,
+		Closing: rbrace,
+		Items:   list,
+	}
+	p.expectSemi()
+	spec.Comment = p.lineComment
+	return spec
+}
+
 func (p *parser) parseServerSpec(doc *ast.CommentGroup) ast.Spec {
 	if p.trace {
 		defer un(trace(p, "ServerType"))
@@ -807,6 +849,9 @@ func (p *parser) parseDecl(sync map[token.Token]bool) ast.Spec {
 		return p.parseDataSpec(nil)
 	case token.SERVER:
 		return p.parseServerSpec(nil)
+	case token.ENUM:
+		return p.parseEnumSpec(nil)
+
 	default:
 		pos := p.pos
 		p.errorExpected(pos, "declaration")

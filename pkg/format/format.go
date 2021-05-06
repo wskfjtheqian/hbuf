@@ -22,10 +22,13 @@ func Node(dst io.Writer, fset *token.FileSet, node interface{}) error {
 	}
 
 	dst.Write([]byte("package " + file.Package.Path.Value + "\n\n"))
+	for _, s := range file.Imports {
+		printImport(dst, s)
+	}
+	dst.Write([]byte("\n"))
 	for _, s := range file.Specs {
 		switch s.(type) {
 		case *ast.ImportSpec:
-			printImport(dst, s.(*ast.ImportSpec))
 		case *ast.TypeSpec:
 			printTypeSpec(dst, (s.(*ast.TypeSpec)).Type)
 		}
@@ -43,24 +46,34 @@ func printTypeSpec(dst io.Writer, expr ast.Expr) {
 }
 
 func printServer(dst io.Writer, typ *ast.ServerType) {
-	dst.Write([]byte("data " + typ.Name.Name))
+	dst.Write([]byte("server " + typ.Name.Name))
 	if nil != typ.Extends {
 		printExtend(dst, typ.Extends)
 	}
 	dst.Write([]byte("{\n"))
 	for _, field := range typ.Methods.List {
 		dst.Write([]byte("    "))
-		printType(dst, field.Type)
+		var fun = field.Type.(*ast.FuncType)
+		printType(dst, *fun.Result)
 		dst.Write([]byte(" " + field.Name.Name))
-		if nil != field.Id {
-			dst.Write([]byte(" = " + field.Id.Value))
+		dst.Write([]byte("("))
+		for i, field := range fun.Params.List {
+			if 0 != i {
+				dst.Write([]byte(", "))
+			}
+			printType(dst, field.Type)
+			dst.Write([]byte(" " + field.Name.Name))
+			if nil != field.Id {
+				dst.Write([]byte(" = " + field.Id.Value))
+			}
+			if nil != field.Tag {
+				dst.Write([]byte(" " + field.Tag.Value))
+			}
 		}
-		if nil != field.Tag {
-			dst.Write([]byte(" " + field.Tag.Value))
-		}
+		dst.Write([]byte(")"))
 		dst.Write([]byte("\n"))
 	}
-	dst.Write([]byte("}\n"))
+	dst.Write([]byte("}\n\n"))
 }
 
 func printData(dst io.Writer, typ *ast.DataType) {

@@ -34,7 +34,13 @@ func ExampleParseFile() {
 		"\n" +
 		"server GetAge : GetName{ \n" +
 		"   Int age(int Id,String key) \n" +
-		"} \n")
+		"} \n" +
+		"\n" +
+		"enum Type{ \n" +
+		"   New" +
+		"   Old" +
+		"} \n" +
+		"")
 
 	// Parse src but stop after processing the imports.
 	f, err := parser.ParseFile(fset, "", src, parser.AllErrors)

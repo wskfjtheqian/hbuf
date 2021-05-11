@@ -41,7 +41,15 @@ func printTypeSpec(dst io.Writer, expr ast.Expr) {
 		printData(dst, expr.(*ast.DataType))
 	case *ast.ServerType:
 		printServer(dst, expr.(*ast.ServerType))
+	case *ast.EnumType:
+		printEnum(dst, expr.(*ast.EnumType))
+
 	}
+}
+
+func printEnum(dst io.Writer, typ *ast.EnumType) {
+	dst.Write([]byte("enum " + typ.Name.Name))
+
 }
 
 func printServer(dst io.Writer, typ *ast.ServerType) {

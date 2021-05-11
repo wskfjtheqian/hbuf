@@ -778,7 +778,6 @@ func (p *parser) parseEnumSpec(doc *ast.CommentGroup) ast.Spec {
 	var list []*ast.Ident
 	for p.tok == token.IDENT {
 		list = append(list, p.parseIdent())
-		p.next()
 	}
 	rbrace := p.expect(token.RBRACE)
 

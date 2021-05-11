@@ -49,7 +49,11 @@ func printTypeSpec(dst io.Writer, expr ast.Expr) {
 
 func printEnum(dst io.Writer, typ *ast.EnumType) {
 	dst.Write([]byte("enum " + typ.Name.Name))
-
+	dst.Write([]byte("{\n"))
+	for _, item := range typ.Items {
+		dst.Write([]byte("    " + item.Name + "\n"))
+	}
+	dst.Write([]byte("}\n\n"))
 }
 
 func printServer(dst io.Writer, typ *ast.ServerType) {

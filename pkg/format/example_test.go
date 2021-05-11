@@ -32,7 +32,12 @@ func ExampleFormat_format() {
 		"\n" +
 		"server GetAge : GetName{ \n" +
 		"   Int age(int Id = 1,String key = 2) \n" +
-		"} \n")
+		"} \n" +
+		"enum Type{ \n" +
+		"   New" +
+		"   Old" +
+		"} \n" +
+		"")
 
 	// Parse src but stop after processing the imports.
 	f, err := parser.ParseFile(fset, "", src, parser.AllErrors)

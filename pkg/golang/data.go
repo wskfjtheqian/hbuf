@@ -2,6 +2,7 @@ package golang
 
 import (
 	"math"
+	"reflect"
 )
 
 type Type int8
@@ -21,10 +22,13 @@ const (
 	Float              // | type[1] | id | data[4] |
 	Double             // | type[1] | id | data[8] |
 	String             // | type[1] | id | len[uint] | data |
-	List               // | type[1] | id | len[uint] | data[(type[1] | id | data[8]) | (type[1] | id | len[uint] | data)] |
-	Map                // | type[1] | id | len[uint] | key[(type[1] | data[8]) | (type[1] | len[uint] | data)] | val[1] | data[(type[1] | data[8]) | (type[1] | len[uint] | data)] |
-	Nil
+	Array              // | type[1] | id | len[uint] | data[(type[1] | id | data[8]) | (type[1] | id | len[uint] | data)] |
+	Map                // | type[1] | id | len[uint] | key[(type[1] | data[8]) | (type[1] | len[uint] | data)] | val[1]   | data[(type[1] | data[8]) | (type[1] | len[uint] | data)] |
 )
+
+type ToByteCall interface {
+	ToBytes() []byte
+}
 
 func getIntBytes(id uint64) ([]byte, int) {
 	var temp = make([]byte, 8)
@@ -42,7 +46,7 @@ func getIntBytes(id uint64) ([]byte, int) {
 	return temp[0:i], i
 }
 
-func toBytes(t Type, id *int, call func() ([]byte, int)) []byte {
+func joinBytes(t Type, id *int, call func() ([]byte, int)) []byte {
 	if nil == id {
 		value, valLen := call()
 		var temp = make([]byte, 1+len(value))
@@ -50,171 +54,40 @@ func toBytes(t Type, id *int, call func() ([]byte, int)) []byte {
 		copy(temp[1:], value)
 		return temp
 	} else {
-		byteId, length := getIntBytes(uint64(*id))
+		byteId, idLen := getIntBytes(uint64(*id))
 		value, valLen := call()
-		var temp = make([]byte, 1+length+len(value))
-		temp[0] = byte(int(t)<<4 | length<<2 | valLen)
+		var temp = make([]byte, 1+idLen+len(value))
+		temp[0] = byte(int(t)<<4 | idLen<<2 | valLen)
 		copy(temp[1:], byteId)
-		copy(temp[1+length:], value)
+		copy(temp[1+idLen:], value)
 		return temp
 	}
 }
-
-func BoolToBytes(id int, val *bool) []byte {
-	if nil == val {
-		return []byte{}
-	}
-	return toBytes(Int8, &id, func() ([]byte, int) {
-		var temp int
-		if *val {
-			temp = 1
-		} else {
-			temp = 0
-		}
-		return getIntBytes(uint64(temp))
-	})
+func JoinBytes(t Type, id int32, call func() ([]byte, int)) []byte {
+	intId := int(id)
+	return joinBytes(t, &intId, call)
 }
 
-func Int8ToBytes(id int, val *int8) []byte {
-	if nil == val {
-		return []byte{}
-	}
-	return toBytes(Int8, &id, func() ([]byte, int) {
-		return getIntBytes(uint64(*val))
-	})
+func ToBytes(typ Type, id int32, val interface{}) []byte {
+	intId := int(id)
+	return toBytes(&typ, &intId, val)
 }
 
-func Int16ToBytes(id int, val *int16) []byte {
-	if nil == val {
-		return []byte{}
-	}
-	return toBytes(Int16, &id, func() ([]byte, int) {
-		return getIntBytes(uint64(*val))
-	})
-}
-
-func Int32ToBytes(id int, val *int32) []byte {
-	if nil == val {
-		return []byte{}
-	}
-	return toBytes(Int32, &id, func() ([]byte, int) {
-		return getIntBytes(uint64(*val))
-	})
-}
-
-func Int64ToBytes(id int, val *int64) []byte {
-	if nil == val {
-		return []byte{}
-	}
-	return toBytes(Int64, &id, func() ([]byte, int) {
-		return getIntBytes(uint64(*val))
-	})
-}
-
-func UInt8ToBytes(id int, val *uint8) []byte {
-	if nil == val {
-		return []byte{}
-	}
-	return toBytes(UInt8, &id, func() ([]byte, int) {
-		return getIntBytes(uint64(*val))
-	})
-}
-
-func UInt16ToBytes(id int, val *uint16) []byte {
-	if nil == val {
-		return []byte{}
-	}
-	return toBytes(UInt16, &id, func() ([]byte, int) {
-		return getIntBytes(uint64(*val))
-	})
-}
-
-func UInt32ToBytes(id int, val *uint32) []byte {
-	if nil == val {
-		return []byte{}
-	}
-	return toBytes(UInt32, &id, func() ([]byte, int) {
-		return getIntBytes(uint64(*val))
-	})
-}
-
-func UInt64ToBytes(id int, val *uint64) []byte {
-	if nil == val {
-		return []byte{}
-	}
-	return toBytes(UInt64, &id, func() ([]byte, int) {
-		return getIntBytes(uint64(*val))
-	})
-}
-
-func FloatToBytes(id int, val *float32) []byte {
-	if nil == val {
-		return []byte{}
-	}
-	return toBytes(Float, &id, func() ([]byte, int) {
-		return getIntBytes(uint64(math.Float32bits(*val)))
-	})
-}
-
-func DoubleToBytes(id int, val *float64) []byte {
-	if nil == val {
-		return []byte{}
-	}
-	return toBytes(Double, &id, func() ([]byte, int) {
-		return getIntBytes(uint64(math.Float64bits(*val)))
-	})
-}
-
-func StringToBytes(id int, val *string) []byte {
-	if nil == val {
-		return []byte{}
-	}
-	return toBytes(String, &id, func() ([]byte, int) {
-		value := []byte(*val)
-		valLen := len(value)
-		lenByte, lenLen := getIntBytes(uint64(valLen))
-		var temp = make([]byte, valLen+lenLen)
-		copy(temp, lenByte)
-		copy(temp[lenLen:], value)
-		return temp, lenLen
-	})
-}
-
-func ListToBytes(id int, val *[]interface{}) []byte {
-	if nil == val {
-		return []byte{}
-	}
-	return toBytes(List, &id, func() ([]byte, int) {
-		temp := []byte{}
-		for index, value := range *val {
-			temp = append(temp, ToByte(Nil, &index, value)...)
-		}
-		return temp, len(*val)
-	})
-}
-
-func MapToBytes(id int, val *[]interface{}) []byte {
-	if nil == val {
-		return []byte{}
-	}
-	return toBytes(Map, &id, func() ([]byte, int) {
-		temp := []byte{}
-		for key, value := range *val {
-			temp = append(temp, ToByte(Nil, nil, key)...)
-			temp = append(temp, ToByte(Nil, nil, value)...)
-		}
-		return temp, len(*val)
-	})
-}
-
-func ToByte(typ Type, id *int, val interface{}) []byte {
+func toBytes(typ *Type, id *int, val interface{}) []byte {
 	if nil == val {
 		return []byte{}
 	}
 	var t Type
 	var call func() ([]byte, int)
-	switch val.(type) {
-	case bool:
+	tp := reflect.TypeOf(val)
+	if reflect.Ptr == tp.Kind() {
+		tp = tp.Elem()
+		if reflect.Struct != tp.Kind() {
+			val = reflect.ValueOf(val).Elem()
+		}
+	}
+	switch tp.Kind() {
+	case reflect.Bool:
 		t = Bool
 		call = func() ([]byte, int) {
 			var temp int
@@ -225,118 +98,64 @@ func ToByte(typ Type, id *int, val interface{}) []byte {
 			}
 			return getIntBytes(uint64(temp))
 		}
-	case *bool:
-		t = Bool
-		call = func() ([]byte, int) {
-			var temp int
-			if *val.(*bool) {
-				temp = 1
-			} else {
-				temp = 0
-			}
-			return getIntBytes(uint64(temp))
-		}
-	case int8:
+
+	case reflect.Int8:
 		t = Int8
 		call = func() ([]byte, int) {
 			return getIntBytes(uint64(val.(int8)))
 		}
-	case *int8:
-		t = Int8
-		call = func() ([]byte, int) {
-			return getIntBytes(uint64(*val.(*int8)))
-		}
-	case int16:
+	case reflect.Int16:
 		t = Int16
 		call = func() ([]byte, int) {
 			return getIntBytes(uint64(val.(int16)))
 		}
-	case *int16:
-		t = Int16
-		call = func() ([]byte, int) {
-			return getIntBytes(uint64(*val.(*int16)))
-		}
-	case int32:
+	case reflect.Int32:
 		t = Int32
 		call = func() ([]byte, int) {
 			return getIntBytes(uint64(val.(int32)))
 		}
-	case *int32:
-		t = Int32
+	case reflect.Int:
+		t = Int64
 		call = func() ([]byte, int) {
-			return getIntBytes(uint64(*val.(*int32)))
+			return getIntBytes(uint64(val.(int)))
 		}
-	case int64:
+	case reflect.Int64:
 		t = Int64
 		call = func() ([]byte, int) {
 			return getIntBytes(uint64(val.(int64)))
 		}
-	case *int64:
-		t = Int64
-		call = func() ([]byte, int) {
-			return getIntBytes(uint64(*val.(*int64)))
-		}
-	case uint8:
+	case reflect.Uint8:
 		t = UInt8
 		call = func() ([]byte, int) {
 			return getIntBytes(uint64(val.(uint8)))
 		}
-	case *uint8:
-		t = UInt8
-		call = func() ([]byte, int) {
-			return getIntBytes(uint64(*val.(*uint8)))
-		}
-	case uint16:
+
+	case reflect.Uint16:
 		t = UInt16
 		call = func() ([]byte, int) {
 			return getIntBytes(uint64(val.(uint16)))
 		}
-	case *uint16:
-		t = UInt16
-		call = func() ([]byte, int) {
-			return getIntBytes(uint64(*val.(*uint16)))
-		}
-	case uint32:
+	case reflect.Uint32:
 		t = UInt32
 		call = func() ([]byte, int) {
 			return getIntBytes(uint64(val.(uint32)))
 		}
-	case *uint32:
-		t = UInt32
-		call = func() ([]byte, int) {
-			return getIntBytes(uint64(val.(uint32)))
-		}
-	case uint64:
-		t = UInt16
+	case reflect.Uint64:
+		t = UInt64
 		call = func() ([]byte, int) {
 			return getIntBytes(val.(uint64))
 		}
-	case *uint64:
-		t = UInt16
-		call = func() ([]byte, int) {
-			return getIntBytes(*val.(*uint64))
-		}
-	case float32:
+	case reflect.Float32:
 		t = Float
 		call = func() ([]byte, int) {
 			return getIntBytes(uint64(math.Float32bits(val.(float32))))
 		}
-	case *float32:
-		t = Float
-		call = func() ([]byte, int) {
-			return getIntBytes(uint64(math.Float32bits(*val.(*float32))))
-		}
-	case float64:
+	case reflect.Float64:
 		t = Double
 		call = func() ([]byte, int) {
 			return getIntBytes(math.Float64bits(val.(float64)))
 		}
-	case *float64:
-		t = Double
-		call = func() ([]byte, int) {
-			return getIntBytes(math.Float64bits(*val.(*float64)))
-		}
-	case string:
+	case reflect.String:
 		t = String
 		call = func() ([]byte, int) {
 			value := []byte(val.(string))
@@ -347,20 +166,38 @@ func ToByte(typ Type, id *int, val interface{}) []byte {
 			copy(temp[lenLen:], value)
 			return temp, lenLen
 		}
-	case *string:
-		t = String
+	case reflect.Slice:
+		t = Array
 		call = func() ([]byte, int) {
-			value := []byte(*val.(*string))
-			valLen := len(value)
-			lenByte, lenLen := getIntBytes(uint64(valLen))
-			var temp = make([]byte, valLen+lenLen)
-			copy(temp, lenByte)
-			copy(temp[lenLen:], value)
-			return temp, lenLen
+			temp := []byte{}
+			v := reflect.ValueOf(val)
+			le := v.Len()
+			for i := 0; i < le; i++ {
+				temp = append(temp, toBytes(nil, &i, v.Index(i).Interface())...)
+			}
+			return temp, le
 		}
+	case reflect.Map:
+		t = Map
+		call = func() ([]byte, int) {
+			temp := []byte{}
+			v := reflect.ValueOf(val)
+			le := v.Len()
+			for _, key := range v.MapKeys() {
+				temp = append(temp, toBytes(nil, nil, key.Interface())...)
+				temp = append(temp, toBytes(nil, nil, v.MapIndex(key).Interface())...)
+			}
+			return temp, le
+		}
+	case reflect.Struct:
+		var v = reflect.ValueOf(val)
+		if call := v.MethodByName("ToBytes"); call.IsValid() {
+			return call.Call(nil)[0].Bytes()
+		}
+		return []byte{}
 	}
-	if Nil == typ {
-		typ = t
+	if nil == typ {
+		typ = &t
 	}
-	return toBytes(typ, id, call)
+	return joinBytes(*typ, id, call)
 }

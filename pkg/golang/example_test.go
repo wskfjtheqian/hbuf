@@ -23,7 +23,7 @@ func ExampleGolang_out() {
 		"} \n" +
 		"\n " +
 		"data Name : Name{ \n" +
-		" int age = 15 `pr:id,json\"age\"` \n" +
+		" int Age = 15 `pr:id,json\"Age\"` \n" +
 		"} \n" +
 		"\n" +
 		"server GetName{ \n" +
@@ -31,7 +31,7 @@ func ExampleGolang_out() {
 		"} \n" +
 		"\n" +
 		"server GetAge : GetName{ \n" +
-		"   Int age(int Id = 1,String key = 2) \n" +
+		"   Int Age(int Id = 1,String key = 2) \n" +
 		"} \n")
 
 	f, err := parser.ParseFile(fset, "", src, parser.AllErrors)

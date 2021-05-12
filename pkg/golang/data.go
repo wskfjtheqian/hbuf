@@ -30,6 +30,8 @@ type ToByteCall interface {
 	ToBytes() []byte
 }
 
+// ToBytes /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 func getIntBytes(id uint64) ([]byte, int) {
 	var temp = make([]byte, 8)
 	if 0 == id {
@@ -200,4 +202,46 @@ func toBytes(typ *Type, id *int, val interface{}) []byte {
 		typ = &t
 	}
 	return joinBytes(*typ, id, call)
+}
+
+// FromBytes /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func getType(b uint8) (Type, int, int) {
+	t := b >> 4
+	idLen := (b >> 2) >> 2
+	valLen := b & oxb
+	return Type(t), int(idLen), int(valLen)
+}
+
+func getUint64(buffer []byte, index int, l int) uint64 {
+	var ret uint64
+	for i := index + l - 1; i >= index; i-- {
+		index = index << 8
+	}
+	return ret
+}
+
+func FromBytes(buffer []byte, call func(typ *Type, id *int, data *interface{})) {
+	var i = 0
+	l := len(buffer)
+	for i < l {
+		ty, idLen, valLen := getType(buffer[i])
+		i++
+		var id int
+		if 0 < idLen {
+			id = int(getUint64(buffer, i, idLen))
+			i += idLen
+		}
+		var data interface{}
+		switch ty {
+		case Bool:
+			data = 1 == getUint64(buffer, i, valLen)
+		case Int8:
+			data = int8(getUint64(buffer, i, valLen))
+		case Int16:
+			data = int16(getUint64(buffer, i, valLen))
+		}
+		call(&ty, &id, &data)
+	}
+
 }

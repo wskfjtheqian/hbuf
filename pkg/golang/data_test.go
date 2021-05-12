@@ -1,7 +1,5 @@
 package golang
 
-import "encoding/json"
-
 type DData struct {
 	Name string
 }
@@ -29,20 +27,9 @@ func (r *EData) ToBytes() []byte {
 }
 
 func ExampleData_test() {
-	var ed = EData{
-		Age: 16,
-		DData: DData{
-			Name: "heqian",
-		},
-	}
+	bb := ToBytes(Bool, 0x0808, true)
+	FromBytes(bb, func(typ *Type, id *int, data *interface{}) {
 
-	aa := ed.ToBytes()
-	println(len(aa))
-
-	ee := toBytes(nil, nil, &ed)
-	println(len(ee))
-
-	ff, _ := json.Marshal(ed)
-	println(len(ff))
+	})
 	// output:
 }

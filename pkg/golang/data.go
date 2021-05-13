@@ -8,22 +8,14 @@ import (
 type Type int8
 
 const (
-	Server Type = iota // | type[1] | id | len[uint] | data |
-	Data               // | type[1] | id | len[uint] | data |
-	Bool               // | type[1] | id | data[1] |
-	Int8               // | type[1] | id | data[1] |
-	Int16              // | type[1] | id | data[2] |
-	Int32              // | type[1] | id | data[4] |
-	Int64              // | type[1] | id | data[8] |
-	UInt8              // | type[1] | id | data[1] |
-	UInt16             // | type[1] | id | data[2] |
-	UInt32             // | type[1] | id | data[4] |
-	UInt64             // | type[1] | id | data[8] |
-	Float              // | type[1] | id | data[4] |
-	Double             // | type[1] | id | data[8] |
-	String             // | type[1] | id | len[uint] | data |
-	Array              // | type[1] | id | len[uint] | data[(type[1] | id | data[8]) | (type[1] | id | len[uint] | data)] |
-	Map                // | type[1] | id | len[uint] | key[(type[1] | data[8]) | (type[1] | len[uint] | data)] | val[1]   | data[(type[1] | data[8]) | (type[1] | len[uint] | data)] |
+	Int    Type = iota // | (type + idMask+ dataSize)[1] | id | data |
+	UInt               // | (type + idMask+ dataSize)[1] | id | data |
+	Float              // | (type + idMask+ dataSize)[1] | id | data |
+	Bytes              // | (type + idMask+ lenSize)[1]  | id | len | data |
+	Array              // | (type + idMask+ lenSize)[1]  | id | len | data |
+	Map                // | (type + idMask+ lenSize)[1]  | id | len | data |
+	Server             // | (type + idMask+ lenSize)[1]  | id | len | data |
+	Data               // | (type + idMask+ lenSize)[1]  | id | len | data |
 )
 
 type ToByteCall interface {
@@ -32,7 +24,32 @@ type ToByteCall interface {
 
 // ToBytes /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func getIntBytes(id uint64) ([]byte, int) {
+func idToBytes(id uint32) ([]byte, int) {
+	var temp = make([]byte, 8)
+	i := 0
+	for id >= 0x80 {
+		temp[i] = byte(id) | 0x80
+		id >>= 7
+		i++
+	}
+	temp[i] = byte(id)
+	return temp[0 : i+1], i + 1
+}
+
+func idFromBytes(bytes []byte) (uint32, int) {
+	var id uint32
+	var i = 0
+	for _, val := range bytes {
+		id |= uint32(val&0x7F) << (7 * i)
+		i++
+		if val < 0x80 {
+			break
+		}
+	}
+	return id, i
+}
+
+func intToBytes(id uint64) ([]byte, int) {
 	var temp = make([]byte, 8)
 	if 0 == id {
 		temp[0] = byte(0)
@@ -48,34 +65,33 @@ func getIntBytes(id uint64) ([]byte, int) {
 	return temp[0:i], i
 }
 
-func joinBytes(t Type, id *int, call func() ([]byte, int)) []byte {
+func joinBytes(t Type, id *uint32, call func() ([]byte, int)) []byte {
 	if nil == id {
-		value, valLen := call()
-		var temp = make([]byte, 1+len(value))
-		temp[0] = byte(int(t)<<4 | valLen)
-		copy(temp[1:], value)
+		valB, valL := call()
+		var temp = make([]byte, 1+valL)
+		temp[0] = byte(int(t)<<5 | valL)
+		copy(temp[1:], valB)
 		return temp
 	} else {
-		byteId, idLen := getIntBytes(uint64(*id))
-		value, valLen := call()
-		var temp = make([]byte, 1+idLen+len(value))
-		temp[0] = byte(int(t)<<4 | idLen<<2 | valLen)
-		copy(temp[1:], byteId)
-		copy(temp[1+idLen:], value)
+		idB, idL := idToBytes(*id)
+		valB, valL := call()
+		var temp = make([]byte, 1+idL+valL)
+		temp[0] = byte(int(t)<<5 | 1<<4 | valL)
+		copy(temp[1:], idB)
+		copy(temp[1+idL:], valB)
 		return temp
 	}
 }
-func JoinBytes(t Type, id int32, call func() ([]byte, int)) []byte {
-	intId := int(id)
-	return joinBytes(t, &intId, call)
+
+func JoinBytes(t Type, id uint32, call func() ([]byte, int)) []byte {
+	return joinBytes(t, &id, call)
 }
 
-func ToBytes(typ Type, id int32, val interface{}) []byte {
-	intId := int(id)
-	return toBytes(&typ, &intId, val)
+func ToBytes(typ Type, id uint32, val interface{}) []byte {
+	return toBytes(&typ, &id, val)
 }
 
-func toBytes(typ *Type, id *int, val interface{}) []byte {
+func toBytes(typ *Type, id *uint32, val interface{}) []byte {
 	if nil == val {
 		return []byte{}
 	}
@@ -90,7 +106,7 @@ func toBytes(typ *Type, id *int, val interface{}) []byte {
 	}
 	switch tp.Kind() {
 	case reflect.Bool:
-		t = Bool
+		t = Int
 		call = func() ([]byte, int) {
 			var temp int
 			if val.(bool) {
@@ -98,86 +114,101 @@ func toBytes(typ *Type, id *int, val interface{}) []byte {
 			} else {
 				temp = 0
 			}
-			return getIntBytes(uint64(temp))
+			return intToBytes(uint64(temp))
 		}
 
 	case reflect.Int8:
-		t = Int8
+		t = Int
 		call = func() ([]byte, int) {
-			return getIntBytes(uint64(val.(int8)))
+			return intToBytes(uint64(val.(int8)))
 		}
 	case reflect.Int16:
-		t = Int16
+		t = Int
 		call = func() ([]byte, int) {
-			return getIntBytes(uint64(val.(int16)))
+			return intToBytes(uint64(val.(int16)))
 		}
 	case reflect.Int32:
-		t = Int32
+		t = Int
 		call = func() ([]byte, int) {
-			return getIntBytes(uint64(val.(int32)))
+			return intToBytes(uint64(val.(int32)))
 		}
 	case reflect.Int:
-		t = Int64
+		t = Int
 		call = func() ([]byte, int) {
-			return getIntBytes(uint64(val.(int)))
+			return intToBytes(uint64(val.(int)))
 		}
 	case reflect.Int64:
-		t = Int64
+		t = Int
 		call = func() ([]byte, int) {
-			return getIntBytes(uint64(val.(int64)))
+			return intToBytes(uint64(val.(int64)))
 		}
 	case reflect.Uint8:
-		t = UInt8
+		t = UInt
 		call = func() ([]byte, int) {
-			return getIntBytes(uint64(val.(uint8)))
+			return intToBytes(uint64(val.(uint8)))
 		}
 
 	case reflect.Uint16:
-		t = UInt16
+		t = UInt
 		call = func() ([]byte, int) {
-			return getIntBytes(uint64(val.(uint16)))
+			return intToBytes(uint64(val.(uint16)))
 		}
 	case reflect.Uint32:
-		t = UInt32
+		t = UInt
 		call = func() ([]byte, int) {
-			return getIntBytes(uint64(val.(uint32)))
+			return intToBytes(uint64(val.(uint32)))
 		}
 	case reflect.Uint64:
-		t = UInt64
+		t = UInt
 		call = func() ([]byte, int) {
-			return getIntBytes(val.(uint64))
+			return intToBytes(val.(uint64))
 		}
 	case reflect.Float32:
 		t = Float
 		call = func() ([]byte, int) {
-			return getIntBytes(uint64(math.Float32bits(val.(float32))))
+			return intToBytes(uint64(math.Float32bits(val.(float32))))
 		}
 	case reflect.Float64:
-		t = Double
+		t = Float
 		call = func() ([]byte, int) {
-			return getIntBytes(math.Float64bits(val.(float64)))
+			return intToBytes(math.Float64bits(val.(float64)))
 		}
 	case reflect.String:
-		t = String
+		t = Bytes
 		call = func() ([]byte, int) {
-			value := []byte(val.(string))
-			valLen := len(value)
-			lenByte, lenLen := getIntBytes(uint64(valLen))
-			var temp = make([]byte, valLen+lenLen)
-			copy(temp, lenByte)
-			copy(temp[lenLen:], value)
-			return temp, lenLen
+			valB := []byte(val.(string))
+			valL := len(valB)
+			lenB, lenL := intToBytes(uint64(valL))
+			var temp = make([]byte, valL+lenL)
+			copy(temp, valB)
+			copy(temp[valL:], lenB)
+			return temp, lenL
 		}
 	case reflect.Slice:
 		t = Array
-		call = func() ([]byte, int) {
-			temp := []byte{}
-			v := reflect.ValueOf(val)
-			le := v.Len()
-			for i := 0; i < le; i++ {
-				temp = append(temp, toBytes(nil, &i, v.Index(i).Interface())...)
+		v := reflect.ValueOf(val)
+		le := v.Len()
+		if 0 < le && reflect.Int8 == v.Index(0).Kind() {
+			call = func() ([]byte, int) {
+				valB := v.Interface().([]byte)
+				valL := len(valB)
+				lenB, lenL := intToBytes(uint64(valL))
+				var temp = make([]byte, valL+lenL)
+				copy(temp, valB)
+				copy(temp[valL:], lenB)
+				return temp, lenL
 			}
-			return temp, le
+		} else {
+			call = func() ([]byte, int) {
+				temp := []byte{}
+				lenB, lenL := intToBytes(uint64(le))
+				temp = append(temp, lenB...)
+				var i uint32 = 0
+				for ; i < uint32(le); i++ {
+					temp = append(temp, toBytes(nil, &i, v.Index(int(i)).Interface())...)
+				}
+				return temp, lenL
+			}
 		}
 	case reflect.Map:
 		t = Map
@@ -185,11 +216,13 @@ func toBytes(typ *Type, id *int, val interface{}) []byte {
 			temp := []byte{}
 			v := reflect.ValueOf(val)
 			le := v.Len()
+			lenB, lenL := intToBytes(uint64(le))
+			temp = append(temp, lenB...)
 			for _, key := range v.MapKeys() {
 				temp = append(temp, toBytes(nil, nil, key.Interface())...)
 				temp = append(temp, toBytes(nil, nil, v.MapIndex(key).Interface())...)
 			}
-			return temp, le
+			return temp, lenL
 		}
 	case reflect.Struct:
 		var v = reflect.ValueOf(val)
@@ -204,44 +237,44 @@ func toBytes(typ *Type, id *int, val interface{}) []byte {
 	return joinBytes(*typ, id, call)
 }
 
-// FromBytes /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-func getType(b uint8) (Type, int, int) {
-	t := b >> 4
-	idLen := (b >> 2) >> 2
-	valLen := b & oxb
-	return Type(t), int(idLen), int(valLen)
-}
-
-func getUint64(buffer []byte, index int, l int) uint64 {
-	var ret uint64
-	for i := index + l - 1; i >= index; i-- {
-		index = index << 8
-	}
-	return ret
-}
-
-func FromBytes(buffer []byte, call func(typ *Type, id *int, data *interface{})) {
-	var i = 0
-	l := len(buffer)
-	for i < l {
-		ty, idLen, valLen := getType(buffer[i])
-		i++
-		var id int
-		if 0 < idLen {
-			id = int(getUint64(buffer, i, idLen))
-			i += idLen
-		}
-		var data interface{}
-		switch ty {
-		case Bool:
-			data = 1 == getUint64(buffer, i, valLen)
-		case Int8:
-			data = int8(getUint64(buffer, i, valLen))
-		case Int16:
-			data = int16(getUint64(buffer, i, valLen))
-		}
-		call(&ty, &id, &data)
-	}
-
-}
+//// FromBytes /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//func getType(b uint8) (Type, int, int) {
+//	t := b >> 4
+//	idLen := (b >> 2) >> 2
+//	valLen := b
+//	return Type(t), int(idLen), int(valLen)
+//}
+//
+//func getUint64(buffer []byte, index int, l int) uint64 {
+//	var ret uint64
+//	for i := index + l - 1; i >= index; i-- {
+//		index = index << 8
+//	}
+//	return ret
+//}
+//
+//func FromBytes(buffer []byte, call func(typ *Type, id *int, data *interface{})) {
+//	var i = 0
+//	l := len(buffer)
+//	for i < l {
+//		ty, idLen, valLen := getType(buffer[i])
+//		i++
+//		var id int
+//		if 0 < idLen {
+//			id = int(getUint64(buffer, i, idLen))
+//			i += idLen
+//		}
+//		var data interface{}
+//		switch ty {
+//		case Bool:
+//			data = 1 == getUint64(buffer, i, valLen)
+//		case Int8:
+//			data = int8(getUint64(buffer, i, valLen))
+//		case Int16:
+//			data = int16(getUint64(buffer, i, valLen))
+//		}
+//		call(&ty, &id, &data)
+//	}
+//
+//}

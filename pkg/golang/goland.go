@@ -6,6 +6,10 @@ import (
 	"io"
 )
 
+func Init() {
+
+}
+
 func Node(dst io.Writer, node interface{}) error {
 	// Determine if we have a complete source file (file != nil).
 	var file *ast.File

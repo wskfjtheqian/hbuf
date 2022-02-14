@@ -24,9 +24,13 @@ func main() {
 		return
 	}
 	if !build.CheckType(*typ) {
-		fmt.Println(fmt.Errorf("Type error : %s\n", *typ))
+		fmt.Println(fmt.Errorf("Type error : %s", *typ))
 		return
 	}
 
-	build.Build(out, in, typ)
+	err := build.Build(*out, *in, *typ)
+	if err != nil {
+		fmt.Println(fmt.Errorf("Build error: %s", err))
+		return
+	}
 }

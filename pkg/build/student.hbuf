@@ -1,0 +1,7 @@
+package "parser"
+
+import "./people.hbuf"
+
+data Student : People{
+  int no = 1  //编号
+}

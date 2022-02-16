@@ -1,0 +1,5 @@
+package "parser"
+
+data People{
+  string name = 1  //姓名
+}

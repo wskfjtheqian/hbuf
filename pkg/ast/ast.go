@@ -409,11 +409,16 @@ func (f *File) End() token.Pos {
 }
 
 type Package struct {
-	Name    string             // package name
 	Scope   *Scope             // package scope across all files
 	Imports map[string]*Object // map of package id -> package object
 	Files   map[string]*File   // Go source files by filename
 }
 
+func NewPackage() *Package {
+	return &Package{
+		Files:   map[string]*File{},
+		Imports: map[string]*Object{},
+	}
+}
 func (p *Package) Pos() token.Pos { return token.NoPos }
 func (p *Package) End() token.Pos { return token.NoPos }

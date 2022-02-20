@@ -1,12 +1,10 @@
 package build
 
 import (
+	"hbuf/pkg/ast"
 	"hbuf/pkg/dart"
 	"hbuf/pkg/parser"
-	"hbuf/pkg/scanner"
 	"hbuf/pkg/token"
-	"io/fs"
-	"io/ioutil"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -23,6 +21,32 @@ func CheckType(typ string) bool {
 	return ok
 }
 
+const (
+	Int8   string = "int8"
+	Int16  string = "int16"
+	Int32  string = "int32"
+	Int64  string = "int64"
+	Uint8  string = "uint8"
+	Uint16 string = "uint16"
+	Uint32 string = "uint32"
+	Uint64 string = "uint64"
+	Bool   string = "bool"
+	Float  string = "float"
+	Double string = "double"
+	String string = "string"
+	Data   string = "data"
+	Server string = "server"
+	Enum   string = "enum"
+)
+
+var _types = []string{
+	Int8, Int16, Int32, Int64, Uint8, Uint16, Uint32, Uint64, Bool, Float, Double, String,
+}
+
+var _keys = []string{
+	Int8, Int16, Int32, Int64, Uint8, Uint16, Uint32, Uint64, Bool, Float, Double, String, Data, Server, Enum,
+}
+
 func Build(out string, in string, typ string) error {
 	in = filepath.Clean(in)
 	path := filepath.Dir(in)
@@ -33,65 +57,11 @@ func Build(out string, in string, typ string) error {
 	}
 
 	fset := token.NewFileSet() // positions are relative to fset
-	err = buildDir(fset, path, reg)
+	pkg := ast.NewPackage()    // positions are relative to fset
+	err = parser.ParseDir(fset, pkg, path, reg)
 	if err != nil {
 		return err
 	}
 
-	return nil
-}
-
-func buildDir(fset *token.FileSet, path string, reg *regexp.Regexp) error {
-	dir, err := ioutil.ReadDir(path)
-	if err != nil {
-		return err
-	}
-	for _, item := range dir {
-		if item.IsDir() {
-			err := buildDir(nil, filepath.Join(path, item.Name()), reg)
-			if err != nil {
-				return err
-			}
-		}
-		if !reg.MatchString(item.Name()) {
-			continue
-		}
-		err := parseFile(fset, path, item.Name())
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func parseFile(fset *token.FileSet, path string, name string) error {
-	file := filepath.Join(path, name)
-	if nil != fset.GetFileByName(file) {
-		return nil
-	}
-	f, err := parser.ParseFile(fset, file, nil, parser.AllErrors|parser.ParseComments)
-	if err != nil {
-		return err
-	}
-	for _, spec := range f.Imports {
-		imp := spec.Path.Value
-		imp = imp[1 : len(imp)-1]
-		if !("/" == imp || 0 != len(filepath.VolumeName(imp))) {
-			imp = filepath.Join(path, imp)
-		}
-		path := filepath.Dir(imp)
-		name := imp[len(path)+1:]
-		err := parseFile(fset, path, name)
-		if err != nil {
-			switch err.(type) {
-			case *fs.PathError:
-				return scanner.Error{
-					Pos: fset.Position(spec.Pos()),
-					Msg: "Not import: " + spec.Path.Value,
-				}
-			}
-			return err
-		}
-	}
 	return nil
 }

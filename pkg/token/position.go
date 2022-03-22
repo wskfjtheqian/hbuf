@@ -248,17 +248,6 @@ func NewFileSet() *FileSet {
 	}
 }
 
-func (s *FileSet) GetFileByName(name string) *File {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
-	for _, file := range s.files {
-		if file.Name() == name {
-			return file
-		}
-	}
-	return nil
-}
-
 func (s *FileSet) Base() int {
 	s.mutex.RLock()
 	b := s.base

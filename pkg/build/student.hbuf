@@ -2,6 +2,12 @@ package "parser"
 
 import "./people.hbuf"
 
+enum Gender{
+  Girl   //女
+  Boy    //男
+}
+
+
 data Student : People{
   int no = 1  //编号
 }

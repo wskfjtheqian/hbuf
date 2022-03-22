@@ -111,15 +111,24 @@ func ParseDir(fset *token.FileSet, pkg *ast.Package, path string, reg *regexp.Re
 }
 
 func parseDirFile(fset *token.FileSet, pkg *ast.Package, path string, name string) error {
-	file := filepath.Join(path, name)
-	if nil != fset.GetFileByName(file) {
+	filePath := filepath.Join(path, name)
+	var temp = false
+	fset.Iterate(func(file *token.File) bool {
+		if file.Name() == filePath {
+			temp = true
+			return false
+		}
+		return true
+	})
+	if temp {
 		return nil
 	}
-	f, err := ParseFile(fset, file, nil, AllErrors|ParseComments)
+
+	f, err := ParseFile(fset, filePath, nil, AllErrors|ParseComments)
 	if err != nil {
 		return err
 	}
-	pkg.Files[file] = f
+	pkg.Files[filePath] = f
 	for _, spec := range f.Imports {
 		imp := spec.Path.Value
 		imp = imp[1 : len(imp)-1]

@@ -4,6 +4,7 @@ import (
 	"hbuf/pkg/ast"
 	"hbuf/pkg/dart"
 	"hbuf/pkg/parser"
+	"hbuf/pkg/scanner"
 	"hbuf/pkg/token"
 	"path/filepath"
 	"regexp"
@@ -21,32 +22,6 @@ func CheckType(typ string) bool {
 	return ok
 }
 
-const (
-	Int8   string = "int8"
-	Int16  string = "int16"
-	Int32  string = "int32"
-	Int64  string = "int64"
-	Uint8  string = "uint8"
-	Uint16 string = "uint16"
-	Uint32 string = "uint32"
-	Uint64 string = "uint64"
-	Bool   string = "bool"
-	Float  string = "float"
-	Double string = "double"
-	String string = "string"
-	Data   string = "data"
-	Server string = "server"
-	Enum   string = "enum"
-)
-
-var _types = []string{
-	Int8, Int16, Int32, Int64, Uint8, Uint16, Uint32, Uint64, Bool, Float, Double, String,
-}
-
-var _keys = []string{
-	Int8, Int16, Int32, Int64, Uint8, Uint16, Uint32, Uint64, Bool, Float, Double, String, Data, Server, Enum,
-}
-
 func Build(out string, in string, typ string) error {
 	in = filepath.Clean(in)
 	path := filepath.Dir(in)
@@ -62,6 +37,52 @@ func Build(out string, in string, typ string) error {
 	if err != nil {
 		return err
 	}
+	pkg.Scope = ast.NewScope(nil)
+	err = checkCode(fset, pkg)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
+func checkCode(fset *token.FileSet, pkg *ast.Package) error {
+	for _, file := range pkg.Files {
+		err := checkFile(fset, pkg, file)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func checkFile(fset *token.FileSet, pkg *ast.Package, file *ast.File) error {
+	for _, s := range file.Specs {
+		switch s.(type) {
+		case *ast.TypeSpec:
+			err := checkEnum(fset, pkg, (s.(*ast.TypeSpec)).Type)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func checkEnum(fset *token.FileSet, pkg *ast.Package, expr ast.Expr) error {
+	switch expr.(type) {
+	case *ast.EnumType:
+		enum := expr.(*ast.EnumType)
+		name := enum.Name.Name
+		if obj := pkg.Scope.Lookup(name); nil != obj {
+			return scanner.Error{
+				Pos: fset.Position(enum.Name.Pos()),
+				Msg: "Duplicate type: " + name,
+			}
+		}
+
+		obj := ast.NewObj(ast.Enum, name)
+		obj.Decl = enum
+		pkg.Scope.Insert(obj)
+	}
 	return nil
 }

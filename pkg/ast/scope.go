@@ -102,18 +102,6 @@ const (
 	Method // function or method
 	Var
 	Enum
-	Int8
-	Int16
-	Int32
-	Int64
-	Uint8
-	Uint16
-	Uint32
-	Uint64
-	Bool
-	Float
-	Double
-	String
 )
 
 var objKindStrings = [...]string{
@@ -123,19 +111,6 @@ var objKindStrings = [...]string{
 	Server: "server",
 	Method: "method",
 	Var:    "var",
-	Enum:   "enum",
-	Int8:   "int8",
-	Int16:  "int16",
-	Int32:  "int32",
-	Int64:  "int64",
-	Uint8:  "uint8",
-	Uint16: "uint16",
-	Uint32: "uint32",
-	Uint64: "uint64",
-	Bool:   "bool",
-	Float:  "float",
-	Double: "double",
-	String: "string",
 }
 
 func (kind ObjKind) String() string { return objKindStrings[kind] }

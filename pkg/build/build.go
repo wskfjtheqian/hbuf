@@ -12,6 +12,35 @@ import (
 )
 import "hbuf/pkg/golang"
 
+const (
+	Int8   string = "int8"
+	Int16  string = "int16"
+	Int32  string = "int32"
+	Int64  string = "int64"
+	Uint8  string = "uint8"
+	Uint16 string = "uint16"
+	Uint32 string = "uint32"
+	Uint64 string = "uint64"
+	Bool   string = "bool"
+	Float  string = "float"
+	Double string = "double"
+	String string = "string"
+	Data   string = "data"
+	Server string = "server"
+	Enum   string = "enum"
+)
+
+type void struct {
+}
+
+var _types = map[string]void{
+	Int8: {}, Int16: {}, Int32: {}, Int64: {}, Uint8: {}, Uint16: {}, Uint32: {}, Uint64: {}, Bool: {}, Float: {}, Double: {}, String: {},
+}
+
+var _keys = map[string]void{
+	Int8: {}, Int16: {}, Int32: {}, Int64: {}, Uint8: {}, Uint16: {}, Uint32: {}, Uint64: {}, Bool: {}, Float: {}, Double: {}, String: {}, Data: {}, Server: {}, Enum: {},
+}
+
 var buildInits = map[string]func(){
 	"dart": dart.Init,
 	"go":   golang.Init,
@@ -38,16 +67,16 @@ func Build(out string, in string, typ string) error {
 		return err
 	}
 	pkg.Scope = ast.NewScope(nil)
-	err = checkCode(fset, pkg)
+	err = registerType(fset, pkg)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func checkCode(fset *token.FileSet, pkg *ast.Package) error {
-	for _, file := range pkg.Files {
-		err := checkFile(fset, pkg, file)
+func registerType(fset *token.FileSet, pkg *ast.Package) error {
+	for path, file := range pkg.Files {
+		err := registerFile(fset, filepath.Dir(path), file, pkg)
 		if err != nil {
 			return err
 		}
@@ -55,11 +84,20 @@ func checkCode(fset *token.FileSet, pkg *ast.Package) error {
 	return nil
 }
 
-func checkFile(fset *token.FileSet, pkg *ast.Package, file *ast.File) error {
+func registerFile(fset *token.FileSet, path string, file *ast.File, pkg *ast.Package) error {
+	if nil != file.Imports {
+		for _, i := range file.Imports {
+			temp := filepath.Join(path, i.Path.Value[1:len(i.Path.Value)-1])
+			err := registerFile(fset, filepath.Dir(temp), pkg.Files[temp], pkg)
+			if err != nil {
+				return err
+			}
+		}
+	}
 	for _, s := range file.Specs {
 		switch s.(type) {
 		case *ast.TypeSpec:
-			err := checkEnum(fset, pkg, (s.(*ast.TypeSpec)).Type)
+			err := registerEnum(fset, file, (s.(*ast.TypeSpec)).Type)
 			if err != nil {
 				return err
 			}
@@ -68,12 +106,18 @@ func checkFile(fset *token.FileSet, pkg *ast.Package, file *ast.File) error {
 	return nil
 }
 
-func checkEnum(fset *token.FileSet, pkg *ast.Package, expr ast.Expr) error {
+func registerEnum(fset *token.FileSet, file *ast.File, expr ast.Expr) error {
 	switch expr.(type) {
 	case *ast.EnumType:
 		enum := expr.(*ast.EnumType)
 		name := enum.Name.Name
-		if obj := pkg.Scope.Lookup(name); nil != obj {
+		if _, ok := _keys[name]; ok {
+			return scanner.Error{
+				Pos: fset.Position(enum.Name.Pos()),
+				Msg: "Invalid name: " + name,
+			}
+		}
+		if obj := file.Scope.Lookup(name); nil != obj {
 			return scanner.Error{
 				Pos: fset.Position(enum.Name.Pos()),
 				Msg: "Duplicate type: " + name,
@@ -82,7 +126,7 @@ func checkEnum(fset *token.FileSet, pkg *ast.Package, expr ast.Expr) error {
 
 		obj := ast.NewObj(ast.Enum, name)
 		obj.Decl = enum
-		pkg.Scope.Insert(obj)
+		file.Scope.Insert(obj)
 	}
 	return nil
 }

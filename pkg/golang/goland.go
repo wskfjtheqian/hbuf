@@ -4,16 +4,23 @@ import (
 	"go/printer"
 	"hbuf/pkg/ast"
 	"io"
+	"os"
 )
 
-func Init() {
-
+func Build(file *ast.File, out string) error {
+	fc, err := os.Create(out + ".dart")
+	if err != nil {
+		return err
+	}
+	err = Node(fc, file)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func Node(dst io.Writer, node interface{}) error {
-	// Determine if we have a complete source file (file != nil).
 	var file *ast.File
-	//var cnode *printer.CommentedNode
 	switch n := node.(type) {
 	case *ast.File:
 		file = n

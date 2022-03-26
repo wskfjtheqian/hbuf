@@ -3,10 +3,9 @@ package "parser"
 import "./people.hbuf"
 
 enum Gender{
-  Girl   //女
-  Boy    //男
+  Girl = 1  //女
+  Boy  = 2  //男
 }
-
 
 data Student : People{
   int no = 1  //编号

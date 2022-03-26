@@ -20,7 +20,6 @@ func main() {
 	}
 	if nil == typ || 0 == len(*typ) {
 		fmt.Println(fmt.Errorf("Not find type"))
-
 		return
 	}
 	if !build.CheckType(*typ) {

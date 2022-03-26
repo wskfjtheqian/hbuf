@@ -4,10 +4,25 @@ import (
 	"go/printer"
 	"hbuf/pkg/ast"
 	"io"
+	"os"
 )
 
-func Init() {
-
+func Build(file *ast.File, out string) error {
+	fc, err := os.Create(out + ".dart")
+	if err != nil {
+		return err
+	}
+	defer func(fc *os.File) {
+		err := fc.Close()
+		if err != nil {
+			print(err)
+		}
+	}(fc)
+	err = Node(fc, file)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func Node(dst io.Writer, node interface{}) error {
@@ -39,11 +54,11 @@ func Node(dst io.Writer, node interface{}) error {
 
 func printTypeSpec(dst io.Writer, expr ast.Expr) {
 	switch expr.(type) {
-	case *ast.DataType:
-		printData(dst, expr.(*ast.DataType))
-		printDataEntity(dst, expr.(*ast.DataType))
-	case *ast.ServerType:
-		printServer(dst, expr.(*ast.ServerType))
+	//case *ast.DataType:
+	//	printData(dst, expr.(*ast.DataType))
+	//	printDataEntity(dst, expr.(*ast.DataType))
+	//case *ast.ServerType:
+	//	printServer(dst, expr.(*ast.ServerType))
 	case *ast.EnumType:
 		printEnum(dst, expr.(*ast.EnumType))
 
@@ -51,12 +66,52 @@ func printTypeSpec(dst io.Writer, expr ast.Expr) {
 }
 
 func printEnum(dst io.Writer, typ *ast.EnumType) {
-	dst.Write([]byte("enum " + typ.Name.Name))
-	dst.Write([]byte("{\n"))
+	_, _ = dst.Write([]byte("class " + typ.Name.Name))
+	_, _ = dst.Write([]byte("{\n"))
+	_, _ = dst.Write([]byte("  final int value;\n"))
+	_, _ = dst.Write([]byte("  final String name;\n\n"))
+
+	_, _ = dst.Write([]byte("  const " + typ.Name.Name + "._(this.value, this.name);\n\n"))
+
+	_, _ = dst.Write([]byte("  @override\n"))
+	_, _ = dst.Write([]byte("  bool operator ==(Object other) =>\n"))
+	_, _ = dst.Write([]byte("      identical(this, other) ||\n"))
+	_, _ = dst.Write([]byte("      other is Gender &&\n"))
+	_, _ = dst.Write([]byte("          runtimeType == other.runtimeType &&\n"))
+	_, _ = dst.Write([]byte("          value == other.value;\n\n"))
+
+	_, _ = dst.Write([]byte("  @override\n"))
+	_, _ = dst.Write([]byte("  int get hashCode => value.hashCode;\n\n"))
+
+	_, _ = dst.Write([]byte("  static Gender valueOf(int value) {\n"))
+	_, _ = dst.Write([]byte("  	for (var item in values) {\n"))
+	_, _ = dst.Write([]byte("  		if (item.value == value) {\n"))
+	_, _ = dst.Write([]byte("  			return item;\n"))
+	_, _ = dst.Write([]byte("  		}\n"))
+	_, _ = dst.Write([]byte("  	}\n"))
+	_, _ = dst.Write([]byte("  	throw 'Get Gender by value error, value=$value';\n"))
+	_, _ = dst.Write([]byte("  }\n\n"))
+
+	_, _ = dst.Write([]byte("  static Gender nameOf(String name) {\n"))
+	_, _ = dst.Write([]byte("  	for (var item in values) {\n"))
+	_, _ = dst.Write([]byte("  		if (item.name == name) {\n"))
+	_, _ = dst.Write([]byte("  			return item;\n"))
+	_, _ = dst.Write([]byte("  		}\n"))
+	_, _ = dst.Write([]byte("  	}\n"))
+	_, _ = dst.Write([]byte("  	throw 'Get Gender by name error, name=$name';\n"))
+	_, _ = dst.Write([]byte("  }\n\n"))
+
 	for _, item := range typ.Items {
-		dst.Write([]byte("    " + item.Name + "\n"))
+		_, _ = dst.Write([]byte("  static const " + item.Name.Name + " = Gender._(" + item.Id.Value + ", '" + item.Name.Name + "');\n"))
 	}
-	dst.Write([]byte("}\n\n"))
+	_, _ = dst.Write([]byte("\n"))
+	_, _ = dst.Write([]byte("  static const List<Gender> values = [\n"))
+	for _, item := range typ.Items {
+		_, _ = dst.Write([]byte("    " + item.Name.Name + ",\n"))
+	}
+	_, _ = dst.Write([]byte("  ];\n\n"))
+
+	_, _ = dst.Write([]byte("}\n\n"))
 }
 
 func printServer(dst io.Writer, typ *ast.ServerType) {

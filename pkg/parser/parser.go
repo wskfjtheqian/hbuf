@@ -775,12 +775,10 @@ func (p *parser) parseEnumSpec(doc *ast.CommentGroup) ast.Spec {
 	name := p.parseIdent()
 
 	lbrace := p.expect(token.LBRACE)
-	var list []*ast.Ident
-	for p.tok == token.IDENT {
-		list = append(list, p.parseIdent())
-		if p.tok == token.SEMICOLON {
-			p.next()
-		}
+	scope := ast.NewScope(nil) // struct scope
+	var list []*ast.EnumItem
+	for p.tok != token.RBRACE {
+		list = append(list, p.parseEnumItem(scope))
 	}
 	rbrace := p.expect(token.RBRACE)
 
@@ -799,6 +797,28 @@ func (p *parser) parseEnumSpec(doc *ast.CommentGroup) ast.Spec {
 	p.expectSemi()
 	spec.Comment = p.lineComment
 	return spec
+}
+func (p *parser) parseEnumItem(scope *ast.Scope) *ast.EnumItem {
+	if p.trace {
+		defer un(trace(p, "FieldDecl"))
+	}
+
+	doc := p.leadComment
+	if p.tok != token.IDENT {
+		p.errorExpected(p.pos, "not find Name")
+	}
+	name := p.parseIdent()
+
+	var id *ast.BasicLit
+	p.next()
+	if p.tok != token.INT {
+		p.errorExpected(p.pos, "not find int")
+	}
+	id = &ast.BasicLit{ValuePos: p.pos, Kind: p.tok, Value: p.lit}
+	p.next()
+
+	p.expectSemi() // call before accessing p.linecomment
+	return &ast.EnumItem{Doc: doc, Name: name, Id: id, Comment: p.lineComment}
 }
 
 func (p *parser) parseServerSpec(doc *ast.CommentGroup) ast.Spec {

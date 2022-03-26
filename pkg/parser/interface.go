@@ -134,6 +134,7 @@ func parseDirFile(fset *token.FileSet, pkg *ast.Package, path string, name strin
 		imp = imp[1 : len(imp)-1]
 		if !("/" == imp || 0 != len(filepath.VolumeName(imp))) {
 			imp = filepath.Join(path, imp)
+			spec.Path.Value = imp
 		}
 		path := filepath.Dir(imp)
 		name := imp[len(path)+1:]

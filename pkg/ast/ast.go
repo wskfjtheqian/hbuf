@@ -267,9 +267,15 @@ type (
 	EnumType struct {
 		Enum    token.Pos
 		Name    *Ident
-		Items   []*Ident
+		Items   []*EnumItem
 		Opening token.Pos
 		Closing token.Pos
+	}
+	EnumItem struct {
+		Doc     *CommentGroup // associated documentation; or nil
+		Name    *Ident        // field/method/parameter names; or nil
+		Id      *BasicLit     // field tag; or nil
+		Comment *CommentGroup // line comments; or nil
 	}
 )
 
@@ -294,6 +300,7 @@ func (x *FuncType) Pos() token.Pos {
 func (x *ServerType) Pos() token.Pos { return x.Interface }
 func (x *MapType) Pos() token.Pos    { return x.Map }
 func (x *EnumType) Pos() token.Pos   { return x.Enum }
+func (x *EnumItem) Pos() token.Pos   { return x.Name.Pos() }
 
 func (x *BadExpr) End() token.Pos      { return x.To }
 func (x *Ident) End() token.Pos        { return token.Pos(int(x.NamePos) + len(x.Name)) }
@@ -306,6 +313,7 @@ func (x *FuncType) End() token.Pos     { return x.Params.End() }
 func (x *ServerType) End() token.Pos   { return x.Methods.End() }
 func (x *MapType) End() token.Pos      { return x.Value.End() }
 func (x *EnumType) End() token.Pos     { return x.Items[len(x.Items)-1].End() }
+func (x *EnumItem) End() token.Pos     { return x.Comment.End() }
 
 func (*BadExpr) exprNode()      {}
 func (*Ident) exprNode()        {}
@@ -318,6 +326,7 @@ func (*FuncType) exprNode()     {}
 func (*ServerType) exprNode()   {}
 func (*MapType) exprNode()      {}
 func (*EnumType) exprNode()     {}
+func (*EnumItem) exprNode()     {}
 
 func (id *Ident) IsExported() bool { return token.IsExported(id.Name) }
 func (id *Ident) String() string {

@@ -152,17 +152,17 @@ func printServer(dst io.Writer, typ *ast.ServerType) {
 }
 
 func printData(dst io.Writer, typ *ast.DataType) {
-	dst.Write([]byte("class " + typ.Name.Name + " implements "))
+	_, _ = dst.Write([]byte("abstract class " + typ.Name.Name + " implements "))
 	if nil != typ.Extends {
 		printExtend(dst, typ.Extends)
 	}
-	dst.Write([]byte("Data {\n\n"))
+	_, _ = dst.Write([]byte("Data {\n\n"))
 	for _, field := range typ.Fields.List {
 		if nil != field.Comment {
-			dst.Write([]byte("    /// " + field.Comment.Text()))
+			_, _ = dst.Write([]byte("    /// " + field.Comment.Text()))
 		}
 
-		dst.Write([]byte("    "))
+		_, _ = dst.Write([]byte("    "))
 		printType(dst, field.Type)
 		dst.Write([]byte("? " + field.Name.Name))
 		dst.Write([]byte(";\n\n"))

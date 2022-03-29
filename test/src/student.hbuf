@@ -8,5 +8,5 @@ enum Gender{
 }
 
 data Student : People{
-  int no = 1  //编号
+  int8 no = 1  //编号
 }

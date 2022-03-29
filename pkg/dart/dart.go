@@ -3,9 +3,16 @@ package dart
 import (
 	"go/printer"
 	"hbuf/pkg/ast"
+	"hbuf/pkg/build"
 	"io"
 	"os"
 )
+
+var _types = map[string]string{
+	build.Int8: "int", build.Int16: "int", build.Int32: "int", build.Int64: "int", build.Uint8: "int",
+	build.Uint16: "int", build.Uint32: "int", build.Uint64: "int", build.Bool: "bool", build.Float: "double",
+	build.Double: "double", build.String: "String",
+}
 
 func Build(file *ast.File, out string) error {
 	fc, err := os.Create(out + ".dart")
@@ -54,14 +61,13 @@ func Node(dst io.Writer, node interface{}) error {
 
 func printTypeSpec(dst io.Writer, expr ast.Expr) {
 	switch expr.(type) {
-	//case *ast.DataType:
-	//	printData(dst, expr.(*ast.DataType))
-	//	printDataEntity(dst, expr.(*ast.DataType))
-	//case *ast.ServerType:
-	//	printServer(dst, expr.(*ast.ServerType))
+	case *ast.DataType:
+		printData(dst, expr.(*ast.DataType))
+		printDataEntity(dst, expr.(*ast.DataType))
+	case *ast.ServerType:
+		printServer(dst, expr.(*ast.ServerType))
 	case *ast.EnumType:
 		printEnum(dst, expr.(*ast.EnumType))
-
 	}
 }
 
@@ -146,7 +152,7 @@ func printServer(dst io.Writer, typ *ast.ServerType) {
 }
 
 func printData(dst io.Writer, typ *ast.DataType) {
-	dst.Write([]byte("abstract class " + typ.Name.Name + " implements "))
+	dst.Write([]byte("class " + typ.Name.Name + " implements "))
 	if nil != typ.Extends {
 		printExtend(dst, typ.Extends)
 	}
@@ -161,8 +167,7 @@ func printData(dst io.Writer, typ *ast.DataType) {
 		dst.Write([]byte("? " + field.Name.Name))
 		dst.Write([]byte(";\n\n"))
 	}
-
-	dst.Write([]byte("    static " + typ.Name.Name + " create({"))
+	dst.Write([]byte("    factory " + typ.Name.Name + "({"))
 	for _, field := range typ.Fields.List {
 		printType(dst, field.Type)
 		dst.Write([]byte("? " + field.Name.Name))
@@ -231,7 +236,13 @@ func printExtend(dst io.Writer, extends []*ast.Ident) {
 func printType(dst io.Writer, expr ast.Expr) {
 	switch expr.(type) {
 	case *ast.Ident:
-		dst.Write([]byte((expr.(*ast.Ident)).Name))
+		t := expr.(*ast.Ident)
+		if nil != t.Obj {
+			_, _ = dst.Write([]byte((expr.(*ast.Ident)).Name))
+		} else {
+			_, _ = dst.Write([]byte(_types[(expr.(*ast.Ident)).Name]))
+		}
+
 	case *ast.ArrayType:
 		dst.Write([]byte("List<" + ((expr.(*ast.ArrayType)).Elt.(*ast.Ident)).Name + "?>"))
 	case *ast.MapType:

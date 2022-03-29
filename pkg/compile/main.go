@@ -4,9 +4,12 @@ import (
 	"flag"
 	"fmt"
 	"hbuf/pkg/build"
+	"hbuf/pkg/dart"
 )
 
 func main() {
+	build.AddBuildType("dart", dart.Build)
+
 	var out = flag.String("o", "", "out dir")
 	var in = flag.String("i", "", "input dir")
 	var typ = flag.String("t", "", "out type")

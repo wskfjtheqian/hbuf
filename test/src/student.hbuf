@@ -7,9 +7,9 @@ enum Gender{
   Boy  = 2  //男
 }
 
-data Student : People{
+data _Student_Data : People{
   int8 no = 1  //编号
   Gender gender = 2
   int8[] ll = 3
-  string<int8> bb= 4
+  string<int8> book_tags= 4
 }

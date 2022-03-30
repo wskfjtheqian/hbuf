@@ -3,6 +3,6 @@ package "parser"
 //人
 data People{
   string name = 1  //姓名
-  uint16 age = 2   //年龄
+  uint16? age = 2   //年龄
 }
 

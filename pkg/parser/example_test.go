@@ -19,7 +19,7 @@ func ExampleParseFile() {
 		"//引用11.go \n" +
 		"import \"/home/yttx_heqian/develop/go/hbuf/pkg/parser/11.go\" \n" +
 		"data NAME : Na,Nb { \n" +
-		"  String Name = 16 `json\"name\"` //姓名\n" +
+		"  String? Name = 16 `json\"name\"` //姓名\n" +
 		"  String[] Info = 0 \n" +
 		"  String<int> other = 0 \n" +
 		"} \n" +

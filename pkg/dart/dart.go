@@ -6,6 +6,8 @@ import (
 	"hbuf/pkg/build"
 	"io"
 	"os"
+	"path/filepath"
+	"strings"
 )
 
 var _types = map[string]string{
@@ -44,11 +46,12 @@ func Node(dst io.Writer, node interface{}) error {
 		}
 	}
 
-	//dst.Write([]byte("package " + file.Package.Path.Value + "\n\n"))
-	//for _, s := range file.Imports {
-	//	printImport(dst, s)
-	//}
-	dst.Write([]byte("\n"))
+	_, _ = dst.Write([]byte("import 'package:hbuf_dart/hbuf_dart.dart';\n"))
+
+	for _, s := range file.Imports {
+		printImport(dst, s)
+	}
+	_, _ = dst.Write([]byte("\n"))
 	for _, s := range file.Specs {
 		switch s.(type) {
 		case *ast.ImportSpec:
@@ -57,6 +60,11 @@ func Node(dst io.Writer, node interface{}) error {
 		}
 	}
 	return nil
+}
+
+func printImport(dst io.Writer, spec *ast.ImportSpec) {
+	_, file := filepath.Split(spec.Path.Value)
+	dst.Write([]byte("import \"" + file + ".dart\";\n"))
 }
 
 func printTypeSpec(dst io.Writer, expr ast.Expr) {
@@ -152,62 +160,64 @@ func printServer(dst io.Writer, typ *ast.ServerType) {
 }
 
 func printData(dst io.Writer, typ *ast.DataType) {
-	_, _ = dst.Write([]byte("abstract class " + typ.Name.Name + " implements "))
+	_, _ = dst.Write([]byte("abstract class " + toClassName(typ.Name.Name) + " implements "))
 	if nil != typ.Extends {
 		printExtend(dst, typ.Extends)
 	}
-	_, _ = dst.Write([]byte("Data {\n\n"))
+	_, _ = dst.Write([]byte("Data {\n"))
 	for _, field := range typ.Fields.List {
 		if nil != field.Comment {
-			_, _ = dst.Write([]byte("    /// " + field.Comment.Text()))
+			_, _ = dst.Write([]byte("  /// " + field.Comment.Text()))
 		}
 
-		_, _ = dst.Write([]byte("    "))
+		_, _ = dst.Write([]byte("  "))
 		printType(dst, field.Type)
-		_, _ = dst.Write([]byte("? " + field.Name.Name))
+		_, _ = dst.Write([]byte("? " + toFieldName(field.Name.Name)))
 		_, _ = dst.Write([]byte(";\n\n"))
 	}
-	_, _ = dst.Write([]byte("    factory " + typ.Name.Name + "({"))
+	_, _ = dst.Write([]byte("  factory " + toClassName(typ.Name.Name) + "({\n"))
 	err := build.EnumField(typ, func(field *ast.Field) error {
+		_, _ = dst.Write([]byte("    "))
 		printType(dst, field.Type)
-		_, _ = dst.Write([]byte("? " + field.Name.Name))
-		_, _ = dst.Write([]byte(", "))
+		_, _ = dst.Write([]byte("? " + toFieldName(field.Name.Name)))
+		_, _ = dst.Write([]byte(",\n"))
 		return nil
 	})
 	if err != nil {
 		return
 	}
-	_, _ = dst.Write([]byte("}){\n"))
-	_, _ = dst.Write([]byte("        return _" + typ.Name.Name + "("))
+	_, _ = dst.Write([]byte("  }){\n"))
+	_, _ = dst.Write([]byte("    return _" + toClassName(typ.Name.Name) + "(\n"))
 	err = build.EnumField(typ, func(field *ast.Field) error {
-		_, _ = dst.Write([]byte(field.Name.Name))
+		_, _ = dst.Write([]byte("      "))
+		_, _ = dst.Write([]byte(toFieldName(field.Name.Name)))
 		_, _ = dst.Write([]byte(": "))
-		_, _ = dst.Write([]byte(field.Name.Name))
-		_, _ = dst.Write([]byte(", "))
+		_, _ = dst.Write([]byte(toFieldName(field.Name.Name)))
+		_, _ = dst.Write([]byte(",\n"))
 		return nil
 	})
 	if err != nil {
 		return
 	}
-	_, _ = dst.Write([]byte(");\n"))
-	_, _ = dst.Write([]byte("    }\n\n"))
+	_, _ = dst.Write([]byte("    );\n"))
+	_, _ = dst.Write([]byte("  }\n\n"))
 
-	_, _ = dst.Write([]byte("    static " + typ.Name.Name + " fromMap(Map<String, dynamic> map){\n"))
-	_, _ = dst.Write([]byte("        return _" + typ.Name.Name + ".fromMap(map);\n"))
-	_, _ = dst.Write([]byte("    }\n\n"))
+	_, _ = dst.Write([]byte("  static " + toClassName(typ.Name.Name) + "? fromMap(Map<String, dynamic> map){\n"))
+	_, _ = dst.Write([]byte("    return _" + toClassName(typ.Name.Name) + ".fromMap(map);\n"))
+	_, _ = dst.Write([]byte("  }\n\n"))
 
 	_, _ = dst.Write([]byte("}\n\n"))
 }
 
 func printDataEntity(dst io.Writer, typ *ast.DataType) {
-	_, _ = dst.Write([]byte("class _" + typ.Name.Name + " implements " + typ.Name.Name))
-	_, _ = dst.Write([]byte(" {\n\n"))
+	_, _ = dst.Write([]byte("class _" + toClassName(typ.Name.Name) + " implements " + toClassName(typ.Name.Name)))
+	_, _ = dst.Write([]byte(" {\n"))
 
 	err := build.EnumField(typ, func(field *ast.Field) error {
-		_, _ = dst.Write([]byte("    @override\n"))
-		_, _ = dst.Write([]byte("    "))
+		_, _ = dst.Write([]byte("  @override\n"))
+		_, _ = dst.Write([]byte("  "))
 		printType(dst, field.Type)
-		_, _ = dst.Write([]byte("? " + field.Name.Name))
+		_, _ = dst.Write([]byte("? " + toFieldName(field.Name.Name)))
 		_, _ = dst.Write([]byte(";\n\n"))
 		return nil
 	})
@@ -215,34 +225,49 @@ func printDataEntity(dst io.Writer, typ *ast.DataType) {
 		return
 	}
 
-	dst.Write([]byte("    _" + typ.Name.Name + "({"))
+	_, _ = dst.Write([]byte("  _" + toClassName(typ.Name.Name) + "({\n"))
 	err = build.EnumField(typ, func(field *ast.Field) error {
-		_, _ = dst.Write([]byte("this." + field.Name.Name))
-		_, _ = dst.Write([]byte(", "))
+		_, _ = dst.Write([]byte("    this." + toFieldName(field.Name.Name)))
+		_, _ = dst.Write([]byte(",\n"))
 		return nil
 	})
 	if err != nil {
 		return
 	}
-	dst.Write([]byte("});\n\n"))
+	_, _ = dst.Write([]byte("  });\n\n"))
 
-	dst.Write([]byte("    static _" + typ.Name.Name + " fromMap(Map<String, dynamic> map){\n"))
-	dst.Write([]byte("      return _" + typ.Name.Name + "(\n"))
+	_, _ = dst.Write([]byte("  static _" + toClassName(typ.Name.Name) + "? fromMap(Map<String, dynamic> map){\n"))
+	_, _ = dst.Write([]byte("    return _" + toClassName(typ.Name.Name) + "(\n"))
 
 	err = build.EnumField(typ, func(field *ast.Field) error {
-		dst.Write([]byte("        " + field.Name.Name))
-		dst.Write([]byte(": map[\"" + getJsonName(field) + "\"]"))
-		dst.Write([]byte(",\n"))
+		_, _ = dst.Write([]byte("      " + toFieldName(field.Name.Name)))
+		_, _ = dst.Write([]byte(": map[\"" + getJsonName(field) + "\"]"))
+		_, _ = dst.Write([]byte(",\n"))
 		return nil
 	})
 	if err != nil {
 		return
 	}
 
-	dst.Write([]byte("      );\n"))
-	dst.Write([]byte("    }\n\n"))
+	_, _ = dst.Write([]byte("    );\n"))
+	_, _ = dst.Write([]byte("  }\n"))
 
-	dst.Write([]byte("}\n\n"))
+	_, _ = dst.Write([]byte("\n"))
+	_, _ = dst.Write([]byte("  @override\n"))
+	_, _ = dst.Write([]byte("  Map<String, dynamic> toMap() {\n"))
+	_, _ = dst.Write([]byte("    return {\n"))
+	err = build.EnumField(typ, func(field *ast.Field) error {
+		_, _ = dst.Write([]byte("      \"" + getJsonName(field)))
+		_, _ = dst.Write([]byte("\": " + toFieldName(field.Name.Name) + ",\n"))
+		return nil
+	})
+	if err != nil {
+		return
+	}
+	_, _ = dst.Write([]byte("    };\n"))
+	_, _ = dst.Write([]byte("  }\n"))
+
+	_, _ = dst.Write([]byte("}\n"))
 }
 
 func getJsonName(field *ast.Field) string {
@@ -251,7 +276,7 @@ func getJsonName(field *ast.Field) string {
 
 func printExtend(dst io.Writer, extends []*ast.Ident) {
 	for _, v := range extends {
-		_, _ = dst.Write([]byte(v.Name))
+		_, _ = dst.Write([]byte(toClassName(v.Name)))
 		_, _ = dst.Write([]byte(", "))
 	}
 }
@@ -280,6 +305,27 @@ func printType(dst io.Writer, expr ast.Expr) {
 	}
 }
 
-func printImport(dst io.Writer, spec *ast.ImportSpec) {
-	dst.Write([]byte("import " + spec.Path.Value + "\n"))
+func toClassName(name string) string {
+	var ret = ""
+	for _, item := range strings.Split(name, "_") {
+		if 0 < len(item) {
+			ret += strings.ToUpper(item[0:1]) + item[1:]
+		}
+	}
+	return ret
+}
+
+func toFieldName(name string) string {
+	var ret = ""
+	for i, item := range strings.Split(name, "_") {
+		if 0 < len(item) {
+			if 0 == i {
+				ret += item
+			} else {
+				ret += strings.ToUpper(item[0:1]) + item[1:]
+			}
+
+		}
+	}
+	return ret
 }

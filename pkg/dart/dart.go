@@ -191,20 +191,57 @@ func printData(dst io.Writer, typ *ast.DataType) {
 	dst.Write([]byte("}\n\n"))
 }
 
-func printDataEntity(dst io.Writer, typ *ast.DataType) {
-	dst.Write([]byte("class _" + typ.Name.Name + " implements " + typ.Name.Name))
-	dst.Write([]byte(" {\n\n"))
+func enumField(typ *ast.DataType, call func(field *ast.Field) error) error {
+	fields := map[string]int{}
 	for _, field := range typ.Fields.List {
-		dst.Write([]byte("    @override\n"))
-		dst.Write([]byte("    "))
-		printType(dst, field.Type)
-		dst.Write([]byte("? " + field.Name.Name))
-		dst.Write([]byte(";\n\n"))
+		err := call(field)
+		if err != nil {
+			return err
+		}
+		fields[field.Name.Name] = 0
 	}
+
+	for _, extend := range typ.Extends {
+		types := extend.Obj.Decl.(*ast.TypeSpec)
+		data := types.Type.(*ast.DataType)
+		for _, field := range data.Fields.List {
+			if _, ok := fields[field.Name.Name]; ok {
+				continue
+			}
+			err := call(field)
+			if err != nil {
+				return err
+			}
+			fields[field.Name.Name] = 0
+		}
+	}
+	return nil
+}
+
+func printDataEntity(dst io.Writer, typ *ast.DataType) {
+	_, _ = dst.Write([]byte("class _" + typ.Name.Name + " implements " + typ.Name.Name))
+	_, _ = dst.Write([]byte(" {\n\n"))
+
+	err := enumField(typ, func(field *ast.Field) error {
+		_, _ = dst.Write([]byte("    @override\n"))
+		_, _ = dst.Write([]byte("    "))
+		printType(dst, field.Type)
+		_, _ = dst.Write([]byte("? " + field.Name.Name))
+		_, _ = dst.Write([]byte(";\n\n"))
+		return nil
+	})
+	if err != nil {
+		return
+	}
+
 	dst.Write([]byte("    _" + typ.Name.Name + "({"))
-	for _, field := range typ.Fields.List {
-		dst.Write([]byte("this." + field.Name.Name))
-		dst.Write([]byte(", "))
+	err = enumField(typ, func(field *ast.Field) error {
+		_, _ = dst.Write([]byte("this." + field.Name.Name))
+		_, _ = dst.Write([]byte(", "))
+		return nil
+	})
+	if err != nil {
+		return
 	}
 	dst.Write([]byte("});\n\n"))
 

@@ -9,4 +9,7 @@ enum Gender{
 
 data Student : People{
   int8 no = 1  //编号
+  Gender gender = 2
+  int8[] ll = 3
+  string<int8> bb= 4
 }

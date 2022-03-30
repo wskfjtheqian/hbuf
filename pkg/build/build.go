@@ -197,3 +197,30 @@ func (b *Builder) registerServer(file *ast.File, enum *ast.ServerType) error {
 	file.Scope.Insert(obj)
 	return nil
 }
+
+func EnumField(typ *ast.DataType, call func(field *ast.Field) error) error {
+	fields := map[string]int{}
+	for _, field := range typ.Fields.List {
+		err := call(field)
+		if err != nil {
+			return err
+		}
+		fields[field.Name.Name] = 0
+	}
+
+	for _, extend := range typ.Extends {
+		types := extend.Obj.Decl.(*ast.TypeSpec)
+		data := types.Type.(*ast.DataType)
+		for _, field := range data.Fields.List {
+			if _, ok := fields[field.Name.Name]; ok {
+				continue
+			}
+			err := call(field)
+			if err != nil {
+				return err
+			}
+			fields[field.Name.Name] = 0
+		}
+	}
+	return nil
+}

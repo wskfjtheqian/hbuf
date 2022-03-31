@@ -136,15 +136,15 @@ func printServer(dst io.Writer, typ *ast.ServerType) {
 	dst.Write([]byte("{\n"))
 	for _, field := range typ.Methods.List {
 		dst.Write([]byte("    "))
-		var fun = field.Type.(*ast.FuncType)
-		printType(dst, *fun.Result)
+		var fun = field.Type.Type().(*ast.FuncType)
+		printType(dst, fun.Result.Type(), false)
 		dst.Write([]byte(" " + field.Name.Name))
 		dst.Write([]byte("("))
 		for i, field := range fun.Params.List {
 			if 0 != i {
 				dst.Write([]byte(", "))
 			}
-			printType(dst, field.Type)
+			printType(dst, field.Type, false)
 			dst.Write([]byte(" " + field.Name.Name))
 			if nil != field.Id {
 				dst.Write([]byte(" = " + field.Id.Value))
@@ -171,15 +171,20 @@ func printData(dst io.Writer, typ *ast.DataType) {
 		}
 
 		_, _ = dst.Write([]byte("  "))
-		printType(dst, field.Type)
-		_, _ = dst.Write([]byte("? " + toFieldName(field.Name.Name)))
+		printType(dst, field.Type, false)
+		_, _ = dst.Write([]byte(" get " + toFieldName(field.Name.Name)))
 		_, _ = dst.Write([]byte(";\n\n"))
+
+		_, _ = dst.Write([]byte("  set "))
+		_, _ = dst.Write([]byte(toFieldName(field.Name.Name) + "("))
+		printType(dst, field.Type, false)
+		_, _ = dst.Write([]byte(" value);\n\n"))
 	}
 	_, _ = dst.Write([]byte("  factory " + toClassName(typ.Name.Name) + "({\n"))
 	err := build.EnumField(typ, func(field *ast.Field) error {
 		_, _ = dst.Write([]byte("    "))
-		printType(dst, field.Type)
-		_, _ = dst.Write([]byte("? " + toFieldName(field.Name.Name)))
+		printType(dst, field.Type, true)
+		_, _ = dst.Write([]byte(" " + toFieldName(field.Name.Name)))
 		_, _ = dst.Write([]byte(",\n"))
 		return nil
 	})
@@ -216,8 +221,8 @@ func printDataEntity(dst io.Writer, typ *ast.DataType) {
 	err := build.EnumField(typ, func(field *ast.Field) error {
 		_, _ = dst.Write([]byte("  @override\n"))
 		_, _ = dst.Write([]byte("  "))
-		printType(dst, field.Type)
-		_, _ = dst.Write([]byte("? " + toFieldName(field.Name.Name)))
+		printType(dst, field.Type, false)
+		_, _ = dst.Write([]byte(" " + toFieldName(field.Name.Name)))
 		_, _ = dst.Write([]byte(";\n\n"))
 		return nil
 	})
@@ -227,7 +232,11 @@ func printDataEntity(dst io.Writer, typ *ast.DataType) {
 
 	_, _ = dst.Write([]byte("  _" + toClassName(typ.Name.Name) + "({\n"))
 	err = build.EnumField(typ, func(field *ast.Field) error {
-		_, _ = dst.Write([]byte("    this." + toFieldName(field.Name.Name)))
+		_, _ = dst.Write([]byte("    "))
+		if !field.Type.IsEmpty() {
+			_, _ = dst.Write([]byte("required "))
+		}
+		_, _ = dst.Write([]byte("this." + toFieldName(field.Name.Name)))
 		_, _ = dst.Write([]byte(",\n"))
 		return nil
 	})
@@ -281,7 +290,7 @@ func printExtend(dst io.Writer, extends []*ast.Ident) {
 	}
 }
 
-func printType(dst io.Writer, expr ast.Expr) {
+func printType(dst io.Writer, expr ast.Expr, b bool) {
 	switch expr.(type) {
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
@@ -290,18 +299,26 @@ func printType(dst io.Writer, expr ast.Expr) {
 		} else {
 			_, _ = dst.Write([]byte(_types[(expr.(*ast.Ident)).Name]))
 		}
-
 	case *ast.ArrayType:
 		_, _ = dst.Write([]byte("List<"))
-		printType(dst, (expr.(*ast.ArrayType)).Elt.(*ast.Ident))
+		printType(dst, (expr.(*ast.ArrayType)).TypeExpr.(*ast.Ident), false)
 		_, _ = dst.Write([]byte("?>"))
 	case *ast.MapType:
 		ma := expr.(*ast.MapType)
 		_, _ = dst.Write([]byte("Map<"))
-		printType(dst, ma.Key.(*ast.Ident))
+		printType(dst, ma.Key.(*ast.VarType), false)
 		_, _ = dst.Write([]byte(", "))
-		printType(dst, ma.Value.(*ast.Ident))
+		printType(dst, ma.TypeExpr.(*ast.Ident), false)
 		_, _ = dst.Write([]byte("?>"))
+	case *ast.VarType:
+		t := expr.(*ast.VarType)
+		if !t.Empty && b {
+			_, _ = dst.Write([]byte("required "))
+		}
+		printType(dst, t.Type(), false)
+		if t.Empty {
+			_, _ = dst.Write([]byte("?"))
+		}
 	}
 }
 

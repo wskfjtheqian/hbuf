@@ -125,41 +125,50 @@ func (b *Builder) getDataType(file *ast.File, name string) *ast.Object {
 	return nil
 }
 
-func (b *Builder) checkDataItemType(file *ast.File, ident *ast.Ident) error {
-	if _, ok := _types[ident.Name]; ok {
-		return nil
+func (b *Builder) checkDataItemType(file *ast.File, typ ast.Type) error {
+	switch typ.Type().(type) {
+	case *ast.Ident:
+		ident := typ.Type().(*ast.Ident)
+		if _, ok := _types[ident.Name]; ok {
+			return nil
+		}
+		obj := b.getDataType(file, ident.Name)
+		if nil != obj {
+			ident.Obj = obj
+			return nil
+		}
+		return scanner.Error{
+			Pos: b.fset.Position(ident.Pos()),
+			Msg: "Invalid name: " + ident.Name,
+		}
 	}
-	obj := b.getDataType(file, ident.Name)
-	if nil != obj {
-		ident.Obj = obj
-		return nil
-	}
+
 	return scanner.Error{
-		Pos: b.fset.Position(ident.Pos()),
-		Msg: "Invalid name: " + ident.Name,
+		Pos: b.fset.Position(typ.Pos()),
+		Msg: "Type Error",
 	}
 }
 
 func (b *Builder) checkDataItem(file *ast.File, data *ast.DataType) error {
 	for index, item := range data.Fields.List {
-		switch item.Type.(type) {
+		switch item.Type.Type().(type) {
 		case *ast.Ident:
-			err := b.checkDataItemType(file, item.Type.(*ast.Ident))
+			err := b.checkDataItemType(file, item.Type)
 			if err != nil {
 				return err
 			}
 		case *ast.ArrayType:
-			err := b.checkDataItemType(file, (item.Type.(*ast.ArrayType)).Elt.(*ast.Ident))
+			err := b.checkDataItemType(file, item.Type)
 			if err != nil {
 				return err
 			}
 		case *ast.MapType:
 			ma := item.Type.(*ast.MapType)
-			err := b.checkDataItemType(file, ma.Key.(*ast.Ident))
+			err := b.checkDataItemType(file, ma.Key.(*ast.VarType))
 			if err != nil {
 				return err
 			}
-			err = b.checkDataItemType(file, ma.Value.(*ast.Ident))
+			err = b.checkDataItemType(file, ma.Key.(*ast.VarType))
 			if err != nil {
 				return err
 			}

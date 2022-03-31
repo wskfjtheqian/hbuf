@@ -17,7 +17,7 @@ func ExampleFormat_format() {
 		"//引用11.go \n" +
 		"import \"/home/yttx_heqian/develop/go/hbuf/pkg/parser/11.go\" \n" +
 		"data Student { \n" +
-		"  String Name = 16 `json\"name\"` //姓名\n" +
+		"  String Type = 16 `json\"name\"` //姓名\n" +
 		"  String[] Info = 0 \n" +
 		"  String<int> other = 0 `json\"map\"` //姓名\n" +
 		"} \n" +
@@ -27,7 +27,7 @@ func ExampleFormat_format() {
 		"} \n" +
 		"\n " +
 
-		//"data Student : Name{ \n" +
+		//"data Student : Type{ \n" +
 		//" int age = 15 `pr:id,json\"age\"` \n" +
 		//"} \n" +
 		//"\n" +

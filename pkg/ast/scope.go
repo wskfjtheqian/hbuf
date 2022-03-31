@@ -75,11 +75,11 @@ func NewObj(kind ObjKind, name string) *Object {
 // The result may be an invalid position if it cannot be computed
 // (obj.Decl may be nil or not correct).
 func (obj *Object) Pos() token.Pos {
-	//name := obj.Name
+	//name := obj.Type
 	//switch d := obj.Decl.(type) {
 	//case *Field:
 	//	//for _, n := range d.Names {
-	//	//	if n.Name == name {
+	//	//	if n.Type == name {
 	//	//		return n.Pos()
 	//	//	}
 	//	//}

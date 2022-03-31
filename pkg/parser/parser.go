@@ -465,7 +465,7 @@ func (p *parser) parseIdent() *ast.Ident {
 
 // ----------------------------------------------------------------------------
 // Types
-func (p *parser) parseType() ast.Expr {
+func (p *parser) parseType() ast.Type {
 	if p.trace {
 		defer un(trace(p, "Type"))
 	}
@@ -476,7 +476,12 @@ func (p *parser) parseType() ast.Expr {
 		pos := p.pos
 		p.errorExpected(pos, "type")
 		p.advance(exprEnd)
-		return &ast.BadExpr{From: pos, To: p.pos}
+		return &ast.VarType{
+			TypeExpr: &ast.BadExpr{
+				From: pos,
+				To:   p.pos,
+			},
+		}
 	}
 
 	return typ
@@ -492,13 +497,13 @@ func (p *parser) parseTypeName() *ast.Ident {
 	return ident
 }
 
-func (p *parser) parseArrayType(elt *ast.Ident) *ast.ArrayType {
+func (p *parser) parseArrayType(elt *ast.VarType) ast.Type {
 	if p.trace {
 		defer un(trace(p, "ArrayType"))
 	}
 	p.expect(token.LBRACK)
 	p.expect(token.RBRACK)
-	return &ast.ArrayType{Lbrack: elt.Pos(), Elt: elt}
+	return &ast.ArrayType{Lbrack: elt.Pos(), VarType: *elt}
 }
 
 func (p *parser) parseFieldDecl(scope *ast.Scope) *ast.Field {
@@ -509,7 +514,7 @@ func (p *parser) parseFieldDecl(scope *ast.Scope) *ast.Field {
 	doc := p.leadComment
 	typ := p.parseVarType(false)
 	if p.tok != token.IDENT {
-		p.errorExpected(p.pos, "not find Name")
+		p.errorExpected(p.pos, "not find Type")
 	}
 	name := p.parseIdent()
 
@@ -546,7 +551,7 @@ func (p *parser) parseExtend() []*ast.Ident {
 		for p.tok == token.COLON || p.tok == token.COMMA {
 			p.next()
 			if p.tok != token.IDENT {
-				p.error(p.pos, "Data not found Extend Name")
+				p.error(p.pos, "Data not found Extend Type")
 			}
 			extends = append(extends, p.parseIdent())
 		}
@@ -554,13 +559,15 @@ func (p *parser) parseExtend() []*ast.Ident {
 	return extends
 }
 
-func (p *parser) parseVarType(isParam bool) ast.Expr {
+func (p *parser) parseVarType(isParam bool) ast.Type {
 	typ := p.tryIdentOrType()
 	if typ == nil {
 		pos := p.pos
 		p.errorExpected(pos, "type")
 		p.next() // make progress
-		typ = &ast.BadExpr{From: pos, To: p.pos}
+		typ = &ast.VarType{
+			TypeExpr: &ast.BadExpr{From: pos, To: p.pos},
+		}
 	}
 	return typ
 }
@@ -572,7 +579,7 @@ func (p *parser) parseParameterList(scope *ast.Scope, ellipsisOk bool) (params [
 	// 1st ParameterDecl
 	// A list of identifiers looks like a list of type names.
 	var list []*ast.Field
-	for p.tok != token.RPAREN {
+	for p.tok != token.RPAREN && p.tok != token.EOF {
 		typ := p.parseVarType(ellipsisOk)
 		name := p.parseIdent()
 
@@ -614,24 +621,24 @@ func (p *parser) parseMethodSpec(scope *ast.Scope) *ast.Field {
 		defer un(trace(p, "MethodSpec"))
 	}
 
-	var typ *ast.FuncType
+	//var typ *ast.FuncType
 	doc := p.leadComment
-	result := p.parseVarType(false)
+	//result := p.parseVarType(false)
 	var idents []*ast.Ident
 
 	name := p.parseIdent()
 	{
-		scope := ast.NewScope(nil) // method scope
-		var params = p.parseParameters(scope, true)
-		typ = &ast.FuncType{Func: token.NoPos, Params: params, Result: &result}
+		//scope := ast.NewScope(nil) // method scope
+		//var params = p.parseParameters(scope, true)
+		//typ = &ast.FuncType{Func: token.NoPos, Params: params, Result: result}
 	}
 
-	spec := &ast.Field{Doc: doc, Type: typ, Name: name, Comment: p.lineComment}
+	spec := &ast.Field{Doc: doc, Type: &ast.VarType{}, Name: name, Comment: p.lineComment}
 	p.declare(spec, nil, scope, ast.Method, idents...)
 	return spec
 }
 
-func (p *parser) parseMapType(value *ast.Ident) *ast.MapType {
+func (p *parser) parseMapType(value *ast.VarType) ast.Type {
 	if p.trace {
 		defer un(trace(p, "MapType"))
 	}
@@ -639,23 +646,36 @@ func (p *parser) parseMapType(value *ast.Ident) *ast.MapType {
 	p.expect(token.LSS)
 	key := p.parseType()
 	p.expect(token.GTR)
-	return &ast.MapType{Map: value.Pos(), Key: key, Value: value}
+	return &ast.MapType{Map: value.Pos(), Key: key, VarType: *value}
 }
 
-func (p *parser) tryIdentOrType() ast.Expr {
+func (p *parser) tryIdentOrType() ast.Type {
 	if p.tok != token.IDENT {
 		defer un(trace(p, "TypeName"))
 	}
-	typ := p.parseTypeName()
+	var typ ast.Type = &ast.VarType{
+		TypeExpr: p.parseTypeName(),
+	}
 	if p.tok == token.LBRACK {
-		return p.parseArrayType(typ)
+		typ = p.parseArrayType(typ.(*ast.VarType))
 	} else if p.tok == token.LSS {
-		return p.parseMapType(typ)
+		typ = p.parseMapType(typ.(*ast.VarType))
+	}
+	if p.tok == token.Question {
+		switch typ.(type) {
+		case *ast.VarType:
+			typ.(*ast.VarType).Empty = true
+		case *ast.ArrayType:
+			typ.(*ast.ArrayType).Empty = true
+		case *ast.MapType:
+			typ.(*ast.MapType).Empty = true
+		}
+		p.next()
 	}
 	return typ
 }
 
-func (p *parser) tryType() ast.Expr {
+func (p *parser) tryType() ast.Type {
 	typ := p.tryIdentOrType()
 	if typ != nil {
 		p.resolve(typ)
@@ -740,7 +760,7 @@ func (p *parser) parseDataSpec(doc *ast.CommentGroup) ast.Spec {
 	lbrace := p.expect(token.LBRACE)
 	scope := ast.NewScope(nil) // struct scope
 	var list []*ast.Field
-	for p.tok != token.RBRACE {
+	for p.tok != token.RBRACE && p.tok != token.EOF {
 		list = append(list, p.parseFieldDecl(scope))
 	}
 	rbrace := p.expect(token.RBRACE)
@@ -777,7 +797,7 @@ func (p *parser) parseEnumSpec(doc *ast.CommentGroup) ast.Spec {
 	lbrace := p.expect(token.LBRACE)
 	scope := ast.NewScope(nil) // struct scope
 	var list []*ast.EnumItem
-	for p.tok != token.RBRACE {
+	for p.tok != token.RBRACE && p.tok != token.EOF {
 		list = append(list, p.parseEnumItem(scope))
 	}
 	rbrace := p.expect(token.RBRACE)
@@ -805,7 +825,7 @@ func (p *parser) parseEnumItem(scope *ast.Scope) *ast.EnumItem {
 
 	doc := p.leadComment
 	if p.tok != token.IDENT {
-		p.errorExpected(p.pos, "not find Name")
+		p.errorExpected(p.pos, "not find Type")
 	}
 	name := p.parseIdent()
 

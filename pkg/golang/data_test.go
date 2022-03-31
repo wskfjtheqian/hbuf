@@ -10,7 +10,7 @@ type DData struct {
 func (r *DData) ToBytes() []byte {
 	//return JoinBytes(Data, 0x1111, func() ([]byte, int) {
 	//	temp := []byte{}
-	//	temp = append(temp, ToBytes(Int64, 1020, r.Name)...)
+	//	temp = append(temp, ToBytes(Int64, 1020, r.Type)...)
 	//	temp = append(temp, ToBytes(Map, 2020, r.Info)...)
 	//	return temp, len(temp)
 	//})

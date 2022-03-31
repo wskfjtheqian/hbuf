@@ -15,7 +15,7 @@ type ErrorHandler func(pos token.Position, msg string)
 type Scanner struct {
 	// immutable state
 	file *token.File  // source file handle
-	dir  string       // directory portion of file.Name()
+	dir  string       // directory portion of file.Type()
 	src  []byte       // source
 	err  ErrorHandler // error reporting; or nil
 	mode Mode         // scanning mode
@@ -783,6 +783,8 @@ scanAgain:
 			}
 		case '=':
 			tok = token.ASSIGN
+		case '?':
+			tok = token.Question
 		default:
 			// next reports unexpected BOMs - don't repeat
 			if ch != bom {

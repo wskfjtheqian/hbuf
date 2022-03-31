@@ -21,6 +21,7 @@ const (
 
 	operator_beg
 	ASSIGN    // =
+	Question  // =
 	LSS       // <
 	LPAREN    // (
 	LBRACK    // [
@@ -53,9 +54,10 @@ var tokens = [...]string{
 	INT:    "INT",
 	STRING: "STRING",
 
-	LSS:    "<",
-	GTR:    ">",
-	ASSIGN: "=",
+	LSS:      "<",
+	GTR:      ">",
+	ASSIGN:   "=",
+	Question: "?",
 
 	LPAREN: "(",
 	LBRACK: "[",

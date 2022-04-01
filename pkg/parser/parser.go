@@ -497,7 +497,7 @@ func (p *parser) parseTypeName() *ast.Ident {
 	return ident
 }
 
-func (p *parser) parseArrayType(elt *ast.VarType) ast.Type {
+func (p *parser) parseArrayType(elt *ast.VarType) *ast.ArrayType {
 	if p.trace {
 		defer un(trace(p, "ArrayType"))
 	}
@@ -638,7 +638,7 @@ func (p *parser) parseMethodSpec(scope *ast.Scope) *ast.Field {
 	return spec
 }
 
-func (p *parser) parseMapType(value *ast.VarType) ast.Type {
+func (p *parser) parseMapType(value *ast.VarType) *ast.MapType {
 	if p.trace {
 		defer un(trace(p, "MapType"))
 	}
@@ -653,26 +653,30 @@ func (p *parser) tryIdentOrType() ast.Type {
 	if p.tok != token.IDENT {
 		defer un(trace(p, "TypeName"))
 	}
-	var typ ast.Type = &ast.VarType{
+	v := &ast.VarType{
 		TypeExpr: p.parseTypeName(),
 	}
-	if p.tok == token.LBRACK {
-		typ = p.parseArrayType(typ.(*ast.VarType))
-	} else if p.tok == token.LSS {
-		typ = p.parseMapType(typ.(*ast.VarType))
-	}
 	if p.tok == token.Question {
-		switch typ.(type) {
-		case *ast.VarType:
-			typ.(*ast.VarType).Empty = true
-		case *ast.ArrayType:
-			typ.(*ast.ArrayType).Empty = true
-		case *ast.MapType:
-			typ.(*ast.MapType).Empty = true
-		}
+		v.Empty = true
 		p.next()
 	}
-	return typ
+	if p.tok == token.LBRACK {
+		a := p.parseArrayType(v)
+		if p.tok == token.Question {
+			a.Empty = true
+			p.next()
+		}
+		return a
+	} else if p.tok == token.LSS {
+		m := p.parseMapType(v)
+		if p.tok == token.Question {
+			m.Empty = true
+			p.next()
+		}
+		return m
+	} else {
+		return v
+	}
 }
 
 func (p *parser) tryType() ast.Type {

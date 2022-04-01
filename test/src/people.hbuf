@@ -2,6 +2,7 @@ package "parser"
 
 //人
 data People{
+  int8?[]? arr = 0
   string name = 1  //姓名
   uint16? age = 2   //年龄
 }

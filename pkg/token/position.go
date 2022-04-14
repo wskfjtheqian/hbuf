@@ -153,7 +153,12 @@ func (f *File) AddLineInfo(offset int, filename string, line int) {
 func (f *File) AddLineColumnInfo(offset int, filename string, line, column int) {
 	f.mutex.Lock()
 	if i := len(f.infos); i == 0 || f.infos[i-1].Offset < offset && offset < f.size {
-		f.infos = append(f.infos, lineInfo{offset, filename, line, column})
+		f.infos = append(f.infos, lineInfo{
+			offset,
+			filename,
+			line,
+			column,
+		})
 	}
 	f.mutex.Unlock()
 }

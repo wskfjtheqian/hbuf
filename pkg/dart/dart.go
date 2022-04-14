@@ -300,15 +300,19 @@ func printType(dst io.Writer, expr ast.Expr, b bool) {
 			_, _ = dst.Write([]byte(_types[(expr.(*ast.Ident)).Name]))
 		}
 	case *ast.ArrayType:
+		ar := expr.(*ast.ArrayType)
 		_, _ = dst.Write([]byte("List<"))
-		printType(dst, (expr.(*ast.ArrayType)).TypeExpr.(*ast.Ident), false)
-		_, _ = dst.Write([]byte("?>"))
+		printType(dst, ar.VType, false)
+		if ar.Empty {
+			_, _ = dst.Write([]byte("?"))
+		}
+		_, _ = dst.Write([]byte(">"))
 	case *ast.MapType:
 		ma := expr.(*ast.MapType)
 		_, _ = dst.Write([]byte("Map<"))
-		printType(dst, ma.Key.(*ast.VarType), false)
+		printType(dst, ma.Key, false)
 		_, _ = dst.Write([]byte(", "))
-		printType(dst, ma.TypeExpr.(*ast.Ident), false)
+		printType(dst, ma.VType, false)
 		_, _ = dst.Write([]byte("?>"))
 	case *ast.VarType:
 		t := expr.(*ast.VarType)

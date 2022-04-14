@@ -250,13 +250,17 @@ type (
 	}
 
 	ArrayType struct {
-		VarType
+		VType  *VarType
+		Empty  bool      //是否可为空
 		Lbrack token.Pos // position of "["
+		Rbrack token.Pos // position of "]"
 	}
 	MapType struct {
-		VarType
-		Map token.Pos // position of "map" keyword
-		Key Expr
+		VType *VarType
+		Empty bool //是否可为空
+		Key   Expr
+		LSS   token.Pos // position of "<"
+		GTR   token.Pos // position of ">"
 	}
 	DataType struct {
 		Struct     token.Pos  // position of "struct" keyword
@@ -302,7 +306,7 @@ func (x *CompositeLit) Pos() token.Pos {
 	}
 	return x.Lbrace
 }
-func (x *ArrayType) Pos() token.Pos { return x.Lbrack }
+func (x *ArrayType) Pos() token.Pos { return x.VType.Pos() }
 func (x *DataType) Pos() token.Pos  { return x.Struct }
 func (x *FuncType) Pos() token.Pos {
 	if x.Func.IsValid() || x.Params == nil { // see issue 3870
@@ -311,7 +315,7 @@ func (x *FuncType) Pos() token.Pos {
 	return x.Params.Pos() // interface method declarations have no "func" keyword
 }
 func (x *ServerType) Pos() token.Pos { return x.Interface }
-func (x *MapType) Pos() token.Pos    { return x.Map }
+func (x *MapType) Pos() token.Pos    { return x.VType.Pos() }
 func (x *EnumType) Pos() token.Pos   { return x.Enum }
 func (x *EnumItem) Pos() token.Pos   { return x.Name.Pos() }
 func (x *VarType) Pos() token.Pos    { return x.TypeExpr.Pos() }
@@ -321,11 +325,11 @@ func (x *Ident) End() token.Pos        { return token.Pos(int(x.NamePos) + len(x
 func (x *BasicLit) End() token.Pos     { return token.Pos(int(x.ValuePos) + len(x.Value)) }
 func (x *FuncLit) End() token.Pos      { return x.Type.End() }
 func (x *CompositeLit) End() token.Pos { return x.Rbrace + 1 }
-func (x *ArrayType) End() token.Pos    { return x.TypeExpr.End() }
+func (x *ArrayType) End() token.Pos    { return x.Rbrack }
 func (x *DataType) End() token.Pos     { return x.Fields.End() }
 func (x *FuncType) End() token.Pos     { return x.Params.End() }
 func (x *ServerType) End() token.Pos   { return x.Methods.End() }
-func (x *MapType) End() token.Pos      { return x.TypeExpr.End() }
+func (x *MapType) End() token.Pos      { return x.GTR }
 func (x *EnumType) End() token.Pos     { return x.Items[len(x.Items)-1].End() }
 func (x *EnumItem) End() token.Pos     { return x.Comment.End() }
 func (x *VarType) End() token.Pos      { return x.TypeExpr.End() }
@@ -345,8 +349,8 @@ func (*EnumItem) exprNode()     {}
 func (*VarType) exprNode()      {}
 
 func (x *VarType) Type() Expr   { return x.TypeExpr }
-func (x *ArrayType) Type() Expr { return x.TypeExpr }
-func (x *MapType) Type() Expr   { return x.TypeExpr }
+func (x *ArrayType) Type() Expr { return x.VType }
+func (x *MapType) Type() Expr   { return x.VType }
 
 func (x *VarType) IsEmpty() bool   { return x.Empty }
 func (x *ArrayType) IsEmpty() bool { return x.Empty }

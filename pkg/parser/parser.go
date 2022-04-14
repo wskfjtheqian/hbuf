@@ -501,9 +501,10 @@ func (p *parser) parseArrayType(elt *ast.VarType) ast.Type {
 	if p.trace {
 		defer un(trace(p, "ArrayType"))
 	}
-	p.expect(token.LBRACK)
-	p.expect(token.RBRACK)
-	return &ast.ArrayType{Lbrack: elt.Pos(), VarType: *elt}
+
+	var lBrack = p.expect(token.LBRACK)
+	var rBrack = p.expect(token.RBRACK)
+	return &ast.ArrayType{Lbrack: lBrack, Rbrack: rBrack, VType: elt}
 }
 
 func (p *parser) parseFieldDecl(scope *ast.Scope) *ast.Field {
@@ -643,10 +644,15 @@ func (p *parser) parseMapType(value *ast.VarType) ast.Type {
 		defer un(trace(p, "MapType"))
 	}
 
-	p.expect(token.LSS)
+	lss := p.expect(token.LSS)
 	key := p.parseType()
-	p.expect(token.GTR)
-	return &ast.MapType{Map: value.Pos(), Key: key, VarType: *value}
+	gtr := p.expect(token.GTR)
+	return &ast.MapType{
+		LSS:   lss,
+		GTR:   gtr,
+		Key:   key,
+		VType: value,
+	}
 }
 
 func (p *parser) tryIdentOrType() ast.Type {

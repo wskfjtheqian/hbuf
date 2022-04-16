@@ -2,6 +2,17 @@ package "parser"
 
 //人
 data People{
-  string?[] name = 1  //姓名
+  string?[]? name_people = 1  //姓名
+  string?<string>? map = 2  //姓名
 }
 
+//服务
+server PeopleServer{
+  //获得年龄
+  People getPeople(People userId)
+
+  //获得姓名
+  People getAddress(People userId)
+
+
+}

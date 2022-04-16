@@ -255,6 +255,7 @@ type (
 		Lbrack token.Pos // position of "["
 		Rbrack token.Pos // position of "]"
 	}
+
 	MapType struct {
 		VType *VarType
 		Empty bool //是否可为空
@@ -262,36 +263,49 @@ type (
 		LSS   token.Pos // position of "<"
 		GTR   token.Pos // position of ">"
 	}
+
 	DataType struct {
-		Struct     token.Pos  // position of "struct" keyword
+		Data       token.Pos  // position of "data" keyword
 		Fields     *FieldList // list of field declarations
 		Incomplete bool       // true if (source) fields are missing in the Fields list
 		Name       *Ident
 		Extends    []*Ident
 	}
+
 	ServerType struct {
-		Interface  token.Pos  // position of "interface" keyword
-		Methods    *FieldList // list of methods
-		Incomplete bool       // true if (source) methods are missing in the Methods list
-		Name       *Ident
-		Extends    []*Ident
+		Server  token.Pos // position of "server" keyword
+		Name    *Ident
+		Extends []*Ident
+		Opening token.Pos // position of opening parenthesis/brace, if any
+		Methods []*FuncType
+		Closing token.Pos     // position of closing parenthesis/brace, if any
+		Doc     *CommentGroup // associated documentation; or nil
+		Comment *CommentGroup // line comments; or nil
 	}
+
 	FuncType struct {
-		Func   token.Pos  // position of "func" keyword (token.NoPos if there is no "func")
-		Params *FieldList // (incoming) parameters; non-nil
-		Result *VarType
+		Result    *VarType
+		Name      *Ident
+		Param     *VarType // (incoming) parameters; non-nil
+		ParamName *Ident
+		Doc       *CommentGroup // associated documentation; or nil
+		Comment   *CommentGroup // line comments; or nil
 	}
+
 	EnumType struct {
 		Enum    token.Pos
 		Name    *Ident
 		Items   []*EnumItem
 		Opening token.Pos
 		Closing token.Pos
-	}
-	EnumItem struct {
 		Doc     *CommentGroup // associated documentation; or nil
+		Comment *CommentGroup // line comments; or nil
+	}
+
+	EnumItem struct {
 		Name    *Ident        // field/method/parameter names; or nil
 		Id      *BasicLit     // field tag; or nil
+		Doc     *CommentGroup // associated documentation; or nil
 		Comment *CommentGroup // line comments; or nil
 	}
 )
@@ -307,14 +321,11 @@ func (x *CompositeLit) Pos() token.Pos {
 	return x.Lbrace
 }
 func (x *ArrayType) Pos() token.Pos { return x.VType.Pos() }
-func (x *DataType) Pos() token.Pos  { return x.Struct }
+func (x *DataType) Pos() token.Pos  { return x.Data }
 func (x *FuncType) Pos() token.Pos {
-	if x.Func.IsValid() || x.Params == nil { // see issue 3870
-		return x.Func
-	}
-	return x.Params.Pos() // interface method declarations have no "func" keyword
+	return x.Result.Pos()
 }
-func (x *ServerType) Pos() token.Pos { return x.Interface }
+func (x *ServerType) Pos() token.Pos { return x.Server }
 func (x *MapType) Pos() token.Pos    { return x.VType.Pos() }
 func (x *EnumType) Pos() token.Pos   { return x.Enum }
 func (x *EnumItem) Pos() token.Pos   { return x.Name.Pos() }
@@ -327,8 +338,8 @@ func (x *FuncLit) End() token.Pos      { return x.Type.End() }
 func (x *CompositeLit) End() token.Pos { return x.Rbrace + 1 }
 func (x *ArrayType) End() token.Pos    { return x.Rbrack }
 func (x *DataType) End() token.Pos     { return x.Fields.End() }
-func (x *FuncType) End() token.Pos     { return x.Params.End() }
-func (x *ServerType) End() token.Pos   { return x.Methods.End() }
+func (x *FuncType) End() token.Pos     { return x.Param.End() }
+func (x *ServerType) End() token.Pos   { return x.Closing }
 func (x *MapType) End() token.Pos      { return x.GTR }
 func (x *EnumType) End() token.Pos     { return x.Items[len(x.Items)-1].End() }
 func (x *EnumItem) End() token.Pos     { return x.Comment.End() }

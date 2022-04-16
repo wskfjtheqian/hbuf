@@ -513,7 +513,7 @@ func (p *parser) parseFieldDecl(scope *ast.Scope) *ast.Field {
 	}
 
 	doc := p.leadComment
-	typ := p.parseVarType(false)
+	typ := p.parseVarType()
 	if p.tok != token.IDENT {
 		p.errorExpected(p.pos, "not find Type")
 	}
@@ -560,7 +560,7 @@ func (p *parser) parseExtend() []*ast.Ident {
 	return extends
 }
 
-func (p *parser) parseVarType(isParam bool) ast.Type {
+func (p *parser) parseVarType() ast.Type {
 	typ := p.tryIdentOrType()
 	if typ == nil {
 		pos := p.pos
@@ -573,70 +573,29 @@ func (p *parser) parseVarType(isParam bool) ast.Type {
 	return typ
 }
 
-func (p *parser) parseParameterList(scope *ast.Scope, ellipsisOk bool) (params []*ast.Field) {
-	if p.trace {
-		defer un(trace(p, "ParameterList"))
-	}
-	// 1st ParameterDecl
-	// A list of identifiers looks like a list of type names.
-	var list []*ast.Field
-	for p.tok != token.RPAREN && p.tok != token.EOF {
-		typ := p.parseVarType(ellipsisOk)
-		name := p.parseIdent()
-
-		var id *ast.BasicLit
-		if p.tok == token.ASSIGN {
-			p.next()
-			if p.tok != token.INT {
-				p.errorExpected(p.pos, "not find int")
-			}
-			id = &ast.BasicLit{ValuePos: p.pos, Kind: p.tok, Value: p.lit}
-			p.next()
-		}
-		list = append(list, &ast.Field{Name: name, Type: typ, Id: id})
-		if p.tok != token.COMMA {
-			break
-		}
-		p.next()
-	}
-	return list
-}
-
-func (p *parser) parseParameters(scope *ast.Scope, ellipsisOk bool) *ast.FieldList {
-	if p.trace {
-		defer un(trace(p, "Parameters"))
-	}
-
-	var params []*ast.Field
-	lparen := p.expect(token.LPAREN)
-	if p.tok != token.RPAREN {
-		params = p.parseParameterList(scope, ellipsisOk)
-	}
-	rparen := p.expect(token.RPAREN)
-
-	return &ast.FieldList{Opening: lparen, List: params, Closing: rparen}
-}
-
-func (p *parser) parseMethodSpec(scope *ast.Scope) *ast.Field {
+func (p *parser) parseMethodSpec() *ast.FuncType {
 	if p.trace {
 		defer un(trace(p, "MethodSpec"))
 	}
 
-	//var typ *ast.FuncType
 	doc := p.leadComment
-	//result := p.parseVarType(false)
-	var idents []*ast.Ident
-
+	result := p.parseVarType()
 	name := p.parseIdent()
-	{
-		//scope := ast.NewScope(nil) // method scope
-		//var params = p.parseParameters(scope, true)
-		//typ = &ast.FuncType{Func: token.NoPos, Params: params, Result: result}
-	}
+	p.expect(token.LPAREN)
+	param := p.parseVarType()
+	paramName := p.parseIdent()
 
-	spec := &ast.Field{Doc: doc, Type: &ast.VarType{}, Name: name, Comment: p.lineComment}
-	p.declare(spec, nil, scope, ast.Method, idents...)
-	return spec
+	p.expect(token.RPAREN)
+
+	var typ = &ast.FuncType{
+		Result:    result.(*ast.VarType),
+		Name:      name,
+		Param:     param.(*ast.VarType),
+		ParamName: paramName,
+		Doc:       doc,
+		Comment:   doc,
+	}
+	return typ
 }
 
 func (p *parser) parseMapType(value *ast.VarType) *ast.MapType {
@@ -782,7 +741,7 @@ func (p *parser) parseDataSpec(doc *ast.CommentGroup) ast.Spec {
 		p.next()
 	}
 	spec.Type = &ast.DataType{
-		Struct:  pos,
+		Data:    pos,
 		Name:    name,
 		Extends: extends,
 		Fields: &ast.FieldList{
@@ -813,7 +772,7 @@ func (p *parser) parseEnumSpec(doc *ast.CommentGroup) ast.Spec {
 	rbrace := p.expect(token.RBRACE)
 
 	spec := &ast.TypeSpec{Doc: doc, Name: name}
-	p.declare(spec, nil, p.topScope, ast.Server, name)
+	p.declare(spec, nil, p.topScope, ast.Enum, name)
 	if p.tok == token.ASSIGN {
 		spec.Assign = p.pos
 		p.next()
@@ -828,6 +787,7 @@ func (p *parser) parseEnumSpec(doc *ast.CommentGroup) ast.Spec {
 	spec.Comment = p.lineComment
 	return spec
 }
+
 func (p *parser) parseEnumItem(scope *ast.Scope) *ast.EnumItem {
 	if p.trace {
 		defer un(trace(p, "FieldDecl"))
@@ -862,10 +822,9 @@ func (p *parser) parseServerSpec(doc *ast.CommentGroup) ast.Spec {
 	extends := p.parseExtend()
 
 	lbrace := p.expect(token.LBRACE)
-	scope := ast.NewScope(nil) // interface scope
-	var list []*ast.Field
-	for p.tok == token.IDENT {
-		list = append(list, p.parseMethodSpec(scope))
+	var list []*ast.FuncType
+	for p.tok != token.RBRACE && p.tok != token.EOF {
+		list = append(list, p.parseMethodSpec())
 		p.next()
 	}
 	rbrace := p.expect(token.RBRACE)
@@ -877,14 +836,12 @@ func (p *parser) parseServerSpec(doc *ast.CommentGroup) ast.Spec {
 		p.next()
 	}
 	spec.Type = &ast.ServerType{
-		Interface: pos,
-		Name:      name,
-		Extends:   extends,
-		Methods: &ast.FieldList{
-			Opening: lbrace,
-			List:    list,
-			Closing: rbrace,
-		},
+		Server:  pos,
+		Name:    name,
+		Extends: extends,
+		Opening: lbrace,
+		Methods: list,
+		Closing: rbrace,
 	}
 	p.expectSemi()
 	spec.Comment = p.lineComment

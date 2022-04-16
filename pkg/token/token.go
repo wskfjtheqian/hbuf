@@ -21,7 +21,7 @@ const (
 
 	operator_beg
 	ASSIGN    // =
-	Question  // =
+	Question  // ?
 	LSS       // <
 	LPAREN    // (
 	LBRACK    // [

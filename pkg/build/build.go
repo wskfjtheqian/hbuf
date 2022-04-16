@@ -131,11 +131,11 @@ func (b *Builder) checkType(file *ast.File, expr ast.Expr, index int) error {
 		if err != nil {
 			return err
 		}
-		//case *ast.ServerType:
-		//	err := b.registerServer(file, expr.(*ast.ServerType))
-		//	if err != nil {
-		//		return err
-		//	}
+	case *ast.ServerType:
+		err := b.checkServer(file, expr.(*ast.ServerType), index)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -196,6 +196,25 @@ func (b *Builder) registerServer(file *ast.File, enum *ast.ServerType) error {
 	obj.Decl = enum
 	file.Scope.Insert(obj)
 	return nil
+}
+
+func (b *Builder) checkDataMapKey(file *ast.File, varType *ast.VarType) error {
+	if varType.Empty {
+		return scanner.Error{
+			Pos: b.fset.Position(varType.TypeExpr.End()),
+			Msg: "Type cannot be empty",
+		}
+	}
+	switch varType.TypeExpr.(type) {
+	case *ast.Ident:
+		if _, ok := _types[varType.TypeExpr.(*ast.Ident).Name]; ok {
+			return nil
+		}
+	}
+	return scanner.Error{
+		Pos: b.fset.Position(varType.TypeExpr.Pos()),
+		Msg: "Map keys can only be of type",
+	}
 }
 
 func EnumField(typ *ast.DataType, call func(field *ast.Field) error) error {

@@ -13,3 +13,8 @@ data _Student_Data : People{
   int8[]? ll = 3
   string<int8> book_tags= 4
 }
+
+
+data AA{
+  People p = 1
+}

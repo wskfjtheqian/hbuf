@@ -151,31 +151,31 @@ func (b *Builder) checkDataItemType(file *ast.File, typ ast.Type) error {
 
 func (b *Builder) checkDataItem(file *ast.File, data *ast.DataType) error {
 	for index, item := range data.Fields.List {
-		switch item.Type.Type().(type) {
-		case *ast.Ident:
+		switch item.Type.(type) {
+		case *ast.VarType:
 			err := b.checkDataItemType(file, item.Type)
 			if err != nil {
 				return err
 			}
 		case *ast.ArrayType:
-			err := b.checkDataItemType(file, item.Type)
+			err := b.checkDataItemType(file, item.Type.(*ast.ArrayType).Type().(*ast.VarType))
 			if err != nil {
 				return err
 			}
 		case *ast.MapType:
 			ma := item.Type.(*ast.MapType)
-			err := b.checkDataItemType(file, ma.Key.(*ast.VarType))
+			err := b.checkDataMapKey(file, ma.Key.(*ast.VarType))
 			if err != nil {
 				return err
 			}
-			err = b.checkDataItemType(file, ma.Key.(*ast.VarType))
+			err = b.checkDataItemType(file, ma.Type().(*ast.VarType))
 			if err != nil {
 				return err
 			}
 		}
 		if _, ok := _keys[item.Name.Name]; ok {
 			return scanner.Error{
-				Pos: b.fset.Position(data.Name.Pos()),
+				Pos: b.fset.Position(item.Name.Pos()),
 				Msg: "Invalid name: " + item.Name.Name,
 			}
 		}

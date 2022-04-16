@@ -66,7 +66,7 @@ func printServer(dst io.Writer, typ *ast.ServerType) {
 		printType(dst, *fun.Result)
 		dst.Write([]byte(" " + field.Name.Name))
 		dst.Write([]byte("("))
-		for i, field := range fun.Params.List {
+		for i, field := range fun.Param.List {
 			if 0 != i {
 				dst.Write([]byte(", "))
 			}

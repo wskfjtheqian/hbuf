@@ -146,15 +146,15 @@ func printDataEntity(dst io.Writer, typ *ast.DataType) {
 	_, _ = dst.Write([]byte("\n"))
 	_, _ = dst.Write([]byte("  @override\n"))
 	_, _ = dst.Write([]byte("  ByteData toData() {\n"))
-	_, _ = dst.Write([]byte("    return {\n"))
-	err = build.EnumField(typ, func(field *ast.Field) error {
-		_, _ = dst.Write([]byte("      \"" + getJsonName(field)))
-		_, _ = dst.Write([]byte("\": " + toFieldName(field.Name.Name) + ",\n"))
-		return nil
-	})
-	if err != nil {
-		return
-	}
+	_, _ = dst.Write([]byte("    return     return ByteData.view(Uint8List(12).buffer);\n"))
+	//err = build.EnumField(typ, func(field *ast.Field) error {
+	//	_, _ = dst.Write([]byte("      \"" + getJsonName(field)))
+	//	_, _ = dst.Write([]byte("\": " + toFieldName(field.Name.Name) + ",\n"))
+	//	return nil
+	//})
+	//if err != nil {
+	//	return
+	//}
 	_, _ = dst.Write([]byte("    };\n"))
 	_, _ = dst.Write([]byte("  }\n"))
 

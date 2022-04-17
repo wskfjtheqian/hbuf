@@ -75,7 +75,8 @@ func printTypeSpec(dst io.Writer, expr ast.Expr) {
 		printDataEntity(dst, expr.(*ast.DataType))
 	case *ast.ServerType:
 		printServer(dst, expr.(*ast.ServerType))
-		printServerEntity(dst, expr.(*ast.ServerType))
+		printServerImp(dst, expr.(*ast.ServerType))
+		printServerRoute(dst, expr.(*ast.ServerType))
 	case *ast.EnumType:
 		printEnum(dst, expr.(*ast.EnumType))
 	}

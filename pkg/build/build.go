@@ -217,10 +217,10 @@ func (b *Builder) checkDataMapKey(file *ast.File, varType *ast.VarType) error {
 	}
 }
 
-func EnumField(typ *ast.DataType, call func(field *ast.Field) error) error {
+func EnumField(typ *ast.DataType, call func(field *ast.Field, data *ast.DataType) error) error {
 	fields := map[string]int{}
 	for _, field := range typ.Fields.List {
-		err := call(field)
+		err := call(field, typ)
 		if err != nil {
 			return err
 		}
@@ -234,7 +234,7 @@ func EnumField(typ *ast.DataType, call func(field *ast.Field) error) error {
 			if _, ok := fields[field.Name.Name]; ok {
 				continue
 			}
-			err := call(field)
+			err := call(field, data)
 			if err != nil {
 				return err
 			}
@@ -242,4 +242,57 @@ func EnumField(typ *ast.DataType, call func(field *ast.Field) error) error {
 		}
 	}
 	return nil
+}
+
+func CheckSuperField(name string, typ *ast.DataType) bool {
+	for _, extend := range typ.Extends {
+		types := extend.Obj.Decl.(*ast.TypeSpec)
+		data := types.Type.(*ast.DataType)
+		for _, field := range data.Fields.List {
+			if name == field.Name.Name {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func EnumMethod(typ *ast.ServerType, call func(method *ast.FuncType, server *ast.ServerType) error) error {
+	fields := map[string]int{}
+	for _, field := range typ.Methods {
+		err := call(field, typ)
+		if err != nil {
+			return err
+		}
+		fields[field.Name.Name] = 0
+	}
+
+	for _, extend := range typ.Extends {
+		types := extend.Obj.Decl.(*ast.TypeSpec)
+		server := types.Type.(*ast.ServerType)
+		for _, field := range server.Methods {
+			if _, ok := fields[field.Name.Name]; ok {
+				continue
+			}
+			err := call(field, server)
+			if err != nil {
+				return err
+			}
+			fields[field.Name.Name] = 0
+		}
+	}
+	return nil
+}
+
+func CheckSuperMethod(name string, typ *ast.ServerType) bool {
+	for _, extend := range typ.Extends {
+		types := extend.Obj.Decl.(*ast.TypeSpec)
+		data := types.Type.(*ast.ServerType)
+		for _, field := range data.Methods {
+			if name == field.Name.Name {
+				return true
+			}
+		}
+	}
+	return false
 }

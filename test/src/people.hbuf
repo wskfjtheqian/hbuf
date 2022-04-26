@@ -1,7 +1,13 @@
 package "parser"
 
+data Base = 1{
+
+  string?[]? name_people = 1  //姓名
+
+}
+
 //人
-data People{
+data People : Base = 1{
 
   string?[]? name_people = 1  //姓名
 
@@ -10,12 +16,23 @@ data People{
 }
 
 //服务
-server PeopleServer {
+server PeopleServer = 1 {
   //获得年龄
-  People getPeople(People userId)
+  People getPeople(People userId) = 1
 
   //获得姓名
-  People getAddress(People userId)
+  People getAddress(People userId) = 2
+
+
+}
+
+//服务
+server StudentServer : PeopleServer  = 2 {
+  //获得年龄
+  People getPeople(People userId) = 1
+
+  //获得姓名
+  People getNumber(People userId) = 2
 
 
 }

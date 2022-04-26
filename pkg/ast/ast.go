@@ -270,6 +270,7 @@ type (
 		Incomplete bool       // true if (source) fields are missing in the Fields list
 		Name       *Ident
 		Extends    []*Ident
+		Id         *BasicLit // field Id; or nil
 	}
 
 	ServerType struct {
@@ -281,6 +282,7 @@ type (
 		Closing token.Pos     // position of closing parenthesis/brace, if any
 		Doc     *CommentGroup // associated documentation; or nil
 		Comment *CommentGroup // line comments; or nil
+		Id      *BasicLit     // field Id; or nil
 	}
 
 	FuncType struct {
@@ -290,6 +292,7 @@ type (
 		ParamName *Ident
 		Doc       *CommentGroup // associated documentation; or nil
 		Comment   *CommentGroup // line comments; or nil
+		Id        *BasicLit     // field Id; or nil
 	}
 
 	EnumType struct {

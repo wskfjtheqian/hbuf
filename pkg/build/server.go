@@ -21,7 +21,12 @@ func (b *Builder) checkServer(file *ast.File, server *ast.ServerType, index int)
 		}
 	}
 
-	err := b.checkServerItem(file, server)
+	err := b.checkServerExtends(file, server, index)
+	if err != nil {
+		return err
+	}
+
+	err = b.checkServerItem(file, server)
 	if err != nil {
 		return err
 	}
@@ -124,6 +129,72 @@ func (b *Builder) checkServerDuplicateItem(server *ast.ServerType, index int, na
 	for i := index + 1; i < len(server.Methods); i++ {
 		s := server.Methods[i]
 		if s.Name.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+func (b *Builder) checkServerExtends(file *ast.File, server *ast.ServerType, index int) error {
+	for i, item := range server.Extends {
+		if _, ok := _keys[item.Name]; ok {
+			return scanner.Error{
+				Pos: b.fset.Position(server.Name.Pos()),
+				Msg: "Invalid name: " + item.Name,
+			}
+		}
+		if b.checkServerDuplicateExtends(server, i, item.Name) {
+			return scanner.Error{
+				Pos: b.fset.Position(item.NamePos),
+				Msg: "Duplicate item: " + item.Name,
+			}
+		}
+
+		obj := b.getServerExtends(file, index, item.Name)
+		if nil == obj {
+			return scanner.Error{
+				Pos: b.fset.Position(item.NamePos),
+				Msg: "Not find: " + item.Name,
+			}
+		}
+		item.Obj = obj
+	}
+	return nil
+}
+
+func (b *Builder) getServerExtends(file *ast.File, index int, name string) *ast.Object {
+	if obj := file.Scope.Lookup(name); nil != obj {
+		switch obj.Decl.(type) {
+		case *ast.TypeSpec:
+			t := (obj.Decl.(*ast.TypeSpec)).Type
+			switch t.(type) {
+			case *ast.ServerType:
+				return obj
+			}
+		}
+
+	}
+	for _, spec := range file.Imports {
+		if f, ok := b.pkg.Files[spec.Path.Value]; ok {
+			if obj := f.Scope.Lookup(name); nil != obj {
+				switch obj.Decl.(type) {
+				case *ast.TypeSpec:
+					t := (obj.Decl.(*ast.TypeSpec)).Type
+					switch t.(type) {
+					case *ast.ServerType:
+						return obj
+					}
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (b *Builder) checkServerDuplicateExtends(server *ast.ServerType, index int, name string) bool {
+	for i := index + 1; i < len(server.Extends); i++ {
+		s := server.Extends[i]
+		if s.Name == name {
 			return true
 		}
 	}

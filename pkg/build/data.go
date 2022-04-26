@@ -52,7 +52,7 @@ func (b *Builder) checkDataExtends(file *ast.File, data *ast.DataType, index int
 			}
 		}
 
-		obj := b.getExtends(file, index, item.Name)
+		obj := b.getDataExtends(file, index, item.Name)
 		if nil == obj {
 			return scanner.Error{
 				Pos: b.fset.Position(item.NamePos),
@@ -64,7 +64,7 @@ func (b *Builder) checkDataExtends(file *ast.File, data *ast.DataType, index int
 	return nil
 }
 
-func (b *Builder) getExtends(file *ast.File, index int, name string) *ast.Object {
+func (b *Builder) getDataExtends(file *ast.File, index int, name string) *ast.Object {
 	if obj := file.Scope.Lookup(name); nil != obj {
 		switch obj.Decl.(type) {
 		case *ast.TypeSpec:

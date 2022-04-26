@@ -507,6 +507,21 @@ func (p *parser) parseArrayType(elt *ast.VarType) *ast.ArrayType {
 	return &ast.ArrayType{Lbrack: lBrack, Rbrack: rBrack, VType: elt}
 }
 
+func (p *parser) parseId() *ast.BasicLit {
+	var id *ast.BasicLit
+	if p.tok != token.ASSIGN {
+		p.errorExpected(p.pos, "not find id key")
+		return nil
+	}
+	p.next()
+	if p.tok != token.INT {
+		p.errorExpected(p.pos, "not find int")
+	}
+	id = &ast.BasicLit{ValuePos: p.pos, Kind: p.tok, Value: p.lit}
+	p.next()
+	return id
+}
+
 func (p *parser) parseFieldDecl(scope *ast.Scope) *ast.Field {
 	if p.trace {
 		defer un(trace(p, "FieldDecl"))
@@ -518,16 +533,7 @@ func (p *parser) parseFieldDecl(scope *ast.Scope) *ast.Field {
 		p.errorExpected(p.pos, "not find Type")
 	}
 	name := p.parseIdent()
-
-	var id *ast.BasicLit
-	if p.tok == token.ASSIGN {
-		p.next()
-		if p.tok != token.INT {
-			p.errorExpected(p.pos, "not find int")
-		}
-		id = &ast.BasicLit{ValuePos: p.pos, Kind: p.tok, Value: p.lit}
-		p.next()
-	}
+	var id = p.parseId()
 
 	// Tag
 	var tag *ast.BasicLit
@@ -584,8 +590,8 @@ func (p *parser) parseMethodSpec() *ast.FuncType {
 	p.expect(token.LPAREN)
 	param := p.parseVarType()
 	paramName := p.parseIdent()
-
 	p.expect(token.RPAREN)
+	id := p.parseId()
 
 	var typ = &ast.FuncType{
 		Result:    result.(*ast.VarType),
@@ -594,6 +600,7 @@ func (p *parser) parseMethodSpec() *ast.FuncType {
 		ParamName: paramName,
 		Doc:       doc,
 		Comment:   doc,
+		Id:        id,
 	}
 	return typ
 }
@@ -725,6 +732,7 @@ func (p *parser) parseDataSpec(doc *ast.CommentGroup) ast.Spec {
 	p.expect(token.DATA)
 	name := p.parseIdent()
 	extends := p.parseExtend()
+	id := p.parseId()
 
 	lbrace := p.expect(token.LBRACE)
 	scope := ast.NewScope(nil) // struct scope
@@ -744,6 +752,7 @@ func (p *parser) parseDataSpec(doc *ast.CommentGroup) ast.Spec {
 		Data:    pos,
 		Name:    name,
 		Extends: extends,
+		Id:      id,
 		Fields: &ast.FieldList{
 			Opening: lbrace,
 			List:    list,
@@ -820,6 +829,7 @@ func (p *parser) parseServerSpec(doc *ast.CommentGroup) ast.Spec {
 	p.expect(token.SERVER)
 	name := p.parseIdent()
 	extends := p.parseExtend()
+	id := p.parseId()
 
 	lbrace := p.expect(token.LBRACE)
 	var list []*ast.FuncType
@@ -842,6 +852,7 @@ func (p *parser) parseServerSpec(doc *ast.CommentGroup) ast.Spec {
 		Opening: lbrace,
 		Methods: list,
 		Closing: rbrace,
+		Id:      id,
 	}
 	p.expectSemi()
 	spec.Comment = p.lineComment

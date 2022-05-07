@@ -47,6 +47,7 @@ func Node(dst io.Writer, node interface{}) error {
 	}
 
 	_, _ = dst.Write([]byte("import 'dart:typed_data';\n"))
+	_, _ = dst.Write([]byte("import 'dart:convert';\n"))
 	_, _ = dst.Write([]byte("import 'package:hbuf_dart/hbuf_dart.dart';\n"))
 
 	for _, s := range file.Imports {
@@ -76,7 +77,7 @@ func printTypeSpec(dst io.Writer, expr ast.Expr) {
 	case *ast.ServerType:
 		printServer(dst, expr.(*ast.ServerType))
 		printServerImp(dst, expr.(*ast.ServerType))
-		printServerRoute(dst, expr.(*ast.ServerType))
+		printServerRouter(dst, expr.(*ast.ServerType))
 	case *ast.EnumType:
 		printEnum(dst, expr.(*ast.EnumType))
 	}

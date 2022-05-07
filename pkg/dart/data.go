@@ -60,11 +60,11 @@ func printData(dst io.Writer, typ *ast.DataType) {
 	_, _ = dst.Write([]byte("    );\n"))
 	_, _ = dst.Write([]byte("  }\n\n"))
 
-	_, _ = dst.Write([]byte("  static " + toClassName(typ.Name.Name) + "? fromMap(Map<String, dynamic> map){\n"))
+	_, _ = dst.Write([]byte("  static " + toClassName(typ.Name.Name) + " fromMap(Map<String, dynamic> map){\n"))
 	_, _ = dst.Write([]byte("    return _" + toClassName(typ.Name.Name) + ".fromMap(map);\n"))
 	_, _ = dst.Write([]byte("  }\n\n"))
 
-	_, _ = dst.Write([]byte("  static " + toClassName(typ.Name.Name) + "? fromData(ByteData data){\n"))
+	_, _ = dst.Write([]byte("  static " + toClassName(typ.Name.Name) + " fromData(ByteData data){\n"))
 	_, _ = dst.Write([]byte("    return _" + toClassName(typ.Name.Name) + ".fromData(data);\n"))
 	_, _ = dst.Write([]byte("  }\n\n"))
 
@@ -102,7 +102,7 @@ func printDataEntity(dst io.Writer, typ *ast.DataType) {
 	}
 	_, _ = dst.Write([]byte("  });\n\n"))
 
-	_, _ = dst.Write([]byte("  static _" + toClassName(typ.Name.Name) + "? fromMap(Map<String, dynamic> map){\n"))
+	_, _ = dst.Write([]byte("  static _" + toClassName(typ.Name.Name) + " fromMap(Map<String, dynamic> map){\n"))
 	_, _ = dst.Write([]byte("    return _" + toClassName(typ.Name.Name) + "(\n"))
 
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
@@ -133,7 +133,7 @@ func printDataEntity(dst io.Writer, typ *ast.DataType) {
 	_, _ = dst.Write([]byte("    };\n"))
 	_, _ = dst.Write([]byte("  }\n"))
 
-	_, _ = dst.Write([]byte("  static _" + toClassName(typ.Name.Name) + "? fromData(ByteData data){\n"))
+	_, _ = dst.Write([]byte("  static _" + toClassName(typ.Name.Name) + " fromData(ByteData data){\n"))
 	_, _ = dst.Write([]byte("    return _" + toClassName(typ.Name.Name) + "(\n"))
 
 	//err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {

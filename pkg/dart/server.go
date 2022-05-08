@@ -32,11 +32,11 @@ func printServer(dst io.Writer, typ *ast.ServerType) {
 }
 
 func printServerImp(dst io.Writer, typ *ast.ServerType) {
-	_, _ = dst.Write([]byte("class " + toClassName(typ.Name.Name) + "Imp extends ServerClient implements " + toClassName(typ.Name.Name)))
+	_, _ = dst.Write([]byte("class " + toClassName(typ.Name.Name) + "Client extends ServerClient implements " + toClassName(typ.Name.Name)))
 
 	_, _ = dst.Write([]byte("{\n"))
 
-	_, _ = dst.Write([]byte("  " + toClassName(typ.Name.Name) + "Imp(Client client):super(client);\n\n"))
+	_, _ = dst.Write([]byte("  " + toClassName(typ.Name.Name) + "Client(Client client):super(client);\n\n"))
 
 	_, _ = dst.Write([]byte("  @override\n"))
 	_, _ = dst.Write([]byte("  String get name => \"" + toClassName(typ.Name.Name) + "\";\n\n"))

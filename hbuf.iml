@@ -3,7 +3,11 @@
   <component name="Go" enabled="true" />
   <component name="NewModuleRootManager" inherit-compiler-output="true">
     <exclude-output />
-    <content url="file://$MODULE_DIR$" />
+    <content url="file://$MODULE_DIR$">
+      <excludeFolder url="file://$MODULE_DIR$/test/out/dart/build" />
+      <excludeFolder url="file://$MODULE_DIR$/test/out/dart/.pub" />
+      <excludeFolder url="file://$MODULE_DIR$/test/out/dart/.dart_tool" />
+    </content>
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>

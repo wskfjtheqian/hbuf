@@ -10,5 +10,8 @@ dependencies:
 #   path: ^1.8.0
   hbuf_dart:
     path: D:/Dev/hbuf_dart
+  cookie_jar: any
 dev_dependencies:
   lints: ^1.0.0
+  test: ^1.16.0
+

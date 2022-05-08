@@ -33,8 +33,13 @@ func printData(dst io.Writer, typ *ast.DataType) {
 		printType(dst, field.Type, false)
 		_, _ = dst.Write([]byte(" value);\n\n"))
 	}
-	_, _ = dst.Write([]byte("  factory " + toClassName(typ.Name.Name) + "({\n"))
+	isParam := false
+	_, _ = dst.Write([]byte("  factory " + toClassName(typ.Name.Name) + "("))
 	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
+		if !isParam {
+			_, _ = dst.Write([]byte("{\n"))
+			isParam = true
+		}
 		_, _ = dst.Write([]byte("    "))
 		printType(dst, field.Type, true)
 		_, _ = dst.Write([]byte(" " + toFieldName(field.Name.Name)))
@@ -44,7 +49,10 @@ func printData(dst io.Writer, typ *ast.DataType) {
 	if err != nil {
 		return
 	}
-	_, _ = dst.Write([]byte("  }){\n"))
+	if isParam {
+		_, _ = dst.Write([]byte("}"))
+	}
+	_, _ = dst.Write([]byte("  ){\n"))
 	_, _ = dst.Write([]byte("    return _" + toClassName(typ.Name.Name) + "(\n"))
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 		_, _ = dst.Write([]byte("      "))
@@ -87,8 +95,13 @@ func printDataEntity(dst io.Writer, typ *ast.DataType) {
 		return
 	}
 
-	_, _ = dst.Write([]byte("  _" + toClassName(typ.Name.Name) + "({\n"))
+	_, _ = dst.Write([]byte("  _" + toClassName(typ.Name.Name) + "("))
+	isParam := false
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
+		if !isParam {
+			_, _ = dst.Write([]byte("{\n"))
+			isParam = true
+		}
 		_, _ = dst.Write([]byte("    "))
 		if !field.Type.IsEmpty() {
 			_, _ = dst.Write([]byte("required "))
@@ -100,7 +113,11 @@ func printDataEntity(dst io.Writer, typ *ast.DataType) {
 	if err != nil {
 		return
 	}
-	_, _ = dst.Write([]byte("  });\n\n"))
+	_, _ = dst.Write([]byte("  "))
+	if isParam {
+		_, _ = dst.Write([]byte("}"))
+	}
+	_, _ = dst.Write([]byte(");\n\n"))
 
 	_, _ = dst.Write([]byte("  static _" + toClassName(typ.Name.Name) + " fromMap(Map<String, dynamic> map){\n"))
 	_, _ = dst.Write([]byte("    return _" + toClassName(typ.Name.Name) + "(\n"))

@@ -17,7 +17,7 @@ var _types = map[string]string{
 }
 
 func Build(file *ast.File, out string) error {
-	fc, err := os.Create(out + ".dart")
+	fc, err := os.Create(out + ".go")
 	if err != nil {
 		return err
 	}

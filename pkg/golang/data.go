@@ -1,280 +1,195 @@
 package golang
 
 import (
-	"math"
-	"reflect"
+	"hbuf/pkg/ast"
+	"hbuf/pkg/build"
+	"io"
 )
 
-type Type int8
+func printData(dst io.Writer, typ *ast.DataType) {
+	_, _ = dst.Write([]byte("abstract class " + toClassName(typ.Name.Name) + " implements Data"))
+	if nil != typ.Extends {
+		printExtend(dst, typ.Extends, true)
+	}
+	_, _ = dst.Write([]byte("{\n"))
+	for _, field := range typ.Fields.List {
+		if nil != field.Comment {
+			_, _ = dst.Write([]byte("  /// " + field.Comment.Text()))
+		}
+		isSuper := build.CheckSuperField(field.Name.Name, typ)
+		if isSuper {
+			_, _ = dst.Write([]byte("  @override\n"))
+		}
+		_, _ = dst.Write([]byte("  "))
+		printType(dst, field.Type, false)
+		_, _ = dst.Write([]byte(" get " + toFieldName(field.Name.Name)))
+		_, _ = dst.Write([]byte(";\n\n"))
 
-const (
-	Int    Type = iota // | (type + idMask+ dataSize)[1] | id | data |
-	UInt               // | (type + idMask+ dataSize)[1] | id | data |
-	Float              // | (type + idMask+ dataSize)[1] | id | data |
-	Bytes              // | (type + idMask+ lenSize)[1]  | id | len | data |
-	Array              // | (type + idMask+ lenSize)[1]  | id | len | data |
-	Map                // | (type + idMask+ lenSize)[1]  | id | len | data |
-	Server             // | (type + idMask+ lenSize)[1]  | id | len | data |
-	Data               // | (type + idMask+ lenSize)[1]  | id | len | data |
-)
+		if isSuper {
+			_, _ = dst.Write([]byte("  @override\n"))
+		}
+		_, _ = dst.Write([]byte("  set "))
+		_, _ = dst.Write([]byte(toFieldName(field.Name.Name) + "("))
+		printType(dst, field.Type, false)
+		_, _ = dst.Write([]byte(" value);\n\n"))
+	}
+	isParam := false
+	_, _ = dst.Write([]byte("  factory " + toClassName(typ.Name.Name) + "("))
+	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
+		if !isParam {
+			_, _ = dst.Write([]byte("{\n"))
+			isParam = true
+		}
+		_, _ = dst.Write([]byte("    "))
+		printType(dst, field.Type, true)
+		_, _ = dst.Write([]byte(" " + toFieldName(field.Name.Name)))
+		_, _ = dst.Write([]byte(",\n"))
+		return nil
+	})
+	if err != nil {
+		return
+	}
+	if isParam {
+		_, _ = dst.Write([]byte("}"))
+	}
+	_, _ = dst.Write([]byte("  ){\n"))
+	_, _ = dst.Write([]byte("    return _" + toClassName(typ.Name.Name) + "(\n"))
+	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
+		_, _ = dst.Write([]byte("      "))
+		_, _ = dst.Write([]byte(toFieldName(field.Name.Name)))
+		_, _ = dst.Write([]byte(": "))
+		_, _ = dst.Write([]byte(toFieldName(field.Name.Name)))
+		_, _ = dst.Write([]byte(",\n"))
+		return nil
+	})
+	if err != nil {
+		return
+	}
+	_, _ = dst.Write([]byte("    );\n"))
+	_, _ = dst.Write([]byte("  }\n\n"))
 
-type ToByteCall interface {
-	ToBytes() []byte
+	_, _ = dst.Write([]byte("  static " + toClassName(typ.Name.Name) + " fromMap(Map<String, dynamic> map){\n"))
+	_, _ = dst.Write([]byte("    return _" + toClassName(typ.Name.Name) + ".fromMap(map);\n"))
+	_, _ = dst.Write([]byte("  }\n\n"))
+
+	_, _ = dst.Write([]byte("  static " + toClassName(typ.Name.Name) + " fromData(ByteData data){\n"))
+	_, _ = dst.Write([]byte("    return _" + toClassName(typ.Name.Name) + ".fromData(data);\n"))
+	_, _ = dst.Write([]byte("  }\n\n"))
+
+	_, _ = dst.Write([]byte("}\n\n"))
 }
 
-// ToBytes /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+func printDataEntity(dst io.Writer, typ *ast.DataType) {
+	_, _ = dst.Write([]byte("class _" + toClassName(typ.Name.Name) + " implements " + toClassName(typ.Name.Name)))
+	_, _ = dst.Write([]byte(" {\n"))
 
-func idToBytes(id uint32) ([]byte, int) {
-	var temp = make([]byte, 8)
-	i := 0
-	for id >= 0x80 {
-		temp[i] = byte(id) | 0x80
-		id >>= 7
-		i++
+	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
+		_, _ = dst.Write([]byte("  @override\n"))
+		_, _ = dst.Write([]byte("  "))
+		printType(dst, field.Type, false)
+		_, _ = dst.Write([]byte(" " + toFieldName(field.Name.Name)))
+		_, _ = dst.Write([]byte(";\n\n"))
+		return nil
+	})
+	if err != nil {
+		return
 	}
-	temp[i] = byte(id)
-	return temp[0 : i+1], i + 1
+
+	_, _ = dst.Write([]byte("  _" + toClassName(typ.Name.Name) + "("))
+	isParam := false
+	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
+		if !isParam {
+			_, _ = dst.Write([]byte("{\n"))
+			isParam = true
+		}
+		_, _ = dst.Write([]byte("    "))
+		if !field.Type.IsEmpty() {
+			_, _ = dst.Write([]byte("required "))
+		}
+		_, _ = dst.Write([]byte("this." + toFieldName(field.Name.Name)))
+		_, _ = dst.Write([]byte(",\n"))
+		return nil
+	})
+	if err != nil {
+		return
+	}
+	_, _ = dst.Write([]byte("  "))
+	if isParam {
+		_, _ = dst.Write([]byte("}"))
+	}
+	_, _ = dst.Write([]byte(");\n\n"))
+
+	_, _ = dst.Write([]byte("  static _" + toClassName(typ.Name.Name) + " fromMap(Map<String, dynamic> map){\n"))
+	_, _ = dst.Write([]byte("    return _" + toClassName(typ.Name.Name) + "(\n"))
+
+	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
+		_, _ = dst.Write([]byte("      " + toFieldName(field.Name.Name)))
+		_, _ = dst.Write([]byte(": map[\"" + getJsonName(field) + "\"]"))
+		_, _ = dst.Write([]byte(",\n"))
+		return nil
+	})
+	if err != nil {
+		return
+	}
+
+	_, _ = dst.Write([]byte("    );\n"))
+	_, _ = dst.Write([]byte("  }\n"))
+
+	_, _ = dst.Write([]byte("\n"))
+	_, _ = dst.Write([]byte("  @override\n"))
+	_, _ = dst.Write([]byte("  Map<String, dynamic> toMap() {\n"))
+	_, _ = dst.Write([]byte("    return {\n"))
+	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
+		_, _ = dst.Write([]byte("      \"" + getJsonName(field)))
+		_, _ = dst.Write([]byte("\": " + toFieldName(field.Name.Name) + ",\n"))
+		return nil
+	})
+	if err != nil {
+		return
+	}
+	_, _ = dst.Write([]byte("    };\n"))
+	_, _ = dst.Write([]byte("  }\n"))
+
+	_, _ = dst.Write([]byte("  static _" + toClassName(typ.Name.Name) + " fromData(ByteData data){\n"))
+	_, _ = dst.Write([]byte("    return _" + toClassName(typ.Name.Name) + "(\n"))
+
+	//err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
+	//	_, _ = dst.Write([]byte("      " + toFieldName(field.Name.Name)))
+	//	_, _ = dst.Write([]byte(": map[\"" + getJsonName(field) + "\"]"))
+	//	_, _ = dst.Write([]byte(",\n"))
+	//	return nil
+	//})
+	//if err != nil {
+	//	return
+	//}
+
+	_, _ = dst.Write([]byte("    );\n"))
+	_, _ = dst.Write([]byte("  }\n"))
+
+	_, _ = dst.Write([]byte("\n"))
+	_, _ = dst.Write([]byte("  @override\n"))
+	_, _ = dst.Write([]byte("  ByteData toData() {\n"))
+	_, _ = dst.Write([]byte("    return ByteData.view(Uint8List(12).buffer);\n"))
+	//err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
+	//	_, _ = dst.Write([]byte("      \"" + getJsonName(field)))
+	//	_, _ = dst.Write([]byte("\": " + toFieldName(field.Name.Name) + ",\n"))
+	//	return nil
+	//})
+	//if err != nil {
+	//	return
+	//}
+	//_, _ = dst.Write([]byte("    };\n"))
+	_, _ = dst.Write([]byte("  }\n"))
+
+	_, _ = dst.Write([]byte("}\n\n"))
 }
 
-func idFromBytes(bytes []byte) (uint32, int) {
-	var id uint32
-	var i = 0
-	for _, val := range bytes {
-		id |= uint32(val&0x7F) << (7 * i)
-		i++
-		if val < 0x80 {
-			break
+func printExtend(dst io.Writer, extends []*ast.Ident, start bool) {
+	for i, v := range extends {
+		if 0 != i || start {
+			_, _ = dst.Write([]byte(", "))
 		}
-	}
-	return id, i
-}
+		_, _ = dst.Write([]byte(toClassName(v.Name)))
 
-func intToBytes(id uint64) ([]byte, int) {
-	var temp = make([]byte, 8)
-	if 0 == id {
-		temp[0] = byte(0)
-		return temp[0:1], 1
-	}
-	var i = 0
-	for id > 0 {
-		a := id & 0xFF
-		temp[i] = byte(a)
-		id = id >> 8
-		i++
-	}
-	return temp[0:i], i
-}
-
-func joinBytes(t Type, id *uint32, call func() ([]byte, int)) []byte {
-	if nil == id {
-		valB, valL := call()
-		var temp = make([]byte, 1+valL)
-		temp[0] = byte(int(t)<<5 | valL)
-		copy(temp[1:], valB)
-		return temp
-	} else {
-		idB, idL := idToBytes(*id)
-		valB, valL := call()
-		var temp = make([]byte, 1+idL+valL)
-		temp[0] = byte(int(t)<<5 | 1<<4 | valL)
-		copy(temp[1:], idB)
-		copy(temp[1+idL:], valB)
-		return temp
 	}
 }
-
-func JoinBytes(t Type, id uint32, call func() ([]byte, int)) []byte {
-	return joinBytes(t, &id, call)
-}
-
-func ToBytes(typ Type, id uint32, val interface{}) []byte {
-	return toBytes(&typ, &id, val)
-}
-
-func toBytes(typ *Type, id *uint32, val interface{}) []byte {
-	if nil == val {
-		return []byte{}
-	}
-	var t Type
-	var call func() ([]byte, int)
-	tp := reflect.TypeOf(val)
-	if reflect.Ptr == tp.Kind() {
-		tp = tp.Elem()
-		if reflect.Struct != tp.Kind() {
-			val = reflect.ValueOf(val).Elem()
-		}
-	}
-	switch tp.Kind() {
-	case reflect.Bool:
-		t = Int
-		call = func() ([]byte, int) {
-			var temp int
-			if val.(bool) {
-				temp = 1
-			} else {
-				temp = 0
-			}
-			return intToBytes(uint64(temp))
-		}
-
-	case reflect.Int8:
-		t = Int
-		call = func() ([]byte, int) {
-			return intToBytes(uint64(val.(int8)))
-		}
-	case reflect.Int16:
-		t = Int
-		call = func() ([]byte, int) {
-			return intToBytes(uint64(val.(int16)))
-		}
-	case reflect.Int32:
-		t = Int
-		call = func() ([]byte, int) {
-			return intToBytes(uint64(val.(int32)))
-		}
-	case reflect.Int:
-		t = Int
-		call = func() ([]byte, int) {
-			return intToBytes(uint64(val.(int)))
-		}
-	case reflect.Int64:
-		t = Int
-		call = func() ([]byte, int) {
-			return intToBytes(uint64(val.(int64)))
-		}
-	case reflect.Uint8:
-		t = UInt
-		call = func() ([]byte, int) {
-			return intToBytes(uint64(val.(uint8)))
-		}
-
-	case reflect.Uint16:
-		t = UInt
-		call = func() ([]byte, int) {
-			return intToBytes(uint64(val.(uint16)))
-		}
-	case reflect.Uint32:
-		t = UInt
-		call = func() ([]byte, int) {
-			return intToBytes(uint64(val.(uint32)))
-		}
-	case reflect.Uint64:
-		t = UInt
-		call = func() ([]byte, int) {
-			return intToBytes(val.(uint64))
-		}
-	case reflect.Float32:
-		t = Float
-		call = func() ([]byte, int) {
-			return intToBytes(uint64(math.Float32bits(val.(float32))))
-		}
-	case reflect.Float64:
-		t = Float
-		call = func() ([]byte, int) {
-			return intToBytes(math.Float64bits(val.(float64)))
-		}
-	case reflect.String:
-		t = Bytes
-		call = func() ([]byte, int) {
-			valB := []byte(val.(string))
-			valL := len(valB)
-			lenB, lenL := intToBytes(uint64(valL))
-			var temp = make([]byte, valL+lenL)
-			copy(temp, valB)
-			copy(temp[valL:], lenB)
-			return temp, lenL
-		}
-	case reflect.Slice:
-		t = Array
-		v := reflect.ValueOf(val)
-		le := v.Len()
-		if 0 < le && reflect.Int8 == v.Index(0).Kind() {
-			call = func() ([]byte, int) {
-				valB := v.Interface().([]byte)
-				valL := len(valB)
-				lenB, lenL := intToBytes(uint64(valL))
-				var temp = make([]byte, valL+lenL)
-				copy(temp, valB)
-				copy(temp[valL:], lenB)
-				return temp, lenL
-			}
-		} else {
-			call = func() ([]byte, int) {
-				temp := []byte{}
-				lenB, lenL := intToBytes(uint64(le))
-				temp = append(temp, lenB...)
-				var i uint32 = 0
-				for ; i < uint32(le); i++ {
-					temp = append(temp, toBytes(nil, &i, v.Index(int(i)).Interface())...)
-				}
-				return temp, lenL
-			}
-		}
-	case reflect.Map:
-		t = Map
-		call = func() ([]byte, int) {
-			temp := []byte{}
-			v := reflect.ValueOf(val)
-			le := v.Len()
-			lenB, lenL := intToBytes(uint64(le))
-			temp = append(temp, lenB...)
-			for _, key := range v.MapKeys() {
-				temp = append(temp, toBytes(nil, nil, key.Interface())...)
-				temp = append(temp, toBytes(nil, nil, v.MapIndex(key).Interface())...)
-			}
-			return temp, lenL
-		}
-	case reflect.Struct:
-		var v = reflect.ValueOf(val)
-		if call := v.MethodByName("ToBytes"); call.IsValid() {
-			return call.Call(nil)[0].Bytes()
-		}
-		return []byte{}
-	}
-	if nil == typ {
-		typ = &t
-	}
-	return joinBytes(*typ, id, call)
-}
-
-//// FromBytes /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-//func getType(b uint8) (Type, int, int) {
-//	t := b >> 4
-//	idLen := (b >> 2) >> 2
-//	valLen := b
-//	return Type(t), int(idLen), int(valLen)
-//}
-//
-//func getUint64(buffer []byte, index int, l int) uint64 {
-//	var ret uint64
-//	for i := index + l - 1; i >= index; i-- {
-//		index = index << 8
-//	}
-//	return ret
-//}
-//
-//func FromBytes(buffer []byte, call func(typ *Type, id *int, data *interface{})) {
-//	var i = 0
-//	l := len(buffer)
-//	for i < l {
-//		ty, idLen, valLen := getType(buffer[i])
-//		i++
-//		var id int
-//		if 0 < idLen {
-//			id = int(getUint64(buffer, i, idLen))
-//			i += idLen
-//		}
-//		var data interface{}
-//		switch ty {
-//		case Bool:
-//			data = 1 == getUint64(buffer, i, valLen)
-//		case Int8:
-//			data = int8(getUint64(buffer, i, valLen))
-//		case Int16:
-//			data = int16(getUint64(buffer, i, valLen))
-//		}
-//		call(&ty, &id, &data)
-//	}
-//
-//}

@@ -397,15 +397,15 @@ type (
 		Doc     *CommentGroup // associated documentation; or nil
 		Path    *BasicLit     // import path
 		Comment *CommentGroup // line comments; or nil
-		EndPos  token.Pos     // end of spec (overrides Path.Pos if nonzero)
+		EndPos  token.Pos     // end of spec (overrides Value.Pos if nonzero)
 	}
 
 	PackageSpec struct {
 		Doc     *CommentGroup // associated documentation; or nil
 		Name    *Ident        // local package name (including "."); or nil
-		Path    *BasicLit     // import path
+		Value   *BasicLit     // import path
 		Comment *CommentGroup // line comments; or nil
-		EndPos  token.Pos     // end of spec (overrides Path.Pos if nonzero)
+		EndPos  token.Pos     // end of spec (overrides Value.Pos if nonzero)
 	}
 
 	TypeSpec struct {
@@ -447,7 +447,7 @@ func (*BadSpec) specNode() {}
 
 type File struct {
 	Doc        *CommentGroup // associated documentation; or nil
-	Package    *PackageSpec
+	Packages   map[string]*PackageSpec
 	Specs      []Spec
 	Scope      *Scope          // package scope (this file only)
 	Imports    []*ImportSpec   // imports in this file
@@ -455,12 +455,25 @@ type File struct {
 	Comments   []*CommentGroup // list of all comments in the source file
 }
 
-func (f *File) Pos() token.Pos { return f.Package.EndPos }
+func (f *File) Pos() token.Pos {
+	for _, item := range f.Packages {
+		return item.EndPos
+	}
+	return token.NoPos
+}
 func (f *File) End() token.Pos {
 	if n := len(f.Specs); n > 0 {
 		return f.Specs[n-1].End()
 	}
-	return f.Package.EndPos
+
+	var temp *PackageSpec
+	for _, item := range f.Packages {
+		temp = item
+	}
+	if nil != temp {
+		return temp.EndPos
+	}
+	return token.NoPos
 }
 
 type Package struct {

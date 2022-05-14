@@ -1,9 +1,10 @@
-package golang
+package dart
 
 import (
 	"go/printer"
 	"hbuf/pkg/ast"
 	"hbuf/pkg/build"
+	"hbuf/pkg/token"
 	"io"
 	"os"
 	"path/filepath"
@@ -16,8 +17,8 @@ var _types = map[string]string{
 	build.Double: "double", build.String: "String",
 }
 
-func Build(file *ast.File, out string) error {
-	fc, err := os.Create(out + ".dart")
+func Build(file *ast.File, fset *token.FileSet, out string) error {
+	fc, err := os.Create(out + ".go")
 	if err != nil {
 		return err
 	}

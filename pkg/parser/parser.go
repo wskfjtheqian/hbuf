@@ -888,7 +888,13 @@ func (p *parser) parseFile() *ast.File {
 		return nil
 	}
 
-	pos := p.parsePackageSpec()
+	packages := make(map[string]*ast.PackageSpec, 0)
+	for token.PACKAGE == p.tok {
+		pack := p.parsePackageSpec()
+		if nil != pack {
+			packages[pack.Name.Name] = pack
+		}
+	}
 
 	p.openScope()
 	p.pkgScope = p.topScope
@@ -924,7 +930,7 @@ func (p *parser) parseFile() *ast.File {
 
 	return &ast.File{
 		//Doc:        doc,
-		Package:    pos,
+		Packages:   packages,
 		Specs:      specs,
 		Scope:      p.pkgScope,
 		Imports:    p.imports,
@@ -937,7 +943,7 @@ func (p *parser) parseFile() *ast.File {
 func (p *parser) parsePackageSpec() *ast.PackageSpec {
 	pos := p.expect(token.PACKAGE)
 	if p.trace {
-		defer un(trace(p, "PackageSpec"))
+		return nil
 	}
 
 	var ident *ast.Ident
@@ -946,22 +952,23 @@ func (p *parser) parsePackageSpec() *ast.PackageSpec {
 		ident = p.parseIdent()
 	}
 
+	if token.ASSIGN != p.tok {
+		p.error(pos, "invalid import path:= ")
+	}
+	p.next()
 	var path string
 	if p.tok == token.STRING {
 		path = p.lit
-		if !isValidImport(path) {
-			p.error(pos, "invalid import path: "+path)
-		}
 		p.next()
 	} else {
-		p.expect(token.STRING) // use expect() error handling
+		p.expect(token.STRING)
 	}
-	p.expectSemi() // call before accessing p.linecomment
+	p.expectSemi()
 
 	return &ast.PackageSpec{
 		Doc:     p.lineComment,
 		Name:    ident,
-		Path:    &ast.BasicLit{ValuePos: pos, Kind: token.STRING, Value: path},
+		Value:   &ast.BasicLit{ValuePos: pos, Kind: token.STRING, Value: path},
 		Comment: p.lineComment,
 	}
 }

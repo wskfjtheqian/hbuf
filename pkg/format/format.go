@@ -18,7 +18,7 @@ func Node(dst io.Writer, node interface{}) error {
 		}
 	}
 
-	dst.Write([]byte("package " + file.Package.Path.Value + "\n\n"))
+	dst.Write([]byte("package " + file.Package.Value.Value + "\n\n"))
 	for _, s := range file.Imports {
 		printImport(dst, s)
 	}

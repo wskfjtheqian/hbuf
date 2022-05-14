@@ -1,4 +1,5 @@
-package "parser"
+package go="parser"
+package java="com.parser"
 
 data Base = 1{
   string?[]? name_people = 1  //姓名
@@ -9,7 +10,7 @@ data People : Base = 1{
 
   string?[]? name_people = 1  //姓名
 
-  string?<string>? map = 2  //姓名
+  string?<string>? maps = 2  //姓名
 
 }
 

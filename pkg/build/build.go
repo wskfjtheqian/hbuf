@@ -41,9 +41,9 @@ var _keys = map[string]void{
 	Int8: {}, Int16: {}, Int32: {}, Int64: {}, Uint8: {}, Uint16: {}, Uint32: {}, Uint64: {}, Bool: {}, Float: {}, Double: {}, String: {}, Data: {}, Server: {}, Enum: {}, Import: {}, Package: {},
 }
 
-var buildInits = map[string]func(file *ast.File, out string) error{}
+var buildInits = map[string]func(file *ast.File, fset *token.FileSet, out string) error{}
 
-func AddBuildType(name string, build func(file *ast.File, out string) error) {
+func AddBuildType(name string, build func(file *ast.File, fset *token.FileSet, out string) error) {
 	buildInits[name] = build
 }
 func CheckType(typ string) bool {
@@ -54,11 +54,11 @@ func CheckType(typ string) bool {
 type Builder struct {
 	fset  *token.FileSet
 	pkg   *ast.Package
-	build func(file *ast.File, out string) error
+	build func(file *ast.File, fset *token.FileSet, out string) error
 	out   string
 }
 
-func NewBuilder(build func(file *ast.File, out string) error, out string) *Builder {
+func NewBuilder(build func(file *ast.File, fset *token.FileSet, out string) error, out string) *Builder {
 	return &Builder{
 		fset:  token.NewFileSet(),
 		pkg:   ast.NewPackage(),
@@ -98,7 +98,7 @@ func (b *Builder) checkFiles() error {
 			return err
 		}
 		_, name := filepath.Split(path)
-		err = b.build(file, filepath.Join(b.out, name))
+		err = b.build(file, b.fset, filepath.Join(b.out, name))
 		if err != nil {
 			return err
 		}

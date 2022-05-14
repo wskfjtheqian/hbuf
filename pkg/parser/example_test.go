@@ -31,7 +31,7 @@ func ExampleParseFile() {
 		return
 	}
 
-	fmt.Println("package" + f.Package.Path.Value)
+	fmt.Println("package" + f.Package.Value.Value)
 	for _, s := range f.Imports {
 		fmt.Println("import" + s.Path.Value)
 	}

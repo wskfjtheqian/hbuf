@@ -1,9 +1,11 @@
-package dart
+package golang
 
 import (
 	"go/printer"
 	"hbuf/pkg/ast"
 	"hbuf/pkg/build"
+	"hbuf/pkg/scanner"
+	"hbuf/pkg/token"
 	"io"
 	"os"
 	"path/filepath"
@@ -11,12 +13,12 @@ import (
 )
 
 var _types = map[string]string{
-	build.Int8: "int", build.Int16: "int", build.Int32: "int", build.Int64: "int", build.Uint8: "int",
-	build.Uint16: "int", build.Uint32: "int", build.Uint64: "int", build.Bool: "bool", build.Float: "double",
-	build.Double: "double", build.String: "String",
+	build.Int8: "int8", build.Int16: "int16", build.Int32: "int32", build.Int64: "int64", build.Uint8: "uint8",
+	build.Uint16: "uint16", build.Uint32: "uint32", build.Uint64: "uint64", build.Bool: "bool", build.Float: "float32",
+	build.Double: "float64", build.String: "string",
 }
 
-func Build(file *ast.File, out string) error {
+func Build(file *ast.File, fset *token.FileSet, out string) error {
 	fc, err := os.Create(out + ".go")
 	if err != nil {
 		return err
@@ -27,14 +29,14 @@ func Build(file *ast.File, out string) error {
 			print(err)
 		}
 	}(fc)
-	err = Node(fc, file)
+	err = Node(fc, fset, file)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func Node(dst io.Writer, node interface{}) error {
+func Node(dst io.Writer, fset *token.FileSet, node interface{}) error {
 	var file *ast.File
 	switch n := node.(type) {
 	case *ast.File:
@@ -46,9 +48,19 @@ func Node(dst io.Writer, node interface{}) error {
 		}
 	}
 
-	_, _ = dst.Write([]byte("import 'dart:typed_data';\n"))
-	_, _ = dst.Write([]byte("import 'dart:convert';\n"))
-	_, _ = dst.Write([]byte("import 'package:hbuf_dart/hbuf_dart.dart';\n"))
+	val, ok := file.Packages["go"]
+	if !ok {
+		return scanner.Error{
+			Pos: fset.Position(file.Pos()),
+			Msg: "Not find : package",
+		}
+	}
+
+	_, _ = dst.Write([]byte("package " + val.Value.Value[1:len(val.Value.Value)-1] + "\n"))
+	_, _ = dst.Write([]byte("import (\n"))
+	_, _ = dst.Write([]byte("\t\"encoding/json\"\n"))
+	_, _ = dst.Write([]byte("\t\"hbuf_golang/pkg/hbuf\"\n"))
+	_, _ = dst.Write([]byte(")\n"))
 
 	for _, s := range file.Imports {
 		printImport(dst, s)
@@ -72,7 +84,6 @@ func printImport(dst io.Writer, spec *ast.ImportSpec) {
 func printTypeSpec(dst io.Writer, expr ast.Expr) {
 	switch expr.(type) {
 	case *ast.DataType:
-		printData(dst, expr.(*ast.DataType))
 		printDataEntity(dst, expr.(*ast.DataType))
 	case *ast.ServerType:
 		printServer(dst, expr.(*ast.ServerType))
@@ -98,35 +109,32 @@ func printType(dst io.Writer, expr ast.Expr, b bool) {
 		}
 	case *ast.ArrayType:
 		ar := expr.(*ast.ArrayType)
-		_, _ = dst.Write([]byte("List<"))
+		_, _ = dst.Write([]byte("[]"))
 		printType(dst, ar.VType, false)
-		_, _ = dst.Write([]byte(">"))
-		if ar.Empty {
-			_, _ = dst.Write([]byte("?"))
-		}
 	case *ast.MapType:
 		ma := expr.(*ast.MapType)
-		_, _ = dst.Write([]byte("Map<"))
+		_, _ = dst.Write([]byte("map["))
 		printType(dst, ma.Key, false)
-		_, _ = dst.Write([]byte(", "))
+		_, _ = dst.Write([]byte("]"))
 		printType(dst, ma.VType, false)
-		_, _ = dst.Write([]byte(">"))
-		if ma.Empty {
-			_, _ = dst.Write([]byte("?"))
-		}
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
-		if !t.Empty && b {
-			_, _ = dst.Write([]byte("required "))
+		if t.Empty {
+			_, _ = dst.Write([]byte("*"))
 		}
 		printType(dst, t.Type(), false)
-		if t.Empty {
-			_, _ = dst.Write([]byte("?"))
-		}
 	}
 }
 
 func toClassName(name string) string {
+	var ret = ""
+	for _, item := range strings.Split(name, "_") {
+		ret += strings.ToUpper(item[0:1]) + item[1:]
+	}
+	return ret
+}
+
+func toFieldName(name string) string {
 	var ret = ""
 	for _, item := range strings.Split(name, "_") {
 		if 0 < len(item) {
@@ -136,7 +144,22 @@ func toClassName(name string) string {
 	return ret
 }
 
-func toFieldName(name string) string {
+func toJsonName(name string) string {
+	var ret = ""
+	for i, item := range strings.Split(name, "_") {
+		if 0 < len(item) {
+			if 0 == i {
+				ret += strings.ToLower(item[0:1]) + item[1:]
+			} else {
+				ret += strings.ToUpper(item[0:1]) + item[1:]
+			}
+
+		}
+	}
+	return ret
+}
+
+func toParamName(name string) string {
 	var ret = ""
 	for i, item := range strings.Split(name, "_") {
 		if 0 < len(item) {

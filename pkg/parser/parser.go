@@ -522,7 +522,7 @@ func (p *parser) parseId() *ast.BasicLit {
 	return id
 }
 
-func (p *parser) parseFieldDecl(scope *ast.Scope) *ast.Field {
+func (p *parser) parseFieldDecl(scope *ast.Scope, tags map[string]*ast.Tag) *ast.Field {
 	if p.trace {
 		defer un(trace(p, "FieldDecl"))
 	}
@@ -544,7 +544,15 @@ func (p *parser) parseFieldDecl(scope *ast.Scope) *ast.Field {
 
 	p.expectSemi() // call before accessing p.linecomment
 
-	field := &ast.Field{Doc: doc, Name: name, Type: typ, Id: id, Tag: tag, Comment: p.lineComment}
+	field := &ast.Field{
+		Tags:    tags,
+		Doc:     doc,
+		Name:    name,
+		Type:    typ,
+		Id:      id,
+		Tag:     tag,
+		Comment: p.lineComment,
+	}
 	p.declare(field, nil, scope, ast.Var, name)
 	p.resolve(typ)
 
@@ -723,7 +731,7 @@ func (p *parser) parseImportSpec(doc *ast.CommentGroup, _ token.Token, _ int) as
 	return spec
 }
 
-func (p *parser) parseDataSpec(doc *ast.CommentGroup) ast.Spec {
+func (p *parser) parseDataSpec(doc *ast.CommentGroup, tags map[string]*ast.Tag) ast.Spec {
 	if p.trace {
 		defer un(trace(p, "DataType"))
 	}
@@ -738,7 +746,8 @@ func (p *parser) parseDataSpec(doc *ast.CommentGroup) ast.Spec {
 	scope := ast.NewScope(nil) // struct scope
 	var list []*ast.Field
 	for p.tok != token.RBRACE && p.tok != token.EOF {
-		list = append(list, p.parseFieldDecl(scope))
+		tags := p.parseTags()
+		list = append(list, p.parseFieldDecl(scope, tags))
 	}
 	rbrace := p.expect(token.RBRACE)
 
@@ -749,6 +758,7 @@ func (p *parser) parseDataSpec(doc *ast.CommentGroup) ast.Spec {
 		p.next()
 	}
 	spec.Type = &ast.DataType{
+		Tags:    tags,
 		Data:    pos,
 		Name:    name,
 		Extends: extends,
@@ -820,7 +830,7 @@ func (p *parser) parseEnumItem(scope *ast.Scope) *ast.EnumItem {
 	return &ast.EnumItem{Doc: doc, Name: name, Id: id, Comment: p.lineComment}
 }
 
-func (p *parser) parseServerSpec(doc *ast.CommentGroup) ast.Spec {
+func (p *parser) parseServerSpec(doc *ast.CommentGroup, tags map[string]*ast.Tag) ast.Spec {
 	if p.trace {
 		defer un(trace(p, "ServerType"))
 	}
@@ -846,6 +856,7 @@ func (p *parser) parseServerSpec(doc *ast.CommentGroup) ast.Spec {
 		p.next()
 	}
 	spec.Type = &ast.ServerType{
+		Tags:    tags,
 		Server:  pos,
 		Name:    name,
 		Extends: extends,
@@ -863,12 +874,12 @@ func (p *parser) parseDecl(sync map[token.Token]bool) ast.Spec {
 	if p.trace {
 		defer un(trace(p, "Declaration"))
 	}
-
+	tags := p.parseTags()
 	switch p.tok {
 	case token.DATA:
-		return p.parseDataSpec(nil)
+		return p.parseDataSpec(nil, tags)
 	case token.SERVER:
-		return p.parseServerSpec(nil)
+		return p.parseServerSpec(nil, tags)
 	case token.ENUM:
 		return p.parseEnumSpec(nil)
 
@@ -947,8 +958,7 @@ func (p *parser) parsePackageSpec() *ast.PackageSpec {
 	}
 
 	var ident *ast.Ident
-	switch p.tok {
-	case token.IDENT:
+	if token.IDENT == p.tok {
 		ident = p.parseIdent()
 	}
 
@@ -970,5 +980,44 @@ func (p *parser) parsePackageSpec() *ast.PackageSpec {
 		Name:    ident,
 		Value:   &ast.BasicLit{ValuePos: pos, Kind: token.STRING, Value: path},
 		Comment: p.lineComment,
+	}
+}
+
+func (p *parser) parseTags() map[string]*ast.Tag {
+	var ret map[string]*ast.Tag = make(map[string]*ast.Tag)
+	for token.LBRACK == p.tok {
+		tag := p.parseTag()
+		if nil != tag {
+			ret[tag.Name.Name] = tag
+		}
+	}
+	return ret
+}
+
+func (p *parser) parseTag() *ast.Tag {
+	pos := p.pos
+	p.next()
+	if token.IDENT != p.tok {
+		p.error(p.pos, "invalid import path:= ")
+		return nil
+	}
+	name := p.parseIdent()
+	if token.COLON != p.tok {
+		p.error(p.pos, "invalid import path:= ")
+		return nil
+	}
+	p.next()
+	var value string
+	if p.tok == token.STRING {
+		value = p.lit
+		p.next()
+	} else {
+		p.expect(token.STRING)
+	}
+	p.expect(token.RBRACK)
+	p.expectSemi()
+	return &ast.Tag{
+		Name:  name,
+		Value: &ast.BasicLit{ValuePos: pos, Kind: token.STRING, Value: value},
 	}
 }

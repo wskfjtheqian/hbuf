@@ -130,6 +130,7 @@ func isDirective(c string) bool {
 }
 
 type Field struct {
+	Tags    map[string]*Tag
 	Doc     *CommentGroup // associated documentation; or nil
 	Name    *Ident        // field/method/parameter names; or nil
 	Type    Type          // field/method/parameter type
@@ -242,6 +243,12 @@ type Type interface {
 	typeNode()
 }
 
+type Tag struct {
+	Name   *Ident    // local package name (including "."); or nil
+	Value  *BasicLit // import path
+	EndPos token.Pos // end of spec (overrides Value.Pos if nonzero)
+}
+
 type (
 	// VarType 变量类型
 	VarType struct {
@@ -265,6 +272,7 @@ type (
 	}
 
 	DataType struct {
+		Tags       map[string]*Tag
 		Data       token.Pos  // position of "data" keyword
 		Fields     *FieldList // list of field declarations
 		Incomplete bool       // true if (source) fields are missing in the Fields list
@@ -274,6 +282,7 @@ type (
 	}
 
 	ServerType struct {
+		Tags    map[string]*Tag
 		Server  token.Pos // position of "server" keyword
 		Name    *Ident
 		Extends []*Ident
@@ -286,6 +295,7 @@ type (
 	}
 
 	FuncType struct {
+		Tags      map[string]*Tag
 		Result    *VarType
 		Name      *Ident
 		Param     *VarType // (incoming) parameters; non-nil

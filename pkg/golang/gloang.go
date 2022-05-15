@@ -58,6 +58,7 @@ func Node(dst io.Writer, fset *token.FileSet, node interface{}) error {
 	_, _ = dst.Write([]byte("package " + val.Value.Value[1:len(val.Value.Value)-1] + "\n"))
 	_, _ = dst.Write([]byte("import (\n"))
 	_, _ = dst.Write([]byte("\t\"context\"\n"))
+	_, _ = dst.Write([]byte("\t\"database/sql\"\n"))
 	_, _ = dst.Write([]byte("\t\"encoding/json\"\n"))
 	_, _ = dst.Write([]byte("\t\"hbuf_golang/pkg/hbuf\"\n"))
 	for _, s := range file.Imports {
@@ -85,7 +86,13 @@ func printTypeSpec(dst io.Writer, expr ast.Expr) {
 	switch expr.(type) {
 	case *ast.DataType:
 		printDataEntity(dst, expr.(*ast.DataType))
+		for _, _ = range (expr.(*ast.DataType)).Tags {
+			printScanData(dst, expr.(*ast.DataType))
+			printGetData(dst, expr.(*ast.DataType))
+			break
+		}
 	case *ast.ServerType:
+
 		printServer(dst, expr.(*ast.ServerType))
 		printServerImp(dst, expr.(*ast.ServerType))
 		printServerRouter(dst, expr.(*ast.ServerType))

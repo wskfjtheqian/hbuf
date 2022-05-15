@@ -1,9 +1,12 @@
 package go="parser"
 package java="com.parser"
 
-[db_name:""]
-data Base = 1{
+[db:""]
+data Base = 1
+{
+  [db:""]
   string?[]? name_people = 1  //姓名
+
 }
 
 //人

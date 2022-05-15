@@ -8,7 +8,6 @@ import (
 	"hbuf/pkg/token"
 	"io"
 	"os"
-	"path/filepath"
 	"strings"
 )
 
@@ -58,13 +57,14 @@ func Node(dst io.Writer, fset *token.FileSet, node interface{}) error {
 
 	_, _ = dst.Write([]byte("package " + val.Value.Value[1:len(val.Value.Value)-1] + "\n"))
 	_, _ = dst.Write([]byte("import (\n"))
+	_, _ = dst.Write([]byte("\t\"context\"\n"))
 	_, _ = dst.Write([]byte("\t\"encoding/json\"\n"))
 	_, _ = dst.Write([]byte("\t\"hbuf_golang/pkg/hbuf\"\n"))
-	_, _ = dst.Write([]byte(")\n"))
-
 	for _, s := range file.Imports {
 		printImport(dst, s)
 	}
+	_, _ = dst.Write([]byte(")\n"))
+
 	_, _ = dst.Write([]byte("\n"))
 	for _, s := range file.Specs {
 		switch s.(type) {
@@ -77,8 +77,8 @@ func Node(dst io.Writer, fset *token.FileSet, node interface{}) error {
 }
 
 func printImport(dst io.Writer, spec *ast.ImportSpec) {
-	_, file := filepath.Split(spec.Path.Value)
-	dst.Write([]byte("import \"" + file + ".dart\";\n"))
+	//_, file := filepath.Split(spec.Path.Value)
+	//dst.Write([]byte("\t\"" + file + ".dart\";\n"))
 }
 
 func printTypeSpec(dst io.Writer, expr ast.Expr) {

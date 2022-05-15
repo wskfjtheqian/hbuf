@@ -17,7 +17,7 @@ func printServer(dst io.Writer, typ *ast.ServerType) {
 		}
 
 		_, _ = dst.Write([]byte("\t" + toFieldName(method.Name.Name)))
-		_, _ = dst.Write([]byte("(cxt *hbuf.Context, "))
+		_, _ = dst.Write([]byte("(ctx context.Context, "))
 		_, _ = dst.Write([]byte(toParamName(method.ParamName.Name)))
 		_, _ = dst.Write([]byte(" *"))
 		printType(dst, method.Param, false)
@@ -105,8 +105,8 @@ func printServerRouter(dst io.Writer, typ *ast.ServerType) {
 		_, _ = dst.Write([]byte("				FormData: func(data hbuf.Data) ([]byte, error) {\n"))
 		_, _ = dst.Write([]byte("					return json.Marshal(&data)\n"))
 		_, _ = dst.Write([]byte("				},\n"))
-		_, _ = dst.Write([]byte("				Invoke: func(cxt *hbuf.Context, data hbuf.Data) (hbuf.Data, error) {\n"))
-		_, _ = dst.Write([]byte("					return server." + toFieldName(method.Name.Name) + "(cxt, data.(*"))
+		_, _ = dst.Write([]byte("				Invoke: func(ctx context.Context, data hbuf.Data) (hbuf.Data, error) {\n"))
+		_, _ = dst.Write([]byte("					return server." + toFieldName(method.Name.Name) + "(ctx, data.(*"))
 		printType(dst, method.Param, false)
 		_, _ = dst.Write([]byte("))\n"))
 		_, _ = dst.Write([]byte("				},\n"))

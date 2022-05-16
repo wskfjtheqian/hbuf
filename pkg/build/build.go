@@ -296,3 +296,55 @@ func CheckSuperMethod(name string, typ *ast.ServerType) bool {
 	}
 	return false
 }
+
+// StringToHumpName 转驼峰名
+func StringToHumpName(val string) string {
+	if 0 == len(val) {
+		return val
+	}
+	temp := strings.Split(val, "_")
+	var ret string
+	for _, item := range temp {
+		ret += strings.ToUpper(item[:1])
+		ret += strings.ToLower(item[1:])
+	}
+	return ret
+}
+
+// StringToFirstLower 转首字母小写
+func StringToFirstLower(val string) string {
+	if 0 == len(val) {
+		return val
+	}
+	temp := strings.Split(val, "_")
+	var ret string
+	for _, item := range temp {
+		ret += strings.ToUpper(item[:1])
+		ret += strings.ToLower(item[1:])
+	}
+	return strings.ToLower(ret[:1]) + ret[1:]
+}
+
+// StringToUnderlineName 下划线
+func StringToUnderlineName(val string) string {
+	if 0 == len(val) {
+		return val
+	}
+
+	rex := regexp.MustCompile(`[A-Z]`)
+	match := rex.FindStringSubmatchIndex(val)
+	if nil == match {
+		return val
+	}
+	var ret string
+	var index = 0
+	for i, item := range match {
+		temp := strings.ToLower(val[index : item+1])
+		if 0 == i {
+			ret += temp
+		} else {
+			ret += "_" + temp
+		}
+	}
+	return ret
+}

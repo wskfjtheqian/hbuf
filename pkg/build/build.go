@@ -306,7 +306,7 @@ func StringToHumpName(val string) string {
 	var ret string
 	for _, item := range temp {
 		ret += strings.ToUpper(item[:1])
-		ret += strings.ToLower(item[1:])
+		ret += item[1:]
 	}
 	return ret
 }
@@ -332,19 +332,23 @@ func StringToUnderlineName(val string) string {
 	}
 
 	rex := regexp.MustCompile(`[A-Z]`)
-	match := rex.FindStringSubmatchIndex(val)
+	match := rex.FindAllStringSubmatchIndex(val, -1)
 	if nil == match {
 		return val
 	}
 	var ret string
 	var index = 0
-	for i, item := range match {
-		temp := strings.ToLower(val[index : item+1])
-		if 0 == i {
+	for _, item := range match {
+		temp := strings.ToLower(val[index:item[0]])
+		if 0 == len(ret) {
 			ret += temp
 		} else {
 			ret += "_" + temp
 		}
+		index = item[0]
+	}
+	if index < len(val) {
+		ret += "_" + strings.ToLower(val[index:])
 	}
 	return ret
 }

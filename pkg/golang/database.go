@@ -7,7 +7,7 @@ import (
 )
 
 func printScanData(dst io.Writer, typ *ast.DataType) error {
-	name := toClassName(typ.Name.Name)
+	name := build.StringToHumpName(typ.Name.Name)
 	_, _ = dst.Write([]byte("func DbScan" + name + "(query *sql.Rows, val *" + name + ") error {\n"))
 	_, _ = dst.Write([]byte("	return query.Scan("))
 	isFist := true
@@ -18,7 +18,7 @@ func printScanData(dst io.Writer, typ *ast.DataType) error {
 				_, _ = dst.Write([]byte(", "))
 			}
 			isFist = false
-			_, _ = dst.Write([]byte("&val." + toFieldName(field.Name.Name)))
+			_, _ = dst.Write([]byte("&val." + build.StringToHumpName(field.Name.Name)))
 		}
 		return nil
 	})
@@ -31,7 +31,7 @@ func printScanData(dst io.Writer, typ *ast.DataType) error {
 }
 
 func printGetData(dst io.Writer, typ *ast.DataType) error {
-	name := toClassName(typ.Name.Name)
+	name := build.StringToHumpName(typ.Name.Name)
 	dbName := typ.Tags["db"].Value.Value
 	if 0 != len(dbName) {
 		dbName = dbName[1 : len(dbName)-1]
@@ -54,7 +54,7 @@ func printGetData(dst io.Writer, typ *ast.DataType) error {
 			if 0 >= len(fieldName) {
 				fieldName = field.Name.Name
 			}
-			_, _ = dst.Write([]byte(fieldName))
+			_, _ = dst.Write([]byte(build.StringToUnderlineName(fieldName)))
 		}
 		return nil
 	})
@@ -73,7 +73,7 @@ func printGetData(dst io.Writer, typ *ast.DataType) error {
 	_, _ = dst.Write([]byte("	}\n"))
 
 	_, _ = dst.Write([]byte("	var val " + name + "\n"))
-	_, _ = dst.Write([]byte("	err = DbScanUserInfo(query, &val)\n"))
+	_, _ = dst.Write([]byte("	err = DbScan" + name + "(query, &val)\n"))
 	_, _ = dst.Write([]byte("	if err != nil {\n"))
 	_, _ = dst.Write([]byte("		return nil, err\n"))
 	_, _ = dst.Write([]byte("	}\n"))

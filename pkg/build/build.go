@@ -352,3 +352,31 @@ func StringToUnderlineName(val string) string {
 	}
 	return ret
 }
+
+// StringToAllUpper 下划线加全部大写
+func StringToAllUpper(val string) string {
+	if 0 == len(val) {
+		return val
+	}
+
+	rex := regexp.MustCompile(`[A-Z]`)
+	match := rex.FindAllStringSubmatchIndex(val, -1)
+	if nil == match {
+		return val
+	}
+	var ret string
+	var index = 0
+	for _, item := range match {
+		temp := strings.ToUpper(val[index:item[0]])
+		if 0 == len(ret) {
+			ret += temp
+		} else {
+			ret += "_" + temp
+		}
+		index = item[0]
+	}
+	if index < len(val) {
+		ret += "_" + strings.ToUpper(val[index:])
+	}
+	return ret
+}

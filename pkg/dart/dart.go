@@ -8,7 +8,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 var _types = map[string]string{
@@ -125,29 +124,4 @@ func printType(dst io.Writer, expr ast.Expr, b bool) {
 			_, _ = dst.Write([]byte("?"))
 		}
 	}
-}
-
-func toClassName(name string) string {
-	var ret = ""
-	for _, item := range strings.Split(name, "_") {
-		if 0 < len(item) {
-			ret += strings.ToUpper(item[0:1]) + item[1:]
-		}
-	}
-	return ret
-}
-
-func toFieldName(name string) string {
-	var ret = ""
-	for i, item := range strings.Split(name, "_") {
-		if 0 < len(item) {
-			if 0 == i {
-				ret += strings.ToLower(item[0:1]) + item[1:]
-			} else {
-				ret += strings.ToUpper(item[0:1]) + item[1:]
-			}
-
-		}
-	}
-	return ret
 }

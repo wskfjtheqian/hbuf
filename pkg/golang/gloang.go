@@ -8,7 +8,6 @@ import (
 	"hbuf/pkg/token"
 	"io"
 	"os"
-	"strings"
 )
 
 var _types = map[string]string{
@@ -89,6 +88,8 @@ func printTypeSpec(dst io.Writer, expr ast.Expr) {
 		for _, _ = range (expr.(*ast.DataType)).Tags {
 			printScanData(dst, expr.(*ast.DataType))
 			printGetData(dst, expr.(*ast.DataType))
+			printDeleteData(dst, expr.(*ast.DataType))
+			printUpdateData(dst, expr.(*ast.DataType))
 			break
 		}
 	case *ast.ServerType:
@@ -131,52 +132,4 @@ func printType(dst io.Writer, expr ast.Expr, b bool) {
 		}
 		printType(dst, t.Type(), false)
 	}
-}
-
-func toClassName(name string) string {
-	var ret = ""
-	for _, item := range strings.Split(name, "_") {
-		ret += strings.ToUpper(item[0:1]) + item[1:]
-	}
-	return ret
-}
-
-func toFieldName(name string) string {
-	var ret = ""
-	for _, item := range strings.Split(name, "_") {
-		if 0 < len(item) {
-			ret += strings.ToUpper(item[0:1]) + item[1:]
-		}
-	}
-	return ret
-}
-
-func toJsonName(name string) string {
-	var ret = ""
-	for i, item := range strings.Split(name, "_") {
-		if 0 < len(item) {
-			if 0 == i {
-				ret += strings.ToLower(item[0:1]) + item[1:]
-			} else {
-				ret += strings.ToUpper(item[0:1]) + item[1:]
-			}
-
-		}
-	}
-	return ret
-}
-
-func toParamName(name string) string {
-	var ret = ""
-	for i, item := range strings.Split(name, "_") {
-		if 0 < len(item) {
-			if 0 == i {
-				ret += strings.ToLower(item[0:1]) + item[1:]
-			} else {
-				ret += strings.ToUpper(item[0:1]) + item[1:]
-			}
-
-		}
-	}
-	return ret
 }

@@ -56,6 +56,7 @@ func Node(dst io.Writer, fset *token.FileSet, node interface{}) error {
 
 	_, _ = dst.Write([]byte("package " + val.Value.Value[1:len(val.Value.Value)-1] + "\n"))
 	_, _ = dst.Write([]byte("import (\n"))
+	_, _ = dst.Write([]byte("\t\"strings\"\n"))
 	_, _ = dst.Write([]byte("\t\"context\"\n"))
 	_, _ = dst.Write([]byte("\t\"database/sql\"\n"))
 	_, _ = dst.Write([]byte("\t\"encoding/json\"\n"))
@@ -90,6 +91,8 @@ func printTypeSpec(dst io.Writer, expr ast.Expr) {
 			printGetData(dst, expr.(*ast.DataType))
 			printDeleteData(dst, expr.(*ast.DataType))
 			printUpdateData(dst, expr.(*ast.DataType))
+			printInsertData(dst, expr.(*ast.DataType))
+			printInsertListData(dst, expr.(*ast.DataType))
 			break
 		}
 	case *ast.ServerType:

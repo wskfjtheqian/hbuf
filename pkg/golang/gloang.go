@@ -13,7 +13,7 @@ import (
 var _types = map[string]string{
 	build.Int8: "int8", build.Int16: "int16", build.Int32: "int32", build.Int64: "int64", build.Uint8: "uint8",
 	build.Uint16: "uint16", build.Uint32: "uint32", build.Uint64: "uint64", build.Bool: "bool", build.Float: "float32",
-	build.Double: "float64", build.String: "string",
+	build.Double: "float64", build.String: "string", build.Date: "time.Time",
 }
 
 func Build(file *ast.File, fset *token.FileSet, out string) error {

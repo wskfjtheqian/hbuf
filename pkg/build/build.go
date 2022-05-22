@@ -28,17 +28,18 @@ const (
 	Enum    string = "enum"
 	Import  string = "import"
 	Package string = "package"
+	Date    string = "date"
 )
 
 type void struct {
 }
 
 var _types = map[string]void{
-	Int8: {}, Int16: {}, Int32: {}, Int64: {}, Uint8: {}, Uint16: {}, Uint32: {}, Uint64: {}, Bool: {}, Float: {}, Double: {}, String: {},
+	Int8: {}, Int16: {}, Int32: {}, Int64: {}, Uint8: {}, Uint16: {}, Uint32: {}, Uint64: {}, Bool: {}, Float: {}, Double: {}, String: {}, Date: {},
 }
 
 var _keys = map[string]void{
-	Int8: {}, Int16: {}, Int32: {}, Int64: {}, Uint8: {}, Uint16: {}, Uint32: {}, Uint64: {}, Bool: {}, Float: {}, Double: {}, String: {}, Data: {}, Server: {}, Enum: {}, Import: {}, Package: {},
+	Int8: {}, Int16: {}, Int32: {}, Int64: {}, Uint8: {}, Uint16: {}, Uint32: {}, Uint64: {}, Bool: {}, Float: {}, Double: {}, String: {}, Data: {}, Server: {}, Enum: {}, Import: {}, Package: {}, Date: {},
 }
 
 var buildInits = map[string]func(file *ast.File, fset *token.FileSet, out string) error{}
@@ -334,7 +335,7 @@ func StringToUnderlineName(val string) string {
 	rex := regexp.MustCompile(`[A-Z]`)
 	match := rex.FindAllStringSubmatchIndex(val, -1)
 	if nil == match {
-		return val
+		return strings.ToLower(val)
 	}
 	var ret string
 	var index = 0
@@ -362,7 +363,7 @@ func StringToAllUpper(val string) string {
 	rex := regexp.MustCompile(`[A-Z]`)
 	match := rex.FindAllStringSubmatchIndex(val, -1)
 	if nil == match {
-		return val
+		return strings.ToUpper(val)
 	}
 	var ret string
 	var index = 0

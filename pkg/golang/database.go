@@ -7,6 +7,20 @@ import (
 	"strings"
 )
 
+type DB struct {
+	name string
+	key  bool
+}
+
+func getDB(name string, tag map[string]*ast.Tag) *DB {
+	value := tag["db"].Value.Value
+	if 2 >= len(value) {
+		return &DB{name: build.StringToUnderlineName(name)}
+	}
+
+	return &DB{}
+}
+
 func printScanData(dst io.Writer, typ *ast.DataType) error {
 	name := build.StringToHumpName(typ.Name.Name)
 	_, _ = dst.Write([]byte("func DbScan" + name + "(query *sql.Rows, val *" + name + ") error {\n"))
@@ -93,11 +107,11 @@ func printInsertData(dst io.Writer, typ *ast.DataType) error {
 		dbName = typ.Name.Name
 	}
 
-	_, _ = dst.Write([]byte("func DbInsert" + name + "(db *sql.DB, val *UserInfo) (int, error) {\n"))
+	_, _ = dst.Write([]byte("func DbInsert" + name + "(db *sql.DB, val *" + name + ") (int, error) {\n"))
 	_, _ = dst.Write([]byte("\tif nil == val {\n"))
 	_, _ = dst.Write([]byte("\t	return 0, nil\n"))
 	_, _ = dst.Write([]byte("\t}\n"))
-	_, _ = dst.Write([]byte("	result, err := db.Exec(`INSERT INTO user_info("))
+	_, _ = dst.Write([]byte("	result, err := db.Exec(`INSERT INTO " + dbName + "("))
 	isFist := true
 	value := strings.Builder{}
 	param := strings.Builder{}
@@ -148,13 +162,13 @@ func printInsertListData(dst io.Writer, typ *ast.DataType) error {
 		dbName = typ.Name.Name
 	}
 
-	_, _ = dst.Write([]byte("func DbInsertList" + name + "(db *sql.DB, val []*UserInfo) (int, error) {\n"))
+	_, _ = dst.Write([]byte("func DbInsertList" + name + "(db *sql.DB, val []*" + name + ") (int, error) {\n"))
 	_, _ = dst.Write([]byte("	if nil == val || 0 == len(val) {\n"))
 	_, _ = dst.Write([]byte("		return 0, nil\n"))
 	_, _ = dst.Write([]byte("	}\n"))
 	_, _ = dst.Write([]byte("	value := strings.Builder{}\n"))
 	_, _ = dst.Write([]byte("	var param []interface{}\n"))
-	_, _ = dst.Write([]byte("	value.Write([]byte(`INSERT INTO user_info("))
+	_, _ = dst.Write([]byte("	value.Write([]byte(`INSERT INTO " + dbName + "("))
 	isFist := true
 	value := strings.Builder{}
 	param := strings.Builder{}
@@ -209,8 +223,8 @@ func printUpdateData(dst io.Writer, typ *ast.DataType) error {
 		dbName = typ.Name.Name
 	}
 
-	_, _ = dst.Write([]byte("func DbUpdate" + name + "(db *sql.DB, val *UserInfo) (int, error) {\n"))
-	_, _ = dst.Write([]byte("	result, err := db.Exec(`UPDATE  user_info SET "))
+	_, _ = dst.Write([]byte("func DbUpdate" + name + "(db *sql.DB, val *" + name + ") (int, error) {\n"))
+	_, _ = dst.Write([]byte("	result, err := db.Exec(`UPDATE  " + dbName + " SET "))
 	isFist := true
 	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 		db, ok := field.Tags["db"]

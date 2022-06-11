@@ -86,15 +86,7 @@ func printTypeSpec(dst io.Writer, expr ast.Expr) {
 	switch expr.(type) {
 	case *ast.DataType:
 		printDataEntity(dst, expr.(*ast.DataType))
-		for _, _ = range (expr.(*ast.DataType)).Tags {
-			printScanData(dst, expr.(*ast.DataType))
-			printGetData(dst, expr.(*ast.DataType))
-			printDeleteData(dst, expr.(*ast.DataType))
-			printUpdateData(dst, expr.(*ast.DataType))
-			printInsertData(dst, expr.(*ast.DataType))
-			printInsertListData(dst, expr.(*ast.DataType))
-			break
-		}
+		printDatabase(dst, expr.(*ast.DataType))
 	case *ast.ServerType:
 
 		printServer(dst, expr.(*ast.ServerType))

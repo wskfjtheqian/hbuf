@@ -15,12 +15,16 @@ func main() {
 	var out = flag.String("o", "", "out dir")
 	var in = flag.String("i", "", "input dir")
 	var typ = flag.String("t", "", "out type")
+	var pack = flag.String("p", "", "package path")
 	flag.Parse()
 
 	if nil == out || 0 == len(*out) {
 
 	}
 	if nil == in || 0 == len(*in) {
+
+	}
+	if nil == pack || 0 == len(*pack) {
 
 	}
 	if nil == typ || 0 == len(*typ) {
@@ -32,7 +36,7 @@ func main() {
 		return
 	}
 
-	err := build.Build(*out, *in, *typ)
+	err := build.Build(*out, *in, *typ, *pack)
 	if err != nil {
 		fmt.Println(fmt.Errorf("Build error: %s", err))
 		return

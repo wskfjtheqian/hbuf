@@ -31,6 +31,7 @@ func (b *Builder) checkServer(file *ast.File, server *ast.ServerType, index int)
 		return err
 	}
 
+	server.Name.Obj.Data = file
 	return nil
 }
 

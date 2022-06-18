@@ -26,9 +26,7 @@ func (b *Builder) checkEnum(file *ast.File, enum *ast.EnumType, index int) error
 		return err
 	}
 
-	//obj := ast.NewObj(ast.Enum, name)
-	//obj.Decl = enum
-	//file.Scope.Insert(obj)
+	enum.Name.Obj.Data = file
 	return nil
 }
 

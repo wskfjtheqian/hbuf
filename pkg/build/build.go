@@ -42,9 +42,11 @@ var _keys = map[string]void{
 	Int8: {}, Int16: {}, Int32: {}, Int64: {}, Uint8: {}, Uint16: {}, Uint32: {}, Uint64: {}, Bool: {}, Float: {}, Double: {}, String: {}, Data: {}, Server: {}, Enum: {}, Import: {}, Package: {}, Date: {},
 }
 
-var buildInits = map[string]func(file *ast.File, fset *token.FileSet, out string) error{}
+type Function = func(file *ast.File, fset *token.FileSet, param *Param) error
 
-func AddBuildType(name string, build func(file *ast.File, fset *token.FileSet, out string) error) {
+var buildInits = map[string]Function{}
+
+func AddBuildType(name string, build Function) {
 	buildInits[name] = build
 }
 func CheckType(typ string) bool {
@@ -52,23 +54,36 @@ func CheckType(typ string) bool {
 	return ok
 }
 
+type Param struct {
+	out  string
+	pack string
+}
+
+func (p *Param) GetOut() string {
+	return p.out
+}
+
+func (p *Param) GetPack() string {
+	return p.pack
+}
+
 type Builder struct {
 	fset  *token.FileSet
 	pkg   *ast.Package
-	build func(file *ast.File, fset *token.FileSet, out string) error
-	out   string
+	build Function
+	param *Param
 }
 
-func NewBuilder(build func(file *ast.File, fset *token.FileSet, out string) error, out string) *Builder {
+func NewBuilder(build Function, param *Param) *Builder {
 	return &Builder{
 		fset:  token.NewFileSet(),
 		pkg:   ast.NewPackage(),
 		build: build,
-		out:   out,
+		param: param,
 	}
 }
 
-func Build(out string, in string, typ string) error {
+func Build(out string, in string, typ string, pack string) error {
 	in = filepath.Clean(in)
 	path := filepath.Dir(in)
 	name := in[len(path)+1:]
@@ -77,7 +92,10 @@ func Build(out string, in string, typ string) error {
 		return err
 	}
 
-	build := NewBuilder(buildInits[typ], out)
+	build := NewBuilder(buildInits[typ], &Param{
+		out:  out,
+		pack: pack,
+	})
 	err = parser.ParseDir(build.fset, build.pkg, path, reg)
 	if err != nil {
 		return err
@@ -85,6 +103,17 @@ func Build(out string, in string, typ string) error {
 	err = build.checkFiles()
 	if err != nil {
 		return err
+	}
+
+	for path, file := range build.pkg.Files {
+		_, name := filepath.Split(path)
+		err := build.build(file, build.fset, &Param{
+			out:  filepath.Join(build.param.out, name),
+			pack: build.param.pack,
+		})
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -98,12 +127,8 @@ func (b *Builder) checkFiles() error {
 		if err != nil {
 			return err
 		}
-		_, name := filepath.Split(path)
-		err = b.build(file, b.fset, filepath.Join(b.out, name))
-		if err != nil {
-			return err
-		}
 	}
+
 	return nil
 }
 

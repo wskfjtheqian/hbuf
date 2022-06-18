@@ -16,8 +16,8 @@ var _types = map[string]string{
 	build.Double: "double", build.String: "String",
 }
 
-func Build(file *ast.File, fset *token.FileSet, out string) error {
-	fc, err := os.Create(out + ".go")
+func Build(file *ast.File, fset *token.FileSet, param *build.Param) error {
+	fc, err := os.Create(param.GetPack() + ".go")
 	if err != nil {
 		return err
 	}

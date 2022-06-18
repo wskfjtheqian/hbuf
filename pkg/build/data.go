@@ -31,9 +31,7 @@ func (b *Builder) checkData(file *ast.File, data *ast.DataType, index int) error
 		return err
 	}
 
-	//obj := ast.NewObj(ast.Data, name)
-	//obj.Decl = data
-	//file.Scope.Insert(obj)
+	data.Name.Obj.Data = file
 	return nil
 }
 

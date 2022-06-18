@@ -1,23 +1,110 @@
 package dart
 
 import (
+	"errors"
 	"go/printer"
 	"hbuf/pkg/ast"
 	"hbuf/pkg/build"
 	"hbuf/pkg/token"
-	"io"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 )
 
 var _types = map[string]string{
 	build.Int8: "int", build.Int16: "int", build.Int32: "int", build.Int64: "int", build.Uint8: "int",
 	build.Uint16: "int", build.Uint32: "int", build.Uint64: "int", build.Bool: "bool", build.Float: "double",
-	build.Double: "double", build.String: "String",
+	build.Double: "double", build.String: "String", build.Date: "DateTime",
+}
+
+type Writer struct {
+	imp  map[string]struct{}
+	code *strings.Builder
+	path string
+	pack string
+}
+
+func (w *Writer) Import(text string) {
+	w.imp[text] = struct{}{}
+}
+
+func (w *Writer) Code(text string) {
+	_, _ = w.code.WriteString(text)
+}
+
+func NewWriter(pack string) *Writer {
+	return &Writer{
+		imp:  map[string]struct{}{},
+		code: &strings.Builder{},
+		pack: pack,
+	}
+}
+
+type GoWriter struct {
+	data   *Writer
+	enum   *Writer
+	server *Writer
+	path   string
+}
+
+func (g *GoWriter) SetPath(s string) {
+	g.path = s
+	g.data.path = s
+	g.enum.path = s
+	g.server.path = s
+}
+
+func NewGoWriter(pack string) *GoWriter {
+	return &GoWriter{
+		data:   NewWriter(pack),
+		enum:   NewWriter(pack),
+		server: NewWriter(pack),
+	}
 }
 
 func Build(file *ast.File, fset *token.FileSet, param *build.Param) error {
-	fc, err := os.Create(param.GetPack() + ".go")
+	dst := NewGoWriter(param.GetPack())
+	err := Node(dst, fset, file)
+	if err != nil {
+		return err
+	}
+
+	if 0 == len(dst.path) {
+		return errors.New("Not find package name")
+	}
+
+	dir, name := filepath.Split(param.GetOut())
+	name = name[:len(name)-len(".hbuf")]
+
+	err = os.MkdirAll(dir, os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	if 0 < dst.data.code.Len() {
+		err := writerFile(dst.data, filepath.Join(dir, name+".data.dart"))
+		if err != nil {
+			return err
+		}
+	}
+	if 0 < dst.enum.code.Len() {
+		err = writerFile(dst.enum, filepath.Join(dir, name+".enum.dart"))
+		if err != nil {
+			return err
+		}
+	}
+	if 0 < dst.server.code.Len() {
+		err = writerFile(dst.server, filepath.Join(dir, name+".server.dart"))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func writerFile(data *Writer, out string) error {
+	fc, err := os.Create(out)
 	if err != nil {
 		return err
 	}
@@ -27,14 +114,27 @@ func Build(file *ast.File, fset *token.FileSet, param *build.Param) error {
 			print(err)
 		}
 	}(fc)
-	err = Node(fc, file)
-	if err != nil {
-		return err
+
+	if 0 < len(data.imp) {
+		imps := make([]string, len(data.imp))
+
+		i := 0
+		for key, _ := range data.imp {
+			imps[i] = key
+			i++
+
+		}
+		sort.Strings(imps)
+		for _, val := range imps {
+			_, _ = fc.WriteString("import '" + val + "';\n")
+		}
 	}
+	_, _ = fc.WriteString("\n")
+	_, _ = fc.WriteString(data.code.String())
 	return nil
 }
 
-func Node(dst io.Writer, node interface{}) error {
+func Node(dst *GoWriter, fset *token.FileSet, node interface{}) error {
 	var file *ast.File
 	switch n := node.(type) {
 	case *ast.File:
@@ -46,14 +146,8 @@ func Node(dst io.Writer, node interface{}) error {
 		}
 	}
 
-	_, _ = dst.Write([]byte("import 'dart:typed_data';\n"))
-	_, _ = dst.Write([]byte("import 'dart:convert';\n"))
-	_, _ = dst.Write([]byte("import 'package:hbuf_dart/hbuf_dart.dart';\n"))
+	dst.SetPath(file.Path)
 
-	for _, s := range file.Imports {
-		printImport(dst, s)
-	}
-	_, _ = dst.Write([]byte("\n"))
 	for _, s := range file.Specs {
 		switch s.(type) {
 		case *ast.ImportSpec:
@@ -64,22 +158,15 @@ func Node(dst io.Writer, node interface{}) error {
 	return nil
 }
 
-func printImport(dst io.Writer, spec *ast.ImportSpec) {
-	_, file := filepath.Split(spec.Path.Value)
-	dst.Write([]byte("import \"" + file + ".dart\";\n"))
-}
-
-func printTypeSpec(dst io.Writer, expr ast.Expr) {
+func printTypeSpec(dst *GoWriter, expr ast.Expr) {
 	switch expr.(type) {
 	case *ast.DataType:
-		printData(dst, expr.(*ast.DataType))
-		printDataEntity(dst, expr.(*ast.DataType))
+		printDataCode(dst.data, expr.(*ast.DataType))
 	case *ast.ServerType:
-		printServer(dst, expr.(*ast.ServerType))
-		printServerImp(dst, expr.(*ast.ServerType))
-		printServerRouter(dst, expr.(*ast.ServerType))
+		printServerCode(dst.server, expr.(*ast.ServerType))
+
 	case *ast.EnumType:
-		printEnum(dst, expr.(*ast.EnumType))
+		printEnumCode(dst.enum, expr.(*ast.EnumType))
 	}
 }
 
@@ -87,41 +174,66 @@ func getJsonName(field *ast.Field) string {
 	return field.Name.Name
 }
 
-func printType(dst io.Writer, expr ast.Expr, b bool) {
+func printType(dst *Writer, expr ast.Expr, b bool) {
 	switch expr.(type) {
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
-			_, _ = dst.Write([]byte((expr.(*ast.Ident)).Name))
+			getPackage(dst, expr)
+			dst.Code(expr.(*ast.Ident).Name)
 		} else {
-			_, _ = dst.Write([]byte(_types[(expr.(*ast.Ident)).Name]))
+			dst.Code(_types[(expr.(*ast.Ident).Name)])
 		}
 	case *ast.ArrayType:
 		ar := expr.(*ast.ArrayType)
-		_, _ = dst.Write([]byte("List<"))
+		dst.Code("List<")
 		printType(dst, ar.VType, false)
-		_, _ = dst.Write([]byte(">"))
+		dst.Code(">")
 		if ar.Empty {
-			_, _ = dst.Write([]byte("?"))
+			dst.Code("?")
 		}
 	case *ast.MapType:
 		ma := expr.(*ast.MapType)
-		_, _ = dst.Write([]byte("Map<"))
+		dst.Code("Map<")
 		printType(dst, ma.Key, false)
-		_, _ = dst.Write([]byte(", "))
+		dst.Code(", ")
 		printType(dst, ma.VType, false)
-		_, _ = dst.Write([]byte(">"))
+		dst.Code(">")
 		if ma.Empty {
-			_, _ = dst.Write([]byte("?"))
+			dst.Code("?")
 		}
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
 		if !t.Empty && b {
-			_, _ = dst.Write([]byte("required "))
+			dst.Code("required ")
 		}
 		printType(dst, t.Type(), false)
 		if t.Empty {
-			_, _ = dst.Write([]byte("?"))
+			dst.Code("?")
 		}
 	}
+}
+
+func getPackage(dst *Writer, expr ast.Expr) string {
+	file := (expr.(*ast.Ident)).Obj.Data
+	switch file.(type) {
+	case *ast.File:
+		break
+	default:
+		return ""
+	}
+
+	_, name := filepath.Split(file.(*ast.File).Path)
+	name = name[:len(name)-len(".hbuf")]
+	switch (expr.(*ast.Ident)).Obj.Kind {
+	case ast.Data:
+		name = name + ".data.dart"
+	case ast.Enum:
+		name = name + ".enum.dart"
+	case ast.Server:
+		name = name + ".server.dart"
+	}
+
+	dst.Import(name)
+	return ""
 }

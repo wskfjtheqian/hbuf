@@ -346,7 +346,7 @@ func StringToFirstLower(val string) string {
 	var ret string
 	for _, item := range temp {
 		ret += strings.ToUpper(item[:1])
-		ret += strings.ToLower(item[1:])
+		ret += item[1:]
 	}
 	return strings.ToLower(ret[:1]) + ret[1:]
 }

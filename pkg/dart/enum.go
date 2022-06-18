@@ -3,56 +3,59 @@ package dart
 import (
 	"hbuf/pkg/ast"
 	"hbuf/pkg/build"
-	"io"
 )
 
-func printEnum(dst io.Writer, typ *ast.EnumType) {
+func printEnumCode(dst *Writer, typ *ast.EnumType) {
+	printEnum(dst, typ)
+}
+
+func printEnum(dst *Writer, typ *ast.EnumType) {
 	enumName := build.StringToHumpName(typ.Name.Name)
-	_, _ = dst.Write([]byte("class " + enumName))
-	_, _ = dst.Write([]byte("{\n"))
-	_, _ = dst.Write([]byte("  final int value;\n"))
-	_, _ = dst.Write([]byte("  final String name;\n\n"))
+	dst.Code("class " + enumName)
+	dst.Code("{\n")
+	dst.Code("  final int value;\n")
+	dst.Code("  final String name;\n\n")
 
-	_, _ = dst.Write([]byte("  const " + enumName + "._(this.value, this.name);\n\n"))
+	dst.Code("  const " + enumName + "._(this.value, this.name);\n\n")
 
-	_, _ = dst.Write([]byte("  @override\n"))
-	_, _ = dst.Write([]byte("  bool operator ==(Object other) =>\n"))
-	_, _ = dst.Write([]byte("      identical(this, other) ||\n"))
-	_, _ = dst.Write([]byte("      other is " + enumName + " &&\n"))
-	_, _ = dst.Write([]byte("          runtimeType == other.runtimeType &&\n"))
-	_, _ = dst.Write([]byte("          value == other.value;\n\n"))
+	dst.Code("  @override\n")
+	dst.Code("  bool operator ==(Object other) =>\n")
+	dst.Code("      identical(this, other) ||\n")
+	dst.Code("      other is " + enumName + " &&\n")
+	dst.Code("          runtimeType == other.runtimeType &&\n")
+	dst.Code("          value == other.value;\n\n")
 
-	_, _ = dst.Write([]byte("  @override\n"))
-	_, _ = dst.Write([]byte("  int get hashCode => value.hashCode;\n\n"))
+	dst.Code("  @override\n")
+	dst.Code("  int get hashCode => value.hashCode;\n\n")
 
-	_, _ = dst.Write([]byte("  static " + enumName + " valueOf(int value) {\n"))
-	_, _ = dst.Write([]byte("  	for (var item in values) {\n"))
-	_, _ = dst.Write([]byte("  		if (item.value == value) {\n"))
-	_, _ = dst.Write([]byte("  			return item;\n"))
-	_, _ = dst.Write([]byte("  		}\n"))
-	_, _ = dst.Write([]byte("  	}\n"))
-	_, _ = dst.Write([]byte("  	throw 'Get " + enumName + " by value error, value=$value';\n"))
-	_, _ = dst.Write([]byte("  }\n\n"))
+	dst.Code("  static " + enumName + " valueOf(int value) {\n")
+	dst.Code("  	for (var item in values) {\n")
+	dst.Code("  		if (item.value == value) {\n")
+	dst.Code("  			return item;\n")
+	dst.Code("  		}\n")
+	dst.Code("  	}\n")
+	dst.Code("  	throw 'Get " + enumName + " by value error, value=$value';\n")
+	dst.Code("  }\n\n")
 
-	_, _ = dst.Write([]byte("  static " + enumName + " nameOf(String name) {\n"))
-	_, _ = dst.Write([]byte("  	for (var item in values) {\n"))
-	_, _ = dst.Write([]byte("  		if (item.name == name) {\n"))
-	_, _ = dst.Write([]byte("  			return item;\n"))
-	_, _ = dst.Write([]byte("  		}\n"))
-	_, _ = dst.Write([]byte("  	}\n"))
-	_, _ = dst.Write([]byte("  	throw 'Get " + enumName + " by name error, name=$name';\n"))
-	_, _ = dst.Write([]byte("  }\n\n"))
+	dst.Code("  static " + enumName + " nameOf(String name) {\n")
+	dst.Code("  	for (var item in values) {\n")
+	dst.Code("  		if (item.name == name) {\n")
+	dst.Code("  			return item;\n")
+	dst.Code("  		}\n")
+	dst.Code("  	}\n")
+	dst.Code("  	throw 'Get " + enumName + " by name error, name=$name';\n")
+	dst.Code("  }\n\n")
 
 	for _, item := range typ.Items {
 		itemName := build.StringToAllUpper(item.Name.Name)
-		_, _ = dst.Write([]byte("  static const " + itemName + " = " + enumName + "._(" + item.Id.Value + ", '" + itemName + "');\n"))
+		dst.Code("  static const " + itemName + " = " + enumName + "._(" + item.Id.Value + ", '" + itemName + "');\n")
 	}
-	_, _ = dst.Write([]byte("\n"))
-	_, _ = dst.Write([]byte("  static const List<" + enumName + "> values = [\n"))
+	dst.Code("\n")
+	dst.Code("  static const List<" + enumName + "> values = [\n")
 	for _, item := range typ.Items {
-		_, _ = dst.Write([]byte("    " + build.StringToAllUpper(item.Name.Name) + ",\n"))
+		dst.Code("    " + build.StringToAllUpper(item.Name.Name) + ",\n")
 	}
-	_, _ = dst.Write([]byte("  ];\n\n"))
+	dst.Code("  ];\n\n")
 
-	_, _ = dst.Write([]byte("}\n\n"))
+	dst.Code("}\n\n")
 }

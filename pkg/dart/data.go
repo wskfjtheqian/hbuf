@@ -3,193 +3,199 @@ package dart
 import (
 	"hbuf/pkg/ast"
 	"hbuf/pkg/build"
-	"io"
 )
 
-func printData(dst io.Writer, typ *ast.DataType) {
-	_, _ = dst.Write([]byte("abstract class " + build.StringToHumpName(typ.Name.Name) + " implements Data"))
+func printDataCode(dst *Writer, typ *ast.DataType) {
+	dst.Import("dart:typed_data")
+	dst.Import("package:hbuf_dart/hbuf_dart.dart")
+
+	printData(dst, typ)
+	printDataEntity(dst, typ)
+}
+func printData(dst *Writer, typ *ast.DataType) {
+	dst.Code("abstract class " + build.StringToHumpName(typ.Name.Name) + " implements Data")
 	if nil != typ.Extends {
 		printExtend(dst, typ.Extends, true)
 	}
-	_, _ = dst.Write([]byte("{\n"))
+	dst.Code("{\n")
 	for _, field := range typ.Fields.List {
 		if nil != field.Comment {
-			_, _ = dst.Write([]byte("  /// " + field.Comment.Text()))
+			dst.Code("  /// " + field.Comment.Text())
 		}
 		isSuper := build.CheckSuperField(field.Name.Name, typ)
 		if isSuper {
-			_, _ = dst.Write([]byte("  @override\n"))
+			dst.Code("  @override\n")
 		}
-		_, _ = dst.Write([]byte("  "))
+		dst.Code("  ")
 		printType(dst, field.Type, false)
-		_, _ = dst.Write([]byte(" get " + build.StringToFirstLower(field.Name.Name)))
-		_, _ = dst.Write([]byte(";\n\n"))
+		dst.Code(" get " + build.StringToFirstLower(field.Name.Name))
+		dst.Code(";\n\n")
 
 		if isSuper {
-			_, _ = dst.Write([]byte("  @override\n"))
+			dst.Code("  @override\n")
 		}
-		_, _ = dst.Write([]byte("  set "))
-		_, _ = dst.Write([]byte(build.StringToFirstLower(field.Name.Name) + "("))
+		dst.Code("  set ")
+		dst.Code(build.StringToFirstLower(field.Name.Name) + "(")
 		printType(dst, field.Type, false)
-		_, _ = dst.Write([]byte(" value);\n\n"))
+		dst.Code(" value);\n\n")
 	}
 	isParam := false
-	_, _ = dst.Write([]byte("  factory " + build.StringToHumpName(typ.Name.Name) + "("))
+	dst.Code("  factory " + build.StringToHumpName(typ.Name.Name) + "(")
 	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 		if !isParam {
-			_, _ = dst.Write([]byte("{\n"))
+			dst.Code("{\n")
 			isParam = true
 		}
-		_, _ = dst.Write([]byte("    "))
+		dst.Code("    ")
 		printType(dst, field.Type, true)
-		_, _ = dst.Write([]byte(" " + build.StringToFirstLower(field.Name.Name)))
-		_, _ = dst.Write([]byte(",\n"))
+		dst.Code(" " + build.StringToFirstLower(field.Name.Name))
+		dst.Code(",\n")
 		return nil
 	})
 	if err != nil {
 		return
 	}
 	if isParam {
-		_, _ = dst.Write([]byte("}"))
+		dst.Code("}")
 	}
-	_, _ = dst.Write([]byte("  ){\n"))
-	_, _ = dst.Write([]byte("    return _" + build.StringToHumpName(typ.Name.Name) + "(\n"))
+	dst.Code("  ){\n")
+	dst.Code("    return _" + build.StringToHumpName(typ.Name.Name) + "(\n")
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
-		_, _ = dst.Write([]byte("      "))
-		_, _ = dst.Write([]byte(build.StringToFirstLower(field.Name.Name)))
-		_, _ = dst.Write([]byte(": "))
-		_, _ = dst.Write([]byte(build.StringToFirstLower(field.Name.Name)))
-		_, _ = dst.Write([]byte(",\n"))
+		dst.Code("      ")
+		dst.Code(build.StringToFirstLower(field.Name.Name))
+		dst.Code(": ")
+		dst.Code(build.StringToFirstLower(field.Name.Name))
+		dst.Code(",\n")
 		return nil
 	})
 	if err != nil {
 		return
 	}
-	_, _ = dst.Write([]byte("    );\n"))
-	_, _ = dst.Write([]byte("  }\n\n"))
+	dst.Code("    );\n")
+	dst.Code("  }\n\n")
 
-	_, _ = dst.Write([]byte("  static " + build.StringToHumpName(typ.Name.Name) + " fromMap(Map<String, dynamic> map){\n"))
-	_, _ = dst.Write([]byte("    return _" + build.StringToHumpName(typ.Name.Name) + ".fromMap(map);\n"))
-	_, _ = dst.Write([]byte("  }\n\n"))
+	dst.Code("  static " + build.StringToHumpName(typ.Name.Name) + " fromMap(Map<String, dynamic> map){\n")
+	dst.Code("    return _" + build.StringToHumpName(typ.Name.Name) + ".fromMap(map);\n")
+	dst.Code("  }\n\n")
 
-	_, _ = dst.Write([]byte("  static " + build.StringToHumpName(typ.Name.Name) + " fromData(ByteData data){\n"))
-	_, _ = dst.Write([]byte("    return _" + build.StringToHumpName(typ.Name.Name) + ".fromData(data);\n"))
-	_, _ = dst.Write([]byte("  }\n\n"))
+	dst.Code("  static " + build.StringToHumpName(typ.Name.Name) + " fromData(ByteData data){\n")
+	dst.Code("    return _" + build.StringToHumpName(typ.Name.Name) + ".fromData(data);\n")
+	dst.Code("  }\n\n")
 
-	_, _ = dst.Write([]byte("}\n\n"))
+	dst.Code("}\n\n")
 }
 
-func printDataEntity(dst io.Writer, typ *ast.DataType) {
-	_, _ = dst.Write([]byte("class _" + build.StringToHumpName(typ.Name.Name) + " implements " + build.StringToHumpName(typ.Name.Name)))
-	_, _ = dst.Write([]byte(" {\n"))
+func printDataEntity(dst *Writer, typ *ast.DataType) {
+	dst.Code("class _" + build.StringToHumpName(typ.Name.Name) + " implements " + build.StringToHumpName(typ.Name.Name))
+	dst.Code(" {\n")
 
 	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
-		_, _ = dst.Write([]byte("  @override\n"))
-		_, _ = dst.Write([]byte("  "))
+		dst.Code("  @override\n")
+		dst.Code("  ")
 		printType(dst, field.Type, false)
-		_, _ = dst.Write([]byte(" " + build.StringToFirstLower(field.Name.Name)))
-		_, _ = dst.Write([]byte(";\n\n"))
+		dst.Code(" " + build.StringToFirstLower(field.Name.Name))
+		dst.Code(";\n\n")
 		return nil
 	})
 	if err != nil {
 		return
 	}
 
-	_, _ = dst.Write([]byte("  _" + build.StringToHumpName(typ.Name.Name) + "("))
+	dst.Code("  _" + build.StringToHumpName(typ.Name.Name) + "(")
 	isParam := false
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 		if !isParam {
-			_, _ = dst.Write([]byte("{\n"))
+			dst.Code("{\n")
 			isParam = true
 		}
-		_, _ = dst.Write([]byte("    "))
+		dst.Code("    ")
 		if !field.Type.IsEmpty() {
-			_, _ = dst.Write([]byte("required "))
+			dst.Code("required ")
 		}
-		_, _ = dst.Write([]byte("this." + build.StringToFirstLower(field.Name.Name)))
-		_, _ = dst.Write([]byte(",\n"))
+		dst.Code("this." + build.StringToFirstLower(field.Name.Name))
+		dst.Code(",\n")
 		return nil
 	})
 	if err != nil {
 		return
 	}
-	_, _ = dst.Write([]byte("  "))
+	dst.Code("  ")
 	if isParam {
-		_, _ = dst.Write([]byte("}"))
+		dst.Code("}")
 	}
-	_, _ = dst.Write([]byte(");\n\n"))
+	dst.Code(");\n\n")
 
-	_, _ = dst.Write([]byte("  static _" + build.StringToHumpName(typ.Name.Name) + " fromMap(Map<String, dynamic> map){\n"))
-	_, _ = dst.Write([]byte("    return _" + build.StringToHumpName(typ.Name.Name) + "(\n"))
+	dst.Code("  static _" + build.StringToHumpName(typ.Name.Name) + " fromMap(Map<String, dynamic> map){\n")
+	dst.Code("    return _" + build.StringToHumpName(typ.Name.Name) + "(\n")
 
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
-		_, _ = dst.Write([]byte("      " + build.StringToFirstLower(field.Name.Name)))
-		_, _ = dst.Write([]byte(": map[\"" + getJsonName(field) + "\"]"))
-		_, _ = dst.Write([]byte(",\n"))
+		dst.Code("      " + build.StringToFirstLower(field.Name.Name))
+		dst.Code(": map[\"" + getJsonName(field) + "\"]")
+		dst.Code(",\n")
 		return nil
 	})
 	if err != nil {
 		return
 	}
 
-	_, _ = dst.Write([]byte("    );\n"))
-	_, _ = dst.Write([]byte("  }\n"))
+	dst.Code("    );\n")
+	dst.Code("  }\n")
 
-	_, _ = dst.Write([]byte("\n"))
-	_, _ = dst.Write([]byte("  @override\n"))
-	_, _ = dst.Write([]byte("  Map<String, dynamic> toMap() {\n"))
-	_, _ = dst.Write([]byte("    return {\n"))
+	dst.Code("\n")
+	dst.Code("  @override\n")
+	dst.Code("  Map<String, dynamic> toMap() {\n")
+	dst.Code("    return {\n")
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
-		_, _ = dst.Write([]byte("      \"" + getJsonName(field)))
-		_, _ = dst.Write([]byte("\": " + build.StringToFirstLower(field.Name.Name) + ",\n"))
+		dst.Code("      \"" + getJsonName(field))
+		dst.Code("\": " + build.StringToFirstLower(field.Name.Name) + ",\n")
 		return nil
 	})
 	if err != nil {
 		return
 	}
-	_, _ = dst.Write([]byte("    };\n"))
-	_, _ = dst.Write([]byte("  }\n"))
+	dst.Code("    };\n")
+	dst.Code("  }\n")
 
-	_, _ = dst.Write([]byte("  static _" + build.StringToHumpName(typ.Name.Name) + " fromData(ByteData data){\n"))
-	_, _ = dst.Write([]byte("    return _" + build.StringToHumpName(typ.Name.Name) + "(\n"))
+	dst.Code("  static _" + build.StringToHumpName(typ.Name.Name) + " fromData(ByteData data){\n")
+	dst.Code("    return _" + build.StringToHumpName(typ.Name.Name) + ".fromMap({});\n")
 
 	//err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
-	//	_, _ = dst.Write([]byte("      " + build.StringToFirstLower(field.Name.Name)))
-	//	_, _ = dst.Write([]byte(": map[\"" + getJsonName(field) + "\"]"))
-	//	_, _ = dst.Write([]byte(",\n"))
+	//	dst.Code("      " + build.StringToFirstLower(field.Name.Name))
+	//	dst.Code(": map[\"" + getJsonName(field) + "\"]")
+	//	dst.Code(",\n")
 	//	return nil
 	//})
 	//if err != nil {
 	//	return
 	//}
 
-	_, _ = dst.Write([]byte("    );\n"))
-	_, _ = dst.Write([]byte("  }\n"))
+	//dst.Code("    );\n")
+	dst.Code("  }\n")
 
-	_, _ = dst.Write([]byte("\n"))
-	_, _ = dst.Write([]byte("  @override\n"))
-	_, _ = dst.Write([]byte("  ByteData toData() {\n"))
-	_, _ = dst.Write([]byte("    return ByteData.view(Uint8List(12).buffer);\n"))
+	dst.Code("\n")
+	dst.Code("  @override\n")
+	dst.Code("  ByteData toData() {\n")
+	dst.Code("    return ByteData.view(Uint8List(12).buffer);\n")
 	//err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
-	//	_, _ = dst.Write([]byte("      \"" + getJsonName(field)))
-	//	_, _ = dst.Write([]byte("\": " + build.StringToFirstLower(field.Name.Name) + ",\n"))
+	//	dst.Code("      \"" + getJsonName(field))
+	//	dst.Code("\": " + build.StringToFirstLower(field.Name.Name) + ",\n")
 	//	return nil
 	//})
 	//if err != nil {
 	//	return
 	//}
-	//_, _ = dst.Write([]byte("    };\n"))
-	_, _ = dst.Write([]byte("  }\n"))
+	//dst.Code("    };\n")
+	dst.Code("  }\n")
 
-	_, _ = dst.Write([]byte("}\n\n"))
+	dst.Code("}\n\n")
 }
 
-func printExtend(dst io.Writer, extends []*ast.Ident, start bool) {
+func printExtend(dst *Writer, extends []*ast.Ident, start bool) {
 	for i, v := range extends {
 		if 0 != i || start {
-			_, _ = dst.Write([]byte(", "))
+			dst.Code(", ")
 		}
-		_, _ = dst.Write([]byte(build.StringToHumpName(v.Name)))
+		dst.Code(build.StringToHumpName(v.Name))
 
 	}
 }

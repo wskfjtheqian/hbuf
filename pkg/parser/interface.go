@@ -83,7 +83,7 @@ func ParseFile(fset *token.FileSet, filename string, src interface{}, mode Mode)
 	// parse source
 	p.init(fset, filename, text, mode)
 	f = p.parseFile()
-
+	f.Path = filename
 	return
 }
 

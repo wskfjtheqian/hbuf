@@ -7,7 +7,8 @@ import (
 )
 
 func printServer(dst io.Writer, typ *ast.ServerType) {
-	_, _ = dst.Write([]byte("type " + build.StringToHumpName(typ.Name.Name)))
+	serverName := build.StringToHumpName(typ.Name.Name)
+	_, _ = dst.Write([]byte("type " + serverName))
 	_, _ = dst.Write([]byte(" interface {\n"))
 	printExtend(dst, typ.Extends)
 
@@ -30,14 +31,14 @@ func printServer(dst io.Writer, typ *ast.ServerType) {
 
 func printServerImp(dst io.Writer, typ *ast.ServerType) {
 	//
-	//_, _ = dst.Write([]byte("class " + build.StringToHumpName(typ.Name.Name) + "Client extends ServerClient implements " + build.StringToHumpName(typ.Name.Name)))
+	//_, _ = dst.Write([]byte("class " +serverName + "Client extends ServerClient implements " +serverName))
 	//
 	//_, _ = dst.Write([]byte("{\n"))
 	//
-	//_, _ = dst.Write([]byte("  " + build.StringToHumpName(typ.Name.Name) + "Client(Client client):super(client);\n\n"))
+	//_, _ = dst.Write([]byte("  " +serverName + "Client(Client client):super(client);\n\n"))
 	//
 	//_, _ = dst.Write([]byte("  @override\n"))
-	//_, _ = dst.Write([]byte("  String get name => \"" + build.StringToHumpName(typ.Name.Name) + "\";\n\n"))
+	//_, _ = dst.Write([]byte("  String get name => \"" +serverName + "\";\n\n"))
 	//_, _ = dst.Write([]byte("  @override\n"))
 	//_, _ = dst.Write([]byte("  int get id => " + typ.Id.Value + ";\n\n"))
 	//
@@ -72,26 +73,26 @@ func printServerImp(dst io.Writer, typ *ast.ServerType) {
 }
 
 func printServerRouter(dst io.Writer, typ *ast.ServerType) {
-
-	_, _ = dst.Write([]byte("type " + build.StringToHumpName(typ.Name.Name) + "Router struct {\n"))
-	_, _ = dst.Write([]byte("	server " + build.StringToHumpName(typ.Name.Name) + "\n"))
+	serverName := build.StringToHumpName(typ.Name.Name)
+	_, _ = dst.Write([]byte("type " + serverName + "Router struct {\n"))
+	_, _ = dst.Write([]byte("	server " + serverName + "\n"))
 	_, _ = dst.Write([]byte("	names  map[string]*hbuf.ServerInvoke\n"))
 	_, _ = dst.Write([]byte("}\n\n"))
 
-	_, _ = dst.Write([]byte("func (p *" + build.StringToHumpName(typ.Name.Name) + "Router) GetName() string {\n"))
+	_, _ = dst.Write([]byte("func (p *" + serverName + "Router) GetName() string {\n"))
 	_, _ = dst.Write([]byte("	return \"" + build.StringToUnderlineName(typ.Name.Name) + "\"\n"))
 	_, _ = dst.Write([]byte("}\n\n"))
 
-	_, _ = dst.Write([]byte("func (p *" + build.StringToHumpName(typ.Name.Name) + "Router) GetId() uint32 {\n"))
+	_, _ = dst.Write([]byte("func (p *" + serverName + "Router) GetId() uint32 {\n"))
 	_, _ = dst.Write([]byte("	return 1\n"))
 	_, _ = dst.Write([]byte("}\n\n"))
 
-	_, _ = dst.Write([]byte("func (p *" + build.StringToHumpName(typ.Name.Name) + "Router) GetInvoke() map[string]*hbuf.ServerInvoke {\n"))
+	_, _ = dst.Write([]byte("func (p *" + serverName + "Router) GetInvoke() map[string]*hbuf.ServerInvoke {\n"))
 	_, _ = dst.Write([]byte("	return p.names\n"))
 	_, _ = dst.Write([]byte("}\n\n"))
 
-	_, _ = dst.Write([]byte("func New" + build.StringToHumpName(typ.Name.Name) + "Router(server " + build.StringToHumpName(typ.Name.Name) + ") *" + build.StringToHumpName(typ.Name.Name) + "Router {\n"))
-	_, _ = dst.Write([]byte("	return &" + build.StringToHumpName(typ.Name.Name) + "Router{\n"))
+	_, _ = dst.Write([]byte("func New" + serverName + "Router(server " + serverName + ") *" + serverName + "Router {\n"))
+	_, _ = dst.Write([]byte("	return &" + serverName + "Router{\n"))
 	_, _ = dst.Write([]byte("		server: server,\n"))
 	_, _ = dst.Write([]byte("		names: map[string]*hbuf.ServerInvoke{\n"))
 	err := build.EnumMethod(typ, func(method *ast.FuncType, server *ast.ServerType) error {
@@ -119,4 +120,20 @@ func printServerRouter(dst io.Writer, typ *ast.ServerType) {
 	_, _ = dst.Write([]byte("		},\n"))
 	_, _ = dst.Write([]byte("	}\n"))
 	_, _ = dst.Write([]byte("}\n\n"))
+}
+
+func printGetServerRouter(dst io.Writer, typ *ast.ServerType) {
+	serverName := build.StringToHumpName(typ.Name.Name)
+
+	_, _ = dst.Write([]byte("func Get" + serverName + "(server hbuf.GetServer) (" + serverName + ", error) {\n"))
+	_, _ = dst.Write([]byte("	router := server.Get(&" + serverName + "Router{})\n"))
+	_, _ = dst.Write([]byte("	if nil == router {\n"))
+	_, _ = dst.Write([]byte("		return nil, errors.New(\"Not find server\")\n"))
+	_, _ = dst.Write([]byte("	}\n"))
+	_, _ = dst.Write([]byte("	switch router.(type) {\n"))
+	_, _ = dst.Write([]byte("	case *" + serverName + "Router:\n"))
+	_, _ = dst.Write([]byte("		return router.(*" + serverName + "Router).server, nil\n"))
+	_, _ = dst.Write([]byte("	}\n"))
+	_, _ = dst.Write([]byte("	return nil, errors.New(\"Not find server\")\n"))
+	_, _ = dst.Write([]byte("}\n"))
 }

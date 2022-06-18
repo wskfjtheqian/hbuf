@@ -92,6 +92,7 @@ func printTypeSpec(dst io.Writer, expr ast.Expr) {
 		printServer(dst, expr.(*ast.ServerType))
 		printServerImp(dst, expr.(*ast.ServerType))
 		printServerRouter(dst, expr.(*ast.ServerType))
+		printGetServerRouter(dst, expr.(*ast.ServerType))
 	case *ast.EnumType:
 		printEnum(dst, expr.(*ast.EnumType))
 	}

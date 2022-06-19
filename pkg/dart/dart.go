@@ -170,10 +170,6 @@ func printTypeSpec(dst *GoWriter, expr ast.Expr) {
 	}
 }
 
-func getJsonName(field *ast.Field) string {
-	return field.Name.Name
-}
-
 func printType(dst *Writer, expr ast.Expr, b bool) {
 	switch expr.(type) {
 	case *ast.Ident:

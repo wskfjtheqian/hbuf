@@ -126,11 +126,13 @@ func printDataEntity(dst *Writer, typ *ast.DataType) {
 	dst.Code(");\n\n")
 
 	dst.Code("  static _" + build.StringToHumpName(typ.Name.Name) + " fromMap(Map<String, dynamic> map){\n")
+	dst.Code("     dynamic temp;\n")
 	dst.Code("    return _" + build.StringToHumpName(typ.Name.Name) + "(\n")
 
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 		dst.Code("      " + build.StringToFirstLower(field.Name.Name))
-		dst.Code(": map[\"" + getJsonName(field) + "\"]")
+		jsonName := build.StringToUnderlineName(field.Name.Name)
+		printJsonValue(dst, jsonName, field.Type, data, false)
 		dst.Code(",\n")
 		return nil
 	})
@@ -146,7 +148,7 @@ func printDataEntity(dst *Writer, typ *ast.DataType) {
 	dst.Code("  Map<String, dynamic> toMap() {\n")
 	dst.Code("    return {\n")
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
-		dst.Code("      \"" + getJsonName(field))
+		dst.Code("      \"" + build.StringToUnderlineName(field.Name.Name))
 		dst.Code("\": " + build.StringToFirstLower(field.Name.Name) + ",\n")
 		return nil
 	})
@@ -188,6 +190,70 @@ func printDataEntity(dst *Writer, typ *ast.DataType) {
 	dst.Code("  }\n")
 
 	dst.Code("}\n\n")
+}
+
+func printJsonValue(dst *Writer, name string, expr ast.Expr, data *ast.DataType, empty bool) {
+	switch expr.(type) {
+	case *ast.Ident:
+		t := expr.(*ast.Ident)
+		if nil != t.Obj {
+			if ast.Enum == t.Obj.Kind {
+				if empty {
+					dst.Code(": null == (temp = map[\"" + name + "\"]) ? null : temp is num ? " + t.Name + ".valueOf(temp.toInt()) : null == num.tryParse(temp.toString()) ? null : " + t.Name + ".valueOf(num.tryParse(temp.toString())!.toInt())")
+				} else {
+					dst.Code(": null == (temp = map[\"" + name + "\"]) ? " + t.Name + ".valueOf(0) : " + t.Name + ".valueOf(temp is num ? temp.toInt() : num.tryParse(temp.toString())?.toInt() ?? 0)")
+				}
+			} else if ast.Data == t.Obj.Kind {
+				if empty {
+					dst.Code(": null == (temp = map[\"" + name + "\"]) ? null : " + t.Name + ".fromMap(temp)")
+				} else {
+					dst.Code(": null == (temp = map[\"" + name + "\"]) ? " + t.Name + ".fromMap({}) : " + t.Name + ".fromMap(temp)")
+				}
+			} else {
+				dst.Code(": map[\"" + name + "\"]")
+			}
+		} else {
+			switch expr.(*ast.Ident).Name {
+			case build.Int8, build.Int16, build.Int32, build.Int64, build.Uint8, build.Uint16, build.Uint32, build.Uint64:
+				if empty {
+					dst.Code(": null == (temp = map[\"" + name + "\"]) ? null : (temp is num ? temp.toInt() : num.tryParse(temp.toString())?.toInt())")
+				} else {
+					dst.Code(": null == (temp = map[\"" + name + "\"]) ? 0 : (temp is num ? temp.toInt() : num.tryParse(temp.toString())?.toInt() ?? 0)")
+				}
+				break
+			case build.Float, build.Double:
+				if empty {
+					dst.Code(": null == (temp = map[\"" + name + "\"]) ? null : (temp is num ? temp.toDouble() : num.tryParse(temp.toString())?.toDouble())")
+				} else {
+					dst.Code(": null == (temp = map[\"" + name + "\"]) ? 0 : (temp is num ? temp.toDouble() : num.tryParse(temp.toString())?.toDouble() ?? 0)")
+				}
+				break
+			case build.String:
+				if empty {
+					dst.Code(": null == (temp = map[\"" + name + "\"]) ? null : (temp is String ? temp : temp.toString())")
+				} else {
+					dst.Code(": null == (temp = map[\"" + name + "\"]) ? \"\" : (temp is String ? temp : temp.toString())")
+				}
+			case build.Date:
+				if empty {
+					dst.Code(": null == (temp = map[\"" + name + "\"]) ? null : temp is num ? DateTime.fromMillisecondsSinceEpoch(temp.toInt()) : null == num.tryParse(temp.toString()) ? null : DateTime.fromMillisecondsSinceEpoch(num.tryParse(temp.toString())!.toInt())")
+				} else {
+					dst.Code(": null == (temp = map[\"" + name + "\"]) ? DateTime.fromMillisecondsSinceEpoch(0) : DateTime.fromMillisecondsSinceEpoch(temp is num ? temp.toInt() : num.tryParse(temp.toString())?.toInt() ?? 0)")
+				}
+			case build.Bool:
+				if empty {
+					dst.Code(": null == (temp = map[\"" + name + "\"]) ? null : (temp is bool ? temp: (temp is num ? 0 != temp : (null == num.tryParse(temp.toString()) ? null : 0 != num.tryParse(temp.toString()))))")
+				} else {
+					dst.Code(": null == (temp = map[\"" + name + "\"]) ? false:(temp is bool ? temp: 0 != (temp is num ? temp : num.tryParse(temp.toString()) ?? 0))")
+				}
+			default:
+				dst.Code(": map[\"" + name + "\"]")
+			}
+		}
+	case *ast.VarType:
+		t := expr.(*ast.VarType)
+		printJsonValue(dst, name, t.Type(), data, t.Empty)
+	}
 }
 
 func printExtend(dst *Writer, extends []*ast.Ident, start bool) {

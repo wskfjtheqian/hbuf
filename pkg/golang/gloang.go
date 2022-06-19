@@ -16,7 +16,7 @@ import (
 var _types = map[string]string{
 	build.Int8: "int8", build.Int16: "int16", build.Int32: "int32", build.Int64: "int64", build.Uint8: "uint8",
 	build.Uint16: "uint16", build.Uint32: "uint32", build.Uint64: "uint64", build.Bool: "bool", build.Float: "float32",
-	build.Double: "float64", build.String: "string", build.Date: "time.Time",
+	build.Double: "float64", build.String: "string", build.Date: "hbuf.Time",
 }
 
 type Writer struct {
@@ -206,7 +206,7 @@ func printType(dst *Writer, expr ast.Expr, b bool) {
 			dst.Code(pack + (expr.(*ast.Ident)).Name)
 		} else {
 			if build.Date == (expr.(*ast.Ident)).Name {
-				dst.Import("time")
+				dst.Import("hbuf_golang/pkg/hbuf")
 			}
 			dst.Code(_types[(expr.(*ast.Ident)).Name])
 		}

@@ -41,12 +41,12 @@ func getDB(n string, tag map[string]*ast.Tag) []*DB {
 
 			arr := strings.Split(val, ";")
 			for _, a := range arr {
-				if 0 == strings.Index(a, "name:") {
-					name = a[len("name:"):]
-				} else if 0 == strings.Index(a, "key:") {
-					key = "key" == a[len("key:"):]
-				} else if 0 == strings.Index(a, "type:") {
-					types = a[len("type:"):]
+				if 0 == strings.Index(a, "name=") {
+					name = a[len("name="):]
+				} else if 0 == strings.Index(a, "key=") {
+					key = "key" == a[len("key="):]
+				} else if 0 == strings.Index(a, "type=") {
+					types = a[len("type="):]
 				}
 			}
 			if "" == name {

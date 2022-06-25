@@ -23,9 +23,9 @@ type DBField struct {
 func getDB(n string, tag map[string]*ast.Tag) []*DB {
 	var dbs []*DB
 	for _, value := range tag {
-		if 0 == strings.Index(value.Name.Name, "db") {
+		if 0 == strings.Index(value.Name.Name, "dbName") {
 			var index int64 = 0
-			if "db" != value.Name.Name {
+			if "dbName" != value.Name.Name {
 				var err error
 				index, err = strconv.ParseInt(value.Name.Name[2:], 10, 32)
 				if nil != err {

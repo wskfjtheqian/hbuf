@@ -593,6 +593,7 @@ func (p *parser) parseMethodSpec() *ast.FuncType {
 	}
 
 	doc := p.leadComment
+	tags := p.parseTags()
 	result := p.parseVarType()
 	name := p.parseIdent()
 	p.expect(token.LPAREN)
@@ -609,6 +610,7 @@ func (p *parser) parseMethodSpec() *ast.FuncType {
 		Doc:       doc,
 		Comment:   doc,
 		Id:        id,
+		Tags:      tags,
 	}
 	return typ
 }

@@ -102,26 +102,33 @@ func printServerRouter(dst *Writer, typ *ast.ServerType) {
 	dst.Code("}\n\n")
 
 	dst.Code("func New" + serverName + "Router(server " + serverName + ") *" + serverName + "Router {\n")
-	dst.Code("	return &" + serverName + "Router{\n")
-	dst.Code("		server: server,\n")
-	dst.Code("		names: map[string]*hbuf.ServerInvoke{\n")
+	dst.Code("\treturn &" + serverName + "Router{\n")
+	dst.Code("\t\tserver: server,\n")
+	dst.Code("\t\tnames: map[string]*hbuf.ServerInvoke{\n")
 	err := build.EnumMethod(typ, func(method *ast.FuncType, server *ast.ServerType) error {
-		dst.Code("			\"" + build.StringToUnderlineName(typ.Name.Name) + "/" + build.StringToUnderlineName(method.Name.Name) + "\": {\n")
-		dst.Code("				ToData: func(buf []byte) (hbuf.Data, error) {\n")
-		dst.Code("					var req ")
+		dst.Code("\t\t\t\"" + build.StringToUnderlineName(typ.Name.Name) + "/" + build.StringToUnderlineName(method.Name.Name) + "\": {\n")
+		dst.Code("\t\t\t\tToData: func(buf []byte) (hbuf.Data, error) {\n")
+		dst.Code("\t\t\t\t\tvar req ")
 		printType(dst, method.Param, false)
 		dst.Code("\n")
-		dst.Code("					return &req, json.Unmarshal(buf, &req)\n")
-		dst.Code("				},\n")
-		dst.Code("				FormData: func(data hbuf.Data) ([]byte, error) {\n")
-		dst.Code("					return json.Marshal(&data)\n")
-		dst.Code("				},\n")
-		dst.Code("				Invoke: func(ctx context.Context, data hbuf.Data) (hbuf.Data, error) {\n")
-		dst.Code("					return server." + build.StringToHumpName(method.Name.Name) + "(ctx, data.(*")
+		dst.Code("\t\t\t\t\treturn &req, json.Unmarshal(buf, &req)\n")
+		dst.Code("\t\t\t\t},\n")
+		dst.Code("\t\t\t\tFormData: func(data hbuf.Data) ([]byte, error) {\n")
+		dst.Code("\t\t\t\t\treturn json.Marshal(&data)\n")
+		dst.Code("\t\t\t\t},\n")
+		dst.Code("\t\t\t\tSetInfo: func(ctx context.Context)  {\n")
+		if 0 < len(method.Tags) {
+			for key, val := range method.Tags {
+				dst.Code("\t\t\t\t\thbuf.SetTag(ctx, \"" + key + "\", " + val.Value.Value + ")\n")
+			}
+		}
+		dst.Code("\t\t\t\t},\n")
+		dst.Code("\t\t\t\tInvoke: func(ctx context.Context, data hbuf.Data) (hbuf.Data, error) {\n")
+		dst.Code("\t\t\t\t\treturn server." + build.StringToHumpName(method.Name.Name) + "(ctx, data.(*")
 		printType(dst, method.Param, false)
 		dst.Code("))\n")
-		dst.Code("				},\n")
-		dst.Code("			},\n")
+		dst.Code("\t\t\t\t},\n")
+		dst.Code("\t\t\t},\n")
 		return nil
 	})
 	if err != nil {

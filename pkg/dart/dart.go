@@ -45,6 +45,7 @@ type GoWriter struct {
 	data   *Writer
 	enum   *Writer
 	server *Writer
+	form   *Writer
 	path   string
 }
 
@@ -53,6 +54,7 @@ func (g *GoWriter) SetPath(s string) {
 	g.data.path = s
 	g.enum.path = s
 	g.server.path = s
+	g.form.path = s
 }
 
 func NewGoWriter(pack string) *GoWriter {
@@ -60,6 +62,7 @@ func NewGoWriter(pack string) *GoWriter {
 		data:   NewWriter(pack),
 		enum:   NewWriter(pack),
 		server: NewWriter(pack),
+		form:   NewWriter(pack),
 	}
 }
 
@@ -96,6 +99,12 @@ func Build(file *ast.File, fset *token.FileSet, param *build.Param) error {
 	}
 	if 0 < dst.server.code.Len() {
 		err = writerFile(dst.server, filepath.Join(dir, name+".server.dart"))
+		if err != nil {
+			return err
+		}
+	}
+	if 0 < dst.form.code.Len() {
+		err = writerFile(dst.form, filepath.Join(dir, name+".form.dart"))
 		if err != nil {
 			return err
 		}
@@ -162,6 +171,7 @@ func printTypeSpec(dst *GoWriter, expr ast.Expr) {
 	switch expr.(type) {
 	case *ast.DataType:
 		printDataCode(dst.data, expr.(*ast.DataType))
+		printFormCode(dst.form, expr.(*ast.DataType))
 	case *ast.ServerType:
 		printServerCode(dst.server, expr.(*ast.ServerType))
 

@@ -180,7 +180,7 @@ func printTypeSpec(dst *GoWriter, expr ast.Expr) {
 	}
 }
 
-func printType(dst *Writer, expr ast.Expr, b bool) {
+func printType(dst *Writer, expr ast.Expr, notEmpty bool) {
 	switch expr.(type) {
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
@@ -195,7 +195,7 @@ func printType(dst *Writer, expr ast.Expr, b bool) {
 		dst.Code("List<")
 		printType(dst, ar.VType, false)
 		dst.Code(">")
-		if ar.Empty {
+		if ar.Empty && !notEmpty {
 			dst.Code("?")
 		}
 	case *ast.MapType:
@@ -205,16 +205,13 @@ func printType(dst *Writer, expr ast.Expr, b bool) {
 		dst.Code(", ")
 		printType(dst, ma.VType, false)
 		dst.Code(">")
-		if ma.Empty {
+		if ma.Empty && !notEmpty {
 			dst.Code("?")
 		}
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
-		if !t.Empty && b {
-			dst.Code("required ")
-		}
 		printType(dst, t.Type(), false)
-		if t.Empty {
+		if t.Empty && !notEmpty {
 			dst.Code("?")
 		}
 	}

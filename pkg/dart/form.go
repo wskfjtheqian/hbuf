@@ -8,8 +8,8 @@ import (
 
 //创建表单代码
 func printFormCode(dst *Writer, typ *ast.DataType) {
-	dst.Import("package:flutter/widgets.dart")
-
+	dst.Import("package:flutter/material.dart")
+	getPackage(dst, typ.Name)
 	printForm(dst, typ)
 }
 
@@ -53,6 +53,26 @@ func getUiText(tags map[string]*ast.Tag) *uiText {
 	return &form
 }
 
+type uiMenu struct {
+	onlyRead bool
+}
+
+func getUiMenu(tags map[string]*ast.Tag) *uiMenu {
+	val, ok := tags["uiMenu"]
+	if !ok {
+		return nil
+	}
+	text := val.Value.Value[1 : len(val.Value.Value)-1]
+	list := strings.Split(text, ";")
+	form := uiMenu{}
+	for _, item := range list {
+		if 0 == strings.Index(item, "onlyRead=") {
+			form.onlyRead = "true" == item[len("onlyRead="):]
+		}
+	}
+	return &form
+}
+
 func printForm(dst *Writer, typ *ast.DataType) {
 	form := getUiForm(typ.Tags)
 	if nil == form {
@@ -79,7 +99,20 @@ func printForm(dst *Writer, typ *ast.DataType) {
 			setValue.WriteString("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = val!;\n")
 			setValue.WriteString("\t\t" + fieldName + ".enabled = enabled;\n\n")
 
-			fields.WriteString("\t\t\t" + fieldName + ".build(),\n")
+			fields.WriteString("\t\t\t" + fieldName + ".build(context),\n")
+			return nil
+		}
+
+		menu := getUiMenu(field.Tags)
+		if nil != menu {
+			dst.Code("\tfinal MenuFormBuild<")
+			printType(dst, field.Type, true)
+			dst.Code("> " + fieldName + " = MenuFormBuild();\n\n")
+			setValue.WriteString("\t\t" + fieldName + ".value = info." + fieldName + ";\n")
+			setValue.WriteString("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = val!;\n\n")
+
+			fields.WriteString("\t\t\t" + fieldName + ".build(context),\n")
+			return nil
 		}
 
 		return nil
@@ -88,33 +121,13 @@ func printForm(dst *Writer, typ *ast.DataType) {
 		return
 	}
 
-	dst.Code("\tList<FormField> build({Function(Form" + name + build.StringToHumpName(form.suffix) + "Build form)? builder}) {\n")
+	dst.Code("\tList<Widget> build(BuildContext context, {Function(Form" + name + build.StringToHumpName(form.suffix) + "Build form)? builder}) {\n")
 	dst.Code(setValue.String())
-	dst.Code("\t\treturn <FormField>[\n")
+	dst.Code("\t\tbuilder?.call(this);\n")
+	dst.Code("\t\treturn <Widget>[\n")
 	dst.Code(fields.String())
 	dst.Code("\t\t];\n")
 	dst.Code("\t}\n")
 	dst.Code("}\n\n")
-
-	//	final TextFormBuild userName = TextFormBuild();
-	//
-	//	final TextFormBuild passWord = TextFormBuild();
-	//
-	//	List<FormField> build({Function(AdminLoginByUserNameReqBuild form)? builder}) {
-	//	userName.initialValue = info.userName;
-	//	userName.onSaved = (val) => info.userName = val!;
-	//	userName.enabled = enabled;
-	//
-	//	passWord.initialValue = info.passWord;
-	//	passWord.onSaved = (val) => info.passWord = val!;
-	//	passWord.enabled = enabled;
-	//
-	//	builder?.call(this);
-	//	return <FormField>[
-	//	userName.build(),
-	//	passWord.build(),
-	//];
-	//}
-	//}
 
 }

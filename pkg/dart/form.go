@@ -10,7 +10,10 @@ import (
 func printFormCode(dst *Writer, typ *ast.DataType) {
 	dst.Import("package:flutter/material.dart")
 	getPackage(dst, typ.Name)
-	printForm(dst, typ)
+	lang := printForm(dst, typ)
+	if lang != nil {
+		lang.printLanguage(dst)
+	}
 }
 
 type uiForm struct {
@@ -25,9 +28,11 @@ func getUiForm(tags map[string]*ast.Tag) *uiForm {
 	text := val.Value.Value[1 : len(val.Value.Value)-1]
 	list := strings.Split(text, ";")
 	form := uiForm{}
-	for _, item := range list {
-		if 0 == strings.Index(item, "name=") {
-			form.suffix = item[len("name="):]
+	if 0 < len(list) {
+		for _, item := range list {
+			if 0 == strings.Index(item, "name=") {
+				form.suffix = item[len("name="):]
+			}
 		}
 	}
 	return &form
@@ -45,9 +50,11 @@ func getUiText(tags map[string]*ast.Tag) *uiText {
 	text := val.Value.Value[1 : len(val.Value.Value)-1]
 	list := strings.Split(text, ";")
 	form := uiText{}
-	for _, item := range list {
-		if 0 == strings.Index(item, "onlyRead=") {
-			form.onlyRead = "true" == item[len("onlyRead="):]
+	if 0 < len(list) {
+		for _, item := range list {
+			if 0 == strings.Index(item, "onlyRead=") {
+				form.onlyRead = "true" == item[len("onlyRead="):]
+			}
 		}
 	}
 	return &form
@@ -73,12 +80,13 @@ func getUiMenu(tags map[string]*ast.Tag) *uiMenu {
 	return &form
 }
 
-func printForm(dst *Writer, typ *ast.DataType) {
+func printForm(dst *Writer, typ *ast.DataType) *Language {
 	form := getUiForm(typ.Tags)
 	if nil == form {
-		return
+		return nil
 	}
 	name := build.StringToHumpName(typ.Name.Name)
+	lang := NewLanguage(name)
 	dst.Code("class Form" + name + build.StringToHumpName(form.suffix) + "Build {\n")
 	dst.Code("\tfinal " + name + " info;\n\n")
 	dst.Code("\tfinal bool enabled;\n\n")
@@ -97,9 +105,11 @@ func printForm(dst *Writer, typ *ast.DataType) {
 			dst.Code("\tfinal TextFormBuild " + fieldName + " = TextFormBuild();\n\n")
 			setValue.WriteString("\t\t" + fieldName + ".initialValue = info." + fieldName + ";\n")
 			setValue.WriteString("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = val!;\n")
-			setValue.WriteString("\t\t" + fieldName + ".enabled = enabled;\n\n")
+			setValue.WriteString("\t\t" + fieldName + ".enabled = enabled;\n")
+			setValue.WriteString("\t\t" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n\n")
 
 			fields.WriteString("\t\t\t" + fieldName + ".build(context),\n")
+			lang.Add(fieldName, field.Tags)
 			return nil
 		}
 
@@ -109,16 +119,18 @@ func printForm(dst *Writer, typ *ast.DataType) {
 			printType(dst, field.Type, true)
 			dst.Code("> " + fieldName + " = MenuFormBuild();\n\n")
 			setValue.WriteString("\t\t" + fieldName + ".value = info." + fieldName + ";\n")
-			setValue.WriteString("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = val!;\n\n")
+			setValue.WriteString("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = val!;\n")
+			setValue.WriteString("\t\t" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n\n")
 
 			fields.WriteString("\t\t\t" + fieldName + ".build(context),\n")
+			lang.Add(fieldName, field.Tags)
 			return nil
 		}
 
 		return nil
 	})
 	if err != nil {
-		return
+		return nil
 	}
 
 	dst.Code("\tList<Widget> build(BuildContext context, {Function(Form" + name + build.StringToHumpName(form.suffix) + "Build form)? builder}) {\n")
@@ -130,4 +142,5 @@ func printForm(dst *Writer, typ *ast.DataType) {
 	dst.Code("\t}\n")
 	dst.Code("}\n\n")
 
+	return lang
 }

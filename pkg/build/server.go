@@ -6,6 +6,10 @@ import (
 )
 
 func (b *Builder) checkServer(file *ast.File, server *ast.ServerType, index int) error {
+	err := b.checkTags(server.Tags)
+	if err != nil {
+		return err
+	}
 	name := server.Name.Name
 	if _, ok := _keys[name]; ok {
 		return scanner.Error{
@@ -21,7 +25,7 @@ func (b *Builder) checkServer(file *ast.File, server *ast.ServerType, index int)
 		}
 	}
 
-	err := b.checkServerExtends(file, server, index)
+	err = b.checkServerExtends(file, server, index)
 	if err != nil {
 		return err
 	}
@@ -37,7 +41,12 @@ func (b *Builder) checkServer(file *ast.File, server *ast.ServerType, index int)
 
 func (b *Builder) checkServerItem(file *ast.File, server *ast.ServerType) error {
 	for index, item := range server.Methods {
-		err := b.checkServerItemType(file, item.Result)
+		err := b.checkTags(item.Tags)
+		if err != nil {
+			return err
+		}
+
+		err = b.checkServerItemType(file, item.Result)
 		if err != nil {
 			return err
 		}

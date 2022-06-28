@@ -522,7 +522,7 @@ func (p *parser) parseId() *ast.BasicLit {
 	return id
 }
 
-func (p *parser) parseFieldDecl(scope *ast.Scope, tags map[string]*ast.Tag) *ast.Field {
+func (p *parser) parseFieldDecl(scope *ast.Scope, tags []*ast.Tag) *ast.Field {
 	if p.trace {
 		defer un(trace(p, "FieldDecl"))
 	}
@@ -733,7 +733,7 @@ func (p *parser) parseImportSpec(doc *ast.CommentGroup, _ token.Token, _ int) as
 	return spec
 }
 
-func (p *parser) parseDataSpec(doc *ast.CommentGroup, tags map[string]*ast.Tag) ast.Spec {
+func (p *parser) parseDataSpec(doc *ast.CommentGroup, tags []*ast.Tag) ast.Spec {
 	if p.trace {
 		defer un(trace(p, "DataType"))
 	}
@@ -832,7 +832,7 @@ func (p *parser) parseEnumItem(scope *ast.Scope) *ast.EnumItem {
 	return &ast.EnumItem{Doc: doc, Name: name, Id: id, Comment: p.lineComment}
 }
 
-func (p *parser) parseServerSpec(doc *ast.CommentGroup, tags map[string]*ast.Tag) ast.Spec {
+func (p *parser) parseServerSpec(doc *ast.CommentGroup, tags []*ast.Tag) ast.Spec {
 	if p.trace {
 		defer un(trace(p, "ServerType"))
 	}
@@ -904,7 +904,7 @@ func (p *parser) parseFile() *ast.File {
 	packages := make(map[string]*ast.PackageSpec, 0)
 	for token.PACKAGE == p.tok {
 		pack := p.parsePackageSpec()
-		if nil != pack {
+		if nil != pack && nil != pack.Name {
 			packages[pack.Name.Name] = pack
 		}
 	}
@@ -985,12 +985,12 @@ func (p *parser) parsePackageSpec() *ast.PackageSpec {
 	}
 }
 
-func (p *parser) parseTags() map[string]*ast.Tag {
-	var ret map[string]*ast.Tag = make(map[string]*ast.Tag)
+func (p *parser) parseTags() []*ast.Tag {
+	var ret []*ast.Tag
 	for token.LBRACK == p.tok {
 		tag := p.parseTag()
 		if nil != tag {
-			ret[tag.Name.Name] = tag
+			ret = append(ret, tag)
 		}
 	}
 	return ret
@@ -999,13 +999,34 @@ func (p *parser) parseTags() map[string]*ast.Tag {
 func (p *parser) parseTag() *ast.Tag {
 	pos := p.pos
 	p.next()
-	if token.IDENT != p.tok {
-		p.error(p.pos, "invalid import path:= ")
-		return nil
-	}
 	name := p.parseIdent()
 	if token.COLON != p.tok {
-		p.error(p.pos, "invalid import path:= ")
+		p.error(p.pos, "Not find tag name ")
+		return nil
+	}
+	p.next()
+
+	var kvs []*ast.KeyValue
+	for token.EOF != p.tok && token.RBRACK != p.tok {
+		kvs = append(kvs, p.parseKeyValue())
+		if token.SEMICOLON == p.tok {
+			p.next()
+		}
+	}
+	p.expect(token.RBRACK)
+	p.expectSemi()
+	return &ast.Tag{
+		Name:    name,
+		KV:      kvs,
+		Opening: pos,
+	}
+}
+
+func (p *parser) parseKeyValue() *ast.KeyValue {
+	pos := p.pos
+	name := p.parseIdent()
+	if token.ASSIGN != p.tok {
+		p.error(p.pos, "syntax error ")
 		return nil
 	}
 	p.next()
@@ -1016,9 +1037,7 @@ func (p *parser) parseTag() *ast.Tag {
 	} else {
 		p.expect(token.STRING)
 	}
-	p.expect(token.RBRACK)
-	p.expectSemi()
-	return &ast.Tag{
+	return &ast.KeyValue{
 		Name:  name,
 		Value: &ast.BasicLit{ValuePos: pos, Kind: token.STRING, Value: value},
 	}

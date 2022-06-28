@@ -32,6 +32,10 @@ func (b *Builder) checkEnum(file *ast.File, enum *ast.EnumType, index int) error
 
 func (b *Builder) checkEnumItem(file *ast.File, enum *ast.EnumType) error {
 	for index, item := range enum.Items {
+		err := b.checkTags(item.Tags)
+		if err != nil {
+			return err
+		}
 		if _, ok := _keys[item.Name.Name]; ok {
 			return scanner.Error{
 				Pos: b.fset.Position(enum.Name.Pos()),

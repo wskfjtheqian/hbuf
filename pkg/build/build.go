@@ -243,6 +243,69 @@ func (b *Builder) checkDataMapKey(file *ast.File, varType *ast.VarType) error {
 	}
 }
 
+func (b *Builder) checkKeyValue(kvs []*ast.KeyValue) error {
+	if nil == kvs {
+		return nil
+	}
+
+	for i := 0; i < len(kvs)-1; i++ {
+		for j := i + 1; j < len(kvs); j++ {
+			if kvs[i].Name.Name == kvs[j].Name.Name {
+				return scanner.Error{
+					Pos: b.fset.Position(kvs[j].Pos()),
+					Msg: "Repeated tag key",
+				}
+			}
+		}
+	}
+	return nil
+}
+func (b *Builder) checkTags(tags []*ast.Tag) error {
+	if nil == tags {
+		return nil
+	}
+
+	for i := 0; i < len(tags)-1; i++ {
+		for j := i + 1; j < len(tags); j++ {
+			if tags[i].Name.Name == tags[j].Name.Name {
+				return scanner.Error{
+					Pos: b.fset.Position(tags[j].Pos()),
+					Msg: "Repeated tag key",
+				}
+			}
+		}
+	}
+
+	for _, tag := range tags {
+		return b.checkKeyValue(tag.KV)
+	}
+	return nil
+}
+
+func GetTag(tags []*ast.Tag, key string) (*ast.Tag, bool) {
+	if nil == tags {
+		return nil, false
+	}
+	for _, tag := range tags {
+		if tag.Name.Name == key {
+			return tag, true
+		}
+	}
+	return nil, false
+}
+
+func GetKeyValue(kvs []*ast.KeyValue, key string) (*ast.KeyValue, bool) {
+	if nil == kvs {
+		return nil, false
+	}
+	for _, kv := range kvs {
+		if kv.Name.Name == key {
+			return kv, true
+		}
+	}
+	return nil, false
+}
+
 func EnumField(typ *ast.DataType, call func(field *ast.Field, data *ast.DataType) error) error {
 	fields := map[string]int{}
 	for _, field := range typ.Fields.List {

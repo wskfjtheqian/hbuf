@@ -21,7 +21,7 @@ func NewLanguage(name string) *Language {
 	}
 }
 
-func (l *Language) Add(field string, tags map[string]*ast.Tag) {
+func (l *Language) Add(field string, tags []*ast.Tag) {
 	lang := getLanguage(tags)
 	l.lang[field] = lang
 	l.key["en"] = struct{}{}
@@ -31,20 +31,16 @@ func (l *Language) Add(field string, tags map[string]*ast.Tag) {
 	}
 }
 
-func getLanguage(tags map[string]*ast.Tag) map[string]string {
-	val, ok := tags["lang"]
+func getLanguage(tags []*ast.Tag) map[string]string {
+	val, ok := build.GetTag(tags, "lang")
 	if !ok {
 		return nil
 	}
-	text := val.Value.Value[1 : len(val.Value.Value)-1]
-	list := strings.Split(text, ";")
+
 	lang := make(map[string]string, 0)
-	if 0 < len(list) {
-		for _, item := range list {
-			keyVal := strings.Split(item, "=")
-			if 1 < len(keyVal) {
-				lang[strings.ToLower(keyVal[0])] = keyVal[1]
-			}
+	if nil != val.KV {
+		for _, item := range val.KV {
+			lang[strings.ToLower(item.Name.Name)] = item.Value.Value[:len(item.Value.Value)-1]
 		}
 	}
 	return lang

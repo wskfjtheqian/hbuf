@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"hbuf/pkg/build"
 	"hbuf/pkg/dart"
-	"hbuf/pkg/golang"
 )
 
 func main() {
 	build.AddBuildType("dart", dart.Build)
-	build.AddBuildType("go", golang.Build)
+	//build.AddBuildType("go", golang.Build)
 
 	var out = flag.String("o", "", "out dir")
 	var in = flag.String("i", "", "input dir")

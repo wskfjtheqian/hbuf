@@ -130,7 +130,7 @@ func isDirective(c string) bool {
 }
 
 type Field struct {
-	Tags    map[string]*Tag
+	Tags    []*Tag
 	Doc     *CommentGroup // associated documentation; or nil
 	Name    *Ident        // field/method/parameter names; or nil
 	Type    Type          // field/method/parameter type
@@ -243,13 +243,19 @@ type Type interface {
 	typeNode()
 }
 
-type Tag struct {
-	Name   *Ident    // local package name (including "."); or nil
-	Value  *BasicLit // import path
-	EndPos token.Pos // end of spec (overrides Value.Pos if nonzero)
-}
-
 type (
+	KeyValue struct {
+		Name  *Ident    // local package name (including "."); or nil
+		Value *BasicLit // import path
+	}
+
+	Tag struct {
+		Name    *Ident // local package name (including "."); or nil
+		KV      []*KeyValue
+		Opening token.Pos
+		Closing token.Pos
+	}
+
 	// VarType 变量类型
 	VarType struct {
 		TypeExpr Expr //类型名称
@@ -272,7 +278,7 @@ type (
 	}
 
 	DataType struct {
-		Tags       map[string]*Tag
+		Tags       []*Tag
 		Data       token.Pos  // position of "data" keyword
 		Fields     *FieldList // list of field declarations
 		Incomplete bool       // true if (source) fields are missing in the Fields list
@@ -282,7 +288,7 @@ type (
 	}
 
 	ServerType struct {
-		Tags    map[string]*Tag
+		Tags    []*Tag
 		Server  token.Pos // position of "server" keyword
 		Name    *Ident
 		Extends []*Ident
@@ -295,7 +301,7 @@ type (
 	}
 
 	FuncType struct {
-		Tags      map[string]*Tag
+		Tags      []*Tag
 		Result    *VarType
 		Name      *Ident
 		Param     *VarType // (incoming) parameters; non-nil
@@ -316,6 +322,7 @@ type (
 	}
 
 	EnumItem struct {
+		Tags    []*Tag
 		Name    *Ident        // field/method/parameter names; or nil
 		Id      *BasicLit     // field tag; or nil
 		Doc     *CommentGroup // associated documentation; or nil
@@ -343,6 +350,8 @@ func (x *MapType) Pos() token.Pos    { return x.VType.Pos() }
 func (x *EnumType) Pos() token.Pos   { return x.Enum }
 func (x *EnumItem) Pos() token.Pos   { return x.Name.Pos() }
 func (x *VarType) Pos() token.Pos    { return x.TypeExpr.Pos() }
+func (x *Tag) Pos() token.Pos        { return x.Opening }
+func (x *KeyValue) Pos() token.Pos   { return x.Name.Pos() }
 
 func (x *BadExpr) End() token.Pos      { return x.To }
 func (x *Ident) End() token.Pos        { return token.Pos(int(x.NamePos) + len(x.Name)) }
@@ -357,6 +366,8 @@ func (x *MapType) End() token.Pos      { return x.GTR }
 func (x *EnumType) End() token.Pos     { return x.Items[len(x.Items)-1].End() }
 func (x *EnumItem) End() token.Pos     { return x.Comment.End() }
 func (x *VarType) End() token.Pos      { return x.TypeExpr.End() }
+func (x *Tag) End() token.Pos          { return x.Closing }
+func (x *KeyValue) End() token.Pos     { return x.Value.End() }
 
 func (*BadExpr) exprNode()      {}
 func (*Ident) exprNode()        {}

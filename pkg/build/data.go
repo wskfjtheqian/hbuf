@@ -6,6 +6,10 @@ import (
 )
 
 func (b *Builder) checkData(file *ast.File, data *ast.DataType, index int) error {
+	err := b.checkTags(data.Tags)
+	if err != nil {
+		return err
+	}
 	name := data.Name.Name
 	if _, ok := _keys[name]; ok {
 		return scanner.Error{
@@ -21,7 +25,7 @@ func (b *Builder) checkData(file *ast.File, data *ast.DataType, index int) error
 		}
 	}
 
-	err := b.checkDataExtends(file, data, index)
+	err = b.checkDataExtends(file, data, index)
 	if err != nil {
 		return err
 	}
@@ -149,6 +153,10 @@ func (b *Builder) checkDataItemType(file *ast.File, typ ast.Type) error {
 
 func (b *Builder) checkDataItem(file *ast.File, data *ast.DataType) error {
 	for index, item := range data.Fields.List {
+		err := b.checkTags(item.Tags)
+		if err != nil {
+			return err
+		}
 		switch item.Type.(type) {
 		case *ast.VarType:
 			err := b.checkDataItemType(file, item.Type)

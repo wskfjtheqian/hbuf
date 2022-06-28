@@ -20,19 +20,18 @@ type uiForm struct {
 	suffix string
 }
 
-func getUiForm(tags map[string]*ast.Tag) *uiForm {
-	val, ok := tags["uiForm"]
+func getUiForm(tags []*ast.Tag) *uiForm {
+	val, ok := build.GetTag(tags, "uiForm")
 	if !ok {
 		return nil
 	}
-	text := val.Value.Value[1 : len(val.Value.Value)-1]
-	list := strings.Split(text, ";")
 	form := uiForm{}
-	if 0 < len(list) {
-		for _, item := range list {
-			if 0 == strings.Index(item, "name=") {
-				form.suffix = item[len("name="):]
+	if nil != val.KV {
+		for _, item := range val.KV {
+			if "name" == item.Name.Name {
+				form.suffix = item.Value.Value[:len(item.Value.Value)-1]
 			}
+
 		}
 	}
 	return &form
@@ -42,42 +41,42 @@ type uiText struct {
 	onlyRead bool
 }
 
-func getUiText(tags map[string]*ast.Tag) *uiText {
-	val, ok := tags["uiText"]
+func getUiText(tags []*ast.Tag) *uiText {
+	val, ok := build.GetTag(tags, "uiText")
 	if !ok {
 		return nil
 	}
-	text := val.Value.Value[1 : len(val.Value.Value)-1]
-	list := strings.Split(text, ";")
-	form := uiText{}
-	if 0 < len(list) {
-		for _, item := range list {
-			if 0 == strings.Index(item, "onlyRead=") {
-				form.onlyRead = "true" == item[len("onlyRead="):]
+	text := uiText{}
+	if nil != val.KV {
+		for _, item := range val.KV {
+			if "onlyRead" == item.Name.Name {
+				text.onlyRead = "true" == item.Value.Value[:len(item.Value.Value)-1]
 			}
+
 		}
 	}
-	return &form
+	return &text
 }
 
 type uiMenu struct {
 	onlyRead bool
 }
 
-func getUiMenu(tags map[string]*ast.Tag) *uiMenu {
-	val, ok := tags["uiMenu"]
+func getUiMenu(tags []*ast.Tag) *uiMenu {
+	val, ok := build.GetTag(tags, "uiMenu")
 	if !ok {
 		return nil
 	}
-	text := val.Value.Value[1 : len(val.Value.Value)-1]
-	list := strings.Split(text, ";")
-	form := uiMenu{}
-	for _, item := range list {
-		if 0 == strings.Index(item, "onlyRead=") {
-			form.onlyRead = "true" == item[len("onlyRead="):]
+	menu := uiMenu{}
+	if nil != val.KV {
+		for _, item := range val.KV {
+			if "onlyRead" == item.Name.Name {
+				menu.onlyRead = "true" == item.Value.Value[:len(item.Value.Value)-1]
+			}
+
 		}
 	}
-	return &form
+	return &menu
 }
 
 func printForm(dst *Writer, typ *ast.DataType) *Language {

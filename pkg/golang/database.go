@@ -20,7 +20,7 @@ type DBField struct {
 	field *ast.Field
 }
 
-func getDB(n string, tag map[string]*ast.Tag) []*DB {
+func getDB(n string, tag []*ast.Tag) []*DB {
 	var dbs []*DB
 	for _, value := range tag {
 		if 0 == strings.Index(value.Name.Name, "dbName") {

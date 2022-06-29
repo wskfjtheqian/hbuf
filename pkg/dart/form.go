@@ -9,6 +9,8 @@ import (
 //创建表单代码
 func printFormCode(dst *Writer, typ *ast.DataType) {
 	dst.Import("package:flutter/material.dart")
+	dst.Import("package:hbuf_flutter/hbuf_flutter.dart")
+
 	getPackage(dst, typ.Name)
 	lang := printForm(dst, typ)
 	if lang != nil {
@@ -16,81 +18,45 @@ func printFormCode(dst *Writer, typ *ast.DataType) {
 	}
 }
 
-type uiForm struct {
-	suffix string
+type ui struct {
+	suffix   string
+	typ      string
+	onlyRead bool
+	form     string
 }
 
-func getUiForm(tags []*ast.Tag) *uiForm {
-	val, ok := build.GetTag(tags, "uiForm")
+func getUI(tags []*ast.Tag) *ui {
+	val, ok := build.GetTag(tags, "ui")
 	if !ok {
 		return nil
 	}
-	form := uiForm{}
+	form := ui{}
 	if nil != val.KV {
 		for _, item := range val.KV {
-			if "name" == item.Name.Name {
-				form.suffix = item.Value.Value[:len(item.Value.Value)-1]
+			if "type" == item.Name.Name {
+				form.typ = item.Value.Value[1 : len(item.Value.Value)-1]
+			} else if "onlyRead" == item.Name.Name {
+				form.onlyRead = "true" == item.Value.Value[1:len(item.Value.Value)-1]
+			} else if "form" == item.Name.Name {
+				form.form = item.Value.Value[1 : len(item.Value.Value)-1]
 			}
-
 		}
 	}
 	return &form
 }
 
-type uiText struct {
-	onlyRead bool
-}
-
-func getUiText(tags []*ast.Tag) *uiText {
-	val, ok := build.GetTag(tags, "uiText")
-	if !ok {
-		return nil
-	}
-	text := uiText{}
-	if nil != val.KV {
-		for _, item := range val.KV {
-			if "onlyRead" == item.Name.Name {
-				text.onlyRead = "true" == item.Value.Value[:len(item.Value.Value)-1]
-			}
-
-		}
-	}
-	return &text
-}
-
-type uiMenu struct {
-	onlyRead bool
-}
-
-func getUiMenu(tags []*ast.Tag) *uiMenu {
-	val, ok := build.GetTag(tags, "uiMenu")
-	if !ok {
-		return nil
-	}
-	menu := uiMenu{}
-	if nil != val.KV {
-		for _, item := range val.KV {
-			if "onlyRead" == item.Name.Name {
-				menu.onlyRead = "true" == item.Value.Value[:len(item.Value.Value)-1]
-			}
-
-		}
-	}
-	return &menu
-}
-
 func printForm(dst *Writer, typ *ast.DataType) *Language {
-	form := getUiForm(typ.Tags)
-	if nil == form {
+	u := getUI(typ.Tags)
+	if nil == u || u.typ != "form" {
 		return nil
 	}
 	name := build.StringToHumpName(typ.Name.Name)
 	lang := NewLanguage(name)
-	dst.Code("class Form" + name + build.StringToHumpName(form.suffix) + "Build {\n")
+	dst.Code("class Form" + name + build.StringToHumpName(u.suffix) + "Build {\n")
 	dst.Code("\tfinal " + name + " info;\n\n")
 	dst.Code("\tfinal bool enabled;\n\n")
 
-	dst.Code("\tForm" + name + build.StringToHumpName(form.suffix) + "Build (\n")
+	dst.Code("\tForm" + name + build.StringToHumpName(u.suffix) + "Build (\n")
 	dst.Code("\t\tthis.info, {\n")
 	dst.Code("\t\tthis.enabled = true,\n")
 	dst.Code("\t});\n\n")
@@ -98,9 +64,12 @@ func printForm(dst *Writer, typ *ast.DataType) *Language {
 	fields := strings.Builder{}
 	setValue := strings.Builder{}
 	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
-		text := getUiText(field.Tags)
+		form := getUI(field.Tags)
 		fieldName := build.StringToFirstLower(field.Name.Name)
-		if nil != text {
+		if nil == form {
+			return nil
+		}
+		if "text" == form.form {
 			dst.Code("\tfinal TextFormBuild " + fieldName + " = TextFormBuild();\n\n")
 			setValue.WriteString("\t\t" + fieldName + ".initialValue = info." + fieldName + ";\n")
 			setValue.WriteString("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = val!;\n")
@@ -109,11 +78,7 @@ func printForm(dst *Writer, typ *ast.DataType) *Language {
 
 			fields.WriteString("\t\t\t" + fieldName + ".build(context),\n")
 			lang.Add(fieldName, field.Tags)
-			return nil
-		}
-
-		menu := getUiMenu(field.Tags)
-		if nil != menu {
+		} else if "menu" == form.form {
 			dst.Code("\tfinal MenuFormBuild<")
 			printType(dst, field.Type, true)
 			dst.Code("> " + fieldName + " = MenuFormBuild();\n\n")
@@ -123,7 +88,6 @@ func printForm(dst *Writer, typ *ast.DataType) *Language {
 
 			fields.WriteString("\t\t\t" + fieldName + ".build(context),\n")
 			lang.Add(fieldName, field.Tags)
-			return nil
 		}
 
 		return nil
@@ -132,7 +96,7 @@ func printForm(dst *Writer, typ *ast.DataType) *Language {
 		return nil
 	}
 
-	dst.Code("\tList<Widget> build(BuildContext context, {Function(Form" + name + build.StringToHumpName(form.suffix) + "Build form)? builder}) {\n")
+	dst.Code("\tList<Widget> build(BuildContext context, {Function(Form" + name + build.StringToHumpName(u.suffix) + "Build form)? builder}) {\n")
 	dst.Code(setValue.String())
 	dst.Code("\t\tbuilder?.call(this);\n")
 	dst.Code("\t\treturn <Widget>[\n")

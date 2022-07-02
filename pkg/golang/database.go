@@ -22,41 +22,33 @@ type DBField struct {
 
 func getDB(n string, tag []*ast.Tag) []*DB {
 	var dbs []*DB
-	for _, value := range tag {
-		if 0 == strings.Index(value.Name.Name, "dbName") {
+	for _, val := range tag {
+		if 0 == strings.Index(val.Name.Name, "db") {
 			var index int64 = 0
-			if "dbName" != value.Name.Name {
+			if "db" != val.Name.Name {
 				var err error
-				index, err = strconv.ParseInt(value.Name.Name[2:], 10, 32)
+				index, err = strconv.ParseInt(val.Name.Name[2:], 10, 32)
 				if nil != err {
 					continue
 				}
 			}
 
-			val := value.Value.Value
-			val = val[1 : len(val)-1]
-			var name string
-			var types string
-			var key bool = false
-
-			arr := strings.Split(val, ";")
-			for _, a := range arr {
-				if 0 == strings.Index(a, "name=") {
-					name = a[len("name="):]
-				} else if 0 == strings.Index(a, "key=") {
-					key = "key" == a[len("key="):]
-				} else if 0 == strings.Index(a, "type=") {
-					types = a[len("type="):]
-				}
-			}
-			if "" == name {
-				name = build.StringToUnderlineName(n)
-			}
 			db := DB{
 				index: int(index),
-				name:  name,
-				key:   key,
-				types: types,
+			}
+			if nil != val.KV {
+				for _, item := range val.KV {
+					if "name" == item.Name.Name {
+						db.name = item.Value.Value[1 : len(item.Value.Value)-1]
+					} else if "key" == item.Name.Name {
+						db.key = "key" == item.Value.Value[1:len(item.Value.Value)-1]
+					} else if "types" == item.Name.Name {
+						db.types = item.Value.Value[1 : len(item.Value.Value)-1]
+					}
+				}
+			}
+			if "" == db.name {
+				db.name = build.StringToUnderlineName(n)
 			}
 			dbs = append(dbs, &db)
 		}

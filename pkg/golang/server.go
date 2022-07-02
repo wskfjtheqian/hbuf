@@ -82,6 +82,22 @@ func printServerImp(dst *Writer, typ *ast.ServerType) {
 	//dst.Code("}\n\n")
 }
 
+type auth map[string]string
+
+func getAuth(tags []*ast.Tag) *auth {
+	val, ok := build.GetTag(tags, "auth")
+	if !ok {
+		return nil
+	}
+	au := make(auth, 0)
+	if nil != val.KV {
+		for _, item := range val.KV {
+			au[item.Name.Name] = item.Value.Value[1 : len(item.Value.Value)-1]
+		}
+	}
+	return &au
+}
+
 func printServerRouter(dst *Writer, typ *ast.ServerType) {
 	serverName := build.StringToHumpName(typ.Name.Name)
 	dst.Code("type " + serverName + "Router struct {\n")
@@ -117,9 +133,11 @@ func printServerRouter(dst *Writer, typ *ast.ServerType) {
 		dst.Code("\t\t\t\t\treturn json.Marshal(&data)\n")
 		dst.Code("\t\t\t\t},\n")
 		dst.Code("\t\t\t\tSetInfo: func(ctx context.Context)  {\n")
-		if 0 < len(method.Tags) {
-			for key, val := range method.Tags {
-				dst.Code("\t\t\t\t\thbuf.SetTag(ctx, \"" + key + "\", " + val.Value.Value + ")\n")
+
+		au := getAuth(method.Tags)
+		if nil != au {
+			for key, val := range *au {
+				dst.Code("\t\t\t\t\thbuf.SetTag(ctx, \"" + key + "\", \"" + val + "\")\n")
 			}
 		}
 		dst.Code("\t\t\t\t},\n")

@@ -256,13 +256,13 @@ func printJsonValue(dst *Writer, name string, expr ast.Expr, data *ast.DataType,
 	case *ast.ArrayType:
 		t := expr.(*ast.ArrayType)
 		if empty {
-			dst.Code("null == " + name + " ? null : (temp! is List ? null : (temp as List).map((temp) => ")
+			dst.Code("null == " + name + " ? null : (temp! is! List ? null : (temp as List).map((temp) => ")
 			printJsonValue(dst, "temp", t.VType, data, empty)
 			dst.Code(").toList())")
 		} else {
 			dst.Code("null == " + name + " ? <")
 			printType(dst, t.VType, false)
-			dst.Code(">[] : (temp! is List ? <")
+			dst.Code(">[] : (temp! is! List ? <")
 			printType(dst, t.VType, false)
 			dst.Code(">[] : (temp as List).map((temp) => ")
 			printJsonValue(dst, "temp", t.VType, data, empty)

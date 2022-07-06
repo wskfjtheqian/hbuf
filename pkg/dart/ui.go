@@ -7,15 +7,42 @@ import (
 )
 
 //创建表单代码
-func printFormCode(dst *Writer, typ *ast.DataType) {
+func printFormCode(dst *Writer, expr ast.Expr) {
 	dst.Import("package:flutter/material.dart")
-	dst.Import("package:hbuf_flutter/hbuf_flutter.dart")
 
-	getPackage(dst, typ.Name)
-	lang := printUi(dst, typ)
-	if lang != nil {
-		lang.printLanguage(dst)
+	switch expr.(type) {
+	case *ast.DataType:
+		dst.Import("package:hbuf_flutter/hbuf_flutter.dart")
+		typ := expr.(*ast.DataType)
+		getPackage(dst, typ.Name, "")
+		lang := printDataUi(dst, typ)
+		if lang != nil {
+			lang.printLanguage(dst)
+		}
+	case *ast.ServerType:
+
+	case *ast.EnumType:
+		typ := expr.(*ast.EnumType)
+		lang := printEnumUi(dst, typ)
+		if lang != nil {
+			lang.printLanguage(dst)
+		}
 	}
+}
+
+func printEnumUi(dst *Writer, typ *ast.EnumType) *Language {
+	_, ok := build.GetTag(typ.Tags, "ui")
+	if !ok {
+		return nil
+	}
+
+	enumName := build.StringToHumpName(typ.Name.Name)
+	lang := NewLanguage(enumName)
+	for _, item := range typ.Items {
+		itemName := build.StringToAllUpper(item.Name.Name)
+		lang.Add(itemName, item.Tags)
+	}
+	return lang
 }
 
 type ui struct {
@@ -48,7 +75,7 @@ func getUI(tags []*ast.Tag) *ui {
 	return &form
 }
 
-func printUi(dst *Writer, typ *ast.DataType) *Language {
+func printDataUi(dst *Writer, typ *ast.DataType) *Language {
 	u := getUI(typ.Tags)
 	if nil == u {
 		return nil
@@ -90,7 +117,9 @@ func printTable(dst *Writer, typ *ast.DataType, u *ui) *Language {
 		dst.Code("\t\t\t\t\treturn TablesCell(child: Text(" + name + "Localizations.of(context)." + fieldName + "));\n")
 		dst.Code("\t\t\t\t},\n")
 		dst.Code("\t\t\t\tcellBuilder: (context, x, y,dynamic data) {\n")
-		dst.Code("\t\t\t\t\treturn TablesCell(child: SelectableText(\"${data." + fieldName + "}\"));\n")
+		dst.Code("\t\t\t\t\treturn TablesCell(child: SelectableText(\"${data." + fieldName)
+		printValue(dst, field.Type, false)
+		dst.Code(" }\"));\n")
 		dst.Code("\t\t\t\t},\n")
 		dst.Code("\t\t\t),\n")
 		lang.Add(fieldName, field.Tags)
@@ -106,6 +135,46 @@ func printTable(dst *Writer, typ *ast.DataType, u *ui) *Language {
 	dst.Code("\t}\n")
 	dst.Code("}\n\n")
 	return lang
+}
+
+func printValue(dst *Writer, expr ast.Expr, empty bool) {
+	switch expr.(type) {
+	case *ast.EnumType:
+		if empty {
+			dst.Code("?")
+		}
+		dst.Code(".toText(context)")
+	case *ast.Ident:
+		t := expr.(*ast.Ident)
+		if nil != t.Obj {
+			getPackage(dst, expr, "")
+			printValue(dst, t.Obj.Decl.(*ast.TypeSpec).Type, empty)
+		}
+	case *ast.ArrayType:
+		//ar := expr.(*ast.ArrayType)
+		//dst.Code("List<")
+		//printType(dst, ar.VType, false)
+		//dst.Code(">")
+		//if ar.Empty && !notEmpty {
+		//	dst.Code("?")
+		//}
+	case *ast.MapType:
+		//ma := expr.(*ast.MapType)
+		//dst.Code("Map<")
+		//printType(dst, ma.Key, false)
+		//dst.Code(", ")
+		//printType(dst, ma.VType, false)
+		//dst.Code(">")
+		//if ma.Empty && !notEmpty {
+		//	dst.Code("?")
+		//}
+	case *ast.VarType:
+		t := expr.(*ast.VarType)
+		printValue(dst, t.Type(), t.Empty)
+		if t.Empty {
+			dst.Code("??\"\"")
+		}
+	}
 }
 
 func printForm(dst *Writer, typ *ast.DataType, u *ui) *Language {

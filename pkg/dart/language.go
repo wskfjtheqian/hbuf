@@ -57,7 +57,7 @@ func (l *Language) printLanguage(dst *Writer) {
 	dst.Code("  const _" + l.Name + "LocalizationsDelegate();\n")
 	dst.Code("\n")
 	dst.Code("  @override\n")
-	dst.Code("  bool isSupported(Locale locale) => locale.languageCode == 'en';\n")
+	dst.Code("  bool isSupported(Locale locale) => true;\n")
 	dst.Code("\n")
 	dst.Code("  @override\n")
 	dst.Code("  Future<" + l.Name + "Localizations> load(Locale locale) {\n")
@@ -71,7 +71,7 @@ func (l *Language) printLanguage(dst *Writer) {
 	dst.Code("   return SynchronousFuture<" + l.Name + "Localizations>(const Default" + l.Name + "Localizations());\n")
 	dst.Code("  }\n")
 	dst.Code("  @override\n")
-	dst.Code("  bool shouldReload(_" + l.Name + "LocalizationsDelegate old) => false;\n")
+	dst.Code("  bool shouldReload(_" + l.Name + "LocalizationsDelegate old) => true;\n")
 	dst.Code("\n")
 	dst.Code("  @override\n")
 	dst.Code(" String toString() => 'Default" + l.Name + "Localizations.delegate(en_US)';\n")
@@ -126,18 +126,24 @@ func (l *Language) printLanguage(dst *Writer) {
 }
 
 func getLang(val string, key string, lanMap map[string]string) string {
-	if text, ok := lanMap[key]; ok {
-		return text
+	if nil != lanMap {
+		if text, ok := lanMap[key]; ok {
+			return text
+		}
 	}
 
 	if 0 == len(val) {
 		return val
 	}
 
+	if !regexp.MustCompile(`[a-z0-9]`).MatchString(val) {
+		val = strings.ToLower(val)
+	}
+
 	rex := regexp.MustCompile(`[A-Z]`)
 	match := rex.FindAllStringSubmatchIndex(val, -1)
 	if nil == match {
-		return strings.ToLower(val)
+		return strings.ToUpper(val[:1]) + strings.ToLower(val[1:])
 	}
 	var ret string
 	var index = 0

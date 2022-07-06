@@ -776,7 +776,7 @@ func (p *parser) parseDataSpec(doc *ast.CommentGroup, tags []*ast.Tag) ast.Spec 
 	return spec
 }
 
-func (p *parser) parseEnumSpec(doc *ast.CommentGroup) ast.Spec {
+func (p *parser) parseEnumSpec(doc *ast.CommentGroup, tags []*ast.Tag) ast.Spec {
 	if p.trace {
 		defer un(trace(p, "EnumType"))
 	}
@@ -788,7 +788,8 @@ func (p *parser) parseEnumSpec(doc *ast.CommentGroup) ast.Spec {
 	scope := ast.NewScope(nil) // struct scope
 	var list []*ast.EnumItem
 	for p.tok != token.RBRACE && p.tok != token.EOF {
-		list = append(list, p.parseEnumItem(scope))
+		tags := p.parseTags()
+		list = append(list, p.parseEnumItem(scope, tags))
 	}
 	rbrace := p.expect(token.RBRACE)
 
@@ -803,13 +804,14 @@ func (p *parser) parseEnumSpec(doc *ast.CommentGroup) ast.Spec {
 		Opening: lbrace,
 		Closing: rbrace,
 		Items:   list,
+		Tags:    tags,
 	}
 	p.expectSemi()
 	spec.Comment = p.lineComment
 	return spec
 }
 
-func (p *parser) parseEnumItem(scope *ast.Scope) *ast.EnumItem {
+func (p *parser) parseEnumItem(scope *ast.Scope, tags []*ast.Tag) *ast.EnumItem {
 	if p.trace {
 		defer un(trace(p, "FieldDecl"))
 	}
@@ -829,7 +831,12 @@ func (p *parser) parseEnumItem(scope *ast.Scope) *ast.EnumItem {
 	p.next()
 
 	p.expectSemi() // call before accessing p.linecomment
-	return &ast.EnumItem{Doc: doc, Name: name, Id: id, Comment: p.lineComment}
+	return &ast.EnumItem{Doc: doc,
+		Name:    name,
+		Id:      id,
+		Comment: p.lineComment,
+		Tags:    tags,
+	}
 }
 
 func (p *parser) parseServerSpec(doc *ast.CommentGroup, tags []*ast.Tag) ast.Spec {
@@ -883,7 +890,7 @@ func (p *parser) parseDecl(sync map[token.Token]bool) ast.Spec {
 	case token.SERVER:
 		return p.parseServerSpec(nil, tags)
 	case token.ENUM:
-		return p.parseEnumSpec(nil)
+		return p.parseEnumSpec(nil, tags)
 
 	default:
 		pos := p.pos

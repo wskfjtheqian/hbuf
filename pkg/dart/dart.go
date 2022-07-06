@@ -171,12 +171,13 @@ func printTypeSpec(dst *GoWriter, expr ast.Expr) {
 	switch expr.(type) {
 	case *ast.DataType:
 		printDataCode(dst.data, expr.(*ast.DataType))
-		printFormCode(dst.ui, expr.(*ast.DataType))
+		printFormCode(dst.ui, expr)
 	case *ast.ServerType:
 		printServerCode(dst.server, expr.(*ast.ServerType))
 
 	case *ast.EnumType:
 		printEnumCode(dst.enum, expr.(*ast.EnumType))
+		printFormCode(dst.ui, expr)
 	}
 }
 
@@ -185,7 +186,7 @@ func printType(dst *Writer, expr ast.Expr, notEmpty bool) {
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
-			getPackage(dst, expr)
+			getPackage(dst, expr, "")
 			dst.Code(expr.(*ast.Ident).Name)
 		} else {
 			dst.Code(_types[(expr.(*ast.Ident).Name)])
@@ -217,7 +218,7 @@ func printType(dst *Writer, expr ast.Expr, notEmpty bool) {
 	}
 }
 
-func getPackage(dst *Writer, expr ast.Expr) string {
+func getPackage(dst *Writer, expr ast.Expr, s string) string {
 	file := (expr.(*ast.Ident)).Obj.Data
 	switch file.(type) {
 	case *ast.File:
@@ -228,13 +229,17 @@ func getPackage(dst *Writer, expr ast.Expr) string {
 
 	_, name := filepath.Split(file.(*ast.File).Path)
 	name = name[:len(name)-len(".hbuf")]
-	switch (expr.(*ast.Ident)).Obj.Kind {
-	case ast.Data:
-		name = name + ".data.dart"
-	case ast.Enum:
-		name = name + ".enum.dart"
-	case ast.Server:
-		name = name + ".server.dart"
+	if 0 < len(s) {
+		name = name + "." + s + ".dart"
+	} else {
+		switch (expr.(*ast.Ident)).Obj.Kind {
+		case ast.Data:
+			name = name + ".data.dart"
+		case ast.Enum:
+			name = name + ".enum.dart"
+		case ast.Server:
+			name = name + ".server.dart"
+		}
 	}
 
 	dst.Import(name)

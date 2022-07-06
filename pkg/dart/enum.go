@@ -11,12 +11,18 @@ func printEnumCode(dst *Writer, typ *ast.EnumType) {
 
 func printEnum(dst *Writer, typ *ast.EnumType) {
 	enumName := build.StringToHumpName(typ.Name.Name)
+	_, lang := build.GetTag(typ.Tags, "ui")
+	if lang {
+		dst.Import("package:flutter/widgets.dart")
+		getPackage(dst, typ.Name, "ui")
+	}
+
 	dst.Code("class " + enumName)
 	dst.Code("{\n")
 	dst.Code("  final int value;\n")
 	dst.Code("  final String name;\n\n")
-
-	dst.Code("  const " + enumName + "._(this.value, this.name);\n\n")
+	dst.Code("  final String Function(BuildContext context)? _onText;\n")
+	dst.Code("  const " + enumName + "._(this.value, this.name, [this._onText]);\n\n")
 
 	dst.Code("  @override\n")
 	dst.Code("  bool operator ==(Object other) =>\n")
@@ -48,14 +54,27 @@ func printEnum(dst *Writer, typ *ast.EnumType) {
 
 	for _, item := range typ.Items {
 		itemName := build.StringToAllUpper(item.Name.Name)
-		dst.Code("  static const " + itemName + " = " + enumName + "._(" + item.Id.Value + ", '" + itemName + "');\n")
+		dst.Code("  static final " + itemName + " = " + enumName + "._(" + item.Id.Value + ", '" + itemName + "'")
+		if lang {
+			dst.Code(", (context) => " + enumName + "Localizations.of(context)." + itemName)
+		}
+		dst.Code(");\n")
 	}
 	dst.Code("\n")
-	dst.Code("  static const List<" + enumName + "> values = [\n")
+	dst.Code("  static final List<" + enumName + "> values = [\n")
 	for _, item := range typ.Items {
 		dst.Code("    " + build.StringToAllUpper(item.Name.Name) + ",\n")
 	}
 	dst.Code("  ];\n\n")
 
+	dst.Code("  @override\n")
+	dst.Code("  String toString() {\n")
+	dst.Code("    return name;\n")
+	dst.Code("  }\n")
+
+	dst.Code("  String toText(BuildContext context) {\n")
+	dst.Code("    return _onText?.call(context) ?? name;\n")
+	dst.Code("  }\n")
 	dst.Code("}\n\n")
+
 }

@@ -312,6 +312,7 @@ type (
 	}
 
 	EnumType struct {
+		Tags    []*Tag
 		Enum    token.Pos
 		Name    *Ident
 		Items   []*EnumItem

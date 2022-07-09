@@ -5,16 +5,16 @@ import (
 	"hbuf/pkg/build"
 )
 
-func printEnumCode(dst *Writer, typ *ast.EnumType) {
-	printEnum(dst, typ)
+func (b *Builder) printEnumCode(dst *Writer, typ *ast.EnumType) {
+	b.printEnum(dst, typ)
 }
 
-func printEnum(dst *Writer, typ *ast.EnumType) {
+func (b *Builder) printEnum(dst *Writer, typ *ast.EnumType) {
 	enumName := build.StringToHumpName(typ.Name.Name)
 	_, lang := build.GetTag(typ.Tags, "ui")
 	if lang {
 		dst.Import("package:flutter/widgets.dart")
-		getPackage(dst, typ.Name, "ui")
+		b.getPackage(dst, typ.Name, "ui")
 	}
 
 	dst.Code("class " + enumName)

@@ -1,7 +1,6 @@
 package dart
 
 import (
-	"errors"
 	"go/printer"
 	"hbuf/pkg/ast"
 	"hbuf/pkg/build"
@@ -31,6 +30,10 @@ func (w *Writer) Import(text string) {
 
 func (w *Writer) Code(text string) {
 	_, _ = w.code.WriteString(text)
+}
+
+func (w *Writer) String() string {
+	return w.code.String()
 }
 
 func NewWriter(pack string) *Writer {
@@ -66,15 +69,19 @@ func NewGoWriter(pack string) *GoWriter {
 	}
 }
 
+type Builder struct {
+}
+
 func Build(file *ast.File, fset *token.FileSet, param *build.Param) error {
+	b := Builder{}
 	dst := NewGoWriter(param.GetPack())
-	err := Node(dst, fset, file)
+	err := b.Node(dst, fset, file)
 	if err != nil {
 		return err
 	}
 
 	if 0 == len(dst.path) {
-		return errors.New("Not find package name")
+		return nil
 	}
 
 	dir, name := filepath.Split(param.GetOut())
@@ -143,7 +150,7 @@ func writerFile(data *Writer, out string) error {
 	return nil
 }
 
-func Node(dst *GoWriter, fset *token.FileSet, node interface{}) error {
+func (b *Builder) Node(dst *GoWriter, fset *token.FileSet, node interface{}) error {
 	var file *ast.File
 	switch n := node.(type) {
 	case *ast.File:
@@ -161,32 +168,32 @@ func Node(dst *GoWriter, fset *token.FileSet, node interface{}) error {
 		switch s.(type) {
 		case *ast.ImportSpec:
 		case *ast.TypeSpec:
-			printTypeSpec(dst, (s.(*ast.TypeSpec)).Type)
+			b.printTypeSpec(dst, (s.(*ast.TypeSpec)).Type)
 		}
 	}
 	return nil
 }
 
-func printTypeSpec(dst *GoWriter, expr ast.Expr) {
+func (b *Builder) printTypeSpec(dst *GoWriter, expr ast.Expr) {
 	switch expr.(type) {
 	case *ast.DataType:
-		printDataCode(dst.data, expr.(*ast.DataType))
-		printFormCode(dst.ui, expr)
+		b.printDataCode(dst.data, expr.(*ast.DataType))
+		b.printFormCode(dst.ui, expr)
 	case *ast.ServerType:
-		printServerCode(dst.server, expr.(*ast.ServerType))
+		b.printServerCode(dst.server, expr.(*ast.ServerType))
 
 	case *ast.EnumType:
-		printEnumCode(dst.enum, expr.(*ast.EnumType))
-		printFormCode(dst.ui, expr)
+		b.printEnumCode(dst.enum, expr.(*ast.EnumType))
+		b.printFormCode(dst.ui, expr)
 	}
 }
 
-func printType(dst *Writer, expr ast.Expr, notEmpty bool) {
+func (b *Builder) printType(dst *Writer, expr ast.Expr, notEmpty bool) {
 	switch expr.(type) {
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
-			getPackage(dst, expr, "")
+			b.getPackage(dst, expr, "")
 			dst.Code(expr.(*ast.Ident).Name)
 		} else {
 			dst.Code(_types[(expr.(*ast.Ident).Name)])
@@ -194,7 +201,7 @@ func printType(dst *Writer, expr ast.Expr, notEmpty bool) {
 	case *ast.ArrayType:
 		ar := expr.(*ast.ArrayType)
 		dst.Code("List<")
-		printType(dst, ar.VType, false)
+		b.printType(dst, ar.VType, false)
 		dst.Code(">")
 		if ar.Empty && !notEmpty {
 			dst.Code("?")
@@ -202,23 +209,23 @@ func printType(dst *Writer, expr ast.Expr, notEmpty bool) {
 	case *ast.MapType:
 		ma := expr.(*ast.MapType)
 		dst.Code("Map<")
-		printType(dst, ma.Key, false)
+		b.printType(dst, ma.Key, false)
 		dst.Code(", ")
-		printType(dst, ma.VType, false)
+		b.printType(dst, ma.VType, false)
 		dst.Code(">")
 		if ma.Empty && !notEmpty {
 			dst.Code("?")
 		}
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
-		printType(dst, t.Type(), false)
+		b.printType(dst, t.Type(), false)
 		if t.Empty && !notEmpty {
 			dst.Code("?")
 		}
 	}
 }
 
-func getPackage(dst *Writer, expr ast.Expr, s string) string {
+func (b *Builder) getPackage(dst *Writer, expr ast.Expr, s string) string {
 	file := (expr.(*ast.Ident)).Obj.Data
 	switch file.(type) {
 	case *ast.File:

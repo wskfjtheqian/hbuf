@@ -5,21 +5,21 @@ import (
 	"hbuf/pkg/build"
 )
 
-func printServerCode(dst *Writer, typ *ast.ServerType) {
+func (b *Builder) printServerCode(dst *Writer, typ *ast.ServerType) {
 	dst.Import("dart:convert")
 	dst.Import("dart:typed_data")
 	dst.Import("package:hbuf_dart/hbuf_dart.dart")
 
-	printServer(dst, typ)
-	printServerImp(dst, typ)
-	printServerRouter(dst, typ)
+	b.printServer(dst, typ)
+	b.printServerImp(dst, typ)
+	b.printServerRouter(dst, typ)
 }
 
-func printServer(dst *Writer, typ *ast.ServerType) {
+func (b *Builder) printServer(dst *Writer, typ *ast.ServerType) {
 	dst.Code("abstract class " + build.StringToHumpName(typ.Name.Name))
 	if nil != typ.Extends {
 		dst.Code(" implements ")
-		printExtend(dst, typ.Extends, false)
+		b.printExtend(dst, typ.Extends, false)
 	}
 	dst.Code("{\n")
 	for _, method := range typ.Methods {
@@ -30,17 +30,17 @@ func printServer(dst *Writer, typ *ast.ServerType) {
 			dst.Code("  @override\n")
 		}
 		dst.Code("  Future<")
-		printType(dst, method.Result.Type(), false)
+		b.printType(dst, method.Result.Type(), false)
 		dst.Code("> " + build.StringToFirstLower(method.Name.Name))
 		dst.Code("(")
-		printType(dst, method.Param, false)
+		b.printType(dst, method.Param, false)
 		dst.Code(" " + build.StringToFirstLower(method.ParamName.Name))
 		dst.Code(", [Context? ctx]);\n\n")
 	}
 	dst.Code("}\n\n")
 }
 
-func printServerImp(dst *Writer, typ *ast.ServerType) {
+func (b *Builder) printServerImp(dst *Writer, typ *ast.ServerType) {
 	dst.Code("class " + build.StringToHumpName(typ.Name.Name) + "Client extends ServerClient implements " + build.StringToHumpName(typ.Name.Name))
 
 	dst.Code("{\n")
@@ -55,15 +55,15 @@ func printServerImp(dst *Writer, typ *ast.ServerType) {
 	_ = build.EnumMethod(typ, func(method *ast.FuncType, server *ast.ServerType) error {
 		dst.Code("  @override\n")
 		dst.Code("  Future<")
-		printType(dst, method.Result.Type(), false)
+		b.printType(dst, method.Result.Type(), false)
 		dst.Code("> " + build.StringToFirstLower(method.Name.Name))
 		dst.Code("(")
-		printType(dst, method.Param, false)
+		b.printType(dst, method.Param, false)
 		dst.Code(" " + build.StringToFirstLower(method.ParamName.Name))
 		dst.Code(", [Context? ctx]){\n")
 
 		dst.Code("    return invoke<")
-		printType(dst, method.Result.Type(), false)
+		b.printType(dst, method.Result.Type(), false)
 		dst.Code(">(\"")
 		dst.Code(build.StringToUnderlineName(server.Name.Name) + "/" + build.StringToUnderlineName(method.Name.Name))
 		dst.Code("\", ")
@@ -71,9 +71,9 @@ func printServerImp(dst *Writer, typ *ast.ServerType) {
 		dst.Code(", ")
 		dst.Code(build.StringToFirstLower(method.ParamName.Name))
 		dst.Code(", ")
-		printType(dst, method.Result.Type(), false)
+		b.printType(dst, method.Result.Type(), false)
 		dst.Code(".fromMap, ")
-		printType(dst, method.Result.Type(), false)
+		b.printType(dst, method.Result.Type(), false)
 		dst.Code(".fromData);\n")
 
 		dst.Code("  }\n\n")
@@ -82,7 +82,7 @@ func printServerImp(dst *Writer, typ *ast.ServerType) {
 	dst.Code("}\n\n")
 }
 
-func printServerRouter(dst *Writer, typ *ast.ServerType) {
+func (b *Builder) printServerRouter(dst *Writer, typ *ast.ServerType) {
 	dst.Code("class " + build.StringToHumpName(typ.Name.Name) + "Router extends ServerRouter")
 
 	dst.Code("{\n")
@@ -110,7 +110,7 @@ func printServerRouter(dst *Writer, typ *ast.ServerType) {
 		dst.Code("      \"" + build.StringToUnderlineName(server.Name.Name) + "/" + build.StringToUnderlineName(method.Name.Name) + "\": ServerInvoke(\n")
 		dst.Code("        toData: (List<int> buf) async {\n")
 		dst.Code("          return ")
-		printType(dst, method.Param.Type(), false)
+		b.printType(dst, method.Param.Type(), false)
 		dst.Code(".fromMap(json.decode(utf8.decode(buf)));\n")
 		dst.Code("        },\n")
 		dst.Code("        formData: (Data data) async {\n")
@@ -118,7 +118,7 @@ func printServerRouter(dst *Writer, typ *ast.ServerType) {
 		dst.Code("        },\n")
 		dst.Code("        invoke: (Context ctx, Data data) async {\n")
 		dst.Code("     	   return await server." + build.StringToFirstLower(method.Name.Name) + "(data as ")
-		printType(dst, method.Param.Type(), false)
+		b.printType(dst, method.Param.Type(), false)
 		dst.Code(", ctx);\n")
 		dst.Code("        },\n")
 		dst.Code("      ),\n")
@@ -131,7 +131,7 @@ func printServerRouter(dst *Writer, typ *ast.ServerType) {
 		dst.Code("        " + server.Id.Value + " << 32 | " + method.Id.Value + ": ServerInvoke(\n")
 		dst.Code("        toData: (List<int> buf) async {\n")
 		dst.Code("          return ")
-		printType(dst, method.Param.Type(), false)
+		b.printType(dst, method.Param.Type(), false)
 		dst.Code(".fromData(ByteData.view(Uint8List.fromList(buf).buffer));\n")
 		dst.Code("        },\n")
 		dst.Code("        formData: (Data data) async {\n")
@@ -139,7 +139,7 @@ func printServerRouter(dst *Writer, typ *ast.ServerType) {
 		dst.Code("        },\n")
 		dst.Code("        invoke: (Context ctx, Data data) async {\n")
 		dst.Code("     	   return await server." + build.StringToFirstLower(method.Name.Name) + "(data as ")
-		printType(dst, method.Param.Type(), false)
+		b.printType(dst, method.Param.Type(), false)
 		dst.Code(", ctx);\n")
 		dst.Code("        },\n")
 		dst.Code("      ),\n")

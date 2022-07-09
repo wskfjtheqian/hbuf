@@ -5,17 +5,17 @@ import (
 	"hbuf/pkg/build"
 )
 
-func printDataCode(dst *Writer, typ *ast.DataType) {
+func (b *Builder) printDataCode(dst *Writer, typ *ast.DataType) {
 	dst.Import("dart:typed_data")
 	dst.Import("package:hbuf_dart/hbuf_dart.dart")
 
-	printData(dst, typ)
-	printDataEntity(dst, typ)
+	b.printData(dst, typ)
+	b.printDataEntity(dst, typ)
 }
-func printData(dst *Writer, typ *ast.DataType) {
+func (b *Builder) printData(dst *Writer, typ *ast.DataType) {
 	dst.Code("abstract class " + build.StringToHumpName(typ.Name.Name) + " implements Data")
 	if nil != typ.Extends {
-		printExtend(dst, typ.Extends, true)
+		b.printExtend(dst, typ.Extends, true)
 	}
 	dst.Code("{\n")
 	for _, field := range typ.Fields.List {
@@ -27,7 +27,7 @@ func printData(dst *Writer, typ *ast.DataType) {
 			dst.Code("  @override\n")
 		}
 		dst.Code("  ")
-		printType(dst, field.Type, false)
+		b.printType(dst, field.Type, false)
 		dst.Code(" get " + build.StringToFirstLower(field.Name.Name))
 		dst.Code(";\n\n")
 
@@ -36,7 +36,7 @@ func printData(dst *Writer, typ *ast.DataType) {
 		}
 		dst.Code("  set ")
 		dst.Code(build.StringToFirstLower(field.Name.Name) + "(")
-		printType(dst, field.Type, false)
+		b.printType(dst, field.Type, false)
 		dst.Code(" value);\n\n")
 	}
 	isParam := false
@@ -50,7 +50,7 @@ func printData(dst *Writer, typ *ast.DataType) {
 		if !field.Type.IsEmpty() {
 			dst.Code("required ")
 		}
-		printType(dst, field.Type, false)
+		b.printType(dst, field.Type, false)
 		dst.Code(" " + build.StringToFirstLower(field.Name.Name))
 		dst.Code(",\n")
 		return nil
@@ -88,14 +88,14 @@ func printData(dst *Writer, typ *ast.DataType) {
 	dst.Code("}\n\n")
 }
 
-func printDataEntity(dst *Writer, typ *ast.DataType) {
+func (b *Builder) printDataEntity(dst *Writer, typ *ast.DataType) {
 	dst.Code("class _" + build.StringToHumpName(typ.Name.Name) + " implements " + build.StringToHumpName(typ.Name.Name))
 	dst.Code(" {\n")
 
 	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 		dst.Code("  @override\n")
 		dst.Code("  ")
-		printType(dst, field.Type, false)
+		b.printType(dst, field.Type, false)
 		dst.Code(" " + build.StringToFirstLower(field.Name.Name))
 		dst.Code(";\n\n")
 		return nil
@@ -135,7 +135,7 @@ func printDataEntity(dst *Writer, typ *ast.DataType) {
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 		dst.Code("      " + build.StringToFirstLower(field.Name.Name) + ": ")
 		jsonName := build.StringToUnderlineName(field.Name.Name)
-		printJsonValue(dst, "(temp = map[\""+jsonName+"\"])", field.Type, data, false)
+		b.printJsonValue(dst, "(temp = map[\""+jsonName+"\"])", field.Type, data, false)
 		dst.Code(",\n")
 		return nil
 	})
@@ -195,7 +195,7 @@ func printDataEntity(dst *Writer, typ *ast.DataType) {
 	dst.Code("}\n\n")
 }
 
-func printJsonValue(dst *Writer, name string, expr ast.Expr, data *ast.DataType, empty bool) {
+func (b *Builder) printJsonValue(dst *Writer, name string, expr ast.Expr, data *ast.DataType, empty bool) {
 	switch expr.(type) {
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
@@ -257,24 +257,24 @@ func printJsonValue(dst *Writer, name string, expr ast.Expr, data *ast.DataType,
 		t := expr.(*ast.ArrayType)
 		if empty {
 			dst.Code("null == " + name + " ? null : (temp! is! List ? null : (temp as List).map((temp) => ")
-			printJsonValue(dst, "temp", t.VType, data, empty)
+			b.printJsonValue(dst, "temp", t.VType, data, empty)
 			dst.Code(").toList())")
 		} else {
 			dst.Code("null == " + name + " ? <")
-			printType(dst, t.VType, false)
+			b.printType(dst, t.VType, false)
 			dst.Code(">[] : (temp! is! List ? <")
-			printType(dst, t.VType, false)
+			b.printType(dst, t.VType, false)
 			dst.Code(">[] : (temp as List).map((temp) => ")
-			printJsonValue(dst, "temp", t.VType, data, empty)
+			b.printJsonValue(dst, "temp", t.VType, data, empty)
 			dst.Code(").toList())")
 		}
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
-		printJsonValue(dst, name, t.Type(), data, t.Empty)
+		b.printJsonValue(dst, name, t.Type(), data, t.Empty)
 	}
 }
 
-func printExtend(dst *Writer, extends []*ast.Ident, start bool) {
+func (b *Builder) printExtend(dst *Writer, extends []*ast.Ident, start bool) {
 	for i, v := range extends {
 		if 0 != i || start {
 			dst.Code(", ")

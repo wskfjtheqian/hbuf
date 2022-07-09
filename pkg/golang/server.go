@@ -5,22 +5,22 @@ import (
 	"hbuf/pkg/build"
 )
 
-func printServerCode(dst *Writer, typ *ast.ServerType) {
+func (b *Builder) printServerCode(dst *Writer, typ *ast.ServerType) {
 	dst.Import("context")
 	dst.Import("encoding/json")
 	dst.Import("errors")
 	dst.Import("hbuf_golang/pkg/hbuf")
 
-	printServer(dst, typ)
-	printServerImp(dst, typ)
-	printServerRouter(dst, typ)
-	printGetServerRouter(dst, typ)
+	b.printServer(dst, typ)
+	b.printServerImp(dst, typ)
+	b.printServerRouter(dst, typ)
+	b.printGetServerRouter(dst, typ)
 }
-func printServer(dst *Writer, typ *ast.ServerType) {
+func (b *Builder) printServer(dst *Writer, typ *ast.ServerType) {
 	serverName := build.StringToHumpName(typ.Name.Name)
 	dst.Code("type " + serverName)
 	dst.Code(" interface {\n")
-	printExtend(dst, typ.Extends)
+	b.printExtend(dst, typ.Extends)
 
 	for _, method := range typ.Methods {
 		if nil != method.Comment {
@@ -31,15 +31,15 @@ func printServer(dst *Writer, typ *ast.ServerType) {
 		dst.Code("(ctx context.Context, ")
 		dst.Code(build.StringToFirstLower(method.ParamName.Name))
 		dst.Code(" *")
-		printType(dst, method.Param, false)
+		b.printType(dst, method.Param, false)
 		dst.Code(") (*")
-		printType(dst, method.Result.Type(), false)
+		b.printType(dst, method.Result.Type(), false)
 		dst.Code(",error)\n\n")
 	}
 	dst.Code("}\n\n")
 }
 
-func printServerImp(dst *Writer, typ *ast.ServerType) {
+func (b *Builder) printServerImp(dst *Writer, typ *ast.ServerType) {
 	//
 	//dst.Code("class " +serverName + "Client extends ServerClient implements " +serverName)
 	//
@@ -84,7 +84,7 @@ func printServerImp(dst *Writer, typ *ast.ServerType) {
 
 type auth map[string]string
 
-func getAuth(tags []*ast.Tag) *auth {
+func (b *Builder) getAuth(tags []*ast.Tag) *auth {
 	val, ok := build.GetTag(tags, "auth")
 	if !ok {
 		return nil
@@ -98,7 +98,7 @@ func getAuth(tags []*ast.Tag) *auth {
 	return &au
 }
 
-func printServerRouter(dst *Writer, typ *ast.ServerType) {
+func (b *Builder) printServerRouter(dst *Writer, typ *ast.ServerType) {
 	serverName := build.StringToHumpName(typ.Name.Name)
 	dst.Code("type " + serverName + "Router struct {\n")
 	dst.Code("	server " + serverName + "\n")
@@ -125,7 +125,7 @@ func printServerRouter(dst *Writer, typ *ast.ServerType) {
 		dst.Code("\t\t\t\"" + build.StringToUnderlineName(typ.Name.Name) + "/" + build.StringToUnderlineName(method.Name.Name) + "\": {\n")
 		dst.Code("\t\t\t\tToData: func(buf []byte) (hbuf.Data, error) {\n")
 		dst.Code("\t\t\t\t\tvar req ")
-		printType(dst, method.Param, false)
+		b.printType(dst, method.Param, false)
 		dst.Code("\n")
 		dst.Code("\t\t\t\t\treturn &req, json.Unmarshal(buf, &req)\n")
 		dst.Code("\t\t\t\t},\n")
@@ -134,7 +134,7 @@ func printServerRouter(dst *Writer, typ *ast.ServerType) {
 		dst.Code("\t\t\t\t},\n")
 		dst.Code("\t\t\t\tSetInfo: func(ctx context.Context)  {\n")
 
-		au := getAuth(method.Tags)
+		au := b.getAuth(method.Tags)
 		if nil != au {
 			for key, val := range *au {
 				dst.Code("\t\t\t\t\thbuf.SetTag(ctx, \"" + key + "\", \"" + val + "\")\n")
@@ -143,7 +143,7 @@ func printServerRouter(dst *Writer, typ *ast.ServerType) {
 		dst.Code("\t\t\t\t},\n")
 		dst.Code("\t\t\t\tInvoke: func(ctx context.Context, data hbuf.Data) (hbuf.Data, error) {\n")
 		dst.Code("\t\t\t\t\treturn server." + build.StringToHumpName(method.Name.Name) + "(ctx, data.(*")
-		printType(dst, method.Param, false)
+		b.printType(dst, method.Param, false)
 		dst.Code("))\n")
 		dst.Code("\t\t\t\t},\n")
 		dst.Code("\t\t\t},\n")
@@ -157,7 +157,7 @@ func printServerRouter(dst *Writer, typ *ast.ServerType) {
 	dst.Code("}\n\n")
 }
 
-func printGetServerRouter(dst *Writer, typ *ast.ServerType) {
+func (b *Builder) printGetServerRouter(dst *Writer, typ *ast.ServerType) {
 	serverName := build.StringToHumpName(typ.Name.Name)
 
 	dst.Code("func Get" + serverName + "(server hbuf.GetServer) (" + serverName + ", error) {\n")

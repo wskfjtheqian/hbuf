@@ -3,19 +3,18 @@ package dart
 import (
 	"hbuf/pkg/ast"
 	"hbuf/pkg/build"
-	"strings"
 )
 
 //创建表单代码
-func printFormCode(dst *Writer, expr ast.Expr) {
+func (b *Builder) printFormCode(dst *Writer, expr ast.Expr) {
 	dst.Import("package:flutter/material.dart")
 
 	switch expr.(type) {
 	case *ast.DataType:
 		dst.Import("package:hbuf_flutter/hbuf_flutter.dart")
 		typ := expr.(*ast.DataType)
-		getPackage(dst, typ.Name, "")
-		lang := printDataUi(dst, typ)
+		b.getPackage(dst, typ.Name, "")
+		lang := b.printDataUi(dst, typ)
 		if lang != nil {
 			lang.printLanguage(dst)
 		}
@@ -23,14 +22,14 @@ func printFormCode(dst *Writer, expr ast.Expr) {
 
 	case *ast.EnumType:
 		typ := expr.(*ast.EnumType)
-		lang := printEnumUi(dst, typ)
+		lang := b.printEnumUi(dst, typ)
 		if lang != nil {
 			lang.printLanguage(dst)
 		}
 	}
 }
 
-func printEnumUi(dst *Writer, typ *ast.EnumType) *Language {
+func (b *Builder) printEnumUi(dst *Writer, typ *ast.EnumType) *Language {
 	_, ok := build.GetTag(typ.Tags, "ui")
 	if !ok {
 		return nil
@@ -53,7 +52,7 @@ type ui struct {
 	table    string
 }
 
-func getUI(tags []*ast.Tag) *ui {
+func (b *Builder) getUI(tags []*ast.Tag) *ui {
 	val, ok := build.GetTag(tags, "ui")
 	if !ok {
 		return nil
@@ -75,22 +74,22 @@ func getUI(tags []*ast.Tag) *ui {
 	return &form
 }
 
-func printDataUi(dst *Writer, typ *ast.DataType) *Language {
-	u := getUI(typ.Tags)
+func (b *Builder) printDataUi(dst *Writer, typ *ast.DataType) *Language {
+	u := b.getUI(typ.Tags)
 	if nil == u {
 		return nil
 	}
 
 	if u.typ == "form" {
-		return printForm(dst, typ, u)
+		return b.printForm(dst, typ, u)
 	} else if u.typ == "table" {
-		return printTable(dst, typ, u)
+		return b.printTable(dst, typ, u)
 	}
 
 	return nil
 }
 
-func printTable(dst *Writer, typ *ast.DataType, u *ui) *Language {
+func (b *Builder) printTable(dst *Writer, typ *ast.DataType, u *ui) *Language {
 	name := build.StringToHumpName(typ.Name.Name)
 	lang := NewLanguage(name)
 	dst.Code("class Table" + name + build.StringToHumpName(u.suffix) + "Build {\n")
@@ -107,7 +106,7 @@ func printTable(dst *Writer, typ *ast.DataType, u *ui) *Language {
 	dst.Code("\t\ttables.columns = [\n")
 
 	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
-		table := getUI(field.Tags)
+		table := b.getUI(field.Tags)
 		fieldName := build.StringToFirstLower(field.Name.Name)
 		if nil == table {
 			return nil
@@ -118,7 +117,7 @@ func printTable(dst *Writer, typ *ast.DataType, u *ui) *Language {
 		dst.Code("\t\t\t\t},\n")
 		dst.Code("\t\t\t\tcellBuilder: (context, x, y,dynamic data) {\n")
 		dst.Code("\t\t\t\t\treturn TablesCell(child: SelectableText(\"${data." + fieldName)
-		printValue(dst, field.Type, false)
+		b.printValue(dst, field.Type, false)
 		dst.Code(" }\"));\n")
 		dst.Code("\t\t\t\t},\n")
 		dst.Code("\t\t\t),\n")
@@ -137,7 +136,7 @@ func printTable(dst *Writer, typ *ast.DataType, u *ui) *Language {
 	return lang
 }
 
-func printValue(dst *Writer, expr ast.Expr, empty bool) {
+func (b *Builder) printValue(dst *Writer, expr ast.Expr, empty bool) {
 	switch expr.(type) {
 	case *ast.EnumType:
 		if empty {
@@ -147,8 +146,8 @@ func printValue(dst *Writer, expr ast.Expr, empty bool) {
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
-			getPackage(dst, expr, "")
-			printValue(dst, t.Obj.Decl.(*ast.TypeSpec).Type, empty)
+			b.getPackage(dst, expr, "")
+			b.printValue(dst, t.Obj.Decl.(*ast.TypeSpec).Type, empty)
 		}
 	case *ast.ArrayType:
 		//ar := expr.(*ast.ArrayType)
@@ -170,14 +169,14 @@ func printValue(dst *Writer, expr ast.Expr, empty bool) {
 		//}
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
-		printValue(dst, t.Type(), t.Empty)
+		b.printValue(dst, t.Type(), t.Empty)
 		if t.Empty {
 			dst.Code("??\"\"")
 		}
 	}
 }
 
-func printForm(dst *Writer, typ *ast.DataType, u *ui) *Language {
+func (b *Builder) printForm(dst *Writer, typ *ast.DataType, u *ui) *Language {
 	name := build.StringToHumpName(typ.Name.Name)
 	lang := NewLanguage(name)
 	dst.Code("class Form" + name + build.StringToHumpName(u.suffix) + "Build {\n")
@@ -189,32 +188,35 @@ func printForm(dst *Writer, typ *ast.DataType, u *ui) *Language {
 	dst.Code("\t\tthis.enabled = true,\n")
 	dst.Code("\t});\n\n")
 
-	fields := strings.Builder{}
-	setValue := strings.Builder{}
+	fields := NewWriter("")
+	setValue := NewWriter("")
 	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
-		form := getUI(field.Tags)
+		form := b.getUI(field.Tags)
 		fieldName := build.StringToFirstLower(field.Name.Name)
 		if nil == form {
 			return nil
 		}
 		if "text" == form.form {
 			dst.Code("\tfinal TextFormBuild " + fieldName + " = TextFormBuild();\n\n")
-			setValue.WriteString("\t\t" + fieldName + ".initialValue = info." + fieldName + ";\n")
-			setValue.WriteString("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = val!;\n")
-			setValue.WriteString("\t\t" + fieldName + ".enabled = enabled;\n")
-			setValue.WriteString("\t\t" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n\n")
+			setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName + ";\n")
+			setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = val!;\n")
+			setValue.Code("\t\t" + fieldName + ".enabled = enabled;\n")
+			setValue.Code("\t\t" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n\n")
 
-			fields.WriteString("\t\t\t" + fieldName + ".build(context),\n")
+			fields.Code("\t\t\t" + fieldName + ".build(context),\n")
 			lang.Add(fieldName, field.Tags)
 		} else if "menu" == form.form {
 			dst.Code("\tfinal MenuFormBuild<")
-			printType(dst, field.Type, true)
+			b.printType(dst, field.Type, true)
 			dst.Code("> " + fieldName + " = MenuFormBuild();\n\n")
-			setValue.WriteString("\t\t" + fieldName + ".value = info." + fieldName + ";\n")
-			setValue.WriteString("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = val!;\n")
-			setValue.WriteString("\t\t" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n\n")
+			setValue.Code("\t\t" + fieldName + ".value = info." + fieldName + ";\n")
+			setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = val!;\n")
+			setValue.Code("\t\t" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n")
+			setValue.Code("\t\tstatus.items = [\n")
+			b.printMenuItem(setValue, field.Type, false)
+			setValue.Code("\t\t];\n\n")
 
-			fields.WriteString("\t\t\t" + fieldName + ".build(context),\n")
+			fields.Code("\t\t\t" + fieldName + ".build(context),\n")
 			lang.Add(fieldName, field.Tags)
 		}
 
@@ -233,4 +235,44 @@ func printForm(dst *Writer, typ *ast.DataType, u *ui) *Language {
 	dst.Code("\t}\n")
 	dst.Code("}\n\n")
 	return lang
+}
+
+func (b *Builder) printMenuItem(dst *Writer, expr ast.Expr, empty bool) {
+	switch expr.(type) {
+	case *ast.EnumType:
+		t := expr.(*ast.EnumType)
+		name := build.StringToHumpName(t.Name.Name)
+		dst.Code("\t\t\tfor (var item in " + name + ".values)\n")
+		dst.Code("\t\t\t\tDropdownMenuItem<" + name + ">(\n")
+		dst.Code("\t\t\t\t\tvalue: item,\n")
+		dst.Code("\t\t\t\t\tchild: Text(item.toText(context)),\n")
+		dst.Code("\t\t\t\t),\n")
+	case *ast.Ident:
+		t := expr.(*ast.Ident)
+		if nil != t.Obj {
+			b.getPackage(dst, expr, "")
+			b.printMenuItem(dst, t.Obj.Decl.(*ast.TypeSpec).Type, empty)
+		}
+	case *ast.ArrayType:
+		//ar := expr.(*ast.ArrayType)
+		//dst.Code("List<")
+		//printType(dst, ar.VType, false)
+		//dst.Code(">")
+		//if ar.Empty && !notEmpty {
+		//	dst.Code("?")
+		//}
+	case *ast.MapType:
+		//ma := expr.(*ast.MapType)
+		//dst.Code("Map<")
+		//printType(dst, ma.Key, false)
+		//dst.Code(", ")
+		//printType(dst, ma.VType, false)
+		//dst.Code(">")
+		//if ma.Empty && !notEmpty {
+		//	dst.Code("?")
+		//}
+	case *ast.VarType:
+		t := expr.(*ast.VarType)
+		b.printMenuItem(dst, t.Type(), t.Empty)
+	}
 }

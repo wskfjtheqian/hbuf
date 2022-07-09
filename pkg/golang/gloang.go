@@ -1,11 +1,9 @@
 package golang
 
 import (
-	"errors"
 	"go/printer"
 	"hbuf/pkg/ast"
 	"hbuf/pkg/build"
-	"hbuf/pkg/scanner"
 	"hbuf/pkg/token"
 	"os"
 	"path/filepath"
@@ -68,15 +66,19 @@ func NewGoWriter(pack string) *GoWriter {
 	}
 }
 
+type Builder struct {
+}
+
 func Build(file *ast.File, fset *token.FileSet, param *build.Param) error {
+	b := Builder{}
 	dst := NewGoWriter(param.GetPack())
-	err := Node(dst, fset, file)
+	err := b.Node(dst, fset, file)
 	if err != nil {
 		return err
 	}
 
 	if 0 == len(dst.packages) {
-		return errors.New("Not find package name")
+		return nil
 	}
 
 	dir, name := filepath.Split(param.GetOut())
@@ -92,25 +94,25 @@ func Build(file *ast.File, fset *token.FileSet, param *build.Param) error {
 	}
 
 	if 0 < dst.data.code.Len() {
-		err := writerFile(dst.data, dst.packages, filepath.Join(dir, name+".data.go"))
+		err := b.writerFile(dst.data, dst.packages, filepath.Join(dir, name+".data.go"))
 		if err != nil {
 			return err
 		}
 	}
 	if 0 < dst.enum.code.Len() {
-		err = writerFile(dst.enum, dst.packages, filepath.Join(dir, name+".enum.go"))
+		err = b.writerFile(dst.enum, dst.packages, filepath.Join(dir, name+".enum.go"))
 		if err != nil {
 			return err
 		}
 	}
 	if 0 < dst.server.code.Len() {
-		err = writerFile(dst.server, dst.packages, filepath.Join(dir, name+".server.go"))
+		err = b.writerFile(dst.server, dst.packages, filepath.Join(dir, name+".server.go"))
 		if err != nil {
 			return err
 		}
 	}
 	if 0 < dst.database.code.Len() {
-		err = writerFile(dst.database, dst.packages, filepath.Join(dir, name+".database.go"))
+		err = b.writerFile(dst.database, dst.packages, filepath.Join(dir, name+".database.go"))
 		if err != nil {
 			return err
 		}
@@ -118,7 +120,7 @@ func Build(file *ast.File, fset *token.FileSet, param *build.Param) error {
 	return nil
 }
 
-func writerFile(data *Writer, packages string, out string) error {
+func (b *Builder) writerFile(data *Writer, packages string, out string) error {
 	fc, err := os.Create(out)
 	if err != nil {
 		return err
@@ -152,7 +154,7 @@ func writerFile(data *Writer, packages string, out string) error {
 	return nil
 }
 
-func Node(dst *GoWriter, fset *token.FileSet, node interface{}) error {
+func (b *Builder) Node(dst *GoWriter, fset *token.FileSet, node interface{}) error {
 	var file *ast.File
 	switch n := node.(type) {
 	case *ast.File:
@@ -166,10 +168,7 @@ func Node(dst *GoWriter, fset *token.FileSet, node interface{}) error {
 
 	val, ok := file.Packages["go"]
 	if !ok {
-		return scanner.Error{
-			Pos: fset.Position(file.Pos()),
-			Msg: "Not find : package",
-		}
+		return nil
 	}
 
 	dst.SetPackages(val.Value.Value[1 : len(val.Value.Value)-1])
@@ -178,31 +177,31 @@ func Node(dst *GoWriter, fset *token.FileSet, node interface{}) error {
 		switch s.(type) {
 		case *ast.ImportSpec:
 		case *ast.TypeSpec:
-			printTypeSpec(dst, (s.(*ast.TypeSpec)).Type)
+			b.printTypeSpec(dst, (s.(*ast.TypeSpec)).Type)
 		}
 	}
 	return nil
 }
 
-func printTypeSpec(dst *GoWriter, expr ast.Expr) {
+func (b *Builder) printTypeSpec(dst *GoWriter, expr ast.Expr) {
 	switch expr.(type) {
 	case *ast.DataType:
-		printDataCode(dst.data, expr.(*ast.DataType))
-		printDatabaseCode(dst.database, expr.(*ast.DataType))
+		b.printDataCode(dst.data, expr.(*ast.DataType))
+		b.printDatabaseCode(dst.database, expr.(*ast.DataType))
 	case *ast.ServerType:
-		printServerCode(dst.server, expr.(*ast.ServerType))
+		b.printServerCode(dst.server, expr.(*ast.ServerType))
 
 	case *ast.EnumType:
 		printEnumCode(dst.enum, expr.(*ast.EnumType))
 	}
 }
 
-func printType(dst *Writer, expr ast.Expr, b bool) {
+func (b *Builder) printType(dst *Writer, expr ast.Expr, emp bool) {
 	switch expr.(type) {
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
-			pack := getPackage(dst, expr)
+			pack := b.getPackage(dst, expr)
 			dst.Code(pack + (expr.(*ast.Ident)).Name)
 		} else {
 			if build.Date == (expr.(*ast.Ident)).Name {
@@ -213,23 +212,23 @@ func printType(dst *Writer, expr ast.Expr, b bool) {
 	case *ast.ArrayType:
 		ar := expr.(*ast.ArrayType)
 		dst.Code("[]")
-		printType(dst, ar.VType, false)
+		b.printType(dst, ar.VType, false)
 	case *ast.MapType:
 		ma := expr.(*ast.MapType)
 		dst.Code("map[")
-		printType(dst, ma.Key, false)
+		b.printType(dst, ma.Key, false)
 		dst.Code("]")
-		printType(dst, ma.VType, false)
+		b.printType(dst, ma.VType, false)
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
 		if t.Empty {
 			dst.Code("*")
 		}
-		printType(dst, t.Type(), false)
+		b.printType(dst, t.Type(), false)
 	}
 }
 
-func getPackage(dst *Writer, expr ast.Expr) string {
+func (b *Builder) getPackage(dst *Writer, expr ast.Expr) string {
 	file := (expr.(*ast.Ident)).Obj.Data
 	switch file.(type) {
 	case *ast.File:

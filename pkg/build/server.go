@@ -102,7 +102,7 @@ func (b *Builder) checkServerItemType(file *ast.File, result *ast.VarType) error
 			if _, ok := _types[ident.Name]; ok {
 				return nil
 			}
-			obj := b.getDataType(file, ident.Name)
+			obj := b.GetDataType(file, ident.Name)
 			if nil != obj {
 				ident.Obj = obj
 				return nil
@@ -119,7 +119,7 @@ func (b *Builder) checkServerItemType(file *ast.File, result *ast.VarType) error
 					if _, ok := _types[ident.Name]; ok {
 						return nil
 					}
-					obj := b.getDataType(file, ident.Name)
+					obj := b.GetDataType(file, ident.Name)
 					if nil != obj {
 						ident.Obj = obj
 						return nil

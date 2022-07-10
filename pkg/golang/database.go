@@ -22,6 +22,9 @@ type DB struct {
 	find    bool
 	count   bool
 	table   bool
+	where   string
+	offset  string
+	limit   string
 }
 
 type DBField struct {
@@ -53,6 +56,12 @@ func (b *Builder) getDB(n string, tag []*ast.Tag) []*DB {
 						db.key = "key" == item.Value.Value[1:len(item.Value.Value)-1]
 					} else if "typ" == item.Name.Name {
 						db.typ = item.Value.Value[1 : len(item.Value.Value)-1]
+					} else if "where" == item.Name.Name {
+						db.where = item.Value.Value[1 : len(item.Value.Value)-1]
+					} else if "offset" == item.Name.Name {
+						db.offset = item.Value.Value[1 : len(item.Value.Value)-1]
+					} else if "limit" == item.Name.Name {
+						db.limit = item.Value.Value[1 : len(item.Value.Value)-1]
 					} else if "insert" == item.Name.Name {
 						db.insert = "true" == strings.ToLower(item.Value.Value[1:len(item.Value.Value)-1])
 					} else if "inserts" == item.Name.Name {
@@ -69,6 +78,8 @@ func (b *Builder) getDB(n string, tag []*ast.Tag) []*DB {
 						db.table = "true" == strings.ToLower(item.Value.Value[1:len(item.Value.Value)-1])
 					} else if "set" == item.Name.Name {
 						db.set = "true" == strings.ToLower(item.Value.Value[1:len(item.Value.Value)-1])
+					} else if "count" == item.Name.Name {
+						db.count = "true" == strings.ToLower(item.Value.Value[1:len(item.Value.Value)-1])
 					}
 				}
 			}
@@ -88,9 +99,82 @@ func (b *Builder) getDB(n string, tag []*ast.Tag) []*DB {
 func (b *Builder) printDatabaseCode(dst *Writer, typ *ast.DataType) error {
 	dst.Import("database/sql")
 
+	dbs, fields, key, err := b.getDBField(typ)
+	if 0 == len(dbs) || nil != err {
+		return nil
+	}
+
+	fDbs := dbs
+	fFields := fields
+	fType := typ
+	if !dbs[0].table && 0 < len(dbs[0].name) {
+		table := b.build.GetDataType(b.getFile(typ.Name), dbs[0].name)
+		if nil == table {
+			return nil
+		}
+		typ = table.Decl.(*ast.TypeSpec).Type.(*ast.DataType)
+		dbs, fields, key, err = b.getDBField(typ)
+		if nil != err {
+			return nil
+		}
+		if len(dbs) == 0 {
+			return nil
+		}
+	}
+
+	if 0 == len(fDbs) {
+		return nil
+	}
+
+	if !dbs[0].table {
+		return nil
+	}
+	if fDbs[0].table {
+		b.printScanData(dst, typ, dbs[0], fields, key)
+	}
+
+	if fDbs[0].find {
+		b.printFindData(dst, typ, dbs[0], fields, fType, fFields)
+	}
+
+	if fDbs[0].count {
+		b.printCountData(dst, typ, dbs[0], fields, fType, fFields)
+	}
+
+	if fDbs[0].del {
+		b.printDeleteData(dst, typ, dbs[0], fields, key)
+	}
+
+	if fDbs[0].insert {
+		b.printInsertData(dst, typ, dbs[0], fields, key)
+	}
+
+	if fDbs[0].inserts {
+		b.printInsertListData(dst, typ, dbs[0], fields, key)
+	}
+
+	if fDbs[0].update {
+		b.printUpdateData(dst, typ, dbs[0], fields, key)
+	}
+
+	if fDbs[0].set {
+		b.printSetData(dst, typ, dbs[0], fields, key)
+	}
+
+	if fDbs[0].get {
+		if typ == fType {
+			key.dbs[0].where = "AND id = ?"
+			fFields = []*DBField{key}
+		}
+		b.printGetData(dst, typ, dbs[0], fields, fType, fFields)
+	}
+	return nil
+}
+
+func (b *Builder) getDBField(typ *ast.DataType) ([]*DB, []*DBField, *DBField, error) {
 	dbs := b.getDB(typ.Name.Name, typ.Tags)
 	if 0 == len(dbs) {
-		return nil
+		return nil, nil, nil, nil
 	}
 
 	var fields []*DBField
@@ -110,47 +194,9 @@ func (b *Builder) printDatabaseCode(dst *Writer, typ *ast.DataType) error {
 		return nil
 	})
 	if nil != err {
-		return err
+		return nil, nil, nil, err
 	}
-
-	if 0 == len(dbs) {
-		return nil
-	}
-
-	if !dbs[0].table && 0 < len(dbs[0].name) {
-
-	}
-
-	if 0 < len(dbs) {
-		if dbs[0].table {
-			b.printScanData(dst, typ, dbs[0], fields, key)
-
-			if dbs[0].get {
-				b.printGetData(dst, typ, dbs[0], fields, key)
-			}
-
-			if dbs[0].find {
-				b.printFindData(dst, typ, dbs[0], fields, key)
-			}
-
-			if dbs[0].del {
-				b.printDeleteData(dst, typ, dbs[0], fields, key)
-			}
-
-			if dbs[0].insert {
-				b.printInsertData(dst, typ, dbs[0], fields, key)
-			}
-
-			if dbs[0].inserts {
-				b.printInsertListData(dst, typ, dbs[0], fields, key)
-			}
-
-			if dbs[0].del {
-				b.printUpdateData(dst, typ, dbs[0], fields, key)
-			}
-		}
-	}
-	return nil
+	return dbs, fields, key, nil
 }
 
 func (b *Builder) printScanData(dst *Writer, typ *ast.DataType, db *DB, fields []*DBField, key *DBField) {
@@ -183,15 +229,65 @@ func (b *Builder) getItemAndValue(fields []*DBField) (strings.Builder, strings.B
 
 }
 
-func (b *Builder) printGetData(dst *Writer, typ *ast.DataType, db *DB, fields []*DBField, key *DBField) {
-	name := build.StringToHumpName(typ.Name.Name)
+func (b *Builder) getParamWhere(dst *Writer, fields []*DBField) (*Writer, *Writer) {
+	param := NewWriter(dst.pack)
+	where := NewWriter(dst.pack)
+
+	isFist := true
+	for _, field := range fields {
+		text := field.dbs[0].where
+		if 0 < len(text) {
+			if !isFist {
+				param.Code(", ")
+			}
+			isFist = false
+			param.Code(build.StringToFirstLower(field.field.Name.Name))
+			param.Code(" ")
+			b.printType(param, field.field.Type, false)
+
+			if b.isNil(field.field.Type) {
+				where.Code("\tif nil != " + build.StringToFirstLower(field.field.Name.Name) + " {\n")
+				where.Code("\t\tsql.WriteString(\" " + text + "\")\n")
+				where.Code("\t\tparam = append(param")
+
+				count := strings.Count(text, "?")
+				for i := 0; i < count; i++ {
+					where.Code(", " + build.StringToFirstLower(field.field.Name.Name))
+				}
+				where.Code(")\n")
+				where.Code("\t}\n")
+			} else {
+				where.Code("\tsql.WriteString(\" " + text + "\")\n")
+				where.Code("\tparam = append(param")
+
+				count := strings.Count(text, "?")
+				for i := 0; i < count; i++ {
+					where.Code(", " + build.StringToFirstLower(field.field.Name.Name))
+				}
+				where.Code(")\n")
+			}
+		}
+	}
+	return param, where
+}
+
+func (b *Builder) printGetData(dst *Writer, typ *ast.DataType, db *DB, fields []*DBField, fType *ast.DataType, fFields []*DBField) {
+	fName := build.StringToHumpName(fType.Name.Name)
+	dName := build.StringToHumpName(typ.Name.Name)
+
+	p, w := b.getParamWhere(dst, fFields)
+	dst.AddImports(p.GetImports())
+	dst.AddImports(w.GetImports())
+
 	item, scan, _ := b.getItemAndValue(fields)
-	dst.Code("func DbGet" + name + "(db *sql.DB, " + build.StringToFirstLower(key.field.Name.Name) + " ")
-	b.printType(dst, key.field.Type, false)
-	dst.Code(") (*" + name + ", error) {\n")
-	dst.Code("	query, err := db.Query(`SELECT ")
-	dst.Code(item.String())
-	dst.Code(" FROM " + db.name + " WHERE " + key.dbs[0].name + " = ? LIMIT 1`, " + build.StringToFirstLower(key.field.Name.Name) + ")\n")
+
+	dst.Code("func DbGet" + fName + "(db *sql.DB, " + p.code.String() + ") (*" + dName + ", error) {\n")
+	dst.Code("\tsql := strings.Builder{}\n")
+	dst.Code("\tvar param []interface{}\n")
+	dst.Code("\tsql.WriteString(\"SELECT " + item.String() + " FROM " + db.name + " WHERE 1 = 1\")\n")
+	dst.Code(w.code.String())
+
+	dst.Code("	query, err := db.Query(sql.String(), param...)\n")
 	dst.Code("	if err != nil {\n")
 	dst.Code("		return nil, err\n")
 	dst.Code("	}\n")
@@ -201,7 +297,7 @@ func (b *Builder) printGetData(dst *Writer, typ *ast.DataType, db *DB, fields []
 	dst.Code("		return nil, nil\n")
 	dst.Code("	}\n")
 
-	dst.Code("	var val " + name + "\n")
+	dst.Code("	var val " + dName + "\n")
 	dst.Code("	err = query.Scan(" + scan.String() + ")\n")
 	dst.Code("	if err != nil {\n")
 	dst.Code("		return nil, err\n")
@@ -293,23 +389,33 @@ func (b *Builder) printInsertListData(dst *Writer, typ *ast.DataType, db *DB, fi
 
 func (b *Builder) printUpdateData(dst *Writer, typ *ast.DataType, db *DB, fields []*DBField, key *DBField) {
 	name := build.StringToHumpName(typ.Name.Name)
-
 	dst.Code("func DbUpdate" + name + "(db *sql.DB, val *" + name + ") (int, error) {\n")
-	dst.Code("	result, err := db.Exec(`UPDATE  " + db.name + " SET ")
-	isFist := true
-	values := strings.Builder{}
+	dst.Code("	value := strings.Builder{}\n")
+	dst.Code("	var param []interface{}\n\n")
 	for _, field := range fields {
-		if !isFist {
-			dst.Code(", ")
+		if field == key {
+			continue
 		}
-		isFist = false
-		dst.Code(field.dbs[0].name + " = ?")
-		_, _ = values.Write([]byte(", &val." + build.StringToHumpName(field.field.Name.Name)))
+		fName := build.StringToHumpName(field.field.Name.Name)
+		if b.isNil(field.field.Type) {
+			dst.Code("	if nil != val." + fName + " {\n")
+			dst.Code("		value.WriteString(\"," + field.dbs[0].name + "= ? \")\n")
+			dst.Code("		param = append(param, &val." + fName + ")\n")
+			dst.Code("	}\n\n")
+		} else {
+			dst.Code("	value.WriteString(\"," + field.dbs[0].name + " = ?\")\n")
+			dst.Code("	param = append(param, &val." + fName + ")\n\n")
+		}
 	}
 
-	dst.Code(" WHERE " + key.dbs[0].name + " = ?`")
-	dst.Code(values.String())
-	dst.Code(", &val." + build.StringToHumpName(key.field.Name.Name) + " )\n")
+	dst.Code("	valText := value.String()\n")
+	dst.Code("	if 0 == len(valText) {\n")
+	dst.Code("		return 0, nil\n")
+	dst.Code("	}\n")
+	dst.Code("	valText = valText[1:]\n")
+	dst.Code("	param = append(param, &val." + build.StringToHumpName(key.field.Name.Name) + ")\n")
+	dst.Code("	result, err := db.Exec(\"UPDATE  admin_info SET \"+valText+\" WHERE id = ?\", param...)\n")
+
 	dst.Code("	if err != nil {\n")
 	dst.Code("		return 0, err\n")
 	dst.Code("	}\n")
@@ -336,25 +442,100 @@ func (b *Builder) printDeleteData(dst *Writer, typ *ast.DataType, db *DB, fields
 	dst.Code("}\n\n")
 }
 
-func (b *Builder) printFindData(dst *Writer, typ *ast.DataType, db *DB, fields []*DBField, key *DBField) {
-	name := build.StringToHumpName(typ.Name.Name)
+func (b *Builder) printFindData(dst *Writer, typ *ast.DataType, db *DB, fields []*DBField, fType *ast.DataType, fFields []*DBField) {
+	fName := build.StringToHumpName(fType.Name.Name)
+	dName := build.StringToHumpName(typ.Name.Name)
+
+	p, w := b.getParamWhere(dst, fFields)
+	dst.AddImports(p.GetImports())
+	dst.AddImports(w.GetImports())
+
 	item, scan, _ := b.getItemAndValue(fields)
-	dst.Code("func DbFind" + name + "(db *sql.DB, offset int, limit int) ([]*" + name + ", error) {\n")
-	dst.Code("	query, err := db.Query(`SELECT " + item.String() + " FROM " + db.name + " WHERE id = ?  LIMIT ?, ?`, offset, limit)\n")
+
+	dst.Code("func DbFind" + fName + "(db *sql.DB, " + p.code.String() + ") ([]" + dName + ", error) {\n")
+	dst.Code("\tsql := strings.Builder{}\n")
+	dst.Code("\tvar param []interface{}\n")
+	dst.Code("\tsql.WriteString(\"SELECT " + item.String() + " FROM " + db.name + " WHERE 1 = 1\")\n")
+	dst.Code(w.code.String())
+
+	dst.Code("	query, err := db.Query(sql.String(), param...)\n")
 	dst.Code("	if err != nil {\n")
 	dst.Code("		return nil, err\n")
 	dst.Code("	}\n")
 	dst.Code("	defer query.Close()\n")
-	dst.Code("	ret := make([]*" + name + ", 0)\n")
+	dst.Code("	ret := make([]" + dName + ", 0)\n")
 	dst.Code("\n")
 	dst.Code("	for query.Next() {\n")
-	dst.Code("		var val " + name + "\n")
+	dst.Code("		var val " + dName + "\n")
 	dst.Code("		err = query.Scan(" + scan.String() + ")\n")
 	dst.Code("		if err != nil {\n")
 	dst.Code("			return nil, err\n")
 	dst.Code("		}\n")
+	dst.Code("		ret = append(ret, val)\n")
 	dst.Code("	}\n")
 	dst.Code("	return ret, nil\n")
 	dst.Code("}\n")
 	dst.Code("\n")
+}
+
+func (b *Builder) printCountData(dst *Writer, typ *ast.DataType, db *DB, fields []*DBField, fType *ast.DataType, fFields []*DBField) {
+	fName := build.StringToHumpName(fType.Name.Name)
+
+	p, w := b.getParamWhere(dst, fFields)
+	dst.AddImports(p.GetImports())
+	dst.AddImports(w.GetImports())
+
+	dst.Code("func DbCount" + fName + "(db *sql.DB, " + p.code.String() + ") (int64, error) {\n")
+	dst.Code("\tsql := strings.Builder{}\n")
+	dst.Code("\tvar param []interface{}\n")
+	dst.Code("\tsql.WriteString(\"SELECT COUNT(1) FROM " + db.name + " WHERE 1 = 1\")\n")
+	dst.Code(w.code.String())
+
+	dst.Code("	query, err := db.Query(sql.String(), param...)\n")
+	dst.Code("	if err != nil {\n")
+	dst.Code("		return 0, err\n")
+	dst.Code("	}\n")
+	dst.Code("	defer query.Close()\n")
+	dst.Code("\n")
+	dst.Code("	if !query.Next() {\n")
+	dst.Code("	  return 0, nil\n")
+	dst.Code("	}\n")
+	dst.Code("	var count int64\n")
+	dst.Code("	err = query.Scan(&count)\n")
+	dst.Code("	if err != nil {\n")
+	dst.Code("		return 0, err\n")
+	dst.Code("	}\n")
+	dst.Code("	return count, nil\n")
+	dst.Code("}\n")
+	dst.Code("\n")
+}
+
+func (b *Builder) printSetData(dst *Writer, typ *ast.DataType, db *DB, fields []*DBField, key *DBField) {
+	name := build.StringToHumpName(typ.Name.Name)
+
+	dst.Code("func DbSet" + name + "(db *sql.DB, val *" + name + ") (int, error) {\n")
+	dst.Code("	result, err := db.Exec(`UPDATE  " + db.name + " SET ")
+	isFist := true
+	values := strings.Builder{}
+	for _, field := range fields {
+		if field == key {
+			continue
+		}
+		if !isFist {
+			dst.Code(", ")
+		}
+		isFist = false
+		dst.Code(field.dbs[0].name + " = ?")
+		_, _ = values.Write([]byte(", &val." + build.StringToHumpName(field.field.Name.Name)))
+	}
+
+	dst.Code(" WHERE " + key.dbs[0].name + " = ?`")
+	dst.Code(values.String())
+	dst.Code(", &val." + build.StringToHumpName(key.field.Name.Name) + " )\n")
+	dst.Code("	if err != nil {\n")
+	dst.Code("		return 0, err\n")
+	dst.Code("	}\n")
+	dst.Code("	count, err := result.RowsAffected()\n")
+	dst.Code("	return int(count), err\n")
+	dst.Code("}\n\n")
 }

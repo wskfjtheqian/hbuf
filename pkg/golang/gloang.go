@@ -28,6 +28,16 @@ func (w *Writer) Import(text string) {
 	w.imp[text] = struct{}{}
 }
 
+func (w *Writer) AddImports(text map[string]struct{}) {
+	for key, _ := range text {
+		w.imp[key] = struct{}{}
+	}
+}
+
+func (w *Writer) GetImports() map[string]struct{} {
+	return w.imp
+}
+
 func (w *Writer) Code(text string) {
 	_, _ = w.code.WriteString(text)
 }
@@ -67,10 +77,13 @@ func NewGoWriter(pack string) *GoWriter {
 }
 
 type Builder struct {
+	build *build.Builder
 }
 
 func Build(file *ast.File, fset *token.FileSet, param *build.Param) error {
-	b := Builder{}
+	b := Builder{
+		build: param.GetBuilder(),
+	}
 	dst := NewGoWriter(param.GetPack())
 	err := b.Node(dst, fset, file)
 	if err != nil {
@@ -256,4 +269,8 @@ func (b *Builder) getPackage(dst *Writer, expr ast.Expr) string {
 
 	dst.Import(dst.pack + pack)
 	return pack + "."
+}
+
+func (b *Builder) getFile(name *ast.Ident) *ast.File {
+	return name.Obj.Data.(*ast.File)
 }

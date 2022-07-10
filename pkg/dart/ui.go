@@ -210,7 +210,7 @@ func (b *Builder) printForm(dst *Writer, typ *ast.DataType, u *ui) *Language {
 			b.printType(dst, field.Type, true)
 			dst.Code("> " + fieldName + " = MenuFormBuild();\n\n")
 			setValue.Code("\t\t" + fieldName + ".value = info." + fieldName + ";\n")
-			setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = val!;\n")
+			setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = val;\n")
 			setValue.Code("\t\t" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n")
 			setValue.Code("\t\tstatus.items = [\n")
 			b.printMenuItem(setValue, field.Type, false)

@@ -135,7 +135,7 @@ func (b *Builder) printDataEntity(dst *Writer, typ *ast.DataType) {
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 		dst.Code("      " + build.StringToFirstLower(field.Name.Name) + ": ")
 		jsonName := build.StringToUnderlineName(field.Name.Name)
-		b.printJsonValue(dst, "(temp = map[\""+jsonName+"\"])", field.Type, data, false)
+		b.printFormMap(dst, "(temp = map[\""+jsonName+"\"])", field.Type, data, false)
 		dst.Code(",\n")
 		return nil
 	})
@@ -152,7 +152,9 @@ func (b *Builder) printDataEntity(dst *Writer, typ *ast.DataType) {
 	dst.Code("    return {\n")
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 		dst.Code("      \"" + build.StringToUnderlineName(field.Name.Name))
-		dst.Code("\": " + build.StringToFirstLower(field.Name.Name) + ",\n")
+		dst.Code("\":")
+		b.printToMap(dst, build.StringToFirstLower(field.Name.Name), field.Type, data, false)
+		dst.Code(",\n")
 		return nil
 	})
 	if err != nil {
@@ -195,7 +197,7 @@ func (b *Builder) printDataEntity(dst *Writer, typ *ast.DataType) {
 	dst.Code("}\n\n")
 }
 
-func (b *Builder) printJsonValue(dst *Writer, name string, expr ast.Expr, data *ast.DataType, empty bool) {
+func (b *Builder) printFormMap(dst *Writer, name string, expr ast.Expr, data *ast.DataType, empty bool) {
 	switch expr.(type) {
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
@@ -223,14 +225,12 @@ func (b *Builder) printJsonValue(dst *Writer, name string, expr ast.Expr, data *
 				} else {
 					dst.Code("null == " + name + " ? 0 : (temp is num ? temp.toInt() : num.tryParse(temp.toString())?.toInt() ?? 0)")
 				}
-				break
 			case build.Float, build.Double:
 				if empty {
 					dst.Code("null == " + name + " ? null : (temp is num ? temp.toDouble() : num.tryParse(temp.toString())?.toDouble())")
 				} else {
 					dst.Code("null == " + name + " ? 0 : (temp is num ? temp.toDouble() : num.tryParse(temp.toString())?.toDouble() ?? 0)")
 				}
-				break
 			case build.String:
 				if empty {
 					dst.Code("null == " + name + " ? null : (temp is String ? temp : temp.toString())")
@@ -257,7 +257,7 @@ func (b *Builder) printJsonValue(dst *Writer, name string, expr ast.Expr, data *
 		t := expr.(*ast.ArrayType)
 		if empty {
 			dst.Code("null == " + name + " ? null : (temp! is! List ? null : (temp as List).map((temp) => ")
-			b.printJsonValue(dst, "temp", t.VType, data, empty)
+			b.printFormMap(dst, "temp", t.VType, data, empty)
 			dst.Code(").toList())")
 		} else {
 			dst.Code("null == " + name + " ? <")
@@ -265,12 +265,63 @@ func (b *Builder) printJsonValue(dst *Writer, name string, expr ast.Expr, data *
 			dst.Code(">[] : (temp! is! List ? <")
 			b.printType(dst, t.VType, false)
 			dst.Code(">[] : (temp as List).map((temp) => ")
-			b.printJsonValue(dst, "temp", t.VType, data, empty)
+			b.printFormMap(dst, "temp", t.VType, data, empty)
 			dst.Code(").toList())")
 		}
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
-		b.printJsonValue(dst, name, t.Type(), data, t.Empty)
+		b.printFormMap(dst, name, t.Type(), data, t.Empty)
+	}
+}
+
+func (b *Builder) printToMap(dst *Writer, name string, expr ast.Expr, data *ast.DataType, empty bool) {
+	switch expr.(type) {
+	case *ast.Ident:
+		t := expr.(*ast.Ident)
+		if nil != t.Obj {
+			if ast.Enum == t.Obj.Kind {
+				if empty {
+					dst.Code(name + "?.value")
+				} else {
+					dst.Code(name + ".value")
+				}
+			} else if ast.Data == t.Obj.Kind {
+				if empty {
+					dst.Code(name + "?.toMap()")
+				} else {
+					dst.Code(name + ".toMap")
+				}
+			} else {
+				dst.Code(name)
+			}
+		} else {
+			switch expr.(*ast.Ident).Name {
+			case build.Int8, build.Int16, build.Int32, build.Int64, build.Uint8, build.Uint16, build.Uint32, build.Uint64, build.Float, build.Double, build.String, build.Bool:
+				dst.Code(name)
+			case build.Date:
+				if empty {
+					dst.Code(name + "?.microsecondsSinceEpoch")
+				} else {
+					dst.Code(name + ".microsecondsSinceEpoch")
+				}
+			default:
+				dst.Code(name)
+			}
+		}
+	case *ast.ArrayType:
+		t := expr.(*ast.ArrayType)
+		if empty {
+			dst.Code("list?.map((e) => ")
+			b.printToMap(dst, "e", t.VType, data, empty)
+			dst.Code(")?.toList()")
+		} else {
+			dst.Code("list.map((e) => ")
+			b.printToMap(dst, "e", t.VType, data, empty)
+			dst.Code(").toList()")
+		}
+	case *ast.VarType:
+		t := expr.(*ast.VarType)
+		b.printToMap(dst, name, t.Type(), data, t.Empty)
 	}
 }
 

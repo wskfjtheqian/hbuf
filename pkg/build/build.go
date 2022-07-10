@@ -55,8 +55,9 @@ func CheckType(typ string) bool {
 }
 
 type Param struct {
-	out  string
-	pack string
+	out   string
+	pack  string
+	build *Builder
 }
 
 func (p *Param) GetOut() string {
@@ -65,6 +66,10 @@ func (p *Param) GetOut() string {
 
 func (p *Param) GetPack() string {
 	return p.pack
+}
+
+func (p *Param) GetBuilder() *Builder {
+	return p.build
 }
 
 type Builder struct {
@@ -108,8 +113,9 @@ func Build(out string, in string, typ string, pack string) error {
 	for path, file := range build.pkg.Files {
 		_, name := filepath.Split(path)
 		err := build.build(file, build.fset, &Param{
-			out:  filepath.Join(build.param.out, name),
-			pack: build.param.pack,
+			out:   filepath.Join(build.param.out, name),
+			pack:  build.param.pack,
+			build: build,
 		})
 		if err != nil {
 			return err

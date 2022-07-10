@@ -95,7 +95,7 @@ func (b *Builder) getDataExtends(file *ast.File, index int, name string) *ast.Ob
 	return nil
 }
 
-func (b *Builder) getDataType(file *ast.File, name string) *ast.Object {
+func (b *Builder) GetDataType(file *ast.File, name string) *ast.Object {
 	if obj := file.Scope.Lookup(name); nil != obj {
 		switch obj.Decl.(type) {
 		case *ast.TypeSpec:
@@ -134,7 +134,7 @@ func (b *Builder) checkDataItemType(file *ast.File, typ ast.Type) error {
 		if _, ok := _types[ident.Name]; ok {
 			return nil
 		}
-		obj := b.getDataType(file, ident.Name)
+		obj := b.GetDataType(file, ident.Name)
 		if nil != obj {
 			ident.Obj = obj
 			return nil

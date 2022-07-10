@@ -289,7 +289,7 @@ func (b *Builder) printToMap(dst *Writer, name string, expr ast.Expr, data *ast.
 				if empty {
 					dst.Code(name + "?.toMap()")
 				} else {
-					dst.Code(name + ".toMap")
+					dst.Code(name + ".toMap()")
 				}
 			} else {
 				dst.Code(name)

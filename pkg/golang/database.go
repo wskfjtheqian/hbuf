@@ -245,7 +245,7 @@ func (b *Builder) getParamWhere(dst *Writer, fields []*DBField) (*Writer, *Write
 			param.Code(" ")
 			b.printType(param, field.field.Type, false)
 
-			if b.isNil(field.field.Type) {
+			if build.IsNil(field.field.Type) {
 				where.Code("\tif nil != " + build.StringToFirstLower(field.field.Name.Name) + " {\n")
 				where.Code("\t\tsql.WriteString(\" " + text + "\")\n")
 				where.Code("\t\tparam = append(param")
@@ -306,17 +306,6 @@ func (b *Builder) printGetData(dst *Writer, typ *ast.DataType, db *DB, fields []
 	dst.Code("}\n\n")
 }
 
-func (b *Builder) isNil(expr ast.Expr) bool {
-	switch expr.(type) {
-	case *ast.VarType:
-		t := expr.(*ast.VarType)
-		if t.Empty {
-			return true
-		}
-	}
-	return false
-}
-
 func (b *Builder) printInsertData(dst *Writer, typ *ast.DataType, db *DB, fields []*DBField, key *DBField) {
 	dst.Import("strings")
 	name := build.StringToHumpName(typ.Name.Name)
@@ -329,15 +318,15 @@ func (b *Builder) printInsertData(dst *Writer, typ *ast.DataType, db *DB, fields
 	dst.Code("	var param []interface{}\n\n")
 	for _, field := range fields {
 		fName := build.StringToHumpName(field.field.Name.Name)
-		if b.isNil(field.field.Type) {
+		if build.IsNil(field.field.Type) {
 			dst.Code("	if nil != val." + fName + " {\n")
 			dst.Code("		value.WriteString(\"," + field.dbs[0].name + "\")\n")
 			dst.Code("		ques.WriteString(\",?\")\n")
 			dst.Code("		param = append(param, &val." + fName + ")\n\n")
 			dst.Code("	}\n")
 		} else {
-			dst.Code("	value.WriteString(\"" + field.dbs[0].name + "\")\n")
-			dst.Code("	ques.WriteString(\"?\")\n")
+			dst.Code("	value.WriteString(\"," + field.dbs[0].name + "\")\n")
+			dst.Code("	ques.WriteString(\",?\")\n")
 			dst.Code("	param = append(param, &val." + fName + ")\n\n")
 		}
 	}
@@ -345,11 +334,11 @@ func (b *Builder) printInsertData(dst *Writer, typ *ast.DataType, db *DB, fields
 	dst.Code("	if len(valText) > 0 {\n")
 	dst.Code("		valText = valText[1:]\n")
 	dst.Code("	}\n")
-	dst.Code("	quesText := value.String()\n")
+	dst.Code("	quesText := ques.String()\n")
 	dst.Code("	if len(quesText) > 0 {\n")
 	dst.Code("		quesText = quesText[1:]\n")
 	dst.Code("	}\n\n")
-	dst.Code("	result, err := db.Exec(\"INSERT INTO admin_info(\"+valText+\") VALUES(\"+quesText+\")\", param...)\n")
+	dst.Code("	result, err := db.Exec(\"INSERT INTO " + db.name + "(\"+valText+\") VALUES(\"+quesText+\")\", param...)\n")
 	dst.Code("	if err != nil {\n")
 	dst.Code("		return 0, err\n")
 	dst.Code("	}\n")
@@ -397,7 +386,7 @@ func (b *Builder) printUpdateData(dst *Writer, typ *ast.DataType, db *DB, fields
 			continue
 		}
 		fName := build.StringToHumpName(field.field.Name.Name)
-		if b.isNil(field.field.Type) {
+		if build.IsNil(field.field.Type) {
 			dst.Code("	if nil != val." + fName + " {\n")
 			dst.Code("		value.WriteString(\"," + field.dbs[0].name + "= ? \")\n")
 			dst.Code("		param = append(param, &val." + fName + ")\n")

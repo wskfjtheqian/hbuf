@@ -22,6 +22,7 @@ const (
 	Bool    string = "bool"
 	Float   string = "float"
 	Double  string = "double"
+	Decimal string = "decimal"
 	String  string = "string"
 	Data    string = "data"
 	Server  string = "server"
@@ -35,11 +36,11 @@ type void struct {
 }
 
 var _types = map[string]void{
-	Int8: {}, Int16: {}, Int32: {}, Int64: {}, Uint8: {}, Uint16: {}, Uint32: {}, Uint64: {}, Bool: {}, Float: {}, Double: {}, String: {}, Date: {},
+	Int8: {}, Int16: {}, Int32: {}, Int64: {}, Uint8: {}, Uint16: {}, Uint32: {}, Uint64: {}, Bool: {}, Float: {}, Double: {}, String: {}, Date: {}, Decimal: {},
 }
 
 var _keys = map[string]void{
-	Int8: {}, Int16: {}, Int32: {}, Int64: {}, Uint8: {}, Uint16: {}, Uint32: {}, Uint64: {}, Bool: {}, Float: {}, Double: {}, String: {}, Data: {}, Server: {}, Enum: {}, Import: {}, Package: {}, Date: {},
+	Int8: {}, Int16: {}, Int32: {}, Int64: {}, Uint8: {}, Uint16: {}, Uint32: {}, Uint64: {}, Bool: {}, Float: {}, Double: {}, String: {}, Data: {}, Server: {}, Enum: {}, Import: {}, Package: {}, Date: {}, Decimal: {},
 }
 
 type Function = func(file *ast.File, fset *token.FileSet, param *Param) error
@@ -474,4 +475,15 @@ func StringToAllUpper(val string) string {
 		ret += "_" + strings.ToUpper(val[index:])
 	}
 	return ret
+}
+
+func IsNil(expr ast.Expr) bool {
+	switch expr.(type) {
+	case *ast.VarType:
+		t := expr.(*ast.VarType)
+		if t.Empty {
+			return true
+		}
+	}
+	return false
 }

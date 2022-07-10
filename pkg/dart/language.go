@@ -46,10 +46,15 @@ func getLanguage(tags []*ast.Tag) map[string]string {
 	return lang
 }
 
-func (l *Language) printLanguage(dst *Writer) {
+func (l *Language) printLanguage(dst *Writer, m map[string]struct{}) {
 	if 0 == len(l.lang) {
 		return
 	}
+	if _, ok := m[l.Name]; ok {
+		return
+	}
+	m[l.Name] = struct{}{}
+
 	dst.Import("package:flutter/foundation.dart")
 
 	dst.Code("\n")

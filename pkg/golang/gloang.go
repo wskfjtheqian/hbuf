@@ -14,7 +14,7 @@ import (
 var _types = map[string]string{
 	build.Int8: "int8", build.Int16: "int16", build.Int32: "int32", build.Int64: "int64", build.Uint8: "uint8",
 	build.Uint16: "uint16", build.Uint32: "uint32", build.Uint64: "uint64", build.Bool: "bool", build.Float: "float32",
-	build.Double: "float64", build.String: "string", build.Date: "hbuf.Time",
+	build.Double: "float64", build.String: "string", build.Date: "hbuf.Time", build.Decimal: "decimal.Decimal",
 }
 
 type Writer struct {
@@ -219,6 +219,8 @@ func (b *Builder) printType(dst *Writer, expr ast.Expr, emp bool) {
 		} else {
 			if build.Date == (expr.(*ast.Ident)).Name {
 				dst.Import("hbuf_golang/pkg/hbuf")
+			} else if build.Decimal == (expr.(*ast.Ident)).Name {
+				dst.Import("github.com/shopspring/decimal")
 			}
 			dst.Code(_types[(expr.(*ast.Ident)).Name])
 		}

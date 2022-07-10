@@ -70,10 +70,13 @@ func NewGoWriter(pack string) *GoWriter {
 }
 
 type Builder struct {
+	lang map[string]struct{}
 }
 
 func Build(file *ast.File, fset *token.FileSet, param *build.Param) error {
-	b := Builder{}
+	b := Builder{
+		lang: map[string]struct{}{},
+	}
 	dst := NewGoWriter(param.GetPack())
 	err := b.Node(dst, fset, file)
 	if err != nil {

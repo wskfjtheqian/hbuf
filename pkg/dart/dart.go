@@ -14,7 +14,7 @@ import (
 var _types = map[string]string{
 	build.Int8: "int", build.Int16: "int", build.Int32: "int", build.Int64: "int", build.Uint8: "int",
 	build.Uint16: "int", build.Uint32: "int", build.Uint64: "int", build.Bool: "bool", build.Float: "double",
-	build.Double: "double", build.String: "String", build.Date: "DateTime",
+	build.Double: "double", build.String: "String", build.Date: "DateTime", build.Decimal: "Decimal",
 }
 
 type Writer struct {
@@ -34,6 +34,12 @@ func (w *Writer) Code(text string) {
 
 func (w *Writer) String() string {
 	return w.code.String()
+}
+
+func (w *Writer) ImportByWriter(value *Writer) {
+	for key, val := range value.imp {
+		w.imp[key] = val
+	}
 }
 
 func NewWriter(pack string) *Writer {
@@ -141,7 +147,6 @@ func writerFile(data *Writer, out string) error {
 		for key, _ := range data.imp {
 			imps[i] = key
 			i++
-
 		}
 		sort.Strings(imps)
 		for _, val := range imps {
@@ -199,6 +204,9 @@ func (b *Builder) printType(dst *Writer, expr ast.Expr, notEmpty bool) {
 			b.getPackage(dst, expr, "")
 			dst.Code(expr.(*ast.Ident).Name)
 		} else {
+			if build.Decimal == (expr.(*ast.Ident).Name) {
+				dst.Import("package:decimal/decimal.dart")
+			}
 			dst.Code(_types[(expr.(*ast.Ident).Name)])
 		}
 	case *ast.ArrayType:

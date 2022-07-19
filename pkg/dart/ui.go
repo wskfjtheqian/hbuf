@@ -182,6 +182,11 @@ func (b *Builder) printToString(dst *Writer, expr ast.Expr, empty bool, digit in
 					dst.Code("?")
 				}
 				dst.Code(".toString()")
+			case build.Decimal:
+				if empty {
+					dst.Code("?")
+				}
+				dst.Code(".toString()")
 			}
 		}
 	case *ast.ArrayType:
@@ -243,6 +248,13 @@ func (b *Builder) printFormString(dst *Writer, name string, expr ast.Expr, empty
 					dst.Code(name + "==null ? null : DateTime.tryParse(" + name + "!)")
 				} else {
 					dst.Code("DateTime.tryParse(" + name + "!)")
+				}
+			case build.Decimal:
+				dst.Import("package:decimal/decimal.dart")
+				if empty {
+					dst.Code(name + "==null ? null : Decimal.fromJson(" + name + "!)")
+				} else {
+					dst.Code("Decimal.fromJson(" + name + "!)")
 				}
 			default:
 				if empty {
@@ -347,6 +359,8 @@ func (b *Builder) printForm(dst *Writer, typ *ast.DataType, u *ui) *Language {
 	dst.Code("\t\t];\n")
 	dst.Code("\t}\n")
 	dst.Code("}\n\n")
+
+	dst.ImportByWriter(setValue)
 	return lang
 }
 

@@ -6,6 +6,7 @@ import (
 )
 
 func (b *Builder) printEnumCode(dst *Writer, typ *ast.EnumType) {
+	dst.Import("package:flutter/widgets.dart")
 	b.printEnum(dst, typ)
 }
 
@@ -13,7 +14,6 @@ func (b *Builder) printEnum(dst *Writer, typ *ast.EnumType) {
 	enumName := build.StringToHumpName(typ.Name.Name)
 	_, lang := build.GetTag(typ.Tags, "ui")
 	if lang {
-		dst.Import("package:flutter/widgets.dart")
 		b.getPackage(dst, typ.Name, "ui")
 	}
 

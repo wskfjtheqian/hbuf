@@ -59,9 +59,11 @@ func (b *Builder) printData(dst *Writer, typ *ast.DataType) {
 		return
 	}
 	if isParam {
-		dst.Code("}")
+		dst.Code("  }")
+	} else {
+		dst.Code("  ")
 	}
-	dst.Code("  ){\n")
+	dst.Code("){\n")
 	dst.Code("    return _" + build.StringToHumpName(typ.Name.Name) + "(\n")
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 		dst.Code("      ")
@@ -84,6 +86,32 @@ func (b *Builder) printData(dst *Writer, typ *ast.DataType) {
 	dst.Code("  static " + build.StringToHumpName(typ.Name.Name) + " fromData(ByteData data){\n")
 	dst.Code("    return _" + build.StringToHumpName(typ.Name.Name) + ".fromData(data);\n")
 	dst.Code("  }\n\n")
+
+	isParam = false
+	dst.Code("  " + build.StringToHumpName(typ.Name.Name) + " copyWith(")
+	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
+		if !isParam {
+			dst.Code("{\n")
+			isParam = true
+		}
+		dst.Code("    ")
+		b.printType(dst, field.Type, true)
+		dst.Code("? " + build.StringToFirstLower(field.Name.Name))
+		dst.Code(",\n")
+		return nil
+	})
+	if err != nil {
+		return
+	}
+	if isParam {
+		dst.Code("  }")
+	} else {
+		dst.Code("  ")
+	}
+	dst.Code(");\n\n")
+
+	dst.Code("  @override\n")
+	dst.Code("  " + build.StringToHumpName(typ.Name.Name) + " copy();\n")
 
 	dst.Code("}\n\n")
 }
@@ -161,7 +189,7 @@ func (b *Builder) printDataEntity(dst *Writer, typ *ast.DataType) {
 		return
 	}
 	dst.Code("    };\n")
-	dst.Code("  }\n")
+	dst.Code("  }\n\n")
 
 	dst.Code("  static _" + build.StringToHumpName(typ.Name.Name) + " fromData(ByteData data){\n")
 	dst.Code("    return _" + build.StringToHumpName(typ.Name.Name) + ".fromMap({});\n")
@@ -192,9 +220,141 @@ func (b *Builder) printDataEntity(dst *Writer, typ *ast.DataType) {
 	//	return
 	//}
 	//dst.Code("    };\n")
+	dst.Code("  }\n\n")
+
+	isParam = false
+	dst.Code("  _" + build.StringToHumpName(typ.Name.Name) + " copyWith(")
+	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
+		if !isParam {
+			dst.Code("{\n")
+			isParam = true
+		}
+		dst.Code("    ")
+		b.printType(dst, field.Type, true)
+		dst.Code("? " + build.StringToFirstLower(field.Name.Name))
+		dst.Code(",\n")
+		return nil
+	})
+	if err != nil {
+		return
+	}
+	if isParam {
+		dst.Code("  }")
+	} else {
+		dst.Code("  ")
+	}
+	dst.Code(") {\n")
+	dst.Code("    return _" + build.StringToHumpName(typ.Name.Name) + "(\n")
+	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
+		dst.Code("      ")
+		dst.Code(build.StringToFirstLower(field.Name.Name))
+		dst.Code(": ")
+		dst.Code(build.StringToFirstLower(field.Name.Name))
+		dst.Code("?? this.")
+		dst.Code(build.StringToFirstLower(field.Name.Name))
+		dst.Code(",\n")
+		return nil
+	})
+	if err != nil {
+		return
+	}
+	dst.Code("    );\n")
+	dst.Code("  }\n\n")
+
+	dst.Code("  @override\n")
+	dst.Code("  bool operator ==(Object other) =>\n")
+	dst.Code("      identical(this, other) ||\n")
+	dst.Code("      other is _" + build.StringToHumpName(typ.Name.Name) + " &&\n")
+	dst.Code("          runtimeType == other.runtimeType ")
+	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
+		dst.Code("&& \n          ")
+		dst.Code(build.StringToFirstLower(field.Name.Name))
+		dst.Code(" == other.")
+		dst.Code(build.StringToFirstLower(field.Name.Name))
+		return nil
+	})
+	if err != nil {
+		return
+	}
+	dst.Code(";\n\n")
+
+	dst.Code("  @override\n")
+	dst.Code("  int get hashCode => 0 ")
+	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
+		dst.Code(" ^ ")
+		dst.Code(build.StringToFirstLower(field.Name.Name))
+		dst.Code(".hashCode")
+		return nil
+	})
+	if err != nil {
+		return
+	}
+	dst.Code(";\n\n")
+
+	dst.Code("  @override\n")
+	dst.Code("  " + build.StringToHumpName(typ.Name.Name) + " copy(){\n")
+	dst.Code("    return _" + build.StringToHumpName(typ.Name.Name) + "(\n")
+	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
+		dst.Code("      ")
+		dst.Code(build.StringToFirstLower(field.Name.Name))
+		dst.Code(": ")
+		b.printCopy(dst, build.StringToFirstLower(field.Name.Name), field.Type, data, true)
+		dst.Code(",\n")
+		return nil
+	})
+	if err != nil {
+		return
+	}
+	dst.Code("    );\n")
 	dst.Code("  }\n")
 
 	dst.Code("}\n\n")
+}
+
+func (b *Builder) printCopy(dst *Writer, name string, expr ast.Expr, data *ast.DataType, empty bool) {
+	switch expr.(type) {
+	case *ast.Ident:
+		t := expr.(*ast.Ident)
+		if nil != t.Obj {
+			if ast.Enum == t.Obj.Kind {
+				dst.Code(name)
+			} else if ast.Data == t.Obj.Kind {
+				if empty {
+					dst.Code(name + "?.copy()")
+				} else {
+					dst.Code(name + ".copy()")
+				}
+			} else {
+				dst.Code(name)
+			}
+		} else {
+			switch expr.(*ast.Ident).Name {
+			case build.Decimal:
+				if empty {
+					dst.Code("null == " + name + " ? null : Decimal.fromJson(" + name + "!.toJson())")
+				} else {
+					dst.Code("Decimal.fromJson(" + name + ".toJson())")
+				}
+			default:
+				dst.Code(name)
+			}
+		}
+	case *ast.ArrayType:
+		t := expr.(*ast.ArrayType)
+		empty = t.IsEmpty()
+		if empty {
+			dst.Code(name + "?.map((temp) => ")
+			b.printCopy(dst, "temp", t.VType, data, empty)
+			dst.Code(").toList()")
+		} else {
+			dst.Code(name + ".map((temp) => ")
+			b.printCopy(dst, "temp", t.VType, data, empty)
+			dst.Code(").toList()")
+		}
+	case *ast.VarType:
+		t := expr.(*ast.VarType)
+		b.printCopy(dst, name, t.Type(), data, t.Empty)
+	}
 }
 
 func (b *Builder) printFormMap(dst *Writer, name string, expr ast.Expr, data *ast.DataType, empty bool) {
@@ -249,12 +409,19 @@ func (b *Builder) printFormMap(dst *Writer, name string, expr ast.Expr, data *as
 				} else {
 					dst.Code("null == " + name + " ? false:(temp is bool ? temp: 0 != (temp is num ? temp : num.tryParse(temp.toString()) ?? 0))")
 				}
+			case build.Decimal:
+				if empty {
+					dst.Code("null == " + name + " ? null : Decimal.tryParse(temp.toString())")
+				} else {
+					dst.Code("null == " + name + " ? Decimal.zero : (Decimal.tryParse(temp.toString()) ?? Decimal.zero)")
+				}
 			default:
 				dst.Code("map[\"" + name + "\"]")
 			}
 		}
 	case *ast.ArrayType:
 		t := expr.(*ast.ArrayType)
+		empty = t.IsEmpty()
 		if empty {
 			dst.Code("null == " + name + " ? null : (temp! is! List ? null : (temp as List).map((temp) => ")
 			b.printFormMap(dst, "temp", t.VType, data, empty)
@@ -304,12 +471,19 @@ func (b *Builder) printToMap(dst *Writer, name string, expr ast.Expr, data *ast.
 				} else {
 					dst.Code(name + ".microsecondsSinceEpoch")
 				}
+			case build.Decimal:
+				if empty {
+					dst.Code(name + "?.toString()")
+				} else {
+					dst.Code(name + ".toString()")
+				}
 			default:
 				dst.Code(name)
 			}
 		}
 	case *ast.ArrayType:
 		t := expr.(*ast.ArrayType)
+		empty = t.IsEmpty()
 		if empty {
 			dst.Code("list?.map((e) => ")
 			b.printToMap(dst, "e", t.VType, data, empty)

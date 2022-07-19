@@ -403,7 +403,7 @@ func (b *Builder) printUpdateData(dst *Writer, typ *ast.DataType, db *DB, fields
 	dst.Code("	}\n")
 	dst.Code("	valText = valText[1:]\n")
 	dst.Code("	param = append(param, &val." + build.StringToHumpName(key.field.Name.Name) + ")\n")
-	dst.Code("	result, err := db.Exec(\"UPDATE  admin_info SET \"+valText+\" WHERE id = ?\", param...)\n")
+	dst.Code("	result, err := db.Exec(\"UPDATE " + db.name + " SET \"+valText+\" WHERE id = ?\", param...)\n")
 
 	dst.Code("	if err != nil {\n")
 	dst.Code("		return 0, err\n")

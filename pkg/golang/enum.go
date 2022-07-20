@@ -5,7 +5,7 @@ import (
 	"hbuf/pkg/build"
 )
 
-func printEnumCode(dst *Writer, typ *ast.EnumType) {
+func printEnumCode(dst *build.Writer, typ *ast.EnumType) {
 	name := build.StringToHumpName(typ.Name.Name)
 	if 0 < len(typ.Doc.Text()) {
 		dst.Code("//" + name + " " + typ.Doc.Text())

@@ -5,14 +5,15 @@ import (
 	"hbuf/pkg/build"
 )
 
-func (b *Builder) printDataCode(dst *Writer, typ *ast.DataType) {
+func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
 	dst.Import("dart:typed_data")
 	dst.Import("package:hbuf_dart/hbuf_dart.dart")
 
 	b.printData(dst, typ)
 	b.printDataEntity(dst, typ)
+
 }
-func (b *Builder) printData(dst *Writer, typ *ast.DataType) {
+func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) {
 	dst.Code("abstract class " + build.StringToHumpName(typ.Name.Name) + " implements Data")
 	if nil != typ.Extends {
 		b.printExtend(dst, typ.Extends, true)
@@ -116,7 +117,7 @@ func (b *Builder) printData(dst *Writer, typ *ast.DataType) {
 	dst.Code("}\n\n")
 }
 
-func (b *Builder) printDataEntity(dst *Writer, typ *ast.DataType) {
+func (b *Builder) printDataEntity(dst *build.Writer, typ *ast.DataType) {
 	dst.Code("class _" + build.StringToHumpName(typ.Name.Name) + " implements " + build.StringToHumpName(typ.Name.Name))
 	dst.Code(" {\n")
 
@@ -311,7 +312,7 @@ func (b *Builder) printDataEntity(dst *Writer, typ *ast.DataType) {
 	dst.Code("}\n\n")
 }
 
-func (b *Builder) printCopy(dst *Writer, name string, expr ast.Expr, data *ast.DataType, empty bool) {
+func (b *Builder) printCopy(dst *build.Writer, name string, expr ast.Expr, data *ast.DataType, empty bool) {
 	switch expr.(type) {
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
@@ -357,7 +358,7 @@ func (b *Builder) printCopy(dst *Writer, name string, expr ast.Expr, data *ast.D
 	}
 }
 
-func (b *Builder) printFormMap(dst *Writer, name string, expr ast.Expr, data *ast.DataType, empty bool) {
+func (b *Builder) printFormMap(dst *build.Writer, name string, expr ast.Expr, data *ast.DataType, empty bool) {
 	switch expr.(type) {
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
@@ -379,11 +380,17 @@ func (b *Builder) printFormMap(dst *Writer, name string, expr ast.Expr, data *as
 			}
 		} else {
 			switch expr.(*ast.Ident).Name {
-			case build.Int8, build.Int16, build.Int32, build.Int64, build.Uint8, build.Uint16, build.Uint32, build.Uint64:
+			case build.Int8, build.Int16, build.Int32, build.Uint8, build.Uint16, build.Uint64:
 				if empty {
 					dst.Code("null == " + name + " ? null : (temp is num ? temp.toInt() : num.tryParse(temp.toString())?.toInt())")
 				} else {
 					dst.Code("null == " + name + " ? 0 : (temp is num ? temp.toInt() : num.tryParse(temp.toString())?.toInt() ?? 0)")
+				}
+			case build.Int64, build.Uint32:
+				if empty {
+					dst.Code("null == " + name + " ? null : Int64.parseInt(temp.toString())")
+				} else {
+					dst.Code("null == " + name + " ? Int64.ZERO : Int64.parseInt(temp.toString())")
 				}
 			case build.Float, build.Double:
 				if empty {
@@ -441,7 +448,7 @@ func (b *Builder) printFormMap(dst *Writer, name string, expr ast.Expr, data *as
 	}
 }
 
-func (b *Builder) printToMap(dst *Writer, name string, expr ast.Expr, data *ast.DataType, empty bool) {
+func (b *Builder) printToMap(dst *build.Writer, name string, expr ast.Expr, data *ast.DataType, empty bool) {
 	switch expr.(type) {
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
@@ -463,8 +470,14 @@ func (b *Builder) printToMap(dst *Writer, name string, expr ast.Expr, data *ast.
 			}
 		} else {
 			switch expr.(*ast.Ident).Name {
-			case build.Int8, build.Int16, build.Int32, build.Int64, build.Uint8, build.Uint16, build.Uint32, build.Uint64, build.Float, build.Double, build.String, build.Bool:
+			case build.Int8, build.Int16, build.Int32, build.Uint8, build.Uint16, build.Uint32, build.Float, build.Double, build.String, build.Bool:
 				dst.Code(name)
+			case build.Uint64, build.Int64:
+				if empty {
+					dst.Code(name + "?.toString()")
+				} else {
+					dst.Code(name + ".toString()")
+				}
 			case build.Date:
 				if empty {
 					dst.Code(name + "?.microsecondsSinceEpoch")
@@ -499,7 +512,7 @@ func (b *Builder) printToMap(dst *Writer, name string, expr ast.Expr, data *ast.
 	}
 }
 
-func (b *Builder) printExtend(dst *Writer, extends []*ast.Ident, start bool) {
+func (b *Builder) printExtend(dst *build.Writer, extends []*ast.Ident, start bool) {
 	for i, v := range extends {
 		if 0 != i || start {
 			dst.Code(", ")

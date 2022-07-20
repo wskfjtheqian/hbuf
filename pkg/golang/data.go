@@ -5,7 +5,7 @@ import (
 	"hbuf/pkg/build"
 )
 
-func (b *Builder) printDataCode(dst *Writer, typ *ast.DataType) {
+func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
 	dst.Import("encoding/json")
 
 	dst.Code("type " + build.StringToHumpName(typ.Name.Name) + " struct")
@@ -38,7 +38,7 @@ func (b *Builder) printDataCode(dst *Writer, typ *ast.DataType) {
 	dst.Code("}\n\n")
 }
 
-func (b *Builder) printExtend(dst *Writer, extends []*ast.Ident) {
+func (b *Builder) printExtend(dst *build.Writer, extends []*ast.Ident) {
 	for _, v := range extends {
 		dst.Code("\t")
 		dst.Code(build.StringToHumpName(v.Name))

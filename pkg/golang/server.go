@@ -5,7 +5,7 @@ import (
 	"hbuf/pkg/build"
 )
 
-func (b *Builder) printServerCode(dst *Writer, typ *ast.ServerType) {
+func (b *Builder) printServerCode(dst *build.Writer, typ *ast.ServerType) {
 	dst.Import("context")
 	dst.Import("encoding/json")
 	dst.Import("errors")
@@ -16,7 +16,7 @@ func (b *Builder) printServerCode(dst *Writer, typ *ast.ServerType) {
 	b.printServerRouter(dst, typ)
 	b.printGetServerRouter(dst, typ)
 }
-func (b *Builder) printServer(dst *Writer, typ *ast.ServerType) {
+func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
 	serverName := build.StringToHumpName(typ.Name.Name)
 	dst.Code("type " + serverName)
 	dst.Code(" interface {\n")
@@ -39,7 +39,7 @@ func (b *Builder) printServer(dst *Writer, typ *ast.ServerType) {
 	dst.Code("}\n\n")
 }
 
-func (b *Builder) printServerImp(dst *Writer, typ *ast.ServerType) {
+func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 	//
 	//dst.Code("class " +serverName + "Client extends ServerClient implements " +serverName)
 	//
@@ -98,7 +98,7 @@ func (b *Builder) getAuth(tags []*ast.Tag) *auth {
 	return &au
 }
 
-func (b *Builder) printServerRouter(dst *Writer, typ *ast.ServerType) {
+func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 	serverName := build.StringToHumpName(typ.Name.Name)
 	dst.Code("type " + serverName + "Router struct {\n")
 	dst.Code("	server " + serverName + "\n")
@@ -157,7 +157,7 @@ func (b *Builder) printServerRouter(dst *Writer, typ *ast.ServerType) {
 	dst.Code("}\n\n")
 }
 
-func (b *Builder) printGetServerRouter(dst *Writer, typ *ast.ServerType) {
+func (b *Builder) printGetServerRouter(dst *build.Writer, typ *ast.ServerType) {
 	serverName := build.StringToHumpName(typ.Name.Name)
 
 	dst.Code("func Get" + serverName + "(server hbuf.GetServer) (" + serverName + ", error) {\n")

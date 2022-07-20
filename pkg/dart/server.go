@@ -5,7 +5,7 @@ import (
 	"hbuf/pkg/build"
 )
 
-func (b *Builder) printServerCode(dst *Writer, typ *ast.ServerType) {
+func (b *Builder) printServerCode(dst *build.Writer, typ *ast.ServerType) {
 	dst.Import("dart:convert")
 	dst.Import("dart:typed_data")
 	dst.Import("package:hbuf_dart/hbuf_dart.dart")
@@ -13,9 +13,10 @@ func (b *Builder) printServerCode(dst *Writer, typ *ast.ServerType) {
 	b.printServer(dst, typ)
 	b.printServerImp(dst, typ)
 	b.printServerRouter(dst, typ)
+
 }
 
-func (b *Builder) printServer(dst *Writer, typ *ast.ServerType) {
+func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
 	dst.Code("abstract class " + build.StringToHumpName(typ.Name.Name))
 	if nil != typ.Extends {
 		dst.Code(" implements ")
@@ -40,7 +41,7 @@ func (b *Builder) printServer(dst *Writer, typ *ast.ServerType) {
 	dst.Code("}\n\n")
 }
 
-func (b *Builder) printServerImp(dst *Writer, typ *ast.ServerType) {
+func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 	dst.Code("class " + build.StringToHumpName(typ.Name.Name) + "Client extends ServerClient implements " + build.StringToHumpName(typ.Name.Name))
 
 	dst.Code("{\n")
@@ -82,7 +83,7 @@ func (b *Builder) printServerImp(dst *Writer, typ *ast.ServerType) {
 	dst.Code("}\n\n")
 }
 
-func (b *Builder) printServerRouter(dst *Writer, typ *ast.ServerType) {
+func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 	dst.Code("class " + build.StringToHumpName(typ.Name.Name) + "Router extends ServerRouter")
 
 	dst.Code("{\n")

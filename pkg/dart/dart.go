@@ -8,70 +8,36 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 )
 
 var _types = map[string]string{
-	build.Int8: "int", build.Int16: "int", build.Int32: "int", build.Int64: "int", build.Uint8: "int",
-	build.Uint16: "int", build.Uint32: "int", build.Uint64: "int", build.Bool: "bool", build.Float: "double",
+	build.Int8: "int", build.Int16: "int", build.Int32: "int", build.Int64: "Int64", build.Uint8: "int",
+	build.Uint16: "int", build.Uint32: "int", build.Uint64: "Int64", build.Bool: "bool", build.Float: "double",
 	build.Double: "double", build.String: "String", build.Date: "DateTime", build.Decimal: "Decimal",
 }
 
-type Writer struct {
-	imp  map[string]struct{}
-	code *strings.Builder
-	path string
-	pack string
-}
-
-func (w *Writer) Import(text string) {
-	w.imp[text] = struct{}{}
-}
-
-func (w *Writer) Code(text string) {
-	_, _ = w.code.WriteString(text)
-}
-
-func (w *Writer) String() string {
-	return w.code.String()
-}
-
-func (w *Writer) ImportByWriter(value *Writer) {
-	for key, val := range value.imp {
-		w.imp[key] = val
-	}
-}
-
-func NewWriter(pack string) *Writer {
-	return &Writer{
-		imp:  map[string]struct{}{},
-		code: &strings.Builder{},
-		pack: pack,
-	}
-}
-
 type GoWriter struct {
-	data   *Writer
-	enum   *Writer
-	server *Writer
-	ui     *Writer
+	data   *build.Writer
+	enum   *build.Writer
+	server *build.Writer
+	ui     *build.Writer
 	path   string
 }
 
 func (g *GoWriter) SetPath(s string) {
 	g.path = s
-	g.data.path = s
-	g.enum.path = s
-	g.server.path = s
-	g.ui.path = s
+	g.data.Path = s
+	g.enum.Path = s
+	g.server.Path = s
+	g.ui.Path = s
 }
 
 func NewGoWriter(pack string) *GoWriter {
 	return &GoWriter{
-		data:   NewWriter(pack),
-		enum:   NewWriter(pack),
-		server: NewWriter(pack),
-		ui:     NewWriter(pack),
+		data:   build.NewWriter(pack),
+		enum:   build.NewWriter(pack),
+		server: build.NewWriter(pack),
+		ui:     build.NewWriter(pack),
 	}
 }
 
@@ -101,25 +67,27 @@ func Build(file *ast.File, fset *token.FileSet, param *build.Param) error {
 		return err
 	}
 
-	if 0 < dst.data.code.Len() {
+	if 0 < dst.data.GetCode().Len() {
 		err := writerFile(dst.data, filepath.Join(dir, name+".data.dart"))
 		if err != nil {
 			return err
 		}
 	}
-	if 0 < dst.enum.code.Len() {
+	if 0 < dst.enum.GetCode().Len() {
 		err = writerFile(dst.enum, filepath.Join(dir, name+".enum.dart"))
 		if err != nil {
 			return err
 		}
 	}
-	if 0 < dst.server.code.Len() {
+	if 0 < dst.server.GetCode().Len() {
 		err = writerFile(dst.server, filepath.Join(dir, name+".server.dart"))
 		if err != nil {
 			return err
 		}
 	}
-	if 0 < dst.ui.code.Len() {
+
+	printLanguge(dst.ui)
+	if 0 < dst.ui.GetCode().Len() {
 		err = writerFile(dst.ui, filepath.Join(dir, name+".ui.dart"))
 		if err != nil {
 			return err
@@ -128,7 +96,7 @@ func Build(file *ast.File, fset *token.FileSet, param *build.Param) error {
 	return nil
 }
 
-func writerFile(data *Writer, out string) error {
+func writerFile(data *build.Writer, out string) error {
 	fc, err := os.Create(out)
 	if err != nil {
 		return err
@@ -140,11 +108,11 @@ func writerFile(data *Writer, out string) error {
 		}
 	}(fc)
 
-	if 0 < len(data.imp) {
-		imps := make([]string, len(data.imp))
+	if 0 < len(data.GetImports()) {
+		imps := make([]string, len(data.GetImports()))
 
 		i := 0
-		for key, _ := range data.imp {
+		for key, _ := range data.GetImports() {
 			imps[i] = key
 			i++
 		}
@@ -154,7 +122,8 @@ func writerFile(data *Writer, out string) error {
 		}
 	}
 	_, _ = fc.WriteString("\n")
-	_, _ = fc.WriteString(data.code.String())
+
+	_, _ = fc.WriteString(data.GetCode().String())
 	return nil
 }
 
@@ -196,7 +165,7 @@ func (b *Builder) printTypeSpec(dst *GoWriter, expr ast.Expr) {
 	}
 }
 
-func (b *Builder) printType(dst *Writer, expr ast.Expr, notEmpty bool) {
+func (b *Builder) printType(dst *build.Writer, expr ast.Expr, notEmpty bool) {
 	switch expr.(type) {
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
@@ -206,6 +175,8 @@ func (b *Builder) printType(dst *Writer, expr ast.Expr, notEmpty bool) {
 		} else {
 			if build.Decimal == (expr.(*ast.Ident).Name) {
 				dst.Import("package:decimal/decimal.dart")
+			} else if build.Int64 == (expr.(*ast.Ident).Name) || build.Uint64 == (expr.(*ast.Ident).Name) {
+				dst.Import("package:fixnum/fixnum.dart")
 			}
 			dst.Code(_types[(expr.(*ast.Ident).Name)])
 		}
@@ -236,7 +207,7 @@ func (b *Builder) printType(dst *Writer, expr ast.Expr, notEmpty bool) {
 	}
 }
 
-func (b *Builder) getPackage(dst *Writer, expr ast.Expr, s string) string {
+func (b *Builder) getPackage(dst *build.Writer, expr ast.Expr, s string) string {
 	file := (expr.(*ast.Ident)).Obj.Data
 	switch file.(type) {
 	case *ast.File:

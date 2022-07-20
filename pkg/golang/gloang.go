@@ -12,67 +12,34 @@ import (
 )
 
 var _types = map[string]string{
-	build.Int8: "int8", build.Int16: "int16", build.Int32: "int32", build.Int64: "int64", build.Uint8: "uint8",
-	build.Uint16: "uint16", build.Uint32: "uint32", build.Uint64: "uint64", build.Bool: "bool", build.Float: "float32",
+	build.Int8: "int8", build.Int16: "int16", build.Int32: "int32", build.Int64: "hbuf.Int64", build.Uint8: "uint8",
+	build.Uint16: "uint16", build.Uint32: "uint32", build.Uint64: "hbuf.Uint64", build.Bool: "bool", build.Float: "float32",
 	build.Double: "float64", build.String: "string", build.Date: "hbuf.Time", build.Decimal: "decimal.Decimal",
 }
 
-type Writer struct {
-	imp      map[string]struct{}
-	code     *strings.Builder
-	packages string
-	pack     string
-}
-
-func (w *Writer) Import(text string) {
-	w.imp[text] = struct{}{}
-}
-
-func (w *Writer) AddImports(text map[string]struct{}) {
-	for key, _ := range text {
-		w.imp[key] = struct{}{}
-	}
-}
-
-func (w *Writer) GetImports() map[string]struct{} {
-	return w.imp
-}
-
-func (w *Writer) Code(text string) {
-	_, _ = w.code.WriteString(text)
-}
-
-func NewWriter(pack string) *Writer {
-	return &Writer{
-		imp:  map[string]struct{}{},
-		code: &strings.Builder{},
-		pack: pack,
-	}
-}
-
 type GoWriter struct {
-	data     *Writer
-	enum     *Writer
-	server   *Writer
-	database *Writer
+	data     *build.Writer
+	enum     *build.Writer
+	server   *build.Writer
+	database *build.Writer
 	packages string
 }
 
 func (g *GoWriter) SetPackages(s string) {
 	g.packages = s
-	g.data.packages = s
-	g.enum.packages = s
-	g.server.packages = s
-	g.database.packages = s
+	g.data.Pack = s
+	g.enum.Pack = s
+	g.server.Pack = s
+	g.database.Pack = s
 
 }
 
 func NewGoWriter(pack string) *GoWriter {
 	return &GoWriter{
-		data:     NewWriter(pack),
-		enum:     NewWriter(pack),
-		server:   NewWriter(pack),
-		database: NewWriter(pack),
+		data:     build.NewWriter(pack),
+		enum:     build.NewWriter(pack),
+		server:   build.NewWriter(pack),
+		database: build.NewWriter(pack),
 	}
 }
 
@@ -106,25 +73,25 @@ func Build(file *ast.File, fset *token.FileSet, param *build.Param) error {
 		return err
 	}
 
-	if 0 < dst.data.code.Len() {
+	if 0 < dst.data.GetCode().Len() {
 		err := b.writerFile(dst.data, dst.packages, filepath.Join(dir, name+".data.go"))
 		if err != nil {
 			return err
 		}
 	}
-	if 0 < dst.enum.code.Len() {
+	if 0 < dst.enum.GetCode().Len() {
 		err = b.writerFile(dst.enum, dst.packages, filepath.Join(dir, name+".enum.go"))
 		if err != nil {
 			return err
 		}
 	}
-	if 0 < dst.server.code.Len() {
+	if 0 < dst.server.GetCode().Len() {
 		err = b.writerFile(dst.server, dst.packages, filepath.Join(dir, name+".server.go"))
 		if err != nil {
 			return err
 		}
 	}
-	if 0 < dst.database.code.Len() {
+	if 0 < dst.database.GetCode().Len() {
 		err = b.writerFile(dst.database, dst.packages, filepath.Join(dir, name+".database.go"))
 		if err != nil {
 			return err
@@ -133,7 +100,7 @@ func Build(file *ast.File, fset *token.FileSet, param *build.Param) error {
 	return nil
 }
 
-func (b *Builder) writerFile(data *Writer, packages string, out string) error {
+func (b *Builder) writerFile(data *build.Writer, packages string, out string) error {
 	fc, err := os.Create(out)
 	if err != nil {
 		return err
@@ -147,12 +114,12 @@ func (b *Builder) writerFile(data *Writer, packages string, out string) error {
 
 	_, _ = fc.WriteString("package " + packages + "\n\n")
 
-	if 0 < len(data.imp) {
+	if 0 < len(data.GetImports()) {
 		_, _ = fc.WriteString("import (\n")
-		imps := make([]string, len(data.imp))
+		imps := make([]string, len(data.GetImports()))
 
 		i := 0
-		for key, _ := range data.imp {
+		for key, _ := range data.GetImports() {
 			imps[i] = key
 			i++
 
@@ -163,7 +130,7 @@ func (b *Builder) writerFile(data *Writer, packages string, out string) error {
 		}
 		_, _ = fc.WriteString(")\n\n")
 	}
-	_, _ = fc.WriteString(data.code.String())
+	_, _ = fc.WriteString(data.GetCode().String())
 	return nil
 }
 
@@ -209,7 +176,7 @@ func (b *Builder) printTypeSpec(dst *GoWriter, expr ast.Expr) {
 	}
 }
 
-func (b *Builder) printType(dst *Writer, expr ast.Expr, emp bool) {
+func (b *Builder) printType(dst *build.Writer, expr ast.Expr, emp bool) {
 	switch expr.(type) {
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
@@ -221,6 +188,8 @@ func (b *Builder) printType(dst *Writer, expr ast.Expr, emp bool) {
 				dst.Import("hbuf_golang/pkg/hbuf")
 			} else if build.Decimal == (expr.(*ast.Ident)).Name {
 				dst.Import("github.com/shopspring/decimal")
+			} else if build.Int64 == (expr.(*ast.Ident).Name) || build.Uint64 == (expr.(*ast.Ident).Name) {
+				dst.Import("hbuf_golang/pkg/hbuf")
 			}
 			dst.Code(_types[(expr.(*ast.Ident)).Name])
 		}
@@ -243,7 +212,7 @@ func (b *Builder) printType(dst *Writer, expr ast.Expr, emp bool) {
 	}
 }
 
-func (b *Builder) getPackage(dst *Writer, expr ast.Expr) string {
+func (b *Builder) getPackage(dst *build.Writer, expr ast.Expr) string {
 	file := (expr.(*ast.Ident)).Obj.Data
 	switch file.(type) {
 	case *ast.File:
@@ -262,14 +231,14 @@ func (b *Builder) getPackage(dst *Writer, expr ast.Expr) string {
 		return ""
 	}
 
-	if pack == dst.packages {
+	if pack == dst.Pack {
 		return ""
 	}
 
 	packs := strings.Split(pack, ".")
 	pack = packs[len(packs)-1]
 
-	dst.Import(dst.pack + pack)
+	dst.Import(dst.Pack + pack)
 	return pack + "."
 }
 

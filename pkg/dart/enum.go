@@ -5,15 +5,16 @@ import (
 	"hbuf/pkg/build"
 )
 
-func (b *Builder) printEnumCode(dst *Writer, typ *ast.EnumType) {
+func (b *Builder) printEnumCode(dst *build.Writer, typ *ast.EnumType) {
 	dst.Import("package:flutter/widgets.dart")
 	b.printEnum(dst, typ)
+
 }
 
-func (b *Builder) printEnum(dst *Writer, typ *ast.EnumType) {
+func (b *Builder) printEnum(dst *build.Writer, typ *ast.EnumType) {
 	enumName := build.StringToHumpName(typ.Name.Name)
-	_, lang := build.GetTag(typ.Tags, "ui")
-	if lang {
+	_, isUi := build.GetTag(typ.Tags, "ui")
+	if isUi {
 		b.getPackage(dst, typ.Name, "ui")
 	}
 
@@ -55,7 +56,7 @@ func (b *Builder) printEnum(dst *Writer, typ *ast.EnumType) {
 	for _, item := range typ.Items {
 		itemName := build.StringToAllUpper(item.Name.Name)
 		dst.Code("  static final " + itemName + " = " + enumName + "._(" + item.Id.Value + ", '" + itemName + "'")
-		if lang {
+		if isUi {
 			dst.Code(", (context) => " + enumName + "Localizations.of(context)." + itemName)
 		}
 		dst.Code(");\n")

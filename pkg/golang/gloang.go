@@ -25,38 +25,38 @@ type GoWriter struct {
 	packages string
 }
 
-func (g *GoWriter) SetPackages(s string) {
-	g.packages = s
-	g.data.Pack = s
-	g.enum.Pack = s
-	g.server.Pack = s
-	g.database.Pack = s
-
+func (w *GoWriter) SetPackages(s string) {
+	w.data.Packages = s
+	w.enum.Packages = s
+	w.server.Packages = s
+	w.database.Packages = s
+	w.packages = s
 }
 
-func NewGoWriter(pack string) *GoWriter {
+func NewGoWriter() *GoWriter {
 	return &GoWriter{
-		data:     build.NewWriter(pack),
-		enum:     build.NewWriter(pack),
-		server:   build.NewWriter(pack),
-		database: build.NewWriter(pack),
+		data:     build.NewWriter(),
+		enum:     build.NewWriter(),
+		server:   build.NewWriter(),
+		database: build.NewWriter(),
 	}
 }
 
 type Builder struct {
-	build *build.Builder
+	build    *build.Builder
+	packages string
 }
 
 func Build(file *ast.File, fset *token.FileSet, param *build.Param) error {
 	b := Builder{
 		build: param.GetBuilder(),
 	}
-	dst := NewGoWriter(param.GetPack())
+	b.packages = param.GetPack()
+	dst := NewGoWriter()
 	err := b.Node(dst, fset, file)
 	if err != nil {
 		return err
 	}
-
 	if 0 == len(dst.packages) {
 		return nil
 	}
@@ -74,25 +74,25 @@ func Build(file *ast.File, fset *token.FileSet, param *build.Param) error {
 	}
 
 	if 0 < dst.data.GetCode().Len() {
-		err := b.writerFile(dst.data, dst.packages, filepath.Join(dir, name+".data.go"))
+		err := b.writerFile(dst.data, dst.data.Packages, filepath.Join(dir, name+".data.go"))
 		if err != nil {
 			return err
 		}
 	}
 	if 0 < dst.enum.GetCode().Len() {
-		err = b.writerFile(dst.enum, dst.packages, filepath.Join(dir, name+".enum.go"))
+		err = b.writerFile(dst.enum, dst.enum.Packages, filepath.Join(dir, name+".enum.go"))
 		if err != nil {
 			return err
 		}
 	}
 	if 0 < dst.server.GetCode().Len() {
-		err = b.writerFile(dst.server, dst.packages, filepath.Join(dir, name+".server.go"))
+		err = b.writerFile(dst.server, dst.server.Packages, filepath.Join(dir, name+".server.go"))
 		if err != nil {
 			return err
 		}
 	}
 	if 0 < dst.database.GetCode().Len() {
-		err = b.writerFile(dst.database, dst.packages, filepath.Join(dir, name+".database.go"))
+		err = b.writerFile(dst.database, dst.database.Packages, filepath.Join(dir, name+".database.go"))
 		if err != nil {
 			return err
 		}
@@ -231,14 +231,14 @@ func (b *Builder) getPackage(dst *build.Writer, expr ast.Expr) string {
 		return ""
 	}
 
-	if pack == dst.Pack {
+	if pack == dst.Packages {
 		return ""
 	}
 
 	packs := strings.Split(pack, ".")
 	pack = packs[len(packs)-1]
 
-	dst.Import(dst.Pack + pack)
+	dst.Import(b.packages + pack)
 	return pack + "."
 }
 

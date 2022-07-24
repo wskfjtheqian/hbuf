@@ -57,8 +57,8 @@ func (b *Builder) getUI(tags []*ast.Tag) *ui {
 		return nil
 	}
 	form := ui{
-		width:  100,
-		height: 100,
+		width:  300,
+		height: 300,
 	}
 	if nil != val.KV {
 		for _, item := range val.KV {
@@ -154,7 +154,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Code("\t\t\t\t\t);\n")
 		} else {
 			dst.Code("\t\t\t\t\treturn TablesCell(child: SelectableText(\"${data." + fieldName)
-			b.printToString(dst, field.Type, false, table.digit, table.format)
+			b.printToString(dst, field.Type, false, table.digit, table.format, "??\"\"")
 			dst.Code(" }\"));\n")
 		}
 		dst.Code("\t\t\t\t},\n")
@@ -173,7 +173,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Code("}\n\n")
 }
 
-func (b *Builder) printToString(dst *build.Writer, expr ast.Expr, empty bool, digit int, format string) {
+func (b *Builder) printToString(dst *build.Writer, expr ast.Expr, empty bool, digit int, format string, val string) {
 	switch expr.(type) {
 	case *ast.EnumType:
 		if empty {
@@ -184,7 +184,7 @@ func (b *Builder) printToString(dst *build.Writer, expr ast.Expr, empty bool, di
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
 			b.getPackage(dst, expr, "")
-			b.printToString(dst, t.Obj.Decl.(*ast.TypeSpec).Type, empty, digit, format)
+			b.printToString(dst, t.Obj.Decl.(*ast.TypeSpec).Type, empty, digit, format, val)
 		} else {
 			switch t.Name {
 			case build.Int8, build.Int16, build.Int32, build.Int64, build.Uint8, build.Uint16, build.Uint32, build.Uint64:
@@ -234,9 +234,9 @@ func (b *Builder) printToString(dst *build.Writer, expr ast.Expr, empty bool, di
 		//}
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
-		b.printToString(dst, t.Type(), t.Empty, digit, format)
+		b.printToString(dst, t.Type(), t.Empty, digit, format, val)
 		if t.Empty {
-			dst.Code("??\"\"")
+			dst.Code(val)
 		}
 	}
 }
@@ -332,8 +332,8 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Code("\t\tthis.enabled = true,\n")
 	dst.Code("\t});\n\n")
 
-	fields := build.NewWriter("")
-	setValue := build.NewWriter("")
+	fields := build.NewWriter()
+	setValue := build.NewWriter()
 	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 		form := b.getUI(field.Tags)
 		fieldName := build.StringToFirstLower(field.Name.Name)
@@ -343,7 +343,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		if "text" == form.form {
 			dst.Code("\tfinal TextFormBuild " + fieldName + " = TextFormBuild();\n\n")
 			setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName)
-			b.printToString(setValue, field.Type, false, form.digit, form.format)
+			b.printToString(setValue, field.Type, false, form.digit, form.format, "??\"\"")
 			setValue.Code(";\n")
 			setValue.Code("\t\t" + fieldName + ".onChanged = (val) => info." + fieldName + " = ")
 			b.printFormString(setValue, "val", field.Type, false, form.digit, form.format)
@@ -353,6 +353,23 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 
 			fields.Code("\t\t\t" + fieldName + ".build(context),\n")
 			lang.Add(fieldName, field.Tags)
+		} else if "image" == form.form {
+			dst.Code("\tfinal ImageFormBuild " + fieldName + " =  ImageFormBuild();\n\n")
+
+			if build.IsNil(field.Type) {
+				setValue.Code("\t\t" + fieldName + ".initialValue = [if (info.picture?.startsWith(\"http\") ?? false) NetworkImage(info." + fieldName + "!)];\n")
+				setValue.Code("\t\t" + fieldName + ".onChanged = (val) => info." + fieldName + " = ((val?.isEmpty ?? true) ? null : val!.first.url);\n")
+			} else {
+				setValue.Code("\t\t" + fieldName + ".initialValue = [NetworkImage(info." + fieldName + ")];\n")
+				setValue.Code("\t\t" + fieldName + ".onChanged = (val) => info." + fieldName + " = val!.first.url);\n")
+			}
+			setValue.Code("\t\t" + fieldName + ".enabled = enabled;\n")
+			setValue.Code("\t\t" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n\n")
+			setValue.Code("\t\t" + fieldName + ".outWidth = " + strconv.FormatFloat(form.width, 'G', -1, 64) + ";\n")
+			setValue.Code("\t\t" + fieldName + ".outHeight = " + strconv.FormatFloat(form.height, 'G', -1, 64) + ";\n")
+			fields.Code("\t\t\t" + fieldName + ".build(context),\n")
+			lang.Add(fieldName, field.Tags)
+
 		} else if "menu" == form.form {
 			dst.Code("\tfinal MenuFormBuild<")
 			b.printType(dst, field.Type, true)

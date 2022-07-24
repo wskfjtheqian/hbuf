@@ -140,8 +140,8 @@ func (b *Builder) getItemAndValue(fields []*build.DBField) (strings.Builder, str
 }
 
 func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField) (*build.Writer, *build.Writer) {
-	param := build.NewWriter(dst.Pack)
-	where := build.NewWriter(dst.Pack)
+	param := build.NewWriter()
+	where := build.NewWriter()
 
 	isFist := true
 	for _, field := range fields {

@@ -3,11 +3,11 @@ package build
 import "strings"
 
 type Writer struct {
-	imp  map[string]struct{}
-	code *strings.Builder
-	Path string
-	Pack string
-	lang map[string]*Language
+	imp      map[string]struct{}
+	code     *strings.Builder
+	Path     string
+	Packages string
+	lang     map[string]*Language
 }
 
 func (w *Writer) Import(text string) {
@@ -56,11 +56,10 @@ func (w *Writer) GetLangs() map[string]*Language {
 	return w.lang
 }
 
-func NewWriter(pack string) *Writer {
+func NewWriter() *Writer {
 	return &Writer{
 		imp:  map[string]struct{}{},
 		code: &strings.Builder{},
-		Pack: pack,
 		lang: map[string]*Language{},
 	}
 }

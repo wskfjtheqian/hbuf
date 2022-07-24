@@ -16,7 +16,7 @@ var _types = map[string]string{
 	build.Double: "double", build.String: "String", build.Date: "DateTime", build.Decimal: "Decimal",
 }
 
-type GoWriter struct {
+type DartWriter struct {
 	data   *build.Writer
 	enum   *build.Writer
 	server *build.Writer
@@ -24,7 +24,7 @@ type GoWriter struct {
 	path   string
 }
 
-func (g *GoWriter) SetPath(s string) {
+func (g *DartWriter) SetPath(s string) {
 	g.path = s
 	g.data.Path = s
 	g.enum.Path = s
@@ -32,12 +32,12 @@ func (g *GoWriter) SetPath(s string) {
 	g.ui.Path = s
 }
 
-func NewGoWriter(pack string) *GoWriter {
-	return &GoWriter{
-		data:   build.NewWriter(pack),
-		enum:   build.NewWriter(pack),
-		server: build.NewWriter(pack),
-		ui:     build.NewWriter(pack),
+func NewGoWriter() *DartWriter {
+	return &DartWriter{
+		data:   build.NewWriter(),
+		enum:   build.NewWriter(),
+		server: build.NewWriter(),
+		ui:     build.NewWriter(),
 	}
 }
 
@@ -49,7 +49,7 @@ func Build(file *ast.File, fset *token.FileSet, param *build.Param) error {
 	b := Builder{
 		lang: map[string]struct{}{},
 	}
-	dst := NewGoWriter(param.GetPack())
+	dst := NewGoWriter()
 	err := b.Node(dst, fset, file)
 	if err != nil {
 		return err
@@ -127,7 +127,7 @@ func writerFile(data *build.Writer, out string) error {
 	return nil
 }
 
-func (b *Builder) Node(dst *GoWriter, fset *token.FileSet, node interface{}) error {
+func (b *Builder) Node(dst *DartWriter, fset *token.FileSet, node interface{}) error {
 	var file *ast.File
 	switch n := node.(type) {
 	case *ast.File:
@@ -151,7 +151,7 @@ func (b *Builder) Node(dst *GoWriter, fset *token.FileSet, node interface{}) err
 	return nil
 }
 
-func (b *Builder) printTypeSpec(dst *GoWriter, expr ast.Expr) {
+func (b *Builder) printTypeSpec(dst *DartWriter, expr ast.Expr) {
 	switch expr.(type) {
 	case *ast.DataType:
 		b.printDataCode(dst.data, expr.(*ast.DataType))

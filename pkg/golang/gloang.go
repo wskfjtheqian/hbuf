@@ -185,11 +185,11 @@ func (b *Builder) printType(dst *build.Writer, expr ast.Expr, emp bool) {
 			dst.Code(pack + (expr.(*ast.Ident)).Name)
 		} else {
 			if build.Date == (expr.(*ast.Ident)).Name {
-				dst.Import("hbuf_golang/pkg/hbuf")
+				dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf")
 			} else if build.Decimal == (expr.(*ast.Ident)).Name {
 				dst.Import("github.com/shopspring/decimal")
 			} else if build.Int64 == (expr.(*ast.Ident).Name) || build.Uint64 == (expr.(*ast.Ident).Name) {
-				dst.Import("hbuf_golang/pkg/hbuf")
+				dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf")
 			}
 			dst.Code(_types[(expr.(*ast.Ident)).Name])
 		}

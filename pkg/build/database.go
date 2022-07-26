@@ -22,8 +22,8 @@ type DB struct {
 	Count   bool
 	Table   bool
 	Where   string
-	offset  string
-	limit   string
+	Offset  string
+	Limit   string
 }
 
 type DBField struct {
@@ -58,9 +58,9 @@ func GetDB(n string, tag []*ast.Tag) []*DB {
 					} else if "where" == item.Name.Name {
 						db.Where = item.Value.Value[1 : len(item.Value.Value)-1]
 					} else if "offset" == item.Name.Name {
-						db.offset = item.Value.Value[1 : len(item.Value.Value)-1]
+						db.Offset = item.Value.Value[1 : len(item.Value.Value)-1]
 					} else if "limit" == item.Name.Name {
-						db.limit = item.Value.Value[1 : len(item.Value.Value)-1]
+						db.Limit = item.Value.Value[1 : len(item.Value.Value)-1]
 					} else if "insert" == item.Name.Name {
 						db.Insert = "true" == strings.ToLower(item.Value.Value[1:len(item.Value.Value)-1])
 					} else if "inserts" == item.Name.Name {

@@ -139,7 +139,7 @@ func (b *Builder) getItemAndValue(fields []*build.DBField) (strings.Builder, str
 
 }
 
-func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField) (*build.Writer, *build.Writer) {
+func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page bool) (*build.Writer, *build.Writer) {
 	param := build.NewWriter()
 	where := build.NewWriter()
 
@@ -178,6 +178,33 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField) (*bu
 			}
 		}
 	}
+	if page {
+		if limit, ok := b.getLimit(fields); ok {
+			if !isFist {
+				param.Code(", ")
+			}
+			isFist = false
+			param.Code(build.StringToFirstLower(limit.Field.Name.Name))
+			param.Code(" ")
+			b.printType(param, limit.Field.Type, false)
+
+			if offset, ok := b.getOffset(fields); ok {
+				if !isFist {
+					param.Code(", ")
+				}
+				isFist = false
+				param.Code(build.StringToFirstLower(offset.Field.Name.Name))
+				param.Code(" ")
+				b.printType(param, offset.Field.Type, false)
+
+				where.Code("\tsql.WriteString(\" LIMIT " + offset.Dbs[0].Offset + ", " + limit.Dbs[0].Limit + "\")\n")
+				where.Code("\tparam = append(param," + build.StringToFirstLower(offset.Field.Name.Name) + ", " + build.StringToFirstLower(limit.Field.Name.Name) + " )\n")
+			} else {
+				where.Code("\tsql.WriteString(\" LIMIT " + limit.Dbs[0].Limit + "\")\n")
+				where.Code("\tparam = append(param," + build.StringToFirstLower(limit.Field.Name.Name) + " )\n")
+			}
+		}
+	}
 	return param, where
 }
 
@@ -185,7 +212,7 @@ func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, db *build.D
 	fName := build.StringToHumpName(fType.Name.Name)
 	dName := build.StringToHumpName(typ.Name.Name)
 
-	p, w := b.getParamWhere(dst, fFields)
+	p, w := b.getParamWhere(dst, fFields, false)
 	dst.AddImports(p.GetImports())
 	dst.AddImports(w.GetImports())
 
@@ -195,6 +222,7 @@ func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, db *build.D
 	dst.Code("\tsql := strings.Builder{}\n")
 	dst.Code("\tvar param []interface{}\n")
 	dst.Code("\tsql.WriteString(\"SELECT " + item.String() + " FROM " + db.Name + " WHERE 1 = 1\")\n")
+	w.Code("\tsql.WriteString(\" LIMIT 1\")\n")
 	dst.Code(w.GetCode().String())
 
 	dst.Code("	query, err := db.Query(sql.String(), param...)\n")
@@ -345,7 +373,7 @@ func (b *Builder) printFindData(dst *build.Writer, typ *ast.DataType, db *build.
 	fName := build.StringToHumpName(fType.Name.Name)
 	dName := build.StringToHumpName(typ.Name.Name)
 
-	p, w := b.getParamWhere(dst, fFields)
+	p, w := b.getParamWhere(dst, fFields, true)
 	dst.AddImports(p.GetImports())
 	dst.AddImports(w.GetImports())
 
@@ -380,7 +408,7 @@ func (b *Builder) printFindData(dst *build.Writer, typ *ast.DataType, db *build.
 func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, fType *ast.DataType, fFields []*build.DBField) {
 	fName := build.StringToHumpName(fType.Name.Name)
 
-	p, w := b.getParamWhere(dst, fFields)
+	p, w := b.getParamWhere(dst, fFields, false)
 	dst.AddImports(p.GetImports())
 	dst.AddImports(w.GetImports())
 

@@ -245,3 +245,21 @@ func (b *Builder) getPackage(dst *build.Writer, expr ast.Expr) string {
 func (b *Builder) getFile(name *ast.Ident) *ast.File {
 	return name.Obj.Data.(*ast.File)
 }
+
+func (b *Builder) getLimit(fields []*build.DBField) (*build.DBField, bool) {
+	for _, field := range fields {
+		if 0 < len(field.Dbs[0].Limit) {
+			return field, true
+		}
+	}
+	return nil, false
+}
+
+func (b *Builder) getOffset(fields []*build.DBField) (*build.DBField, bool) {
+	for _, field := range fields {
+		if 0 < len(field.Dbs[0].Offset) {
+			return field, true
+		}
+	}
+	return nil, false
+}

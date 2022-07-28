@@ -147,9 +147,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 				dst.Code("??\"\"")
 			}
 			dst.Code(",\n")
-			dst.Code("\t\t\t\t\t\t\twidth: " + strconv.FormatFloat(table.width, 'G', -1, 64) + ",\n")
-			dst.Code("\t\t\t\t\t\t\theight: " + strconv.FormatFloat(table.width, 'G', -1, 64) + ",\n")
-			dst.Code("\t\t\t\t\t\t\tfit: BoxFit.cover,\n")
+			dst.Code("\t\t\t\t\t\t\tfit: BoxFit.contain,\n")
 			dst.Code("\t\t\t\t\t\t),\n")
 			dst.Code("\t\t\t\t\t);\n")
 		} else {
@@ -206,7 +204,11 @@ func (b *Builder) printToString(dst *build.Writer, expr ast.Expr, empty bool, di
 				if empty {
 					dst.Code("?")
 				}
-				dst.Code(".toString()")
+				dst.Import("package:hbuf_flutter/hbuf_flutter.dart")
+				if 0 == len(format) {
+					format = "yyyy/MM/dd HH:mm:ss"
+				}
+				dst.Code(".format(\"" + format + "\")")
 			case build.Decimal:
 				if empty {
 					dst.Code("?")
@@ -279,7 +281,7 @@ func (b *Builder) printFormString(dst *build.Writer, name string, expr ast.Expr,
 				if empty {
 					dst.Code(name + "==null ? null : DateTime.tryParse(" + name + "!)")
 				} else {
-					dst.Code("DateTime.tryParse(" + name + "!)")
+					dst.Code("DateTime.tryParse(" + name + ") ?? DateTime.now()")
 				}
 			case build.Decimal:
 				dst.Import("package:decimal/decimal.dart")
@@ -325,11 +327,11 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	lang := dst.GetLang(name)
 	dst.Code("class Form" + name + build.StringToHumpName(u.suffix) + "Build {\n")
 	dst.Code("\tfinal " + name + " info;\n\n")
-	dst.Code("\tfinal bool enabled;\n\n")
+	dst.Code("\tfinal bool readOnly;\n\n")
 
 	dst.Code("\tForm" + name + build.StringToHumpName(u.suffix) + "Build (\n")
 	dst.Code("\t\tthis.info, {\n")
-	dst.Code("\t\tthis.enabled = true,\n")
+	dst.Code("\t\tthis.readOnly = false,\n")
 	dst.Code("\t});\n\n")
 
 	fields := build.NewWriter()
@@ -340,6 +342,11 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		if nil == form {
 			return nil
 		}
+
+		onlyRead := "false"
+		if form.onlyRead {
+			onlyRead = "true"
+		}
 		if "text" == form.form {
 			dst.Code("\tfinal TextFormBuild " + fieldName + " = TextFormBuild();\n\n")
 			setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName)
@@ -348,7 +355,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			setValue.Code("\t\t" + fieldName + ".onChanged = (val) => info." + fieldName + " = ")
 			b.printFormString(setValue, "val", field.Type, false, form.digit, form.format)
 			setValue.Code(";\n")
-			setValue.Code("\t\t" + fieldName + ".enabled = enabled;\n")
+			setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
 			setValue.Code("\t\t" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n\n")
 
 			fields.Code("\t\t\t" + fieldName + ".build(context),\n")
@@ -363,7 +370,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				setValue.Code("\t\t" + fieldName + ".initialValue = [NetworkImage(info." + fieldName + ")];\n")
 				setValue.Code("\t\t" + fieldName + ".onChanged = (val) => info." + fieldName + " = val!.first.url);\n")
 			}
-			setValue.Code("\t\t" + fieldName + ".enabled = enabled;\n")
+			setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
 			setValue.Code("\t\t" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n\n")
 			setValue.Code("\t\t" + fieldName + ".outWidth = " + strconv.FormatFloat(form.width, 'G', -1, 64) + ";\n")
 			setValue.Code("\t\t" + fieldName + ".outHeight = " + strconv.FormatFloat(form.height, 'G', -1, 64) + ";\n")
@@ -380,6 +387,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				setValue.Code("!")
 			}
 			setValue.Code(";\n")
+			setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
 			setValue.Code("\t\t" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n")
 			setValue.Code("\t\tstatus.items = [\n")
 			b.printMenuItem(setValue, field.Type, false)

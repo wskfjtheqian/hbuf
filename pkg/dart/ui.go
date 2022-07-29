@@ -75,7 +75,7 @@ func (b *Builder) getUI(tags []*ast.Tag) *ui {
 					return nil
 				}
 				form.digit = atoi
-			} else if "table" == item.Name.Name {
+			} else if "format" == item.Name.Name {
 				form.format = item.Value.Value[1 : len(item.Value.Value)-1]
 			} else if "width" == item.Name.Name {
 				atoi, err := strconv.ParseFloat(item.Value.Value[1:len(item.Value.Value)-1], 10)

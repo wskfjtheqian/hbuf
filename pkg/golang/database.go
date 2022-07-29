@@ -55,6 +55,10 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 		b.printDeleteData(dst, typ, dbs[0], fields, key)
 	}
 
+	if fDbs[0].Remove {
+		b.printRemoveData(dst, typ, dbs[0], fields, key)
+	}
+
 	if fDbs[0].Insert {
 		b.printInsertData(dst, typ, dbs[0], fields, key)
 	}
@@ -221,7 +225,7 @@ func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, db *build.D
 	dst.Code("func DbGet" + fName + "(db *sql.DB, " + p.GetCode().String() + ") (*" + dName + ", error) {\n")
 	dst.Code("\tsql := strings.Builder{}\n")
 	dst.Code("\tvar param []interface{}\n")
-	dst.Code("\tsql.WriteString(\"SELECT " + item.String() + " FROM " + db.Name + " WHERE 1 = 1\")\n")
+	dst.Code("\tsql.WriteString(\"SELECT " + item.String() + " FROM " + db.Name + " WHERE del_time IS  NULL\")\n")
 	w.Code("\tsql.WriteString(\" LIMIT 1\")\n")
 	dst.Code(w.GetCode().String())
 
@@ -341,11 +345,28 @@ func (b *Builder) printUpdateData(dst *build.Writer, typ *ast.DataType, db *buil
 	dst.Code("	}\n")
 	dst.Code("	valText = valText[1:]\n")
 	dst.Code("	param = append(param, &val." + build.StringToHumpName(key.Field.Name.Name) + ")\n")
-	dst.Code("	result, err := db.Exec(\"UPDATE " + db.Name + " SET \"+valText+\" WHERE id = ?\", param...)\n")
+	dst.Code("	result, err := db.Exec(\"UPDATE " + db.Name + " SET \"+valText+\" WHERE del_time IS  NULL AND id = ?\", param...)\n")
 
 	dst.Code("	if err != nil {\n")
 	dst.Code("		return 0, err\n")
 	dst.Code("	}\n")
+
+	dst.Code("	count, err := result.RowsAffected()\n")
+	dst.Code("	return int(count), err\n")
+	dst.Code("}\n\n")
+}
+
+func (b *Builder) printRemoveData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField) {
+	name := build.StringToHumpName(typ.Name.Name)
+
+	dst.Code("func DbDel" + name + "(db *sql.DB, " + build.StringToFirstLower(key.Field.Name.Name) + " ")
+	b.printType(dst, key.Field.Type, false)
+	dst.Code(") (int, error) {\n")
+
+	dst.Code("	result, err := db.Exec(`DELETE FROM  " + db.Name + " WHERE " + key.Dbs[0].Name + " = ?`, " + build.StringToFirstLower(key.Field.Name.Name) + ")\n")
+	dst.Code("	if err != nil {\n")
+	dst.Code("		return 0, err\n")
+	dst.Code("	}\n\n")
 
 	dst.Code("	count, err := result.RowsAffected()\n")
 	dst.Code("	return int(count), err\n")
@@ -359,7 +380,7 @@ func (b *Builder) printDeleteData(dst *build.Writer, typ *ast.DataType, db *buil
 	b.printType(dst, key.Field.Type, false)
 	dst.Code(") (int, error) {\n")
 
-	dst.Code("	result, err := db.Exec(`DELETE FROM  " + db.Name + " WHERE " + key.Dbs[0].Name + " = ?`, " + build.StringToFirstLower(key.Field.Name.Name) + ")\n")
+	dst.Code("	result, err := db.Exec(`UPDATE " + db.Name + " SET del_time = NOW() WHERE " + key.Dbs[0].Name + " = ?`, " + build.StringToFirstLower(key.Field.Name.Name) + ")\n")
 	dst.Code("	if err != nil {\n")
 	dst.Code("		return 0, err\n")
 	dst.Code("	}\n\n")
@@ -382,7 +403,7 @@ func (b *Builder) printFindData(dst *build.Writer, typ *ast.DataType, db *build.
 	dst.Code("func DbFind" + fName + "(db *sql.DB, " + p.GetCode().String() + ") ([]" + dName + ", error) {\n")
 	dst.Code("\tsql := strings.Builder{}\n")
 	dst.Code("\tvar param []interface{}\n")
-	dst.Code("\tsql.WriteString(\"SELECT " + item.String() + " FROM " + db.Name + " WHERE 1 = 1\")\n")
+	dst.Code("\tsql.WriteString(\"SELECT " + item.String() + " FROM " + db.Name + " WHERE del_time IS  NULL\")\n")
 	dst.Code(w.GetCode().String())
 
 	dst.Code("	query, err := db.Query(sql.String(), param...)\n")
@@ -415,7 +436,7 @@ func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build
 	dst.Code("func DbCount" + fName + "(db *sql.DB, " + p.GetCode().String() + ") (int64, error) {\n")
 	dst.Code("\tsql := strings.Builder{}\n")
 	dst.Code("\tvar param []interface{}\n")
-	dst.Code("\tsql.WriteString(\"SELECT COUNT(1) FROM " + db.Name + " WHERE 1 = 1\")\n")
+	dst.Code("\tsql.WriteString(\"SELECT COUNT(1) FROM " + db.Name + " WHERE del_time IS  NULL\")\n")
 	dst.Code(w.GetCode().String())
 
 	dst.Code("	query, err := db.Query(sql.String(), param...)\n")
@@ -456,7 +477,7 @@ func (b *Builder) printSetData(dst *build.Writer, typ *ast.DataType, db *build.D
 		_, _ = values.Write([]byte(", &val." + build.StringToHumpName(field.Field.Name.Name)))
 	}
 
-	dst.Code(" WHERE " + key.Dbs[0].Name + " = ?`")
+	dst.Code(" WHERE del_time IS  NULL AND" + key.Dbs[0].Name + " = ?`")
 	dst.Code(values.String())
 	dst.Code(", &val." + build.StringToHumpName(key.Field.Name.Name) + " )\n")
 	dst.Code("	if err != nil {\n")

@@ -21,6 +21,7 @@ type DB struct {
 	Find    bool
 	Count   bool
 	Table   bool
+	Remove  bool
 	Where   string
 	Offset  string
 	Limit   string
@@ -78,6 +79,8 @@ func GetDB(n string, tag []*ast.Tag) []*DB {
 					} else if "set" == item.Name.Name {
 						db.Set = "true" == strings.ToLower(item.Value.Value[1:len(item.Value.Value)-1])
 					} else if "count" == item.Name.Name {
+						db.Count = "true" == strings.ToLower(item.Value.Value[1:len(item.Value.Value)-1])
+					} else if "rm" == item.Name.Name {
 						db.Count = "true" == strings.ToLower(item.Value.Value[1:len(item.Value.Value)-1])
 					}
 				}

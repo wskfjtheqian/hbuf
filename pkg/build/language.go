@@ -60,7 +60,7 @@ func GetLang(val string, key string, lanMap map[string]string) string {
 		val = strings.ToLower(val)
 	}
 
-	rex := regexp.MustCompile(`[A-Z]`)
+	rex := regexp.MustCompile(`[A-Z_]`)
 	match := rex.FindAllStringSubmatchIndex(val, -1)
 	if nil == match {
 		return strings.ToUpper(val[:1]) + strings.ToLower(val[1:])
@@ -69,16 +69,28 @@ func GetLang(val string, key string, lanMap map[string]string) string {
 	var index = 0
 	for _, item := range match {
 		temp := val[index:item[0]]
+		if 0 == strings.Index(temp, "_") {
+			temp = temp[1:]
+		}
+		if 0 == len(temp) {
+			continue
+		}
 		if 0 == len(ret) {
 			ret += strings.ToUpper(temp[:1])
 			ret += strings.ToLower(temp[1:])
 		} else {
-			ret += " " + strings.ToLower(val[index:item[0]])
+			ret += " " + strings.ToLower(temp)
 		}
 		index = item[0]
 	}
 	if index < len(val) {
-		ret += " " + strings.ToLower(val[index:])
+		temp := val[index:]
+		if 0 == strings.Index(temp, "_") {
+			temp = temp[1:]
+		}
+		if 0 < len(temp) {
+			ret += " " + strings.ToLower(temp)
+		}
 	}
 	return ret
 }

@@ -8,11 +8,11 @@ import (
 
 //创建表单代码
 func (b *Builder) printFormCode(dst *build.Writer, expr ast.Expr) {
-	dst.Import("package:flutter/material.dart")
+	dst.Import("package:flutter/material.dart", "")
 
 	switch expr.(type) {
 	case *ast.DataType:
-		dst.Import("package:hbuf_flutter/hbuf_flutter.dart")
+		dst.Import("package:hbuf_flutter/hbuf_flutter.dart", "")
 		typ := expr.(*ast.DataType)
 		b.getPackage(dst, typ.Name, "")
 		b.printDataUi(dst, typ)
@@ -204,7 +204,7 @@ func (b *Builder) printToString(dst *build.Writer, expr ast.Expr, empty bool, di
 				if empty {
 					dst.Code("?")
 				}
-				dst.Import("package:hbuf_flutter/hbuf_flutter.dart")
+				dst.Import("package:hbuf_flutter/hbuf_flutter.dart", "")
 				if 0 == len(format) {
 					format = "yyyy/MM/dd HH:mm:ss"
 				}
@@ -263,7 +263,7 @@ func (b *Builder) printFormString(dst *build.Writer, name string, expr ast.Expr,
 				}
 
 			case build.Uint64, build.Int64:
-				dst.Import("package:fixnum/fixnum.dart")
+				dst.Import("package:fixnum/fixnum.dart", "")
 				if empty {
 					dst.Code(name + "==null ? null : Int64.parseInt(" + name + "!)")
 				} else {
@@ -284,7 +284,7 @@ func (b *Builder) printFormString(dst *build.Writer, name string, expr ast.Expr,
 					dst.Code("DateTime.tryParse(" + name + ") ?? DateTime.now()")
 				}
 			case build.Decimal:
-				dst.Import("package:decimal/decimal.dart")
+				dst.Import("package:decimal/decimal.dart", "")
 				if empty {
 					dst.Code(name + "==null ? null : Decimal.fromJson(" + name + "!)")
 				} else {
@@ -389,7 +389,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			setValue.Code(";\n")
 			setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
 			setValue.Code("\t\t" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n")
-			setValue.Code("\t\tstatus.items = [\n")
+			setValue.Code("\t\t" + fieldName + ".items = [\n")
 			b.printMenuItem(setValue, field.Type, false)
 			setValue.Code("\t\t];\n\n")
 

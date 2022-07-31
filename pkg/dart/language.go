@@ -9,7 +9,7 @@ func printLanguge(dst *build.Writer) {
 		if 0 >= len(l.Lang) {
 			continue
 		}
-		dst.Import("package:flutter/foundation.dart")
+		dst.Import("package:flutter/foundation.dart", "")
 
 		dst.Code("\n")
 		dst.Code("class _" + l.Name + "LocalizationsDelegate extends LocalizationsDelegate<" + l.Name + "Localizations> {\n")

@@ -427,7 +427,7 @@ func StringToUnderlineName(val string) string {
 		return val
 	}
 
-	rex := regexp.MustCompile(`[A-Z]`)
+	rex := regexp.MustCompile(`[A-Z_]`)
 	match := rex.FindAllStringSubmatchIndex(val, -1)
 	if nil == match {
 		return strings.ToLower(val)
@@ -436,6 +436,13 @@ func StringToUnderlineName(val string) string {
 	var index = 0
 	for _, item := range match {
 		temp := strings.ToLower(val[index:item[0]])
+		if 0 == strings.Index(temp, "_") {
+			temp = temp[1:]
+		}
+		if 0 == len(temp) {
+			continue
+		}
+
 		if 0 == len(ret) {
 			ret += temp
 		} else {
@@ -444,7 +451,15 @@ func StringToUnderlineName(val string) string {
 		index = item[0]
 	}
 	if index < len(val) {
-		ret += "_" + strings.ToLower(val[index:])
+		temp := strings.ToLower(val[index:])
+		if 0 == strings.Index(temp, "_") {
+			temp = temp[1:]
+		}
+		if 0 == len(ret) {
+			ret += temp
+		} else {
+			ret += "_" + temp
+		}
 	}
 	return ret
 }
@@ -455,7 +470,7 @@ func StringToAllUpper(val string) string {
 		return val
 	}
 
-	rex := regexp.MustCompile(`[A-Z]`)
+	rex := regexp.MustCompile(`[A-Z_]`)
 	match := rex.FindAllStringSubmatchIndex(val, -1)
 	if nil == match {
 		return strings.ToUpper(val)
@@ -464,6 +479,13 @@ func StringToAllUpper(val string) string {
 	var index = 0
 	for _, item := range match {
 		temp := strings.ToUpper(val[index:item[0]])
+		if 0 == strings.Index(temp, "_") {
+			temp = temp[1:]
+		}
+		if 0 == len(temp) {
+			continue
+		}
+
 		if 0 == len(ret) {
 			ret += temp
 		} else {
@@ -472,7 +494,15 @@ func StringToAllUpper(val string) string {
 		index = item[0]
 	}
 	if index < len(val) {
-		ret += "_" + strings.ToUpper(val[index:])
+		temp := strings.ToUpper(val[index:])
+		if 0 == strings.Index(temp, "_") {
+			temp = temp[1:]
+		}
+		if 0 == len(ret) {
+			ret += temp
+		} else {
+			ret += "_" + temp
+		}
 	}
 	return ret
 }
@@ -484,6 +514,14 @@ func IsNil(expr ast.Expr) bool {
 		if t.Empty {
 			return true
 		}
+	}
+	return false
+}
+
+func IsArray(expr ast.Expr) bool {
+	switch expr.(type) {
+	case *ast.ArrayType:
+		return true
 	}
 	return false
 }

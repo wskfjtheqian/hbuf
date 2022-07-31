@@ -122,11 +122,15 @@ func (b *Builder) writerFile(data *build.Writer, packages string, out string) er
 		for key, _ := range data.GetImports() {
 			imps[i] = key
 			i++
-
 		}
 		sort.Strings(imps)
 		for _, val := range imps {
-			_, _ = fc.WriteString("\t\"" + val + "\"\n")
+			key := data.GetImports()[val]
+			_, _ = fc.WriteString("\t")
+			if 0 < len(key) {
+				_, _ = fc.WriteString(key + " ")
+			}
+			_, _ = fc.WriteString("\"" + val + "\"\n")
 		}
 		_, _ = fc.WriteString(")\n\n")
 	}
@@ -185,11 +189,11 @@ func (b *Builder) printType(dst *build.Writer, expr ast.Expr, emp bool) {
 			dst.Code(pack + (expr.(*ast.Ident)).Name)
 		} else {
 			if build.Date == (expr.(*ast.Ident)).Name {
-				dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf")
+				dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "")
 			} else if build.Decimal == (expr.(*ast.Ident)).Name {
-				dst.Import("github.com/shopspring/decimal")
+				dst.Import("github.com/shopspring/decimal", "")
 			} else if build.Int64 == (expr.(*ast.Ident).Name) || build.Uint64 == (expr.(*ast.Ident).Name) {
-				dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf")
+				dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "")
 			}
 			dst.Code(_types[(expr.(*ast.Ident)).Name])
 		}
@@ -200,12 +204,12 @@ func (b *Builder) printType(dst *build.Writer, expr ast.Expr, emp bool) {
 	case *ast.MapType:
 		ma := expr.(*ast.MapType)
 		dst.Code("map[")
-		b.printType(dst, ma.Key, false)
+		b.printType(dst, ma.Key, true)
 		dst.Code("]")
 		b.printType(dst, ma.VType, false)
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
-		if t.Empty {
+		if t.Empty || emp {
 			dst.Code("*")
 		}
 		b.printType(dst, t.Type(), false)
@@ -238,7 +242,7 @@ func (b *Builder) getPackage(dst *build.Writer, expr ast.Expr) string {
 	packs := strings.Split(pack, ".")
 	pack = packs[len(packs)-1]
 
-	dst.Import(b.packages + pack)
+	dst.Import(b.packages+pack, "")
 	return pack + "."
 }
 

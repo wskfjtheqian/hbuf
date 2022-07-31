@@ -6,7 +6,7 @@ import (
 )
 
 func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
-	dst.Import("encoding/json")
+	dst.Import("encoding/json", "")
 
 	dst.Code("type " + build.StringToHumpName(typ.Name.Name) + " struct")
 	dst.Code(" {\n")

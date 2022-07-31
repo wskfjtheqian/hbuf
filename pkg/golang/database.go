@@ -3,11 +3,12 @@ package golang
 import (
 	"hbuf/pkg/ast"
 	"hbuf/pkg/build"
+	"regexp"
 	"strings"
 )
 
 func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error {
-	dst.Import("database/sql")
+	dst.Import("database/sql", "")
 
 	dbs, fields, key, err := b.getDBField(typ)
 	if 0 == len(dbs) || nil != err {
@@ -145,7 +146,9 @@ func (b *Builder) getItemAndValue(fields []*build.DBField) (strings.Builder, str
 
 func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page bool) (*build.Writer, *build.Writer) {
 	param := build.NewWriter()
+	param.Packages = dst.Packages
 	where := build.NewWriter()
+	where.Packages = dst.Packages
 
 	isFist := true
 	for _, field := range fields {
@@ -161,24 +164,10 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 
 			if build.IsNil(field.Field.Type) {
 				where.Code("\tif nil != " + build.StringToFirstLower(field.Field.Name.Name) + " {\n")
-				where.Code("\t\tsql.WriteString(\" " + text + "\")\n")
-				where.Code("\t\tparam = append(param")
-
-				count := strings.Count(text, "?")
-				for i := 0; i < count; i++ {
-					where.Code(", " + build.StringToFirstLower(field.Field.Name.Name))
-				}
-				where.Code(")\n")
+				b.printWhere(where, text, field)
 				where.Code("\t}\n")
 			} else {
-				where.Code("\tsql.WriteString(\" " + text + "\")\n")
-				where.Code("\tparam = append(param")
-
-				count := strings.Count(text, "?")
-				for i := 0; i < count; i++ {
-					where.Code(", " + build.StringToFirstLower(field.Field.Name.Name))
-				}
-				where.Code(")\n")
+				b.printWhere(where, text, field)
 			}
 		}
 	}
@@ -210,6 +199,40 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 		}
 	}
 	return param, where
+}
+
+func (b *Builder) printWhere(where *build.Writer, text string, field *build.DBField) {
+	count := strings.Count(text, "?")
+	if build.IsArray(field.Field.Type) {
+		temp := "\" + hbuf.ToQuestions(ids, \",\") + \""
+		rex := regexp.MustCompile(`\?`)
+		match := rex.FindAllStringSubmatchIndex(text, -1)
+		if nil != match {
+			var index = 0
+			buf := strings.Builder{}
+			for _, item := range match {
+				buf.WriteString(text[index:item[0]])
+				index = item[0] + 1
+				buf.WriteString(temp)
+			}
+			if index < len(text) {
+				buf.WriteString(text[index:])
+			}
+			text = buf.String()
+		}
+	}
+	where.Code("\tsql.WriteString(\" " + text + "\")\n")
+	where.Code("\tparam = append(param")
+
+	for i := 0; i < count; i++ {
+		if build.IsArray(field.Field.Type) {
+			where.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "")
+			where.Code(", hbuf.ToAnyList(" + build.StringToFirstLower(field.Field.Name.Name) + ")...")
+		} else {
+			where.Code(", " + build.StringToFirstLower(field.Field.Name.Name))
+		}
+	}
+	where.Code(")\n")
 }
 
 func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, fType *ast.DataType, fFields []*build.DBField) {
@@ -249,7 +272,7 @@ func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, db *build.D
 }
 
 func (b *Builder) printInsertData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField) {
-	dst.Import("strings")
+	dst.Import("strings", "")
 	name := build.StringToHumpName(typ.Name.Name)
 	dst.Code("func DbInsert" + name + "(db *sql.DB, val *" + name + ") (int, error) {\n")
 	dst.Code("	if nil == val {\n")
@@ -290,7 +313,7 @@ func (b *Builder) printInsertData(dst *build.Writer, typ *ast.DataType, db *buil
 }
 
 func (b *Builder) printInsertListData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField) {
-	dst.Import("strings")
+	dst.Import("strings", "")
 	name := build.StringToHumpName(typ.Name.Name)
 	item, scan, ques := b.getItemAndValue(fields)
 	dst.Code("func DbInsertList" + name + "(db *sql.DB, val []*" + name + ") (int, error) {\n")
@@ -477,7 +500,7 @@ func (b *Builder) printSetData(dst *build.Writer, typ *ast.DataType, db *build.D
 		_, _ = values.Write([]byte(", &val." + build.StringToHumpName(field.Field.Name.Name)))
 	}
 
-	dst.Code(" WHERE del_time IS  NULL AND" + key.Dbs[0].Name + " = ?`")
+	dst.Code(" WHERE del_time IS  NULL AND " + key.Dbs[0].Name + " = ?`")
 	dst.Code(values.String())
 	dst.Code(", &val." + build.StringToHumpName(key.Field.Name.Name) + " )\n")
 	dst.Code("	if err != nil {\n")

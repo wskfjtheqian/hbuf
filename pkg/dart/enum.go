@@ -6,7 +6,7 @@ import (
 )
 
 func (b *Builder) printEnumCode(dst *build.Writer, typ *ast.EnumType) {
-	dst.Import("package:flutter/widgets.dart")
+	dst.Import("package:flutter/widgets.dart", "")
 	b.printEnum(dst, typ)
 
 }

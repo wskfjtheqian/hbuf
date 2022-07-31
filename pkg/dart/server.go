@@ -6,9 +6,9 @@ import (
 )
 
 func (b *Builder) printServerCode(dst *build.Writer, typ *ast.ServerType) {
-	dst.Import("dart:convert")
-	dst.Import("dart:typed_data")
-	dst.Import("package:hbuf_dart/hbuf_dart.dart")
+	dst.Import("dart:convert", "")
+	dst.Import("dart:typed_data", "")
+	dst.Import("package:hbuf_dart/hbuf_dart.dart", "")
 
 	b.printServer(dst, typ)
 	b.printServerImp(dst, typ)

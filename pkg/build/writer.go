@@ -3,15 +3,15 @@ package build
 import "strings"
 
 type Writer struct {
-	imp      map[string]struct{}
+	imp      map[string]string
 	code     *strings.Builder
 	Path     string
 	Packages string
 	lang     map[string]*Language
 }
 
-func (w *Writer) Import(text string) {
-	w.imp[text] = struct{}{}
+func (w *Writer) Import(text string, s string) {
+	w.imp[text] = s
 }
 
 func (w *Writer) Code(text string) {
@@ -33,11 +33,11 @@ func (w *Writer) GetCode() *strings.Builder {
 
 }
 
-func (w *Writer) GetImports() map[string]struct{} {
+func (w *Writer) GetImports() map[string]string {
 	return w.imp
 }
 
-func (w *Writer) AddImports(imp map[string]struct{}) {
+func (w *Writer) AddImports(imp map[string]string) {
 	for key, val := range imp {
 		w.imp[key] = val
 	}
@@ -58,7 +58,7 @@ func (w *Writer) GetLangs() map[string]*Language {
 
 func NewWriter() *Writer {
 	return &Writer{
-		imp:  map[string]struct{}{},
+		imp:  map[string]string{},
 		code: &strings.Builder{},
 		lang: map[string]*Language{},
 	}

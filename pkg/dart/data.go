@@ -521,9 +521,9 @@ func (b *Builder) printToMap(dst *build.Writer, name string, expr ast.Expr, data
 				}
 			case build.Date:
 				if empty {
-					dst.Code(name + "?.microsecondsSinceEpoch")
+					dst.Code(name + "?.millisecondsSinceEpoch")
 				} else {
-					dst.Code(name + ".microsecondsSinceEpoch")
+					dst.Code(name + ".millisecondsSinceEpoch")
 				}
 			case build.Decimal:
 				if empty {

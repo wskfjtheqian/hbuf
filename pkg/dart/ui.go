@@ -47,6 +47,7 @@ type ui struct {
 	table    string
 	format   string
 	digit    int
+	index    int
 	width    float64
 	height   float64
 }
@@ -75,6 +76,13 @@ func (b *Builder) getUI(tags []*ast.Tag) *ui {
 					return nil
 				}
 				form.digit = atoi
+			} else if "index" == item.Name.Name {
+				atoi, err := strconv.Atoi(item.Value.Value[1 : len(item.Value.Value)-1])
+				if err != nil {
+					//TODO 添加错误处理
+					return nil
+				}
+				form.index = atoi
 			} else if "format" == item.Name.Name {
 				form.format = item.Value.Value[1 : len(item.Value.Value)-1]
 			} else if "width" == item.Name.Name {
@@ -126,15 +134,18 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Code("\t\t\treturn TablesRow<" + name + ">(data: list[y]);\n")
 	dst.Code("\t\t};\n")
 	dst.Code("\t\ttables.rowCount = list.length;\n")
-	dst.Code("\t\ttables.columns = [\n")
-
 	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
+
 		table := b.getUI(field.Tags)
 		if nil == table || 0 == len(table.table) {
 			return nil
 		}
+
+		dst.Code("\t\ttables.columns[\"")
 		fieldName := build.StringToFirstLower(field.Name.Name)
-		dst.Code("\t\t\tTablesColumn(\n")
+		dst.Code(fieldName)
+		dst.Code("\"] = TablesColumn(\n")
+		dst.Code("\t\t\t\tindex: " + strconv.Itoa(table.index) + ",\n")
 		dst.Code("\t\t\t\theaderBuilder: (context) {\n")
 		dst.Code("\t\t\t\t\treturn TablesCell(child: Text(" + name + "Localizations.of(context)." + fieldName + "));\n")
 		dst.Code("\t\t\t\t},\n")
@@ -156,14 +167,13 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Code(" }\"));\n")
 		}
 		dst.Code("\t\t\t\t},\n")
-		dst.Code("\t\t\t),\n")
+		dst.Code("\t\t\t);\n")
 		lang.Add(fieldName, field.Tags)
 		return nil
 	})
 	if err != nil {
 		return
 	}
-	dst.Code("\t\t];\n")
 
 	dst.Code("\t\tbuilder?.call(this);\n")
 	dst.Code("\t\treturn tables.build(context);\n")

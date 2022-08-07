@@ -82,14 +82,14 @@ func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 	//dst.Code("}\n\n")
 }
 
-type auth map[string]string
+type Tag map[string]string
 
-func (b *Builder) getAuth(tags []*ast.Tag) *auth {
-	val, ok := build.GetTag(tags, "auth")
+func (b *Builder) getTag(tags []*ast.Tag) *Tag {
+	val, ok := build.GetTag(tags, "tag")
 	if !ok {
 		return nil
 	}
-	au := make(auth, 0)
+	au := make(Tag, 0)
 	if nil != val.KV {
 		for _, item := range val.KV {
 			au[item.Name.Name] = item.Value.Value[1 : len(item.Value.Value)-1]
@@ -134,7 +134,7 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 		dst.Code("\t\t\t\t},\n")
 		dst.Code("\t\t\t\tSetInfo: func(ctx context.Context)  {\n")
 
-		au := b.getAuth(method.Tags)
+		au := b.getTag(method.Tags)
 		if nil != au {
 			for key, val := range *au {
 				dst.Code("\t\t\t\t\thbuf.SetTag(ctx, \"" + key + "\", \"" + val + "\")\n")

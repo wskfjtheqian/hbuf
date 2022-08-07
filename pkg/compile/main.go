@@ -6,6 +6,7 @@ import (
 	"hbuf/pkg/build"
 	"hbuf/pkg/dart"
 	"hbuf/pkg/golang"
+	"log"
 )
 
 func main() {
@@ -19,17 +20,16 @@ func main() {
 	flag.Parse()
 
 	if nil == out || 0 == len(*out) {
-
+		log.Fatalln("Output directory not found")
 	}
 	if nil == in || 0 == len(*in) {
-
+		log.Fatalln("Input file not found")
 	}
 	if nil == pack || 0 == len(*pack) {
 
 	}
 	if nil == typ || 0 == len(*typ) {
-		fmt.Println(fmt.Errorf("Not find type"))
-		return
+		log.Fatalln("Build type not found")
 	}
 	if !build.CheckType(*typ) {
 		fmt.Println(fmt.Errorf("Type error : %s", *typ))

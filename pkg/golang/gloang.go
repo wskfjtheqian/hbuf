@@ -22,6 +22,9 @@ type GoWriter struct {
 	enum     *build.Writer
 	server   *build.Writer
 	database *build.Writer
+	verify   *build.Writer
+	cache    *build.Writer
+
 	packages string
 }
 
@@ -30,6 +33,7 @@ func (w *GoWriter) SetPackages(s string) {
 	w.enum.Packages = s
 	w.server.Packages = s
 	w.database.Packages = s
+	w.verify.Packages = s
 	w.packages = s
 }
 
@@ -39,6 +43,7 @@ func NewGoWriter() *GoWriter {
 		enum:     build.NewWriter(),
 		server:   build.NewWriter(),
 		database: build.NewWriter(),
+		verify:   build.NewWriter(),
 	}
 }
 
@@ -93,6 +98,12 @@ func Build(file *ast.File, fset *token.FileSet, param *build.Param) error {
 	}
 	if 0 < dst.database.GetCode().Len() {
 		err = b.writerFile(dst.database, dst.database.Packages, filepath.Join(dir, name+".database.go"))
+		if err != nil {
+			return err
+		}
+	}
+	if 0 < dst.verify.GetCode().Len() {
+		err = b.writerFile(dst.verify, dst.verify.Packages, filepath.Join(dir, name+".verify.go"))
 		if err != nil {
 			return err
 		}
@@ -172,6 +183,7 @@ func (b *Builder) printTypeSpec(dst *GoWriter, expr ast.Expr) {
 	case *ast.DataType:
 		b.printDataCode(dst.data, expr.(*ast.DataType))
 		b.printDatabaseCode(dst.database, expr.(*ast.DataType))
+		b.printVerifyCode(dst.verify, expr.(*ast.DataType))
 	case *ast.ServerType:
 		b.printServerCode(dst.server, expr.(*ast.ServerType))
 

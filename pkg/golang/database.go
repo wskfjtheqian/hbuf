@@ -38,6 +38,7 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 		return nil
 	}
 
+	c := getCache(typ.Name.Name, typ.Tags)
 	if !dbs[0].Table {
 		return nil
 	}
@@ -46,7 +47,7 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 	}
 
 	if fDbs[0].Find {
-		b.printFindData(dst, typ, dbs[0], fields, fType, fFields)
+		b.printFindData(dst, typ, dbs[0], fields, fType, fFields, nil != c)
 	}
 
 	if fDbs[0].Count {
@@ -414,7 +415,7 @@ func (b *Builder) printDeleteData(dst *build.Writer, typ *ast.DataType, db *buil
 	dst.Code("}\n\n")
 }
 
-func (b *Builder) printFindData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, fType *ast.DataType, fFields []*build.DBField) {
+func (b *Builder) printFindData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, fType *ast.DataType, fFields []*build.DBField, isCache bool) {
 	fName := build.StringToHumpName(fType.Name.Name)
 	dName := build.StringToHumpName(typ.Name.Name)
 
@@ -425,6 +426,12 @@ func (b *Builder) printFindData(dst *build.Writer, typ *ast.DataType, db *build.
 	item, scan, _ := b.getItemAndValue(fields)
 
 	dst.Code("func DbFind" + fName + "(ctx context.Context, " + p.GetCode().String() + ") ([]" + dName + ", error) {\n")
+	if isCache {
+		dst.Code("\tlist, err := CacheFindMerchantLogin(ctx)\n")
+		dst.Code("\tif err == nil {\n")
+		dst.Code("\t	return *list, nil\n")
+		dst.Code("\t}\n")
+	}
 	dst.Code("\tsql := strings.Builder{}\n")
 	dst.Code("\tvar param []interface{}\n")
 	dst.Code("\tsql.WriteString(\"SELECT " + item.String() + " FROM " + db.Name + " WHERE del_time IS  NULL\")\n")
@@ -445,6 +452,9 @@ func (b *Builder) printFindData(dst *build.Writer, typ *ast.DataType, db *build.
 	dst.Code("		}\n")
 	dst.Code("		ret = append(ret, val)\n")
 	dst.Code("	}\n")
+	if isCache {
+		dst.Code("	_ = CacheSetFindMerchantLogin(ctx, &ret)\n")
+	}
 	dst.Code("	return ret, nil\n")
 	dst.Code("}\n")
 	dst.Code("\n")

@@ -50,17 +50,10 @@ func (b *Builder) printCacheCode(dst *build.Writer, typ *ast.DataType) error {
 	}
 
 	dst.Import("context", "")
-	dst.Import("encoding/json", "")
 	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/cache", "")
-	dst.Import("math/rand", "")
-	dst.Import("strconv", "")
 	dst.Import("strings", "")
 
-	b.printCacheSet(dst)
-	b.printCacheGet(dst)
-	b.printCacheDel(dst)
-
-	dbs, fields, _, err := b.getDBField(typ)
+	dbs, fields, key, err := b.getDBField(typ)
 	if 0 == len(dbs) || nil != err {
 		return nil
 	}
@@ -96,89 +89,115 @@ func (b *Builder) printCacheCode(dst *build.Writer, typ *ast.DataType) error {
 	}
 
 	if fDbs[0].Count {
-		//b.printCacheCountData(dst, typ, dbs[0], fields, fType, fFields)
+		b.printCacheCountData(dst, typ, dbs[0], fields, fType, fFields)
 	}
 
 	if fDbs[0].Get {
-		//b.printCacheGetData(dst, typ, dbs[0], fields, fType, fFields)
+		if typ == fType {
+			key.Dbs[0].Where = "AND id = ?"
+			fFields = []*build.DBField{key}
+		}
+		b.printCacheGetData(dst, typ, dbs[0], fields, fType, fFields)
 	}
+	b.printCacheDelData(dst, typ, dbs[0], fields, fType, fFields)
 	return nil
+}
+
+func (b *Builder) printCacheDelData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, fType *ast.DataType, fFields []*build.DBField) {
+	fName := build.StringToHumpName(fType.Name.Name)
+
+	dst.Code("func CacheDel" + fName + "(ctx context.Context) error {\n")
+	dst.Code("\tkey := strings.Builder{}\n")
+	dst.Code("\tkey.WriteString(\"db/cache/" + db.Name + "/*\")\n")
+	dst.Code("\treturn cache.CacheDel(ctx, key.String())\n")
+	dst.Code("}\n")
+	dst.Code("\n")
+
+}
+
+func (b *Builder) printCacheGetData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, fType *ast.DataType, fFields []*build.DBField) {
+	fName := build.StringToHumpName(fType.Name.Name)
+	dName := build.StringToHumpName(typ.Name.Name)
+
+	p, w, _, t := b.getParamWhere(dst, fFields, true)
+	dst.AddImports(p.GetImports())
+	dst.AddImports(w.GetImports())
+	dst.AddImports(t.GetImports())
+	dst.Import("crypto/md5", "")
+	dst.Import("encoding/hex", "")
+
+	dst.Code("func CacheGetGet" + fName + "(ctx context.Context, " + p.GetCode().String() + ") (*" + dName + ", error) {\n")
+	dst.Code("\tkey := strings.Builder{}\n")
+	dst.Code(t.GetCode().String())
+	dst.Code("\tdata := md5.Sum([]byte(key.String()))\n")
+	dst.Code("\treturn cache.CacheGet(ctx, \"db/cache/" + db.Name + "/get_" + build.StringToUnderlineName(fType.Name.Name) + "/\"+hex.EncodeToString(data[:]), &" + dName + "{})\n")
+	dst.Code("}\n")
+	dst.Code("\n")
+
+	dst.Code("func CacheSetGet" + fName + "(ctx context.Context, val *" + dName + ", " + p.GetCode().String() + ") error {\n")
+	dst.Code("\tkey := strings.Builder{}\n")
+	dst.Code(t.GetCode().String())
+	dst.Code("\tdata := md5.Sum([]byte(key.String()))\n")
+	dst.Code("\treturn cache.CacheSet(ctx, \"db/cache/" + db.Name + "/get_" + build.StringToUnderlineName(fType.Name.Name) + "/\"+hex.EncodeToString(data[:]), val)\n")
+	dst.Code("}\n")
+	dst.Code("\n")
+
 }
 
 func (b *Builder) printCacheFindData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, fType *ast.DataType, fFields []*build.DBField) {
 	fName := build.StringToHumpName(fType.Name.Name)
 	dName := build.StringToHumpName(typ.Name.Name)
 
-	p, w := b.getParamWhere(dst, fFields, true)
+	p, w, _, t := b.getParamWhere(dst, fFields, true)
 	dst.AddImports(p.GetImports())
 	dst.AddImports(w.GetImports())
+	dst.AddImports(t.GetImports())
+	dst.Import("crypto/md5", "")
+	dst.Import("encoding/hex", "")
 
-	//item, scan, _ := b.getItemAndValue(fields)
-
-	dst.Code("func CacheFind" + fName + "(ctx context.Context, " + p.GetCode().String() + ") (*[]" + dName + ", error) {\n")
+	dst.Code("func CacheGetFind" + fName + "(ctx context.Context, " + p.GetCode().String() + ") (*[]" + dName + ", error) {\n")
 	dst.Code("\tkey := strings.Builder{}\n")
-	dst.Code("\tkey.WriteString(\"db/cache/merchant_login/find_merchant_login/\")\n")
-	dst.Code("\treturn CacheGet(ctx, key.String(), &[]MerchantLogin{})\n")
+	dst.Code(t.GetCode().String())
+	dst.Code("\tdata := md5.Sum([]byte(key.String()))\n")
+	dst.Code("\treturn cache.CacheGet(ctx, \"db/cache/" + db.Name + "/find_" + build.StringToUnderlineName(fType.Name.Name) + "/\"+hex.EncodeToString(data[:]), &[]" + dName + "{})\n")
 	dst.Code("}\n")
 	dst.Code("\n")
 
 	dst.Code("func CacheSetFind" + fName + "(ctx context.Context, val *[]" + dName + ", " + p.GetCode().String() + ") error {\n")
 	dst.Code("\tkey := strings.Builder{}\n")
-	dst.Code("\tkey.WriteString(\"db/cache/merchant_login/find_merchant_login/\")\n")
-	dst.Code("\treturn CacheSet(ctx, key.String(), val)\n")
+	dst.Code(t.GetCode().String())
+	dst.Code("\tdata := md5.Sum([]byte(key.String()))\n")
+	dst.Code("\treturn cache.CacheSet(ctx, \"db/cache/" + db.Name + "/find_" + build.StringToUnderlineName(fType.Name.Name) + "/\"+hex.EncodeToString(data[:]), val)\n")
 	dst.Code("}\n")
 	dst.Code("\n")
 
 }
 
-func (b *Builder) printCacheSet(dst *build.Writer) {
-	dst.Code("func CacheSet(ctx context.Context, key string, value any) error {\n")
-	dst.Code("	marshal, err := json.Marshal(value)\n")
-	dst.Code("	if err != nil {\n")
-	dst.Code("		return nil\n")
-	dst.Code("	}\n")
-	dst.Code("	c := cache.GET(ctx)\n")
-	dst.Code("	err = c.Send(\"SET\", key, string(marshal))\n")
-	dst.Code("	if err != nil {\n")
-	dst.Code("		return nil\n")
-	dst.Code("	}\n")
-	dst.Code("	e := rand.Intn(3000-2000) + 2000\n")
-	dst.Code("	err = c.Send(\"EXPIRE\", key, strconv.Itoa(e))\n")
-	dst.Code("	if err != nil {\n")
-	dst.Code("		return err\n")
-	dst.Code("	}\n")
-	dst.Code("	return c.Flush()\n")
-	dst.Code("}\n\n")
-}
+func (b *Builder) printCacheCountData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, fType *ast.DataType, fFields []*build.DBField) {
+	fName := build.StringToHumpName(fType.Name.Name)
 
-func (b *Builder) printCacheGet(dst *build.Writer) {
-	dst.Code("func CacheGet[T any](ctx context.Context, key string, value *T) (*T, error) {\n")
-	dst.Code("	reply, err := cache.GET(ctx).Do(\"GET\", key)\n")
-	dst.Code("	if err != nil {\n")
-	dst.Code("		return nil, err\n")
-	dst.Code("	}\n")
-	dst.Code("\terr = json.Unmarshal(reply.([]uint8), value)\n")
-	dst.Code("\tif err != nil {\n")
-	dst.Code("\t	return nil, err\n")
-	dst.Code("\t}\n")
-	dst.Code("	return value, nil\n")
-	dst.Code("}\n\n")
-}
+	p, w, _, t := b.getParamWhere(dst, fFields, false)
+	dst.AddImports(p.GetImports())
+	dst.AddImports(w.GetImports())
+	dst.AddImports(t.GetImports())
+	dst.Import("crypto/md5", "")
+	dst.Import("encoding/hex", "")
 
-func (b *Builder) printCacheDel(dst *build.Writer) {
-	dst.Code("func CacheDel(ctx context.Context, key string) error {\n")
-	dst.Code("	c := cache.GET(ctx)\n")
-	dst.Code("	reply, err := c.Do(\"KEYS\", key)\n")
-	dst.Code("	if err != nil {\n")
-	dst.Code("		return err\n")
-	dst.Code("	}\n")
-	dst.Code("	if 0 == len(reply.([]any)) {\n")
-	dst.Code("		return nil\n")
-	dst.Code("	}\n")
-	dst.Code("	err = c.Send(\"DEL\", reply.([]any))\n")
-	dst.Code("	if err != nil {\n")
-	dst.Code("		return err\n")
-	dst.Code("	}\n")
-	dst.Code("	return c.Flush()\n")
-	dst.Code("}\n\n")
+	dst.Code("func CacheGetCount" + fName + "(ctx context.Context, " + p.GetCode().String() + ") (*int64, error) {\n")
+	dst.Code("\tkey := strings.Builder{}\n")
+	dst.Code(t.GetCode().String())
+	dst.Code("\tvar count int64\n")
+	dst.Code("\tdata := md5.Sum([]byte(key.String()))\n")
+	dst.Code("\treturn cache.CacheGet(ctx, \"db/cache/" + db.Name + "/count_" + build.StringToUnderlineName(fType.Name.Name) + "/\"+hex.EncodeToString(data[:]), &count)\n")
+	dst.Code("}\n")
+	dst.Code("\n")
+
+	dst.Code("func CacheSetCount" + fName + "(ctx context.Context, val *int64, " + p.GetCode().String() + ") error {\n")
+	dst.Code("\tkey := strings.Builder{}\n")
+	dst.Code(t.GetCode().String())
+	dst.Code("\tdata := md5.Sum([]byte(key.String()))\n")
+	dst.Code("\treturn cache.CacheSet(ctx, \"db/cache/" + db.Name + "/count_" + build.StringToUnderlineName(fType.Name.Name) + "/\"+hex.EncodeToString(data[:]), val)\n")
+	dst.Code("}\n")
+	dst.Code("\n")
+
 }

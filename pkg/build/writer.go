@@ -8,6 +8,16 @@ type Writer struct {
 	Path     string
 	Packages string
 	lang     map[string]*Language
+	maps     map[string]interface{}
+}
+
+func (w *Writer) SetValue(key string, val interface{}) {
+	w.maps[key] = val
+}
+
+func (w *Writer) GetValue(key string) (interface{}, bool) {
+	val, ok := w.maps[key]
+	return val, ok
 }
 
 func (w *Writer) Import(text string, s string) {
@@ -61,5 +71,6 @@ func NewWriter() *Writer {
 		imp:  map[string]string{},
 		code: &strings.Builder{},
 		lang: map[string]*Language{},
+		maps: map[string]interface{}{},
 	}
 }

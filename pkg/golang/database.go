@@ -1,5 +1,6 @@
 package golang
 
+import "C"
 import (
 	"hbuf/pkg/ast"
 	"hbuf/pkg/build"
@@ -15,6 +16,8 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 	if 0 == len(dbs) || nil != err {
 		return nil
 	}
+
+	c := getCache(typ.Name.Name, typ.Tags)
 
 	fDbs := dbs
 	fFields := fields
@@ -38,7 +41,6 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 		return nil
 	}
 
-	c := getCache(typ.Name.Name, typ.Tags)
 	if !dbs[0].Table {
 		return nil
 	}
@@ -51,31 +53,31 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 	}
 
 	if fDbs[0].Count {
-		b.printCountData(dst, typ, dbs[0], fields, fType, fFields)
+		b.printCountData(dst, typ, dbs[0], fields, fType, fFields, nil != c)
 	}
 
 	if fDbs[0].Del {
-		b.printDeleteData(dst, typ, dbs[0], fields, key)
+		b.printDeleteData(dst, typ, dbs[0], fields, key, nil != c)
 	}
 
 	if fDbs[0].Remove {
-		b.printRemoveData(dst, typ, dbs[0], fields, key)
+		b.printRemoveData(dst, typ, dbs[0], fields, key, nil != c)
 	}
 
 	if fDbs[0].Insert {
-		b.printInsertData(dst, typ, dbs[0], fields, key)
+		b.printInsertData(dst, typ, dbs[0], fields, key, nil != c)
 	}
 
 	if fDbs[0].Inserts {
-		b.printInsertListData(dst, typ, dbs[0], fields, key)
+		b.printInsertListData(dst, typ, dbs[0], fields, key, nil != c)
 	}
 
 	if fDbs[0].Update {
-		b.printUpdateData(dst, typ, dbs[0], fields, key)
+		b.printUpdateData(dst, typ, dbs[0], fields, key, nil != c)
 	}
 
 	if fDbs[0].Set {
-		b.printSetData(dst, typ, dbs[0], fields, key)
+		b.printSetData(dst, typ, dbs[0], fields, key, nil != c)
 	}
 
 	if fDbs[0].Get {
@@ -83,7 +85,7 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 			key.Dbs[0].Where = "AND id = ?"
 			fFields = []*build.DBField{key}
 		}
-		b.printGetData(dst, typ, dbs[0], fields, fType, fFields)
+		b.printGetData(dst, typ, dbs[0], fields, fType, fFields, nil != c)
 	}
 	return nil
 }
@@ -146,23 +148,33 @@ func (b *Builder) getItemAndValue(fields []*build.DBField) (strings.Builder, str
 
 }
 
-func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page bool) (*build.Writer, *build.Writer) {
+func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page bool) (*build.Writer, *build.Writer, *build.Writer, *build.Writer) {
 	param := build.NewWriter()
 	param.Packages = dst.Packages
 	where := build.NewWriter()
 	where.Packages = dst.Packages
+	caches := build.NewWriter()
+	caches.Packages = dst.Packages
+	texts := build.NewWriter()
+	texts.Import("fmt", "")
+	texts.Packages = dst.Packages
 
 	isFist := true
 	for _, field := range fields {
 		text := field.Dbs[0].Where
 		if 0 < len(text) {
 			if !isFist {
+				caches.Code(", ")
 				param.Code(", ")
+
 			}
 			isFist = false
+			caches.Code(build.StringToFirstLower(field.Field.Name.Name))
 			param.Code(build.StringToFirstLower(field.Field.Name.Name))
 			param.Code(" ")
 			b.printType(param, field.Field.Type, false)
+			texts.Code("\tkey.WriteString(\"&" + build.StringToUnderlineName(field.Field.Name.Name) + "=\")\n")
+			texts.Code("\tkey.WriteString(fmt.Sprint(" + build.StringToFirstLower(field.Field.Name.Name) + "))\n")
 
 			if build.IsNil(field.Field.Type) {
 				where.Code("\tif nil != " + build.StringToFirstLower(field.Field.Name.Name) + " {\n")
@@ -177,20 +189,28 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 		if limit, ok := b.getLimit(fields); ok {
 			if !isFist {
 				param.Code(", ")
+				caches.Code(", ")
 			}
 			isFist = false
+			caches.Code(build.StringToFirstLower(limit.Field.Name.Name))
 			param.Code(build.StringToFirstLower(limit.Field.Name.Name))
 			param.Code(" ")
 			b.printType(param, limit.Field.Type, false)
+			texts.Code("\tkey.WriteString(\"&" + build.StringToUnderlineName(limit.Field.Name.Name) + "=\")\n")
+			texts.Code("\tkey.WriteString(fmt.Sprint(" + build.StringToFirstLower(limit.Field.Name.Name) + "))\n")
 
 			if offset, ok := b.getOffset(fields); ok {
 				if !isFist {
+					caches.Code(", ")
 					param.Code(", ")
 				}
 				isFist = false
+				caches.Code(build.StringToFirstLower(offset.Field.Name.Name))
 				param.Code(build.StringToFirstLower(offset.Field.Name.Name))
 				param.Code(" ")
 				b.printType(param, offset.Field.Type, false)
+				texts.Code("\tkey.WriteString(\"&" + build.StringToUnderlineName(offset.Field.Name.Name) + "=\")\n")
+				texts.Code("\tkey.WriteString(fmt.Sprint(" + build.StringToFirstLower(offset.Field.Name.Name) + "))\n")
 
 				where.Code("\tsql.WriteString(\" LIMIT " + offset.Dbs[0].Offset + ", " + limit.Dbs[0].Limit + "\")\n")
 				where.Code("\tparam = append(param," + build.StringToFirstLower(offset.Field.Name.Name) + ", " + build.StringToFirstLower(limit.Field.Name.Name) + " )\n")
@@ -200,7 +220,7 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 			}
 		}
 	}
-	return param, where
+	return param, where, caches, texts
 }
 
 func (b *Builder) printWhere(where *build.Writer, text string, field *build.DBField) {
@@ -237,17 +257,24 @@ func (b *Builder) printWhere(where *build.Writer, text string, field *build.DBFi
 	where.Code(")\n")
 }
 
-func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, fType *ast.DataType, fFields []*build.DBField) {
+func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, fType *ast.DataType, fFields []*build.DBField, isCache bool) {
 	fName := build.StringToHumpName(fType.Name.Name)
 	dName := build.StringToHumpName(typ.Name.Name)
 
-	p, w := b.getParamWhere(dst, fFields, false)
+	p, w, c, _ := b.getParamWhere(dst, fFields, false)
 	dst.AddImports(p.GetImports())
 	dst.AddImports(w.GetImports())
+	dst.AddImports(c.GetImports())
 
 	item, scan, _ := b.getItemAndValue(fields)
 
 	dst.Code("func DbGet" + fName + "(ctx context.Context, " + p.GetCode().String() + ") (*" + dName + ", error) {\n")
+	if isCache {
+		dst.Code("\tcv, err := CacheGetGet" + fName + "(ctx," + c.GetCode().String() + ")\n")
+		dst.Code("\tif cv != nil {\n")
+		dst.Code("\t	return cv, nil\n")
+		dst.Code("\t}\n")
+	}
 	dst.Code("\tsql := strings.Builder{}\n")
 	dst.Code("\tvar param []interface{}\n")
 	dst.Code("\tsql.WriteString(\"SELECT " + item.String() + " FROM " + db.Name + " WHERE del_time IS  NULL\")\n")
@@ -269,17 +296,23 @@ func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, db *build.D
 	dst.Code("	if err != nil {\n")
 	dst.Code("		return nil, err\n")
 	dst.Code("	}\n")
+	if isCache {
+		dst.Code("	_ = CacheSetGet" + fName + "(ctx, &val, " + c.GetCode().String() + ")\n")
+	}
 	dst.Code("	return &val, nil\n")
 	dst.Code("}\n\n")
 }
 
-func (b *Builder) printInsertData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField) {
+func (b *Builder) printInsertData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField, isCache bool) {
 	dst.Import("strings", "")
 	name := build.StringToHumpName(typ.Name.Name)
 	dst.Code("func DbInsert" + name + "(ctx context.Context, val *" + name + ") (int, error) {\n")
 	dst.Code("	if nil == val {\n")
 	dst.Code("		return 0, nil\n")
 	dst.Code("	}\n")
+	if isCache {
+		dst.Code("\t_ = CacheDel" + name + "(ctx)\n")
+	}
 	dst.Code("	value := strings.Builder{}\n")
 	dst.Code("	ques := strings.Builder{}\n")
 	dst.Code("	var param []interface{}\n\n")
@@ -314,7 +347,7 @@ func (b *Builder) printInsertData(dst *build.Writer, typ *ast.DataType, db *buil
 	dst.Code("}\n\n")
 }
 
-func (b *Builder) printInsertListData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField) {
+func (b *Builder) printInsertListData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField, isCache bool) {
 	dst.Import("strings", "")
 	name := build.StringToHumpName(typ.Name.Name)
 	item, scan, ques := b.getItemAndValue(fields)
@@ -322,6 +355,9 @@ func (b *Builder) printInsertListData(dst *build.Writer, typ *ast.DataType, db *
 	dst.Code("	if nil == val || 0 == len(val) {\n")
 	dst.Code("		return 0, nil\n")
 	dst.Code("	}\n")
+	if isCache {
+		dst.Code("\t_ = CacheDel" + name + "(ctx)\n")
+	}
 	dst.Code("	value := strings.Builder{}\n")
 	dst.Code("	var param []interface{}\n")
 	dst.Code("	value.Write([]byte(`INSERT INTO " + db.Name + "(")
@@ -343,9 +379,12 @@ func (b *Builder) printInsertListData(dst *build.Writer, typ *ast.DataType, db *
 	dst.Code("}\n\n")
 }
 
-func (b *Builder) printUpdateData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField) {
+func (b *Builder) printUpdateData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField, isCache bool) {
 	name := build.StringToHumpName(typ.Name.Name)
 	dst.Code("func DbUpdate" + name + "(ctx context.Context, val *" + name + ") (int, error) {\n")
+	if isCache {
+		dst.Code("\t_ = CacheDel" + name + "(ctx)\n")
+	}
 	dst.Code("	value := strings.Builder{}\n")
 	dst.Code("	var param []interface{}\n\n")
 	for _, field := range fields {
@@ -381,13 +420,15 @@ func (b *Builder) printUpdateData(dst *build.Writer, typ *ast.DataType, db *buil
 	dst.Code("}\n\n")
 }
 
-func (b *Builder) printRemoveData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField) {
+func (b *Builder) printRemoveData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField, isCache bool) {
 	name := build.StringToHumpName(typ.Name.Name)
 
 	dst.Code("func DbDel" + name + "(ctx context.Context, " + build.StringToFirstLower(key.Field.Name.Name) + " ")
 	b.printType(dst, key.Field.Type, false)
 	dst.Code(") (int, error) {\n")
-
+	if isCache {
+		dst.Code("\t_ = CacheDel" + name + "(ctx)\n")
+	}
 	dst.Code("	result, err := db.GET(ctx).Exec(`DELETE FROM  " + db.Name + " WHERE " + key.Dbs[0].Name + " = ?`, " + build.StringToFirstLower(key.Field.Name.Name) + ")\n")
 	dst.Code("	if err != nil {\n")
 	dst.Code("		return 0, err\n")
@@ -398,13 +439,15 @@ func (b *Builder) printRemoveData(dst *build.Writer, typ *ast.DataType, db *buil
 	dst.Code("}\n\n")
 }
 
-func (b *Builder) printDeleteData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField) {
+func (b *Builder) printDeleteData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField, isCache bool) {
 	name := build.StringToHumpName(typ.Name.Name)
 
 	dst.Code("func DbDel" + name + "(ctx context.Context, " + build.StringToFirstLower(key.Field.Name.Name) + " ")
 	b.printType(dst, key.Field.Type, false)
 	dst.Code(") (int, error) {\n")
-
+	if isCache {
+		dst.Code("\t_ = CacheDel" + name + "(ctx)\n")
+	}
 	dst.Code("	result, err := db.GET(ctx).Exec(`UPDATE " + db.Name + " SET del_time = NOW() WHERE " + key.Dbs[0].Name + " = ?`, " + build.StringToFirstLower(key.Field.Name.Name) + ")\n")
 	dst.Code("	if err != nil {\n")
 	dst.Code("		return 0, err\n")
@@ -419,16 +462,17 @@ func (b *Builder) printFindData(dst *build.Writer, typ *ast.DataType, db *build.
 	fName := build.StringToHumpName(fType.Name.Name)
 	dName := build.StringToHumpName(typ.Name.Name)
 
-	p, w := b.getParamWhere(dst, fFields, true)
+	p, w, c, _ := b.getParamWhere(dst, fFields, true)
 	dst.AddImports(p.GetImports())
 	dst.AddImports(w.GetImports())
+	dst.AddImports(c.GetImports())
 
 	item, scan, _ := b.getItemAndValue(fields)
 
 	dst.Code("func DbFind" + fName + "(ctx context.Context, " + p.GetCode().String() + ") ([]" + dName + ", error) {\n")
 	if isCache {
-		dst.Code("\tlist, err := CacheFindMerchantLogin(ctx)\n")
-		dst.Code("\tif err == nil {\n")
+		dst.Code("\tlist, err := CacheGetFind" + fName + "(ctx," + c.GetCode().String() + ")\n")
+		dst.Code("\tif list != nil {\n")
 		dst.Code("\t	return *list, nil\n")
 		dst.Code("\t}\n")
 	}
@@ -453,21 +497,29 @@ func (b *Builder) printFindData(dst *build.Writer, typ *ast.DataType, db *build.
 	dst.Code("		ret = append(ret, val)\n")
 	dst.Code("	}\n")
 	if isCache {
-		dst.Code("	_ = CacheSetFindMerchantLogin(ctx, &ret)\n")
+		dst.Code("	_ = CacheSetFind" + fName + "(ctx, &ret, " + c.GetCode().String() + ")\n")
 	}
 	dst.Code("	return ret, nil\n")
 	dst.Code("}\n")
 	dst.Code("\n")
 }
 
-func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, fType *ast.DataType, fFields []*build.DBField) {
+func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, fType *ast.DataType, fFields []*build.DBField, isCache bool) {
 	fName := build.StringToHumpName(fType.Name.Name)
 
-	p, w := b.getParamWhere(dst, fFields, false)
+	p, w, c, _ := b.getParamWhere(dst, fFields, false)
 	dst.AddImports(p.GetImports())
 	dst.AddImports(w.GetImports())
+	dst.AddImports(c.GetImports())
 
 	dst.Code("func DbCount" + fName + "(ctx context.Context, " + p.GetCode().String() + ") (int64, error) {\n")
+	if isCache {
+		dst.Code("\tc, err := CacheGetCount" + fName + "(ctx," + c.GetCode().String() + ")\n")
+		dst.Code("\tif c != nil {\n")
+		dst.Code("\t	return *c, nil\n")
+		dst.Code("\t}\n")
+	}
+
 	dst.Code("\tsql := strings.Builder{}\n")
 	dst.Code("\tvar param []interface{}\n")
 	dst.Code("\tsql.WriteString(\"SELECT COUNT(1) FROM " + db.Name + " WHERE del_time IS  NULL\")\n")
@@ -487,15 +539,21 @@ func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build
 	dst.Code("	if err != nil {\n")
 	dst.Code("		return 0, err\n")
 	dst.Code("	}\n")
+	if isCache {
+		dst.Code("	_ = CacheSetCount" + fName + "(ctx, &count, " + c.GetCode().String() + ")\n")
+	}
 	dst.Code("	return count, nil\n")
 	dst.Code("}\n")
 	dst.Code("\n")
 }
 
-func (b *Builder) printSetData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField) {
+func (b *Builder) printSetData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField, isCache bool) {
 	name := build.StringToHumpName(typ.Name.Name)
 
 	dst.Code("func DbSet" + name + "(ctx context.Context, val *" + name + ") (int, error) {\n")
+	if isCache {
+		dst.Code("\t_ = CacheDel" + name + "(ctx)\n")
+	}
 	dst.Code("	result, err := db.GET(ctx).Exec(`UPDATE  " + db.Name + " SET ")
 	isFist := true
 	values := strings.Builder{}

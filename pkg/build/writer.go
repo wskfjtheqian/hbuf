@@ -1,11 +1,14 @@
 package build
 
-import "strings"
+import (
+	"hbuf/pkg/ast"
+	"strings"
+)
 
 type Writer struct {
 	imp      map[string]string
 	code     *strings.Builder
-	Path     string
+	File     *ast.File
 	Packages string
 	lang     map[string]*Language
 	maps     map[string]interface{}

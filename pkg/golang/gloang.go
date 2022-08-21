@@ -38,6 +38,15 @@ func (w *GoWriter) SetPackages(s string) {
 	w.packages = s
 }
 
+func (w *GoWriter) SetPath(file *ast.File) {
+	w.data.File = file
+	w.enum.File = file
+	w.server.File = file
+	w.database.File = file
+	w.verify.File = file
+	w.cache.File = file
+}
+
 func NewGoWriter() *GoWriter {
 	return &GoWriter{
 		data:     build.NewWriter(),
@@ -51,12 +60,14 @@ func NewGoWriter() *GoWriter {
 
 type Builder struct {
 	build    *build.Builder
+	pkg      *ast.Package
 	packages string
 }
 
 func Build(file *ast.File, fset *token.FileSet, param *build.Param) error {
 	b := Builder{
 		build: param.GetBuilder(),
+		pkg:   param.GetPkg(),
 	}
 	b.packages = param.GetPack()
 	dst := NewGoWriter()
@@ -174,6 +185,7 @@ func (b *Builder) Node(dst *GoWriter, fset *token.FileSet, node interface{}) err
 		return nil
 	}
 
+	dst.SetPath(file)
 	dst.SetPackages(val.Value.Value[1 : len(val.Value.Value)-1])
 
 	for _, s := range file.Specs {

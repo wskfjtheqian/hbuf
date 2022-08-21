@@ -59,6 +59,7 @@ type Param struct {
 	out   string
 	pack  string
 	build *Builder
+	pkg   *ast.Package
 }
 
 func (p *Param) GetOut() string {
@@ -71,6 +72,10 @@ func (p *Param) GetPack() string {
 
 func (p *Param) GetBuilder() *Builder {
 	return p.build
+}
+
+func (p *Param) GetPkg() *ast.Package {
+	return p.pkg
 }
 
 type Builder struct {
@@ -115,6 +120,7 @@ func Build(out string, in string, typ string, pack string) error {
 		_, name := filepath.Split(path)
 		err := build.build(file, build.fset, &Param{
 			out:   filepath.Join(build.param.out, name),
+			pkg:   build.pkg,
 			pack:  build.param.pack,
 			build: build,
 		})

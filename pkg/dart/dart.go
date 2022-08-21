@@ -21,15 +21,17 @@ type DartWriter struct {
 	enum   *build.Writer
 	server *build.Writer
 	ui     *build.Writer
+	verify *build.Writer
 	path   string
 }
 
-func (g *DartWriter) SetPath(s string) {
-	g.path = s
-	g.data.Path = s
-	g.enum.Path = s
-	g.server.Path = s
-	g.ui.Path = s
+func (g *DartWriter) SetPath(s *ast.File) {
+	g.path = s.Path
+	g.data.File = s
+	g.enum.File = s
+	g.server.File = s
+	g.ui.File = s
+	g.verify.File = s
 }
 
 func NewGoWriter() *DartWriter {
@@ -38,16 +40,19 @@ func NewGoWriter() *DartWriter {
 		enum:   build.NewWriter(),
 		server: build.NewWriter(),
 		ui:     build.NewWriter(),
+		verify: build.NewWriter(),
 	}
 }
 
 type Builder struct {
 	lang map[string]struct{}
+	pkg  *ast.Package
 }
 
 func Build(file *ast.File, fset *token.FileSet, param *build.Param) error {
 	b := Builder{
 		lang: map[string]struct{}{},
+		pkg:  param.GetPkg(),
 	}
 	dst := NewGoWriter()
 	err := b.Node(dst, fset, file)
@@ -91,6 +96,44 @@ func Build(file *ast.File, fset *token.FileSet, param *build.Param) error {
 		err = writerFile(dst.ui, filepath.Join(dir, name+".ui.dart"))
 		if err != nil {
 			return err
+		}
+	}
+	if 0 < dst.verify.GetCode().Len() {
+		err = writerFile(dst.verify, filepath.Join(dir, name+".verify.dart"))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (b *Builder) GetDataType(file *ast.File, name string) *ast.Object {
+	if obj := file.Scope.Lookup(name); nil != obj {
+		switch obj.Decl.(type) {
+		case *ast.TypeSpec:
+			t := (obj.Decl.(*ast.TypeSpec)).Type
+			switch t.(type) {
+			case *ast.DataType:
+				return obj
+			case *ast.EnumType:
+				return obj
+			}
+		}
+	}
+	for _, spec := range file.Imports {
+		if f, ok := b.pkg.Files[spec.Path.Value]; ok {
+			if obj := f.Scope.Lookup(name); nil != obj {
+				switch obj.Decl.(type) {
+				case *ast.TypeSpec:
+					t := (obj.Decl.(*ast.TypeSpec)).Type
+					switch t.(type) {
+					case *ast.DataType:
+						return obj
+					case *ast.EnumType:
+						return obj
+					}
+				}
+			}
 		}
 	}
 	return nil
@@ -139,7 +182,7 @@ func (b *Builder) Node(dst *DartWriter, fset *token.FileSet, node interface{}) e
 		}
 	}
 
-	dst.SetPath(file.Path)
+	dst.SetPath(file)
 
 	for _, s := range file.Specs {
 		switch s.(type) {
@@ -156,6 +199,7 @@ func (b *Builder) printTypeSpec(dst *DartWriter, expr ast.Expr) {
 	case *ast.DataType:
 		b.printDataCode(dst.data, expr.(*ast.DataType))
 		b.printFormCode(dst.ui, expr)
+		b.printVerifyCode(dst.verify, expr.(*ast.DataType))
 	case *ast.ServerType:
 		b.printServerCode(dst.server, expr.(*ast.ServerType))
 

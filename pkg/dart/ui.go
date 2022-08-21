@@ -357,6 +357,10 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		if form.onlyRead {
 			onlyRead = "true"
 		}
+		verify, err := build.GetVerify(field.Tags, dst.File, b.GetDataType)
+		if err != nil {
+			return err
+		}
 		if "text" == form.form {
 			dst.Code("\tfinal TextFormBuild " + fieldName + " = TextFormBuild();\n\n")
 			setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName)
@@ -366,6 +370,10 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			b.printFormString(setValue, "val", field.Type, false, form.digit, form.format)
 			setValue.Code(";\n")
 			setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
+			if nil != verify {
+				b.getPackage(dst, typ.Name, "verify")
+				setValue.Code("\t\t" + fieldName + ".validator = (val) => verify" + name + "_" + build.StringToHumpName(fieldName) + "(context, val!);\n")
+			}
 			setValue.Code("\t\t" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n\n")
 
 			fields.Code("\t\t\t" + fieldName + ".build(context),\n")
@@ -381,9 +389,13 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				setValue.Code("\t\t" + fieldName + ".onChanged = (val) => info." + fieldName + " = val!.first.url);\n")
 			}
 			setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
-			setValue.Code("\t\t" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n\n")
 			setValue.Code("\t\t" + fieldName + ".outWidth = " + strconv.FormatFloat(form.width, 'G', -1, 64) + ";\n")
 			setValue.Code("\t\t" + fieldName + ".outHeight = " + strconv.FormatFloat(form.height, 'G', -1, 64) + ";\n")
+			if nil != verify {
+				b.getPackage(dst, typ.Name, "verify")
+				setValue.Code("\t\t" + fieldName + ".validator = (val) => verify" + name + "_" + build.StringToHumpName(fieldName) + "(context, val!);\n")
+			}
+			setValue.Code("\t\t" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n\n")
 			fields.Code("\t\t\t" + fieldName + ".build(context),\n")
 			lang.Add(fieldName, field.Tags)
 
@@ -399,6 +411,10 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			setValue.Code(";\n")
 			setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
 			setValue.Code("\t\t" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n")
+			if nil != verify {
+				b.getPackage(dst, typ.Name, "verify")
+				setValue.Code("\t\t" + fieldName + ".validator = (val) => verify" + name + "_" + build.StringToHumpName(fieldName) + "(context, val!);\n")
+			}
 			setValue.Code("\t\t" + fieldName + ".items = [\n")
 			b.printMenuItem(setValue, field.Type, false)
 			setValue.Code("\t\t];\n\n")

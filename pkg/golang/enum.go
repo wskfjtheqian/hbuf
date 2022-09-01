@@ -20,22 +20,22 @@ func printEnumCode(dst *build.Writer, typ *ast.EnumType) {
 	}
 
 	dst.Code("func (e " + name + ") ToName() string {\n")
-	dst.Code("	switch e {\n")
+	dst.Code("\tswitch e {\n")
 	for _, item := range typ.Items {
-		dst.Code("		case " + name + build.StringToHumpName(item.Name.Name) + ":\n")
-		dst.Code("			return \"" + build.StringToAllUpper(item.Name.Name) + "\"\n")
+		dst.Code("\t\tcase " + name + build.StringToHumpName(item.Name.Name) + ":\n")
+		dst.Code("\t\t\treturn \"" + build.StringToAllUpper(item.Name.Name) + "\"\n")
 	}
-	dst.Code("	}\n")
-	dst.Code("	return \"\"\n")
+	dst.Code("\t}\n")
+	dst.Code("\treturn \"\"\n")
 	dst.Code("}\n\n")
 
 	dst.Code("func (e " + name + ") OfName(name string) " + name + " {\n")
-	dst.Code("	switch name {\n")
+	dst.Code("\tswitch name {\n")
 	for _, item := range typ.Items {
-		dst.Code("		case \"" + build.StringToAllUpper(item.Name.Name) + "\":\n")
-		dst.Code("			return " + name + build.StringToHumpName(item.Name.Name) + "\n")
+		dst.Code("\t\tcase \"" + build.StringToAllUpper(item.Name.Name) + "\":\n")
+		dst.Code("\t\t\treturn " + name + build.StringToHumpName(item.Name.Name) + "\n")
 	}
-	dst.Code("	}\n")
-	dst.Code("	return 0\n")
+	dst.Code("\t}\n")
+	dst.Code("\treturn 0\n")
 	dst.Code("}\n")
 }

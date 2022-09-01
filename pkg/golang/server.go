@@ -101,20 +101,20 @@ func (b *Builder) getTag(tags []*ast.Tag) *Tag {
 func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 	serverName := build.StringToHumpName(typ.Name.Name)
 	dst.Code("type " + serverName + "Router struct {\n")
-	dst.Code("	server " + serverName + "\n")
-	dst.Code("	names  map[string]*hbuf.ServerInvoke\n")
+	dst.Code("\tserver " + serverName + "\n")
+	dst.Code("\tnames  map[string]*hbuf.ServerInvoke\n")
 	dst.Code("}\n\n")
 
 	dst.Code("func (p *" + serverName + "Router) GetName() string {\n")
-	dst.Code("	return \"" + build.StringToUnderlineName(typ.Name.Name) + "\"\n")
+	dst.Code("\treturn \"" + build.StringToUnderlineName(typ.Name.Name) + "\"\n")
 	dst.Code("}\n\n")
 
 	dst.Code("func (p *" + serverName + "Router) GetId() uint32 {\n")
-	dst.Code("	return 1\n")
+	dst.Code("\treturn 1\n")
 	dst.Code("}\n\n")
 
 	dst.Code("func (p *" + serverName + "Router) GetInvoke() map[string]*hbuf.ServerInvoke {\n")
-	dst.Code("	return p.names\n")
+	dst.Code("\treturn p.names\n")
 	dst.Code("}\n\n")
 
 	dst.Code("func New" + serverName + "Router(server " + serverName + ") *" + serverName + "Router {\n")
@@ -152,8 +152,8 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 	if err != nil {
 		return
 	}
-	dst.Code("		},\n")
-	dst.Code("	}\n")
+	dst.Code("\t\t},\n")
+	dst.Code("\t}\n")
 	dst.Code("}\n\n")
 }
 
@@ -161,14 +161,14 @@ func (b *Builder) printGetServerRouter(dst *build.Writer, typ *ast.ServerType) {
 	serverName := build.StringToHumpName(typ.Name.Name)
 
 	dst.Code("func Get" + serverName + "(server hbuf.GetServer) (" + serverName + ", error) {\n")
-	dst.Code("	router := server.Get(&" + serverName + "Router{})\n")
-	dst.Code("	if nil == router {\n")
-	dst.Code("		return nil, errors.New(\"Not find server\")\n")
-	dst.Code("	}\n")
-	dst.Code("	switch router.(type) {\n")
-	dst.Code("	case *" + serverName + "Router:\n")
-	dst.Code("		return router.(*" + serverName + "Router).server, nil\n")
-	dst.Code("	}\n")
-	dst.Code("	return nil, errors.New(\"Not find server\")\n")
+	dst.Code("\trouter := server.Get(&" + serverName + "Router{})\n")
+	dst.Code("\tif nil == router {\n")
+	dst.Code("\t\treturn nil, errors.New(\"Not find server\")\n")
+	dst.Code("\t}\n")
+	dst.Code("\tswitch router.(type) {\n")
+	dst.Code("\tcase *" + serverName + "Router:\n")
+	dst.Code("\t\treturn router.(*" + serverName + "Router).server, nil\n")
+	dst.Code("\t}\n")
+	dst.Code("\treturn nil, errors.New(\"Not find server\")\n")
 	dst.Code("}\n")
 }

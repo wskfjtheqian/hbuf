@@ -30,11 +30,11 @@ func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
 	dst.Code("}\n\n")
 
 	dst.Code("func (g *" + build.StringToHumpName(typ.Name.Name) + ") ToData() ([]byte, error) {\n")
-	dst.Code("	return json.Marshal(g)\n")
+	dst.Code("\treturn json.Marshal(g)\n")
 	dst.Code("}\n\n")
 
 	dst.Code("func (g *" + build.StringToHumpName(typ.Name.Name) + ") FormData(data []byte) error {\n")
-	dst.Code("	return json.Unmarshal(data, g)\n")
+	dst.Code("\treturn json.Unmarshal(data, g)\n")
 	dst.Code("}\n\n")
 }
 

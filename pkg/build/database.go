@@ -25,6 +25,7 @@ type DB struct {
 	Where   string
 	Offset  string
 	Limit   string
+	Order   string
 }
 
 type DBField struct {
@@ -52,6 +53,8 @@ func GetDB(n string, tag []*ast.Tag) []*DB {
 				for _, item := range val.KV {
 					if "name" == item.Name.Name {
 						db.Name = item.Value.Value[1 : len(item.Value.Value)-1]
+					} else if "order" == item.Name.Name {
+						db.Order = item.Value.Value[1 : len(item.Value.Value)-1]
 					} else if "key" == item.Name.Name {
 						db.Key = "key" == item.Value.Value[1:len(item.Value.Value)-1]
 					} else if "typ" == item.Name.Name {
@@ -81,7 +84,7 @@ func GetDB(n string, tag []*ast.Tag) []*DB {
 					} else if "count" == item.Name.Name {
 						db.Count = "true" == strings.ToLower(item.Value.Value[1:len(item.Value.Value)-1])
 					} else if "rm" == item.Name.Name {
-						db.Count = "true" == strings.ToLower(item.Value.Value[1:len(item.Value.Value)-1])
+						db.Remove = "true" == strings.ToLower(item.Value.Value[1:len(item.Value.Value)-1])
 					}
 				}
 			}

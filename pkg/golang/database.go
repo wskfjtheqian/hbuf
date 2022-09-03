@@ -88,11 +88,11 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 	}
 
 	if fDbs[0].Find {
-		b.printFindData(dst, typ, dbs[0], fields, fType, fFields, nil != c)
+		b.printFindData(dst, typ, dbs[0], fields, fType, fFields, c)
 	}
 
 	if fDbs[0].Count {
-		b.printCountData(dst, typ, dbs[0], fields, fType, fFields, nil != c)
+		b.printCountData(dst, typ, dbs[0], fields, fType, fFields, c)
 	}
 
 	if fDbs[0].Del {
@@ -124,7 +124,7 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 			key.Dbs[0].Where = "AND id = ?"
 			fFields = []*build.DBField{key}
 		}
-		b.printGetData(dst, typ, dbs[0], fields, fType, fFields, nil != c)
+		b.printGetData(dst, typ, dbs[0], fields, fType, fFields, c)
 	}
 	return nil
 }
@@ -313,7 +313,7 @@ func (b *Builder) printWhere(where *build.Writer, text string, field *build.DBFi
 	where.Code(")\n")
 }
 
-func (b *Builder) printFindData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, fType *ast.DataType, fFields []*build.DBField, isCache bool) {
+func (b *Builder) printFindData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, fType *ast.DataType, fFields []*build.DBField, c *cache) {
 	fName := build.StringToHumpName(fType.Name.Name)
 	dName := build.StringToHumpName(typ.Name.Name)
 
@@ -328,7 +328,7 @@ func (b *Builder) printFindData(dst *build.Writer, typ *ast.DataType, db *build.
 	dst.Code(w.GetCode().String())
 
 	dst.Code("\tret := make([]" + dName + ", 0)\n")
-	if isCache {
+	if nil != c {
 		dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/cache", "")
 		dst.Code("\tlist, key, err := cache.DbGet(ctx, \"" + db.Name + "\", s, &ret)\n")
 		dst.Code("\tif list != nil {\n")
@@ -351,15 +351,23 @@ func (b *Builder) printFindData(dst *build.Writer, typ *ast.DataType, db *build.
 	dst.Code("\t\t}\n")
 	dst.Code("\t\tret = append(ret, val)\n")
 	dst.Code("\t}\n")
-	if isCache {
-		dst.Code("\t_ = cache.Set(ctx, key, &ret)\n")
+	if nil != c {
+		dst.Import("math/rand", "")
+		dst.Import("time", "")
+		dst.Code("\t_ = cache.Set(ctx, key, &ret, ")
+		if 0 < c.min {
+			dst.Code("time.Duration(rand.Intn(" + strconv.Itoa(c.max) + "-" + strconv.Itoa(c.min) + ")+" + strconv.Itoa(c.min) + ")*time.Second")
+		} else {
+			dst.Code("0")
+		}
+		dst.Code(")\n")
 	}
 	dst.Code("\treturn ret, nil\n")
 	dst.Code("}\n")
 	dst.Code("\n")
 }
 
-func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, fType *ast.DataType, fFields []*build.DBField, isCache bool) {
+func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, fType *ast.DataType, fFields []*build.DBField, c *cache) {
 	fName := build.StringToHumpName(fType.Name.Name)
 
 	p, w := b.getParamWhere(dst, fFields, false)
@@ -369,9 +377,10 @@ func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build
 	dst.Code("func DbCount" + fName + "(ctx context.Context, " + p.GetCode().String() + ") (int64, error) {\n")
 	dst.Code("\ts := db.NewSql()\n")
 	dst.Code("\ts.T(\"SELECT COUNT(1) FROM " + db.Name + " WHERE del_time IS  NULL\")\n")
+	dst.Code(w.GetCode().String())
 
 	dst.Code("\tvar count int64\n")
-	if isCache {
+	if nil != c {
 		dst.Code("\tc, key, err := cache.DbGet(ctx, \"" + db.Name + "\", s, &count)\n")
 		dst.Code("\tif c != nil {\n")
 		dst.Code("\t\treturn *c, nil\n")
@@ -391,8 +400,16 @@ func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build
 	dst.Code("\tif err != nil {\n")
 	dst.Code("\t\treturn 0, err\n")
 	dst.Code("\t}\n")
-	if isCache {
-		dst.Code("\t_ = cache.Set(ctx, key, &count)\n")
+	if nil != c {
+		dst.Import("math/rand", "")
+		dst.Import("time", "")
+		dst.Code("\t_ = cache.Set(ctx, key, &count, ")
+		if 0 < c.min {
+			dst.Code("time.Duration(rand.Intn(" + strconv.Itoa(c.max) + "-" + strconv.Itoa(c.min) + ")+" + strconv.Itoa(c.min) + ")*time.Second")
+		} else {
+			dst.Code("0")
+		}
+		dst.Code(")\n")
 	}
 	dst.Code("\treturn count, nil\n")
 	dst.Code("}\n")
@@ -613,7 +630,7 @@ func (b *Builder) printSetData(dst *build.Writer, typ *ast.DataType, db *build.D
 	dst.Code("}\n\n")
 }
 
-func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, fType *ast.DataType, fFields []*build.DBField, isCache bool) {
+func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, fType *ast.DataType, fFields []*build.DBField, c *cache) {
 	fName := build.StringToHumpName(fType.Name.Name)
 	dName := build.StringToHumpName(typ.Name.Name)
 
@@ -626,10 +643,11 @@ func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, db *build.D
 	dst.Code("func DbGet" + fName + "(ctx context.Context, " + p.GetCode().String() + ") (*" + dName + ", error) {\n")
 	dst.Code("\ts := db.NewSql()\n")
 	dst.Code("\ts.T(\"SELECT " + item.String() + " FROM " + db.Name + " WHERE del_time IS NULL\")\n")
+	dst.Code(w.GetCode().String())
 	dst.Code("\ts.T(\" LIMIT 1\")\n")
 	dst.Code("\tvar val " + dName + "\n")
 
-	if isCache {
+	if nil != c {
 		dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/cache", "")
 		dst.Code("\tcv, key, err := cache.DbGet(ctx, \"" + db.Name + "\", s, &val)\n")
 		dst.Code("\tif cv != nil {\n")
@@ -650,8 +668,16 @@ func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, db *build.D
 	dst.Code("\tif err != nil {\n")
 	dst.Code("\t\treturn nil, errors.New(err.Error() +\":\"+ s.ToText())\n")
 	dst.Code("\t}\n")
-	if isCache {
-		dst.Code("\t_ = cache.Set(ctx, key, &val)\n")
+	if nil != c {
+		dst.Import("math/rand", "")
+		dst.Import("time", "")
+		dst.Code("\t_ = cache.Set(ctx, key, &val, ")
+		if 0 < c.min {
+			dst.Code("time.Duration(rand.Intn(" + strconv.Itoa(c.max) + "-" + strconv.Itoa(c.min) + ")+" + strconv.Itoa(c.min) + ")*time.Second")
+		} else {
+			dst.Code("0")
+		}
+		dst.Code(")\n")
 	}
 	dst.Code("\treturn &val, nil\n")
 	dst.Code("}\n\n")

@@ -158,10 +158,10 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 }
 
 func (b *Builder) printGetServerRouter(dst *build.Writer, typ *ast.ServerType) {
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/manage", "")
 	serverName := build.StringToHumpName(typ.Name.Name)
-
-	dst.Code("func Get" + serverName + "(server hbuf.GetServer) (" + serverName + ", error) {\n")
-	dst.Code("\trouter := server.Get(&" + serverName + "Router{})\n")
+	dst.Code("func Get" + serverName + "(ctx context.Context) (" + serverName + ", error) {\n")
+	dst.Code("\trouter := manage.GET(ctx).Get(&" + serverName + "Router{})\n")
 	dst.Code("\tif nil == router {\n")
 	dst.Code("\t\treturn nil, errors.New(\"Not find server\")\n")
 	dst.Code("\t}\n")

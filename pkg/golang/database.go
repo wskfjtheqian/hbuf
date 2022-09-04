@@ -187,7 +187,7 @@ func (b *Builder) getItemAndValue(fields []*build.DBField) (strings.Builder, str
 
 }
 
-func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page bool) (*build.Writer, *build.Writer) {
+func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page bool, orderBy bool) (*build.Writer, *build.Writer) {
 	param := build.NewWriter()
 	param.Packages = dst.Packages
 	where := build.NewWriter()
@@ -213,38 +213,41 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 			}
 		}
 	}
-	isOrderFist := true
-	for _, field := range fields {
-		order := field.Dbs[0].Order
-		if 0 < len(order) {
-			if !isFist {
-				param.Code(", ")
-			}
-			isFist = false
-			param.Code(build.StringToFirstLower(field.Field.Name.Name))
-			param.Code(" ")
-			b.printType(param, field.Field.Type, false)
-			where.Code("\tif \"AES\" == " + build.StringToFirstLower(field.Field.Name.Name) + " || \"DESC\" == " + build.StringToFirstLower(field.Field.Name.Name))
-			if build.IsNil(field.Field.Type) {
-				where.Code("&& nil != " + build.StringToFirstLower(field.Field.Name.Name))
-			}
-			where.Code(" {\n")
 
-			if isOrderFist {
-				where.Code("\t\ts.T(\" ORDER BY \" + ")
-			} else {
-				where.Code("\t\ts.T(\", \" + ")
+	if orderBy {
+		isOrderFist := true
+		for _, field := range fields {
+			order := field.Dbs[0].Order
+			if 0 < len(order) {
+				if !isFist {
+					param.Code(", ")
+				}
+				isFist = false
+				param.Code(build.StringToFirstLower(field.Field.Name.Name))
+				param.Code(" ")
+				b.printType(param, field.Field.Type, false)
+				where.Code("\tif \"AES\" == " + build.StringToFirstLower(field.Field.Name.Name) + " || \"DESC\" == " + build.StringToFirstLower(field.Field.Name.Name))
+				if build.IsNil(field.Field.Type) {
+					where.Code("&& nil != " + build.StringToFirstLower(field.Field.Name.Name))
+				}
+				where.Code(" {\n")
+
+				if isOrderFist {
+					where.Code("\t\ts.T(\" ORDER BY \" + ")
+				} else {
+					where.Code("\t\ts.T(\", \" + ")
+				}
+				isOrderFist = true
+				where.Import("strings", "")
+				where.Code("strings.ReplaceAll(\"")
+				where.Code(order)
+				where.Code("\", \"$\",")
+				where.Code(build.StringToFirstLower(field.Field.Name.Name))
+				where.Code("))\n")
+
+				where.Code("\t}\n")
+
 			}
-			isOrderFist = true
-			where.Import("strings", "")
-			where.Code("strings.ReplaceAll(\"")
-			where.Code(order)
-			where.Code("\", \"$\",")
-			where.Code(build.StringToFirstLower(field.Field.Name.Name))
-			where.Code("))\n")
-
-			where.Code("\t}\n")
-
 		}
 	}
 
@@ -317,7 +320,7 @@ func (b *Builder) printFindData(dst *build.Writer, typ *ast.DataType, db *build.
 	fName := build.StringToHumpName(fType.Name.Name)
 	dName := build.StringToHumpName(typ.Name.Name)
 
-	p, w := b.getParamWhere(dst, fFields, true)
+	p, w := b.getParamWhere(dst, fFields, true, true)
 	dst.AddImports(p.GetImports())
 	dst.AddImports(w.GetImports())
 
@@ -370,7 +373,7 @@ func (b *Builder) printFindData(dst *build.Writer, typ *ast.DataType, db *build.
 func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, fType *ast.DataType, fFields []*build.DBField, c *cache) {
 	fName := build.StringToHumpName(fType.Name.Name)
 
-	p, w := b.getParamWhere(dst, fFields, false)
+	p, w := b.getParamWhere(dst, fFields, false, false)
 	dst.AddImports(p.GetImports())
 	dst.AddImports(w.GetImports())
 
@@ -634,7 +637,7 @@ func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, db *build.D
 	fName := build.StringToHumpName(fType.Name.Name)
 	dName := build.StringToHumpName(typ.Name.Name)
 
-	p, w := b.getParamWhere(dst, fFields, false)
+	p, w := b.getParamWhere(dst, fFields, false, false)
 	dst.AddImports(p.GetImports())
 	dst.AddImports(w.GetImports())
 

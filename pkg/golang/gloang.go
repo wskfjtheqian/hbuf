@@ -192,8 +192,8 @@ func (b *Builder) printTypeSpec(dst *GoWriter, expr ast.Expr) {
 	switch expr.(type) {
 	case *ast.DataType:
 		b.printDataCode(dst.data, expr.(*ast.DataType))
-		b.printDatabaseCode(dst.database, expr.(*ast.DataType))
-		b.printVerifyCode(dst.verify, expr.(*ast.DataType))
+		_ = b.printDatabaseCode(dst.database, expr.(*ast.DataType))
+		_ = b.printVerifyCode(dst.verify, expr.(*ast.DataType))
 	case *ast.ServerType:
 		b.printServerCode(dst.server, expr.(*ast.ServerType))
 

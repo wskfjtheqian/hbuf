@@ -582,7 +582,7 @@ func (b *Builder) printUpdateData(dst *build.Writer, typ *ast.DataType, db *buil
 		}
 	}
 
-	dst.Code("\ts.T(\"WHERE del_time IS  NULL AND " + key.Dbs[0].Name + "\").V(&val." + build.StringToHumpName(key.Field.Name.Name) + ")\n")
+	dst.Code("\ts.T(\"WHERE del_time IS  NULL AND " + key.Dbs[0].Name + " = \").V(&val." + build.StringToHumpName(key.Field.Name.Name) + ")\n")
 
 	dst.Code("\tresult, err := s.Exec(ctx)\n")
 	dst.Code("\tif err != nil {\n")

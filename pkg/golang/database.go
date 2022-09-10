@@ -48,7 +48,6 @@ func getCache(name string, tags []*ast.Tag) *cache {
 
 func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error {
 	dst.Import("context", "")
-	dst.Import("errors", "")
 	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/db", "")
 
 	dbs, fields, key, err := b.getDBField(typ)
@@ -341,7 +340,7 @@ func (b *Builder) printFindData(dst *build.Writer, typ *ast.DataType, db *build.
 
 	dst.Code("\tquery, err := s.Query(ctx)\n")
 	dst.Code("\tif err != nil {\n")
-	dst.Code("\t\treturn nil, errors.New(err.Error() +\":\"+ s.ToText())\n")
+	dst.Code("\t\treturn nil, err\n")
 	dst.Code("\t}\n")
 	dst.Code("\tdefer query.Close()\n")
 
@@ -392,7 +391,7 @@ func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build
 
 	dst.Code("\tquery, err := s.Query(ctx)\n")
 	dst.Code("\tif err != nil {\n")
-	dst.Code("\t\treturn 0, errors.New(err.Error() +\":\"+ s.ToText())\n")
+	dst.Code("\t\treturn 0, err\n")
 	dst.Code("\t}\n")
 	dst.Code("\tdefer query.Close()\n")
 	dst.Code("\n")
@@ -437,7 +436,7 @@ func (b *Builder) printDeleteData(dst *build.Writer, typ *ast.DataType, db *buil
 
 	dst.Code("\tresult, err := s.Exec(ctx)\n")
 	dst.Code("\tif err != nil {\n")
-	dst.Code("\t\treturn 0, errors.New(err.Error() +\":\"+ s.ToText())\n")
+	dst.Code("\t\treturn 0, err\n")
 	dst.Code("\t}\n")
 
 	dst.Code("\tcount, err := result.RowsAffected()\n")
@@ -463,7 +462,7 @@ func (b *Builder) printRemoveData(dst *build.Writer, typ *ast.DataType, db *buil
 
 	dst.Code("\tresult, err := s.Exec(ctx)\n")
 	dst.Code("\tif err != nil {\n")
-	dst.Code("\t\treturn 0, errors.New(err.Error() +\":\"+ s.ToText())\n")
+	dst.Code("\t\treturn 0, err\n")
 	dst.Code("\t}\n")
 
 	dst.Code("\tcount, err := result.RowsAffected()\n")
@@ -503,7 +502,7 @@ func (b *Builder) printInsertData(dst *build.Writer, typ *ast.DataType, db *buil
 
 	dst.Code("\tresult, err := s.Exec(ctx)\n")
 	dst.Code("\tif err != nil {\n")
-	dst.Code("\t\treturn 0, errors.New(err.Error() +\":\"+ s.ToText())\n")
+	dst.Code("\t\treturn 0, err\n")
 	dst.Code("\t}\n")
 	dst.Code("\tcount, err := result.RowsAffected()\n")
 	dst.Code("\treturn int(count), err\n")
@@ -551,7 +550,7 @@ func (b *Builder) printInsertListData(dst *build.Writer, typ *ast.DataType, db *
 
 	dst.Code("\tresult, err := s.Exec(ctx)\n")
 	dst.Code("\tif err != nil {\n")
-	dst.Code("\t\treturn 0, errors.New(err.Error() +\":\"+ s.ToText())\n")
+	dst.Code("\t\treturn 0, err\n")
 	dst.Code("\t}\n")
 	dst.Code("\tcount, err := result.RowsAffected()\n")
 	dst.Code("\treturn int(count), err\n\n")
@@ -589,7 +588,7 @@ func (b *Builder) printUpdateData(dst *build.Writer, typ *ast.DataType, db *buil
 
 	dst.Code("\tresult, err := s.Exec(ctx)\n")
 	dst.Code("\tif err != nil {\n")
-	dst.Code("\t\treturn 0, errors.New(err.Error() +\":\"+ s.ToText())\n")
+	dst.Code("\t\treturn 0, err\n")
 	dst.Code("\t}\n")
 	dst.Code("\tcount, err := result.RowsAffected()\n")
 	dst.Code("\treturn int(count), err\n")
@@ -626,7 +625,7 @@ func (b *Builder) printSetData(dst *build.Writer, typ *ast.DataType, db *build.D
 
 	dst.Code("\tresult, err := s.Exec(ctx)\n")
 	dst.Code("\tif err != nil {\n")
-	dst.Code("\t\treturn 0, errors.New(err.Error() +\":\"+ s.ToText())\n")
+	dst.Code("\t\treturn 0, err\n")
 	dst.Code("\t}\n")
 	dst.Code("\tcount, err := result.RowsAffected()\n")
 	dst.Code("\treturn int(count), err\n")
@@ -669,7 +668,7 @@ func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, db *build.D
 
 	dst.Code("\terr = query.Scan(" + scan.String() + ")\n")
 	dst.Code("\tif err != nil {\n")
-	dst.Code("\t\treturn nil, errors.New(err.Error() +\":\"+ s.ToText())\n")
+	dst.Code("\t\treturn nil, err\n")
 	dst.Code("\t}\n")
 	if nil != c {
 		dst.Import("math/rand", "")

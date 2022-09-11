@@ -21,6 +21,7 @@ func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
 	dst.Code("type " + serverName)
 	dst.Code(" interface {\n")
 	b.printExtend(dst, typ.Extends)
+	dst.Code("\tInit()\n")
 
 	for _, method := range typ.Methods {
 		if nil != method.Comment {
@@ -111,6 +112,10 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 
 	dst.Code("func (p *" + serverName + "Router) GetId() uint32 {\n")
 	dst.Code("\treturn 1\n")
+	dst.Code("}\n\n")
+
+	dst.Code("func (p *" + serverName + "Router) GetServer() hbuf.Init {\n")
+	dst.Code("\treturn p.server\n")
 	dst.Code("}\n\n")
 
 	dst.Code("func (p *" + serverName + "Router) GetInvoke() map[string]*hbuf.ServerInvoke {\n")

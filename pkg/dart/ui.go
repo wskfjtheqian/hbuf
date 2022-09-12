@@ -257,7 +257,7 @@ func (b *Builder) printFormString(dst *build.Writer, name string, expr ast.Expr,
 	switch expr.(type) {
 	case *ast.EnumType:
 		t := expr.(*ast.EnumType)
-		dst.Code(t.Name.Name + ".nameOf(" + name + ")")
+		dst.Code(t.Name.Name + ".nameOf(" + name + "!)")
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
@@ -291,7 +291,7 @@ func (b *Builder) printFormString(dst *build.Writer, name string, expr ast.Expr,
 				if empty {
 					dst.Code(name + "==null ? null : DateTime.tryParse(" + name + "!)")
 				} else {
-					dst.Code("DateTime.tryParse(" + name + ") ?? DateTime.now()")
+					dst.Code("DateTime.tryParse(" + name + "!) ?? DateTime.now()")
 				}
 			case build.Decimal:
 				dst.Import("package:decimal/decimal.dart", "")
@@ -366,7 +366,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName)
 			b.printToString(setValue, field.Type, false, form.digit, form.format, "??\"\"")
 			setValue.Code(";\n")
-			setValue.Code("\t\t" + fieldName + ".onChanged = (val) => info." + fieldName + " = ")
+			setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = ")
 			b.printFormString(setValue, "val", field.Type, false, form.digit, form.format)
 			setValue.Code(";\n")
 			setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
@@ -383,10 +383,10 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 
 			if build.IsNil(field.Type) {
 				setValue.Code("\t\t" + fieldName + ".initialValue = [if (info.picture?.startsWith(\"http\") ?? false) NetworkImage(info." + fieldName + "!)];\n")
-				setValue.Code("\t\t" + fieldName + ".onChanged = (val) => info." + fieldName + " = ((val?.isEmpty ?? true) ? null : val!.first.url);\n")
+				setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = ((val?.isEmpty ?? true) ? null : val!.first.url);\n")
 			} else {
 				setValue.Code("\t\t" + fieldName + ".initialValue = [NetworkImage(info." + fieldName + ")];\n")
-				setValue.Code("\t\t" + fieldName + ".onChanged = (val) => info." + fieldName + " = val!.first.url);\n")
+				setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = val!.first.url);\n")
 			}
 			setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
 			setValue.Code("\t\t" + fieldName + ".outWidth = " + strconv.FormatFloat(form.width, 'G', -1, 64) + ";\n")
@@ -404,7 +404,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			b.printType(dst, field.Type, true)
 			dst.Code("> " + fieldName + " = MenuFormBuild();\n\n")
 			setValue.Code("\t\t" + fieldName + ".value = info." + fieldName + ";\n")
-			setValue.Code("\t\t" + fieldName + ".onChanged = (val) => info." + fieldName + " = val")
+			setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = val")
 			if !build.IsNil(field.Type) {
 				setValue.Code("!")
 			}

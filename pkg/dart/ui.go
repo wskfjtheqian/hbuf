@@ -50,6 +50,7 @@ type ui struct {
 	index    int
 	width    float64
 	height   float64
+	maxLine  int
 }
 
 func (b *Builder) getUI(tags []*ast.Tag) *ui {
@@ -58,8 +59,9 @@ func (b *Builder) getUI(tags []*ast.Tag) *ui {
 		return nil
 	}
 	form := ui{
-		width:  300,
-		height: 300,
+		width:   300,
+		height:  300,
+		maxLine: 1,
 	}
 	if nil != val.KV {
 		for _, item := range val.KV {
@@ -99,6 +101,13 @@ func (b *Builder) getUI(tags []*ast.Tag) *ui {
 					return nil
 				}
 				form.height = atoi
+			} else if "maxLine" == item.Name.Name {
+				atoi, err := strconv.ParseInt(item.Value.Value[1:len(item.Value.Value)-1], 64, 10)
+				if err != nil {
+					//TODO 添加错误处理
+					return nil
+				}
+				form.maxLine = int(atoi)
 			}
 		}
 	}
@@ -162,9 +171,20 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Code("\t\t\t\t\t\t),\n")
 			dst.Code("\t\t\t\t\t);\n")
 		} else {
-			dst.Code("\t\t\t\t\treturn TablesCell(child: SelectableText(\"${data." + fieldName)
+			dst.Code("\t\t\t\treturn TablesCell(\n")
+			dst.Code("\t\t\t\t\tchild: Tooltip(\n")
+			dst.Code("\t\t\t\t\t\tmessage: data." + fieldName)
 			b.printToString(dst, field.Type, false, table.digit, table.format, "??\"\"")
-			dst.Code(" }\"));\n")
+			dst.Code(",\n")
+			dst.Code("\t\t\t\t\t\tchild: Text(\n")
+			dst.Code("\t\t\t\t\t\t\tdata." + fieldName)
+			b.printToString(dst, field.Type, false, table.digit, table.format, "??\"\"")
+			dst.Code(",\n")
+			dst.Code("\t\t\t\t\t\t\tmaxLines: " + strconv.Itoa(table.maxLine) + ",\n")
+			dst.Code("\t\t\t\t\t\t\toverflow: TextOverflow.ellipsis,\n")
+			dst.Code("\t\t\t\t\t\t),\n")
+			dst.Code("\t\t\t\t\t),\n")
+			dst.Code("\t\t\t\t);\n")
 		}
 		dst.Code("\t\t\t\t},\n")
 		dst.Code("\t\t\t);\n")
@@ -338,10 +358,14 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Code("class Form" + name + build.StringToHumpName(u.suffix) + "Build {\n")
 	dst.Code("\tfinal " + name + " info;\n\n")
 	dst.Code("\tfinal bool readOnly;\n\n")
+	dst.Code("\tfinal Map<double, int> sizes;\n\n")
+	dst.Code("\tfinal EdgeInsetsGeometry padding;\n\n")
 
 	dst.Code("\tForm" + name + build.StringToHumpName(u.suffix) + "Build (\n")
 	dst.Code("\t\tthis.info, {\n")
 	dst.Code("\t\tthis.readOnly = false,\n")
+	dst.Code("\t\tthis.sizes = const {},\n")
+	dst.Code("\t\tthis.padding = const EdgeInsets.only(),\n")
 	dst.Code("\t});\n\n")
 
 	fields := build.NewWriter()
@@ -370,6 +394,8 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			b.printFormString(setValue, "val", field.Type, false, form.digit, form.format)
 			setValue.Code(";\n")
 			setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
+			setValue.Code("\t\t" + fieldName + ".widthSizes = sizes;\n")
+			setValue.Code("\t\t" + fieldName + ".padding = padding;\n")
 			if nil != verify {
 				b.getPackage(dst, typ.Name, "verify")
 				setValue.Code("\t\t" + fieldName + ".validator = (val) => verify" + name + "_" + build.StringToHumpName(fieldName) + "(context, val!);\n")
@@ -389,6 +415,8 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = val!.first.url);\n")
 			}
 			setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
+			setValue.Code("\t\t" + fieldName + ".widthSizes = sizes;\n")
+			setValue.Code("\t\t" + fieldName + ".padding = padding;\n")
 			setValue.Code("\t\t" + fieldName + ".outWidth = " + strconv.FormatFloat(form.width, 'G', -1, 64) + ";\n")
 			setValue.Code("\t\t" + fieldName + ".outHeight = " + strconv.FormatFloat(form.height, 'G', -1, 64) + ";\n")
 			if nil != verify {
@@ -410,6 +438,8 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			setValue.Code(";\n")
 			setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
+			setValue.Code("\t\t" + fieldName + ".widthSizes = sizes;\n")
+			setValue.Code("\t\t" + fieldName + ".padding = padding;\n")
 			setValue.Code("\t\t" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n")
 			if nil != verify {
 				b.getPackage(dst, typ.Name, "verify")
@@ -421,9 +451,6 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 
 			fields.Code("\t\t\t" + fieldName + ".build(context),\n")
 			lang.Add(fieldName, field.Tags)
-		} else if "pic" == form.form {
-			lang.Add(fieldName, field.Tags)
-
 		} else if "time" == form.form {
 			lang.Add(fieldName, field.Tags)
 		}

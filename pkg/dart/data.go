@@ -224,6 +224,7 @@ func (b *Builder) printDataEntity(dst *build.Writer, typ *ast.DataType) {
 	dst.Code("  }\n\n")
 
 	isParam = false
+	dst.Code("  @override\n")
 	dst.Code("  _" + build.StringToHumpName(typ.Name.Name) + " copyWith(")
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 		if !isParam {
@@ -381,15 +382,15 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, expr ast.Expr, da
 		if nil != t.Obj {
 			if ast.Enum == t.Obj.Kind {
 				if empty {
-					dst.Code("null == " + name + " ? null :  " + name + "  is num ? " + t.Name + ".valueOf( " + name + " .toInt()) : null == num.tryParse( " + name + " .toString()) ? null : " + t.Name + ".valueOf(num.tryParse( " + name + " .toString())!.toInt())")
+					dst.Code("null == " + name + " ? null :temp is num ? " + t.Name + ".valueOf(temp.toInt()) : null == num.tryParse(temp.toString()) ? null : " + t.Name + ".valueOf(num.tryParse(temp.toString())!.toInt())")
 				} else {
-					dst.Code("null == " + name + " ? " + t.Name + ".valueOf(0) : " + t.Name + ".valueOf( " + name + "  is num ?  " + name + " .toInt() : num.tryParse( " + name + " .toString())?.toInt() ?? 0)")
+					dst.Code("null == " + name + " ? " + t.Name + ".valueOf(0) : " + t.Name + ".valueOf(temp is num ? temp.toInt() : num.tryParse(temp.toString())?.toInt() ?? 0)")
 				}
 			} else if ast.Data == t.Obj.Kind {
 				if empty {
-					dst.Code("null == " + name + " ? null : " + t.Name + ".fromMap( " + name + " )")
+					dst.Code("null == " + name + " ? null : " + t.Name + ".fromMap(temp)")
 				} else {
-					dst.Code("null == " + name + " ? " + t.Name + ".fromMap({}) : " + t.Name + ".fromMap( " + name + " )")
+					dst.Code("null == " + name + " ? " + t.Name + ".fromMap({}) : " + t.Name + ".fromMap(temp)")
 				}
 			} else {
 				dst.Code("map[\"" + name + "\"]")
@@ -398,45 +399,45 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, expr ast.Expr, da
 			switch expr.(*ast.Ident).Name {
 			case build.Int8, build.Int16, build.Int32, build.Uint8, build.Uint16, build.Uint64:
 				if empty {
-					dst.Code("null == " + name + " ? null : ( " + name + "  is num ?  " + name + " .toInt() : num.tryParse( " + name + " .toString())?.toInt())")
+					dst.Code("null == " + name + " ? null : (temp is num ? temp.toInt() : num.tryParse(temp.toString())?.toInt())")
 				} else {
-					dst.Code("null == " + name + " ? 0 : ( " + name + "  is num ?  " + name + " .toInt() : num.tryParse( " + name + " .toString())?.toInt() ?? 0)")
+					dst.Code("null == " + name + " ? 0 : (temp is num ? temp.toInt() : num.tryParse(temp.toString())?.toInt() ?? 0)")
 				}
 			case build.Int64, build.Uint32:
 				if empty {
-					dst.Code("null == " + name + " ? null : Int64.parseInt( " + name + " .toString())")
+					dst.Code("null == " + name + " ? null : Int64.parseInt(temp.toString())")
 				} else {
-					dst.Code("null == " + name + " ? Int64.ZERO : Int64.parseInt( " + name + " .toString())")
+					dst.Code("null == " + name + " ? Int64.ZERO : Int64.parseInt(temp.toString())")
 				}
 			case build.Float, build.Double:
 				if empty {
-					dst.Code("null == " + name + " ? null : ( " + name + "  is num ?  " + name + " .toDouble() : num.tryParse( " + name + " .toString())?.toDouble())")
+					dst.Code("null == " + name + " ? null : (temp is num ? temp.toDouble() : num.tryParse(temp.toString())?.toDouble())")
 				} else {
-					dst.Code("null == " + name + " ? 0 : ( " + name + "  is num ?  " + name + " .toDouble() : num.tryParse( " + name + " .toString())?.toDouble() ?? 0)")
+					dst.Code("null == " + name + " ? 0 : (temp is num ? temp.toDouble() : num.tryParse(temp.toString())?.toDouble() ?? 0)")
 				}
 			case build.String:
 				if empty {
-					dst.Code("null == " + name + " ? null : ( " + name + "  is String ?  " + name + "  :  " + name + " .toString())")
+					dst.Code("null == " + name + " ? null : (temp is String ? temp : temp .toString())")
 				} else {
-					dst.Code("null == " + name + " ? \"\" : ( " + name + "  is String ?  " + name + "  :  " + name + " .toString())")
+					dst.Code("null == " + name + " ? \"\" : (temp is String ? temp : temp .toString())")
 				}
 			case build.Date:
 				if empty {
-					dst.Code("null == " + name + " ? null :  " + name + "  is num ? DateTime.fromMillisecondsSinceEpoch( " + name + " .toInt()) : null == num.tryParse( " + name + " .toString()) ? null : DateTime.fromMillisecondsSinceEpoch(num.tryParse( " + name + " .toString())!.toInt())")
+					dst.Code("null == " + name + " ? null : temp is num ? DateTime.fromMillisecondsSinceEpoch(temp.toInt()) : null == num.tryParse(temp .toString()) ? null : DateTime.fromMillisecondsSinceEpoch(num.tryParse(temp.toString())!.toInt())")
 				} else {
-					dst.Code("null == " + name + " ? DateTime.fromMillisecondsSinceEpoch(0) : DateTime.fromMillisecondsSinceEpoch( " + name + "  is num ?  " + name + " .toInt() : num.tryParse( " + name + " .toString())?.toInt() ?? 0)")
+					dst.Code("null == " + name + " ? DateTime.fromMillisecondsSinceEpoch(0) : DateTime.fromMillisecondsSinceEpoch(temp is num ? temp.toInt() : num.tryParse(temp.toString())?.toInt() ?? 0)")
 				}
 			case build.Bool:
 				if empty {
-					dst.Code("null == " + name + " ? null : ( " + name + "  is bool ?  " + name + " : ( " + name + "  is num ? 0 !=  " + name + "  : (null == num.tryParse( " + name + " .toString()) ? null : 0 != num.tryParse( " + name + " .toString()))))")
+					dst.Code("null == " + name + " ? null : (temp is bool ? temp : (temp is num ? 0 != temp : (null == num.tryParse(temp.toString()) ? null : 0 != num.tryParse(temp.toString()))))")
 				} else {
-					dst.Code("null == " + name + " ? false:( " + name + "  is bool ?  " + name + " : 0 != ( " + name + "  is num ?  " + name + "  : num.tryParse( " + name + " .toString()) ?? 0))")
+					dst.Code("null == " + name + " ? false:(temp is bool ? temp : 0 != (temp is num ? temp : num.tryParse(temp.toString()) ?? 0))")
 				}
 			case build.Decimal:
 				if empty {
-					dst.Code("null == " + name + " ? null : Decimal.tryParse( " + name + " .toString())")
+					dst.Code("null == " + name + " ? null : Decimal.tryParse(temp.toString())")
 				} else {
-					dst.Code("null == " + name + " ? Decimal.zero : (Decimal.tryParse( " + name + " .toString()) ?? Decimal.zero)")
+					dst.Code("null == " + name + " ? Decimal.zero : (Decimal.tryParse(temp.toString()) ?? Decimal.zero)")
 				}
 			default:
 				dst.Code("map[\"" + name + "\"]")

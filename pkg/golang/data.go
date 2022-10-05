@@ -7,14 +7,17 @@ import (
 
 func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
 	dst.Import("encoding/json", "")
-
-	dst.Code("type " + build.StringToHumpName(typ.Name.Name) + " struct")
+	name := build.StringToHumpName(typ.Name.Name)
+	if nil != typ.Doc && 0 < len(typ.Doc.Text()) {
+		dst.Code("//" + name + " " + typ.Doc.Text())
+	}
+	dst.Code("type " + name + " struct")
 	dst.Code(" {\n")
 	b.printExtend(dst, typ.Extends)
 
 	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
-		if nil != field.Comment {
-			dst.Code("\t//" + field.Comment.Text())
+		if nil != field.Doc && 0 < len(field.Doc.Text()) {
+			dst.Code("\t//" + field.Doc.Text())
 		}
 
 		dst.Code("\t" + build.StringToHumpName(field.Name.Name) + " ")

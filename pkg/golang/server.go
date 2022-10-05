@@ -18,14 +18,17 @@ func (b *Builder) printServerCode(dst *build.Writer, typ *ast.ServerType) {
 }
 func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
 	serverName := build.StringToHumpName(typ.Name.Name)
+	if nil != typ.Doc && 0 < len(typ.Doc.Text()) {
+		dst.Code("//" + build.StringToHumpName(serverName) + " " + typ.Doc.Text())
+	}
 	dst.Code("type " + serverName)
 	dst.Code(" interface {\n")
 	b.printExtend(dst, typ.Extends)
 	dst.Code("\tInit()\n")
 
 	for _, method := range typ.Methods {
-		if nil != method.Comment {
-			dst.Code("\t//" + build.StringToHumpName(method.Name.Name) + " " + method.Comment.Text())
+		if nil != method.Doc && 0 < len(method.Doc.Text()) {
+			dst.Code("\t//" + build.StringToHumpName(method.Name.Name) + " " + method.Doc.Text())
 		}
 
 		dst.Code("\t" + build.StringToHumpName(method.Name.Name))

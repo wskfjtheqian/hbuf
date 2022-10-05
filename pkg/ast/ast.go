@@ -284,7 +284,9 @@ type (
 		Incomplete bool       // true if (source) fields are missing in the Fields list
 		Name       *Ident
 		Extends    []*Ident
-		Id         *BasicLit // field Id; or nil
+		Id         *BasicLit     // field Id; or nil
+		Doc        *CommentGroup // associated documentation; or nil
+		Comment    *CommentGroup // line comments; or nil
 	}
 
 	ServerType struct {

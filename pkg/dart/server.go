@@ -17,6 +17,9 @@ func (b *Builder) printServerCode(dst *build.Writer, typ *ast.ServerType) {
 }
 
 func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
+	if nil != typ.Doc && 0 < len(typ.Doc.Text()) {
+		dst.Code("///" + typ.Doc.Text())
+	}
 	dst.Code("abstract class " + build.StringToHumpName(typ.Name.Name))
 	if nil != typ.Extends {
 		dst.Code(" implements ")
@@ -24,8 +27,8 @@ func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
 	}
 	dst.Code("{\n")
 	for _, method := range typ.Methods {
-		if nil != method.Comment {
-			dst.Code("  /// " + method.Comment.Text())
+		if nil != method.Doc && 0 < len(method.Doc.Text()) {
+			dst.Code("///" + method.Doc.Text())
 		}
 		if build.CheckSuperMethod(method.Name.Name, typ) {
 			dst.Code("  @override\n")

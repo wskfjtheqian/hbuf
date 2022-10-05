@@ -7,13 +7,13 @@ import (
 
 func printEnumCode(dst *build.Writer, typ *ast.EnumType) {
 	name := build.StringToHumpName(typ.Name.Name)
-	if 0 < len(typ.Doc.Text()) {
+	if nil != typ.Doc && 0 < len(typ.Doc.Text()) {
 		dst.Code("//" + name + " " + typ.Doc.Text())
 	}
 	dst.Code("type " + name + " int\n\n")
 	for _, item := range typ.Items {
 		itemName := name + build.StringToHumpName(item.Name.Name)
-		if 0 < len(item.Doc.Text()) {
+		if nil != item.Doc && 0 < len(item.Doc.Text()) {
 			dst.Code("//" + itemName + " " + item.Doc.Text())
 		}
 		dst.Code("const " + itemName + " " + name + " = " + item.Id.Value + "\n\n")

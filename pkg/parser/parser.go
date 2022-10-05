@@ -522,12 +522,12 @@ func (p *parser) parseId() *ast.BasicLit {
 	return id
 }
 
-func (p *parser) parseFieldDecl(scope *ast.Scope, tags []*ast.Tag) *ast.Field {
+func (p *parser) parseFieldDecl(scope *ast.Scope) *ast.Field {
 	if p.trace {
 		defer un(trace(p, "FieldDecl"))
 	}
-
 	doc := p.leadComment
+	tags := p.parseTags()
 	typ := p.parseVarType()
 	if p.tok != token.IDENT {
 		p.errorExpected(p.pos, "not find Type")
@@ -748,8 +748,7 @@ func (p *parser) parseDataSpec(doc *ast.CommentGroup, tags []*ast.Tag) ast.Spec 
 	scope := ast.NewScope(nil) // struct scope
 	var list []*ast.Field
 	for p.tok != token.RBRACE && p.tok != token.EOF {
-		tags := p.parseTags()
-		list = append(list, p.parseFieldDecl(scope, tags))
+		list = append(list, p.parseFieldDecl(scope))
 	}
 	rbrace := p.expect(token.RBRACE)
 
@@ -770,6 +769,7 @@ func (p *parser) parseDataSpec(doc *ast.CommentGroup, tags []*ast.Tag) ast.Spec 
 			List:    list,
 			Closing: rbrace,
 		},
+		Doc: doc,
 	}
 	p.expectSemi()
 	spec.Comment = p.lineComment
@@ -788,8 +788,7 @@ func (p *parser) parseEnumSpec(doc *ast.CommentGroup, tags []*ast.Tag) ast.Spec 
 	scope := ast.NewScope(nil) // struct scope
 	var list []*ast.EnumItem
 	for p.tok != token.RBRACE && p.tok != token.EOF {
-		tags := p.parseTags()
-		list = append(list, p.parseEnumItem(scope, tags))
+		list = append(list, p.parseEnumItem(scope))
 	}
 	rbrace := p.expect(token.RBRACE)
 
@@ -805,18 +804,19 @@ func (p *parser) parseEnumSpec(doc *ast.CommentGroup, tags []*ast.Tag) ast.Spec 
 		Closing: rbrace,
 		Items:   list,
 		Tags:    tags,
+		Doc:     doc,
 	}
 	p.expectSemi()
 	spec.Comment = p.lineComment
 	return spec
 }
 
-func (p *parser) parseEnumItem(scope *ast.Scope, tags []*ast.Tag) *ast.EnumItem {
+func (p *parser) parseEnumItem(scope *ast.Scope) *ast.EnumItem {
 	if p.trace {
 		defer un(trace(p, "FieldDecl"))
 	}
-
 	doc := p.leadComment
+	tags := p.parseTags()
 	if p.tok != token.IDENT {
 		p.errorExpected(p.pos, "not find Type")
 	}
@@ -831,7 +831,8 @@ func (p *parser) parseEnumItem(scope *ast.Scope, tags []*ast.Tag) *ast.EnumItem 
 	p.next()
 
 	p.expectSemi() // call before accessing p.linecomment
-	return &ast.EnumItem{Doc: doc,
+	return &ast.EnumItem{
+		Doc:     doc,
 		Name:    name,
 		Id:      id,
 		Comment: p.lineComment,
@@ -873,6 +874,7 @@ func (p *parser) parseServerSpec(doc *ast.CommentGroup, tags []*ast.Tag) ast.Spe
 		Methods: list,
 		Closing: rbrace,
 		Id:      id,
+		Doc:     doc,
 	}
 	p.expectSemi()
 	spec.Comment = p.lineComment
@@ -883,14 +885,15 @@ func (p *parser) parseDecl(sync map[token.Token]bool) ast.Spec {
 	if p.trace {
 		defer un(trace(p, "Declaration"))
 	}
+	doc := p.leadComment
 	tags := p.parseTags()
 	switch p.tok {
 	case token.DATA:
-		return p.parseDataSpec(nil, tags)
+		return p.parseDataSpec(doc, tags)
 	case token.SERVER:
-		return p.parseServerSpec(nil, tags)
+		return p.parseServerSpec(doc, tags)
 	case token.ENUM:
-		return p.parseEnumSpec(nil, tags)
+		return p.parseEnumSpec(doc, tags)
 
 	default:
 		pos := p.pos

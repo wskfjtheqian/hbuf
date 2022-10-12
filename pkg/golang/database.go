@@ -1,6 +1,5 @@
 package golang
 
-import "C"
 import (
 	"hbuf/pkg/ast"
 	"hbuf/pkg/build"

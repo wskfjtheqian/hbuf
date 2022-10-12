@@ -6,12 +6,14 @@ import (
 	"hbuf/pkg/build"
 	"hbuf/pkg/dart"
 	"hbuf/pkg/golang"
+	"hbuf/pkg/java"
 	"log"
 )
 
 func main() {
 	build.AddBuildType("dart", dart.Build)
 	build.AddBuildType("go", golang.Build)
+	build.AddBuildType("java", java.Build)
 
 	var out = flag.String("o", "", "out dir")
 	var in = flag.String("i", "", "input dir")

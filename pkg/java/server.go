@@ -6,7 +6,7 @@ import (
 )
 
 func (b *Builder) printServerCode(dst *build.Writer, typ *ast.ServerType) {
-	dst.Import("java.util.concurrent.Future", "")
+	dst.Import("java.util.concurrent.CompletableFuture", "")
 	dst.Import("com.hbuf.java.Data", "")
 	dst.Import("com.hbuf.java.Server", "")
 
@@ -33,7 +33,7 @@ func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
 		if build.CheckSuperMethod(method.Name.Name, typ) {
 			dst.Code("\t@override\n")
 		}
-		dst.Code("\t\tFuture<")
+		dst.Code("\t\tCompletableFuture<")
 		b.printType(dst, method.Result.Type(), false)
 		dst.Code("> " + build.StringToFirstLower(method.Name.Name))
 		dst.Code("(")
@@ -49,7 +49,7 @@ func (b *Builder) printServerClient(dst *build.Writer, typ *ast.ServerType) {
 
 	dst.Code("{\n")
 
-	dst.Code("\t\t" + build.StringToHumpName(typ.Name.Name) + "Client(Server.Client client) {\n")
+	dst.Code("\t\tpublic " + build.StringToHumpName(typ.Name.Name) + "Client(Server.Client client) {\n")
 	dst.Code("\t\t\tsuper(client);\n")
 	dst.Code("\t\t}\n\n")
 
@@ -64,7 +64,7 @@ func (b *Builder) printServerClient(dst *build.Writer, typ *ast.ServerType) {
 
 	_ = build.EnumMethod(typ, func(method *ast.FuncType, server *ast.ServerType) error {
 		dst.Code("\t\t@Override\n")
-		dst.Code("\t\tpublic Future<")
+		dst.Code("\t\tpublic CompletableFuture<")
 		b.printType(dst, method.Result.Type(), false)
 		dst.Code("> " + build.StringToFirstLower(method.Name.Name))
 		dst.Code("(")

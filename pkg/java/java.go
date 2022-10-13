@@ -11,9 +11,15 @@ import (
 )
 
 var _types = map[string]string{
-	build.Int8: "int", build.Int16: "int", build.Int32: "int", build.Int64: "Int64", build.Uint8: "int",
-	build.Uint16: "int", build.Uint32: "int", build.Uint64: "Int64", build.Bool: "bool", build.Float: "float",
-	build.Double: "double", build.String: "String", build.Date: "DateTime", build.Decimal: "Decimal",
+	build.Int8: "byte", build.Int16: "short", build.Int32: "int", build.Int64: "long", build.Uint8: "char",
+	build.Uint16: "int", build.Uint32: "long", build.Uint64: "BigInteger", build.Bool: "boolean", build.Float: "float",
+	build.Double: "double", build.String: "String", build.Date: "Date", build.Decimal: "BigDecimal",
+}
+
+var _nullTypes = map[string]string{
+	build.Int8: "Byte", build.Int16: "Short", build.Int32: "Integer", build.Int64: "Long", build.Uint8: "Character",
+	build.Uint16: "Integer", build.Uint32: "Long", build.Uint64: "BigInteger", build.Bool: "Boolean", build.Float: "Float",
+	build.Double: "Double", build.String: "String", build.Date: "Date", build.Decimal: "BigDecimal",
 }
 
 type JavaWriter struct {
@@ -156,7 +162,6 @@ func writerFile(data *build.Writer, packages string, out string) error {
 		}
 	}
 	_, _ = fc.WriteString("\n")
-
 	_, _ = fc.WriteString(data.GetCode().String())
 	return nil
 }
@@ -180,12 +185,24 @@ func (b *Builder) Node(dst *JavaWriter, fset *token.FileSet, node interface{}) e
 	dst.SetPath(file)
 	dst.SetPackages(val.Value.Value[1 : len(val.Value.Value)-1])
 
+	dst.data.Code("public interface UserData {\n")
+	dst.server.Code("public interface UserServer {\n")
+	dst.enum.Code("public interface UserEnum {\n")
 	for _, s := range file.Specs {
 		switch s.(type) {
 		case *ast.ImportSpec:
 		case *ast.TypeSpec:
 			b.printTypeSpec(dst, (s.(*ast.TypeSpec)).Type)
 		}
+	}
+	if 0 < dst.data.GetCode().Len() {
+		dst.data.Code("}\n")
+	}
+	if 0 < dst.server.GetCode().Len() {
+		dst.server.Code("}\n")
+	}
+	if 0 < dst.enum.GetCode().Len() {
+		dst.enum.Code("}\n")
 	}
 	return nil
 }
@@ -210,36 +227,35 @@ func (b *Builder) printType(dst *build.Writer, expr ast.Expr, notEmpty bool) {
 			dst.Code(expr.(*ast.Ident).Name)
 		} else {
 			if build.Decimal == (expr.(*ast.Ident).Name) {
-				dst.Import("package:decimal/decimal.dart", "")
-			} else if build.Int64 == (expr.(*ast.Ident).Name) || build.Uint64 == (expr.(*ast.Ident).Name) {
-				dst.Import("package:fixnum/fixnum.dart", "")
+				dst.Import("java.math.BigDecimal", "")
+			} else if build.Date == (expr.(*ast.Ident).Name) {
+				dst.Import("java.util.Date", "")
+			} else if build.Int64 == (expr.(*ast.Ident).Name) {
+				dst.Import("java.math.BigInteger", "")
 			}
-			dst.Code(_types[(expr.(*ast.Ident).Name)])
+			if notEmpty {
+				dst.Code(_types[(expr.(*ast.Ident).Name)])
+			} else {
+				dst.Code(_nullTypes[(expr.(*ast.Ident).Name)])
+			}
 		}
 	case *ast.ArrayType:
+		dst.Import("java.util.List", "")
 		ar := expr.(*ast.ArrayType)
 		dst.Code("List<")
 		b.printType(dst, ar.VType, false)
 		dst.Code(">")
-		if ar.Empty && !notEmpty {
-			dst.Code("?")
-		}
 	case *ast.MapType:
+		dst.Import("java.util.Map", "")
 		ma := expr.(*ast.MapType)
 		dst.Code("Map<")
 		b.printType(dst, ma.Key, false)
 		dst.Code(", ")
 		b.printType(dst, ma.VType, false)
 		dst.Code(">")
-		if ma.Empty && !notEmpty {
-			dst.Code("?")
-		}
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
-		b.printType(dst, t.Type(), false)
-		if t.Empty && !notEmpty {
-			dst.Code("?")
-		}
+		b.printType(dst, t.Type(), notEmpty && !t.Empty)
 	}
 }
 
@@ -253,17 +269,17 @@ func (b *Builder) getPackage(dst *build.Writer, expr ast.Expr, s string) string 
 	}
 
 	_, name := filepath.Split(file.(*ast.File).Path)
-	name = name[:len(name)-len(".hbuf")]
+	name = dst.Packages + "." + build.StringToHumpName(name[:len(name)-len(".hbuf")])
 	if 0 < len(s) {
 		name = name + "." + s + ".dart"
 	} else {
 		switch (expr.(*ast.Ident)).Obj.Kind {
 		case ast.Data:
-			name = name + ".data.dart"
+			name = name + "Data.*"
 		case ast.Enum:
-			name = name + ".enum.dart"
+			name = name + "Enum.*"
 		case ast.Server:
-			name = name + ".server.dart"
+			name = name + "Server.*"
 		}
 	}
 

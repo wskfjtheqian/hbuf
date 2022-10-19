@@ -270,7 +270,7 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 				where.Code("\ts.P(" + build.StringToFirstLower(offset.Field.Name.Name) + ", " + build.StringToFirstLower(limit.Field.Name.Name) + " )\n")
 			} else {
 				where.Code("\ts.T(\" LIMIT " + limit.Dbs[0].Limit + "\")\n")
-				where.Code("\ts.P(param," + build.StringToFirstLower(limit.Field.Name.Name) + " )\n")
+				where.Code("\ts.P(" + build.StringToFirstLower(limit.Field.Name.Name) + " )\n")
 			}
 		}
 	}

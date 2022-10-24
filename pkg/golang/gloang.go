@@ -88,31 +88,31 @@ func Build(file *ast.File, fset *token.FileSet, param *build.Param) error {
 	}
 
 	if 0 < dst.data.GetCode().Len() {
-		err := b.writerFile(dst.data, dst.data.Packages, filepath.Join(dir, name+".data.go"))
+		err := b.writerFile(dst.data, dst.data.Packages, filepath.Join(dir, name+".data.go"), 1)
 		if err != nil {
 			return err
 		}
 	}
 	if 0 < dst.enum.GetCode().Len() {
-		err = b.writerFile(dst.enum, dst.enum.Packages, filepath.Join(dir, name+".enum.go"))
+		err = b.writerFile(dst.enum, dst.enum.Packages, filepath.Join(dir, name+".enum.go"), 0)
 		if err != nil {
 			return err
 		}
 	}
 	if 0 < dst.server.GetCode().Len() {
-		err = b.writerFile(dst.server, dst.server.Packages, filepath.Join(dir, name+".server.go"))
+		err = b.writerFile(dst.server, dst.server.Packages, filepath.Join(dir, name+".server.go"), 0)
 		if err != nil {
 			return err
 		}
 	}
 	if 0 < dst.database.GetCode().Len() {
-		err = b.writerFile(dst.database, dst.database.Packages, filepath.Join(dir, name+".database.go"))
+		err = b.writerFile(dst.database, dst.database.Packages, filepath.Join(dir, name+".database.go"), 0)
 		if err != nil {
 			return err
 		}
 	}
 	if 0 < dst.verify.GetCode().Len() {
-		err = b.writerFile(dst.verify, dst.verify.Packages, filepath.Join(dir, name+".verify.go"))
+		err = b.writerFile(dst.verify, dst.verify.Packages, filepath.Join(dir, name+".verify.go"), 0)
 		if err != nil {
 			return err
 		}
@@ -120,7 +120,7 @@ func Build(file *ast.File, fset *token.FileSet, param *build.Param) error {
 	return nil
 }
 
-func (b *Builder) writerFile(data *build.Writer, packages string, out string) error {
+func (b *Builder) writerFile(data *build.Writer, packages string, out string, i int) error {
 	fc, err := os.Create(out)
 	if err != nil {
 		return err
@@ -154,7 +154,8 @@ func (b *Builder) writerFile(data *build.Writer, packages string, out string) er
 		}
 		_, _ = fc.WriteString(")\n\n")
 	}
-	_, _ = fc.WriteString(data.GetCode().String())
+	code := data.GetCode().String()
+	_, _ = fc.WriteString(code[:len(code)-1])
 	return nil
 }
 

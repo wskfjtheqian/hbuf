@@ -183,5 +183,5 @@ func (b *Builder) printGetServerRouter(dst *build.Writer, typ *ast.ServerType) {
 	dst.Code("\t\treturn router.(*" + serverName + "Router).server, nil\n")
 	dst.Code("\t}\n")
 	dst.Code("\treturn nil, errors.New(\"Not find server\")\n")
-	dst.Code("}\n")
+	dst.Code("}\n\n")
 }

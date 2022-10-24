@@ -232,7 +232,7 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 				where.Import("strings", "")
 				where.Code("strings.ReplaceAll(\"")
 				where.Code(order)
-				where.Code("\", \"$\",")
+				where.Code("\", \"$\", ")
 				where.Code(build.StringToFirstLower(field.Field.Name.Name))
 				where.Code("))\n")
 

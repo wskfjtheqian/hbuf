@@ -26,7 +26,12 @@ func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
 	b.printExtend(dst, typ.Extends)
 	dst.Code("\tInit()\n")
 
+	isFast := true
 	for _, method := range typ.Methods {
+		if !isFast {
+			dst.Code("\n")
+		}
+		isFast = false
 		if nil != method.Doc && 0 < len(method.Doc.Text()) {
 			dst.Code("\t//" + build.StringToHumpName(method.Name.Name) + " " + method.Doc.Text())
 		}
@@ -38,7 +43,7 @@ func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
 		b.printType(dst, method.Param, false)
 		dst.Code(") (*")
 		b.printType(dst, method.Result.Type(), false)
-		dst.Code(",error)\n\n")
+		dst.Code(", error)\n")
 	}
 	dst.Code("}\n\n")
 }
@@ -140,7 +145,7 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 		dst.Code("\t\t\t\tFormData: func(data hbuf.Data) ([]byte, error) {\n")
 		dst.Code("\t\t\t\t\treturn json.Marshal(&data)\n")
 		dst.Code("\t\t\t\t},\n")
-		dst.Code("\t\t\t\tSetInfo: func(ctx context.Context)  {\n")
+		dst.Code("\t\t\t\tSetInfo: func(ctx context.Context) {\n")
 
 		au := b.getTag(method.Tags)
 		if nil != au {

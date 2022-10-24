@@ -15,7 +15,12 @@ func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
 	dst.Code(" {\n")
 	b.printExtend(dst, typ.Extends)
 
+	isFast := true
 	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
+		if !isFast {
+			dst.Code("\n")
+		}
+		isFast = false
 		if nil != field.Doc && 0 < len(field.Doc.Text()) {
 			dst.Code("\t//" + field.Doc.Text())
 		}
@@ -23,8 +28,8 @@ func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
 		dst.Code("\t" + build.StringToHumpName(field.Name.Name) + " ")
 		b.printType(dst, field.Type, false)
 
-		dst.Code("\t`json:\"" + build.StringToUnderlineName(field.Name.Name) + "\"`")
-		dst.Code("\n\n")
+		dst.Code(" `json:\"" + build.StringToUnderlineName(field.Name.Name) + "\"`")
+		dst.Code("\n")
 		return nil
 	})
 	if err != nil {

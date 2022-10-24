@@ -191,14 +191,10 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 	where := build.NewWriter()
 	where.Packages = dst.Packages
 
-	isFist := true
 	for _, field := range fields {
 		text := field.Dbs[0].Where
 		if 0 < len(text) {
-			if !isFist {
-				param.Code(", ")
-			}
-			isFist = false
+			param.Code(", ")
 			param.Code(build.StringToFirstLower(field.Field.Name.Name))
 			param.Code(" ")
 			b.printType(param, field.Field.Type, false)
@@ -217,10 +213,7 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 		for _, field := range fields {
 			order := field.Dbs[0].Order
 			if 0 < len(order) {
-				if !isFist {
-					param.Code(", ")
-				}
-				isFist = false
+				param.Code(", ")
 				param.Code(build.StringToFirstLower(field.Field.Name.Name))
 				param.Code(" ")
 				b.printType(param, field.Field.Type, false)
@@ -251,26 +244,20 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 
 	if page {
 		if limit, ok := b.getLimit(fields); ok {
-			if !isFist {
-				param.Code(", ")
-			}
-			isFist = false
+			param.Code(", ")
 			param.Code(build.StringToFirstLower(limit.Field.Name.Name))
 			param.Code(" ")
 			b.printType(param, limit.Field.Type, false)
 			if offset, ok := b.getOffset(fields); ok {
-				if !isFist {
-					param.Code(", ")
-				}
-				isFist = false
+				param.Code(", ")
 				param.Code(build.StringToFirstLower(offset.Field.Name.Name))
 				param.Code(" ")
 				b.printType(param, offset.Field.Type, false)
 				where.Code("\ts.T(\" LIMIT " + offset.Dbs[0].Offset + ", " + limit.Dbs[0].Limit + "\")\n")
-				where.Code("\ts.P(" + build.StringToFirstLower(offset.Field.Name.Name) + ", " + build.StringToFirstLower(limit.Field.Name.Name) + " )\n")
+				where.Code("\ts.P(" + build.StringToFirstLower(offset.Field.Name.Name) + ", " + build.StringToFirstLower(limit.Field.Name.Name) + ")\n")
 			} else {
 				where.Code("\ts.T(\" LIMIT " + limit.Dbs[0].Limit + "\")\n")
-				where.Code("\ts.P(" + build.StringToFirstLower(limit.Field.Name.Name) + " )\n")
+				where.Code("\ts.P(" + build.StringToFirstLower(limit.Field.Name.Name) + ")\n")
 			}
 		}
 	}
@@ -323,7 +310,7 @@ func (b *Builder) printFindData(dst *build.Writer, typ *ast.DataType, db *build.
 	dst.AddImports(w.GetImports())
 
 	item, scan, _ := b.getItemAndValue(fields)
-	dst.Code("func DbFind" + fName + "(ctx context.Context, " + p.GetCode().String() + ") ([]" + dName + ", error) {\n")
+	dst.Code("func DbFind" + fName + "(ctx context.Context" + p.GetCode().String() + ") ([]" + dName + ", error) {\n")
 	dst.Code("\ts := db.NewSql()\n")
 	dst.Code("\ts.T(\"SELECT " + item.String() + " FROM " + db.Name + " WHERE del_time IS  NULL\")\n")
 	dst.Code(w.GetCode().String())
@@ -375,7 +362,7 @@ func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build
 	dst.AddImports(p.GetImports())
 	dst.AddImports(w.GetImports())
 
-	dst.Code("func DbCount" + fName + "(ctx context.Context, " + p.GetCode().String() + ") (int64, error) {\n")
+	dst.Code("func DbCount" + fName + "(ctx context.Context" + p.GetCode().String() + ") (int64, error) {\n")
 	dst.Code("\ts := db.NewSql()\n")
 	dst.Code("\ts.T(\"SELECT COUNT(1) FROM " + db.Name + " WHERE del_time IS  NULL\")\n")
 	dst.Code(w.GetCode().String())
@@ -395,7 +382,7 @@ func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build
 	dst.Code("\tdefer query.Close()\n")
 	dst.Code("\n")
 	dst.Code("\tif !query.Next() {\n")
-	dst.Code("\t  return 0, nil\n")
+	dst.Code("\t\treturn 0, nil\n")
 	dst.Code("\t}\n")
 	dst.Code("\terr = query.Scan(&count)\n")
 	dst.Code("\tif err != nil {\n")
@@ -429,7 +416,7 @@ func (b *Builder) printDeleteData(dst *build.Writer, typ *ast.DataType, db *buil
 		dst.Code("\t\treturn 0, err\n")
 		dst.Code("\t}\n")
 	}
-	dst.Code("\ts:=db.NewSql()\n")
+	dst.Code("\ts := db.NewSql()\n")
 	dst.Code("\ts.T(\"UPDATE " + db.Name + " SET del_time = NOW() \")\n")
 	dst.Code("\ts.T(\"WHERE " + key.Dbs[0].Name + " = \").V(&" + build.StringToFirstLower(key.Field.Name.Name) + ")\n")
 
@@ -455,7 +442,7 @@ func (b *Builder) printRemoveData(dst *build.Writer, typ *ast.DataType, db *buil
 		dst.Code("\t\treturn 0, err\n")
 		dst.Code("\t}\n")
 	}
-	dst.Code("\ts:=db.NewSql()\n")
+	dst.Code("\ts := db.NewSql()\n")
 	dst.Code("\ts.T(\"DELETE FROM " + db.Name + " \")\n")
 	dst.Code("\ts.T(\"WHERE " + key.Dbs[0].Name + " = \").V(&" + build.StringToFirstLower(key.Field.Name.Name) + ")\n")
 
@@ -481,7 +468,7 @@ func (b *Builder) printInsertData(dst *build.Writer, typ *ast.DataType, db *buil
 		dst.Code("\t\treturn 0, err\n")
 		dst.Code("\t}\n")
 	}
-	dst.Code("\ts:=db.NewSql()\n")
+	dst.Code("\ts := db.NewSql()\n")
 	dst.Code("\ts.T(\"INSERT INTO " + db.Name + " \")\n")
 	dst.Code("\ts.T(\"SET " + key.Dbs[0].Name + " = \").V(&val." + build.StringToHumpName(key.Field.Name.Name) + ")\n")
 	for _, field := range fields {
@@ -520,7 +507,7 @@ func (b *Builder) printInsertListData(dst *build.Writer, typ *ast.DataType, db *
 		dst.Code("\t\treturn 0, err\n")
 		dst.Code("\t}\n")
 	}
-	dst.Code("\ts:=db.NewSql()\n")
+	dst.Code("\ts := db.NewSql()\n")
 	dst.Code("\ts.T(\"INSERT INTO " + db.Name + " (")
 	isFist := true
 	for _, field := range fields {
@@ -565,7 +552,7 @@ func (b *Builder) printUpdateData(dst *build.Writer, typ *ast.DataType, db *buil
 		dst.Code("\t\treturn 0, err\n")
 		dst.Code("\t}\n")
 	}
-	dst.Code("\ts:=db.NewSql()\n")
+	dst.Code("\ts := db.NewSql()\n")
 	dst.Code("\ts.T(\"UPDATE " + db.Name + " \")\n")
 	dst.Code("\ts.T(\"SET " + key.Dbs[0].Name + " = " + key.Dbs[0].Name + "\")\n")
 	for _, field := range fields {
@@ -604,7 +591,7 @@ func (b *Builder) printSetData(dst *build.Writer, typ *ast.DataType, db *build.D
 		dst.Code("\t\treturn 0, err\n")
 		dst.Code("\t}\n")
 	}
-	dst.Code("\ts:=db.NewSql()\n")
+	dst.Code("\ts := db.NewSql()\n")
 	dst.Code("\ts.T(\"UPDATE " + db.Name + " \")\n")
 	isFist := true
 	for _, field := range fields {
@@ -641,7 +628,7 @@ func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, db *build.D
 
 	item, scan, _ := b.getItemAndValue(fields)
 
-	dst.Code("func DbGet" + fName + "(ctx context.Context, " + p.GetCode().String() + ") (*" + dName + ", error) {\n")
+	dst.Code("func DbGet" + fName + "(ctx context.Context" + p.GetCode().String() + ") (*" + dName + ", error) {\n")
 	dst.Code("\ts := db.NewSql()\n")
 	dst.Code("\ts.T(\"SELECT " + item.String() + " FROM " + db.Name + " WHERE del_time IS NULL\")\n")
 	dst.Code(w.GetCode().String())

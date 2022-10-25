@@ -428,7 +428,7 @@ func (b *Builder) printDeleteData(dst *build.Writer, typ *ast.DataType, db *buil
 	}
 
 	dst.Code("\ts := db.NewSql()\n")
-	dst.Code("\ts.T(\"UPDATE " + db.Name + " SET del_time = NOW() WHERE\")\n")
+	dst.Code("\ts.T(\"UPDATE " + db.Name + " SET del_time = NOW() WHERE 1 = 1\")\n")
 	dst.Code(w.GetCode().String())
 
 	dst.Code("\tresult, err := s.Exec(ctx)\n")
@@ -457,7 +457,7 @@ func (b *Builder) printRemoveData(dst *build.Writer, typ *ast.DataType, db *buil
 	}
 
 	dst.Code("\ts := db.NewSql()\n")
-	dst.Code("\ts.T(\"DELETE FROM " + db.Name + " WHERE\")\n")
+	dst.Code("\ts.T(\"DELETE FROM " + db.Name + " WHERE 1 = 1\")\n")
 	dst.Code(w.GetCode().String())
 
 	dst.Code("\tresult, err := s.Exec(ctx)\n")

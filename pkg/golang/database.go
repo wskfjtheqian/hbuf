@@ -94,11 +94,19 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 	}
 
 	if fDbs[0].Del {
-		b.printDeleteData(dst, typ, dbs[0], fields, key, nil != c)
+		if typ == fType {
+			key.Dbs[0].Where = "AND id = ?"
+			fFields = []*build.DBField{key}
+		}
+		b.printDeleteData(dst, typ, dbs[0], fields, fType, fFields, nil != c)
 	}
 
 	if fDbs[0].Remove {
-		b.printRemoveData(dst, typ, dbs[0], fields, key, nil != c)
+		if typ == fType {
+			key.Dbs[0].Where = "AND id = ?"
+			fFields = []*build.DBField{key}
+		}
+		b.printRemoveData(dst, typ, dbs[0], fields, fType, fFields, nil != c)
 	}
 
 	if fDbs[0].Insert {
@@ -404,21 +412,24 @@ func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build
 	dst.Code("\n")
 }
 
-func (b *Builder) printDeleteData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField, isCache bool) {
-	name := build.StringToHumpName(typ.Name.Name)
+func (b *Builder) printDeleteData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, fType *ast.DataType, fFields []*build.DBField, isCache bool) {
+	fName := build.StringToHumpName(fType.Name.Name)
 
-	dst.Code("func DbDel" + name + "(ctx context.Context, " + build.StringToFirstLower(key.Field.Name.Name) + " ")
-	b.printType(dst, key.Field.Type, false)
-	dst.Code(") (int, error) {\n")
+	p, w := b.getParamWhere(dst, fFields, false, false)
+	dst.AddImports(p.GetImports())
+	dst.AddImports(w.GetImports())
+
+	dst.Code("func DbDel" + fName + "(ctx context.Context" + p.GetCode().String() + ") (int, error) {\n")
 	if isCache {
 		dst.Code("\terr := cache.DbDel(ctx, \"" + db.Name + "\")\n")
 		dst.Code("\tif err != nil {\n")
 		dst.Code("\t\treturn 0, err\n")
 		dst.Code("\t}\n")
 	}
+
 	dst.Code("\ts := db.NewSql()\n")
-	dst.Code("\ts.T(\"UPDATE " + db.Name + " SET del_time = NOW() \")\n")
-	dst.Code("\ts.T(\"WHERE " + key.Dbs[0].Name + " = \").V(&" + build.StringToFirstLower(key.Field.Name.Name) + ")\n")
+	dst.Code("\ts.T(\"UPDATE " + db.Name + " SET del_time = NOW() WHERE\")\n")
+	dst.Code(w.GetCode().String())
 
 	dst.Code("\tresult, err := s.Exec(ctx)\n")
 	dst.Code("\tif err != nil {\n")
@@ -430,21 +441,24 @@ func (b *Builder) printDeleteData(dst *build.Writer, typ *ast.DataType, db *buil
 	dst.Code("}\n\n")
 }
 
-func (b *Builder) printRemoveData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField, isCache bool) {
-	name := build.StringToHumpName(typ.Name.Name)
+func (b *Builder) printRemoveData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, fType *ast.DataType, fFields []*build.DBField, isCache bool) {
+	fName := build.StringToHumpName(fType.Name.Name)
 
-	dst.Code("func DbRemove" + name + "(ctx context.Context, " + build.StringToFirstLower(key.Field.Name.Name) + " ")
-	b.printType(dst, key.Field.Type, false)
-	dst.Code(") (int, error) {\n")
+	p, w := b.getParamWhere(dst, fFields, false, false)
+	dst.AddImports(p.GetImports())
+	dst.AddImports(w.GetImports())
+
+	dst.Code("func DbRemove" + fName + "(ctx context.Context" + p.GetCode().String() + ") (int, error) {\n")
 	if isCache {
 		dst.Code("\terr := cache.DbDel(ctx, \"" + db.Name + "\")\n")
 		dst.Code("\tif err != nil {\n")
 		dst.Code("\t\treturn 0, err\n")
 		dst.Code("\t}\n")
 	}
+
 	dst.Code("\ts := db.NewSql()\n")
-	dst.Code("\ts.T(\"DELETE FROM " + db.Name + " \")\n")
-	dst.Code("\ts.T(\"WHERE " + key.Dbs[0].Name + " = \").V(&" + build.StringToFirstLower(key.Field.Name.Name) + ")\n")
+	dst.Code("\ts.T(\"DELETE FROM " + db.Name + " WHERE\")\n")
+	dst.Code(w.GetCode().String())
 
 	dst.Code("\tresult, err := s.Exec(ctx)\n")
 	dst.Code("\tif err != nil {\n")

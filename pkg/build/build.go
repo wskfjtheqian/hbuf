@@ -520,6 +520,11 @@ func IsNil(expr ast.Expr) bool {
 		if t.Empty {
 			return true
 		}
+	case *ast.ArrayType:
+		t := expr.(*ast.ArrayType)
+		if t.Empty {
+			return true
+		}
 	}
 	return false
 }

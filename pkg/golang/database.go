@@ -275,7 +275,7 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 func (b *Builder) printWhere(where *build.Writer, text string, field *build.DBField, s string) {
 	count := strings.Count(text, "?")
 	if build.IsArray(field.Field.Type) {
-		temp := "\" + hbuf.ToQuestions(ids, \",\") + \""
+		temp := "\" + hbuf.ToQuestions(" + build.StringToFirstLower(field.Field.Name.Name) + ", \",\") + \""
 		rex := regexp.MustCompile(`\?`)
 		match := rex.FindAllStringSubmatchIndex(text, -1)
 		if nil != match {

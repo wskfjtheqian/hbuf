@@ -161,14 +161,20 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 		dst.Code("\t\t\t\tcellBuilder: (context, x, y, data) {\n")
 		if "image" == table.table {
 			dst.Code("\t\t\t\t\treturn TablesCell(\n")
-			dst.Code("\t\t\t\t\t\tchild: Image.network(\n")
-			dst.Code("\t\t\t\t\t\t\tdata." + fieldName)
+			dst.Code("\t\t\t\t\t\tchild: (data." + fieldName)
 			if build.IsNil(field.Type) {
 				dst.Code("??\"\"")
 			}
+			dst.Code(").startsWith(\"http\")\n")
+			dst.Code("\t\t\t\t\t\t\t\t? Image.network(\n")
+			dst.Code("\t\t\t\t\t\t\t\t\t\tdata." + fieldName)
+			if build.IsNil(field.Type) {
+				dst.Code("!")
+			}
 			dst.Code(",\n")
-			dst.Code("\t\t\t\t\t\t\tfit: BoxFit.contain,\n")
-			dst.Code("\t\t\t\t\t\t),\n")
+			dst.Code("\t\t\t\t\t\t\t\t\t\tfit: BoxFit.contain,\n")
+			dst.Code("\t\t\t\t\t\t\t\t\t)\n")
+			dst.Code("\t\t\t\t\t\t\t\t: const SizedBox(),\n")
 			dst.Code("\t\t\t\t\t);\n")
 		} else {
 			dst.Code("\t\t\t\treturn TablesCell(\n")
@@ -408,7 +414,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Code("\tfinal ImageFormBuild " + fieldName + " =  ImageFormBuild();\n\n")
 
 			if build.IsNil(field.Type) {
-				setValue.Code("\t\t" + fieldName + ".initialValue = [if (info.picture?.startsWith(\"http\") ?? false) NetworkImage(info." + fieldName + "!)];\n")
+				setValue.Code("\t\t" + fieldName + ".initialValue = [if (info." + fieldName + "?.startsWith(\"http\") ?? false) NetworkImage(info." + fieldName + "!)];\n")
 				setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = ((val?.isEmpty ?? true) ? null : val!.first.url);\n")
 			} else {
 				setValue.Code("\t\t" + fieldName + ".initialValue = [NetworkImage(info." + fieldName + ")];\n")

@@ -225,7 +225,7 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 				param.Code(build.StringToFirstLower(field.Field.Name.Name))
 				param.Code(" ")
 				b.printType(param, field.Field.Type, false)
-				where.Code("\tif \"AES\" == " + build.StringToFirstLower(field.Field.Name.Name) + " || \"DESC\" == " + build.StringToFirstLower(field.Field.Name.Name))
+				where.Code("\tif \"ASC\" == " + build.StringToFirstLower(field.Field.Name.Name) + " || \"DESC\" == " + build.StringToFirstLower(field.Field.Name.Name))
 				if build.IsNil(field.Field.Type) {
 					where.Code("&& nil != " + build.StringToFirstLower(field.Field.Name.Name))
 				}

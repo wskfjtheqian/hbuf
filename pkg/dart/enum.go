@@ -22,9 +22,9 @@ func (b *Builder) printEnum(dst *build.Writer, typ *ast.EnumType) {
 	}
 	dst.Code("class " + enumName)
 	dst.Code("{\n")
-	dst.Code("\tfinal int value;\n")
+	dst.Code("\tfinal int value;\n\n")
 	dst.Code("\tfinal String name;\n\n")
-	dst.Code("\tfinal String Function(BuildContext context)? _onText;\n")
+	dst.Code("\tfinal String Function(BuildContext context)? _onText;\n\n")
 	dst.Code("\tconst " + enumName + "._(this.value, this.name, [this._onText]);\n\n")
 
 	dst.Code("\t@override\n")
@@ -57,14 +57,14 @@ func (b *Builder) printEnum(dst *build.Writer, typ *ast.EnumType) {
 
 	for _, item := range typ.Items {
 		if nil != item.Doc && 0 < len(item.Doc.Text()) {
-			dst.Code("///" + item.Doc.Text())
+			dst.Code("\t///" + item.Doc.Text())
 		}
 		itemName := build.StringToAllUpper(item.Name.Name)
 		dst.Code("\tstatic final " + itemName + " = " + enumName + "._(" + item.Id.Value + ", '" + itemName + "'")
 		if isUi {
 			dst.Code(", (context) => " + enumName + "Localizations.of(context)." + itemName)
 		}
-		dst.Code(");\n")
+		dst.Code(");\n\n")
 	}
 	dst.Code("\n")
 	dst.Code("\tstatic final List<" + enumName + "> values = [\n")

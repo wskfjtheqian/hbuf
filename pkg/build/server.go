@@ -131,7 +131,7 @@ func (b *Builder) checkServerItemType(file *ast.File, result *ast.VarType) error
 	}
 	return scanner.Error{
 		Pos: b.fset.Position(result.TypeExpr.End()),
-		Msg: "Type can only be data",
+		Msg: "Type can only be data: " + result.TypeExpr.(*ast.Ident).Name,
 	}
 }
 

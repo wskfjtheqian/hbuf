@@ -5,3 +5,7 @@ package java="com.parser"
 data TestB = 1 {
   string?[] name_people = 1  //姓名
 }
+
+server Ts = 0{
+    void Tf(TestB b) = 0
+}

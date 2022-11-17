@@ -10,7 +10,7 @@ func (b *Builder) printServerCode(dst *build.Writer, typ *ast.ServerType) {
 	dst.Import("encoding/json", "")
 	dst.Import("errors", "")
 	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "")
-	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/utl", "")
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/utils", "")
 
 	b.printServer(dst, typ)
 	b.printServerImp(dst, typ)

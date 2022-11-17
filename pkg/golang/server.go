@@ -10,6 +10,7 @@ func (b *Builder) printServerCode(dst *build.Writer, typ *ast.ServerType) {
 	dst.Import("encoding/json", "")
 	dst.Import("errors", "")
 	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "")
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/utl", "")
 
 	b.printServer(dst, typ)
 	b.printServerImp(dst, typ)
@@ -182,6 +183,6 @@ func (b *Builder) printGetServerRouter(dst *build.Writer, typ *ast.ServerType) {
 	dst.Code("\tcase *" + serverName + "Router:\n")
 	dst.Code("\t\treturn router.(*" + serverName + "Router).server, nil\n")
 	dst.Code("\t}\n")
-	dst.Code("\treturn nil, errors.New(\"Not find server\")\n")
+	dst.Code("\treturn nil, utl.Wrap(errors.New(\"Not find server\"))\n")
 	dst.Code("}\n\n")
 }

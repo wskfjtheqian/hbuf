@@ -177,7 +177,7 @@ func (b *Builder) printGetServerRouter(dst *build.Writer, typ *ast.ServerType) {
 	dst.Code("func Get" + serverName + "(ctx context.Context) (" + serverName + ", error) {\n")
 	dst.Code("\trouter := manage.GET(ctx).Get(&" + serverName + "Router{})\n")
 	dst.Code("\tif nil == router {\n")
-	dst.Code("\t\treturn nil, errors.New(\"Not find server\")\n")
+	dst.Code("\t\treturn nil, utl.Wrap(errors.New(\"Not find server\"))\n")
 	dst.Code("\t}\n")
 	dst.Code("\tswitch router.(type) {\n")
 	dst.Code("\tcase *" + serverName + "Router:\n")

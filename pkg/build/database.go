@@ -18,7 +18,8 @@ type DB struct {
 	Set     bool
 	Del     bool
 	Get     bool
-	Find    bool
+	List    bool
+	Map     string
 	Count   bool
 	Table   bool
 	Remove  bool
@@ -75,8 +76,10 @@ func GetDB(n string, tag []*ast.Tag) []*DB {
 						db.Del = "true" == strings.ToLower(item.Value.Value[1:len(item.Value.Value)-1])
 					} else if "get" == item.Name.Name {
 						db.Get = "true" == strings.ToLower(item.Value.Value[1:len(item.Value.Value)-1])
-					} else if "find" == item.Name.Name {
-						db.Find = "true" == strings.ToLower(item.Value.Value[1:len(item.Value.Value)-1])
+					} else if "list" == item.Name.Name {
+						db.List = "true" == strings.ToLower(item.Value.Value[1:len(item.Value.Value)-1])
+					} else if "map" == item.Name.Name {
+						db.Map = strings.ToLower(item.Value.Value[1 : len(item.Value.Value)-1])
 					} else if "table" == item.Name.Name {
 						db.Table = "true" == strings.ToLower(item.Value.Value[1:len(item.Value.Value)-1])
 					} else if "set" == item.Name.Name {

@@ -417,9 +417,9 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 				}
 			case build.Float, build.Double:
 				if empty {
-					dst.Code("null == " + name + " ? null : (" + v + " is num ? " + v + "toDouble() : num.tryParse(" + v + ".toString())?.toDouble())")
+					dst.Code("null == " + name + " ? null : (" + v + " is num ? " + v + ".toDouble() : num.tryParse(" + v + ".toString())?.toDouble())")
 				} else {
-					dst.Code("null == " + name + " ? 0 : (" + v + " is num ? " + v + "toDouble() : num.tryParse(" + v + ".toString())?.toDouble() ?? 0)")
+					dst.Code("null == " + name + " ? 0 : (" + v + " is num ? " + v + ".toDouble() : num.tryParse(" + v + ".toString())?.toDouble() ?? 0)")
 				}
 			case build.String:
 				if empty {

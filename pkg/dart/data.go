@@ -581,6 +581,7 @@ func (b *Builder) printExtend(dst *build.Writer, extends []*ast.Ident, start boo
 		if 0 != i || start {
 			dst.Code(", ")
 		}
+		b.getPackage(dst, v, "")
 		dst.Code(build.StringToHumpName(v.Name))
 
 	}

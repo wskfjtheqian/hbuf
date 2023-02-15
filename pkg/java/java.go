@@ -10,13 +10,13 @@ import (
 	"sort"
 )
 
-var _types = map[string]string{
+var _types = map[build.BaseType]string{
 	build.Int8: "byte", build.Int16: "short", build.Int32: "int", build.Int64: "long", build.Uint8: "char",
 	build.Uint16: "int", build.Uint32: "long", build.Uint64: "BigInteger", build.Bool: "boolean", build.Float: "float",
 	build.Double: "double", build.String: "String", build.Date: "Date", build.Decimal: "BigDecimal",
 }
 
-var _nullTypes = map[string]string{
+var _nullTypes = map[build.BaseType]string{
 	build.Int8: "Byte", build.Int16: "Short", build.Int32: "Integer", build.Int64: "Long", build.Uint8: "Character",
 	build.Uint16: "Integer", build.Uint32: "Long", build.Uint64: "BigInteger", build.Bool: "Boolean", build.Float: "Float",
 	build.Double: "Double", build.String: "String", build.Date: "Date", build.Decimal: "BigDecimal",
@@ -226,17 +226,17 @@ func (b *Builder) printType(dst *build.Writer, expr ast.Expr, notEmpty bool) {
 			b.getPackage(dst, expr, "")
 			dst.Code(expr.(*ast.Ident).Name)
 		} else {
-			if build.Decimal == (expr.(*ast.Ident).Name) {
+			if build.Decimal == build.BaseType((expr.(*ast.Ident).Name)) {
 				dst.Import("java.math.BigDecimal", "")
-			} else if build.Date == (expr.(*ast.Ident).Name) {
+			} else if build.Date == build.BaseType((expr.(*ast.Ident).Name)) {
 				dst.Import("java.util.Date", "")
-			} else if build.Int64 == (expr.(*ast.Ident).Name) {
+			} else if build.Int64 == build.BaseType((expr.(*ast.Ident).Name)) {
 				dst.Import("java.math.BigInteger", "")
 			}
 			if notEmpty {
-				dst.Code(_types[(expr.(*ast.Ident).Name)])
+				dst.Code(_types[build.BaseType((expr.(*ast.Ident).Name))])
 			} else {
-				dst.Code(_nullTypes[(expr.(*ast.Ident).Name)])
+				dst.Code(_nullTypes[build.BaseType((expr.(*ast.Ident).Name))])
 			}
 		}
 	case *ast.ArrayType:

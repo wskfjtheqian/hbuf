@@ -336,7 +336,7 @@ func (b *Builder) printCopy(dst *build.Writer, name string, expr ast.Expr, data 
 				dst.Code(name)
 			}
 		} else {
-			switch expr.(*ast.Ident).Name {
+			switch build.BaseType(expr.(*ast.Ident).Name) {
 			case build.Decimal:
 				if empty {
 					dst.Code("null == " + name + " ? null : Decimal.fromJson(" + name + "!.toJson())")
@@ -402,7 +402,7 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 				dst.Code("map[\"" + name + "\"]")
 			}
 		} else {
-			switch expr.(*ast.Ident).Name {
+			switch build.BaseType(expr.(*ast.Ident).Name) {
 			case build.Int8, build.Int16, build.Int32, build.Uint8, build.Uint16, build.Uint64:
 				if empty {
 					dst.Code("null == " + name + " ? null : (" + v + " is num ? " + v + ".toInt() : num.tryParse(" + v + ".toString())?.toInt())")
@@ -517,7 +517,7 @@ func (b *Builder) printToMap(dst *build.Writer, name string, expr ast.Expr, data
 				dst.Code(name)
 			}
 		} else {
-			switch expr.(*ast.Ident).Name {
+			switch build.BaseType(expr.(*ast.Ident).Name) {
 			case build.Int8, build.Int16, build.Int32, build.Uint8, build.Uint16, build.Uint32, build.Float, build.Double, build.String, build.Bool:
 				dst.Code(name)
 			case build.Uint64, build.Int64:

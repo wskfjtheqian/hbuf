@@ -10,7 +10,7 @@ import (
 	"sort"
 )
 
-var _types = map[string]string{
+var _types = map[build.BaseType]string{
 	build.Int8: "int", build.Int16: "int", build.Int32: "int", build.Int64: "Int64", build.Uint8: "int",
 	build.Uint16: "int", build.Uint32: "int", build.Uint64: "Int64", build.Bool: "bool", build.Float: "double",
 	build.Double: "double", build.String: "String", build.Date: "DateTime", build.Decimal: "Decimal",
@@ -217,12 +217,12 @@ func (b *Builder) printType(dst *build.Writer, expr ast.Expr, notEmpty bool) {
 			b.getPackage(dst, expr, "")
 			dst.Code(expr.(*ast.Ident).Name)
 		} else {
-			if build.Decimal == (expr.(*ast.Ident).Name) {
+			if build.Decimal == build.BaseType((expr.(*ast.Ident).Name)) {
 				dst.Import("package:decimal/decimal.dart", "")
-			} else if build.Int64 == (expr.(*ast.Ident).Name) || build.Uint64 == (expr.(*ast.Ident).Name) {
+			} else if build.Int64 == build.BaseType((expr.(*ast.Ident).Name)) || build.Uint64 == build.BaseType((expr.(*ast.Ident).Name)) {
 				dst.Import("package:fixnum/fixnum.dart", "")
 			}
-			dst.Code(_types[(expr.(*ast.Ident).Name)])
+			dst.Code(_types[build.BaseType((expr.(*ast.Ident).Name))])
 		}
 	case *ast.ArrayType:
 		ar := expr.(*ast.ArrayType)

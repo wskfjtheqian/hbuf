@@ -11,7 +11,7 @@ func (b *Builder) checkServer(file *ast.File, server *ast.ServerType, index int)
 		return err
 	}
 	name := server.Name.Name
-	if _, ok := _keys[name]; ok {
+	if _, ok := _keys[BaseType(name)]; ok {
 		return scanner.Error{
 			Pos: b.fset.Position(server.Name.Pos()),
 			Msg: "Invalid name: " + name,
@@ -51,7 +51,7 @@ func (b *Builder) checkServerItem(file *ast.File, server *ast.ServerType) error 
 			return err
 		}
 
-		if _, ok := _keys[item.Name.Name]; ok {
+		if _, ok := _keys[BaseType(item.Name.Name)]; ok {
 			return scanner.Error{
 				Pos: b.fset.Position(item.Name.Pos()),
 				Msg: "Invalid name: " + item.Name.Name,
@@ -70,7 +70,7 @@ func (b *Builder) checkServerItem(file *ast.File, server *ast.ServerType) error 
 			}
 		}
 
-		if _, ok := _keys[item.ParamName.Name]; ok {
+		if _, ok := _keys[BaseType(item.ParamName.Name)]; ok {
 			return scanner.Error{
 				Pos: b.fset.Position(item.ParamName.Pos()),
 				Msg: "Invalid name: " + item.ParamName.Name,
@@ -99,7 +99,7 @@ func (b *Builder) checkServerItemType(file *ast.File, result *ast.VarType) error
 	if obj := file.Scope.Lookup(ident.Name); nil != obj {
 		switch obj.Decl.(*ast.TypeSpec).Type.(type) {
 		case *ast.DataType:
-			if _, ok := _types[ident.Name]; ok {
+			if _, ok := _types[BaseType(ident.Name)]; ok {
 				return nil
 			}
 			obj := b.GetDataType(file, ident.Name)
@@ -116,7 +116,7 @@ func (b *Builder) checkServerItemType(file *ast.File, result *ast.VarType) error
 			if obj := f.Scope.Lookup(ident.Name); nil != obj {
 				switch obj.Decl.(*ast.TypeSpec).Type.(type) {
 				case *ast.DataType:
-					if _, ok := _types[ident.Name]; ok {
+					if _, ok := _types[BaseType(ident.Name)]; ok {
 						return nil
 					}
 					obj := b.GetDataType(file, ident.Name)
@@ -147,7 +147,7 @@ func (b *Builder) checkServerDuplicateItem(server *ast.ServerType, index int, na
 
 func (b *Builder) checkServerExtends(file *ast.File, server *ast.ServerType, index int) error {
 	for i, item := range server.Extends {
-		if _, ok := _keys[item.Name]; ok {
+		if _, ok := _keys[BaseType(item.Name)]; ok {
 			return scanner.Error{
 				Pos: b.fset.Position(server.Name.Pos()),
 				Msg: "Invalid name: " + item.Name,

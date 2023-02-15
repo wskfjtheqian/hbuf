@@ -2,7 +2,7 @@ package golang
 
 import (
 	"go/printer"
-	"hbuf/pkg/ast"
+	ast "hbuf/pkg/ast"
 	"hbuf/pkg/build"
 	"hbuf/pkg/token"
 	"os"
@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-var _types = map[string]string{
+var _types = map[build.BaseType]string{
 	build.Int8: "int8", build.Int16: "int16", build.Int32: "int32", build.Int64: "hbuf.Int64", build.Uint8: "uint8",
 	build.Uint16: "uint16", build.Uint32: "uint32", build.Uint64: "hbuf.Uint64", build.Bool: "bool", build.Float: "float32",
 	build.Double: "float64", build.String: "string", build.Date: "hbuf.Time", build.Decimal: "decimal.Decimal",
@@ -203,7 +203,7 @@ func (b *Builder) printTypeSpec(dst *GoWriter, expr ast.Expr) {
 	}
 }
 
-func (b *Builder) printType(dst *build.Writer, expr ast.Expr, emp bool) {
+func (b *Builder) printType(dst *build.Writer, expr ast.Expr, emp bool, notEmp bool) {
 	switch expr.(type) {
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
@@ -211,31 +211,33 @@ func (b *Builder) printType(dst *build.Writer, expr ast.Expr, emp bool) {
 			pack := b.getPackage(dst, expr)
 			dst.Code(pack + (expr.(*ast.Ident)).Name)
 		} else {
-			if build.Date == (expr.(*ast.Ident)).Name {
+			if build.Date == build.BaseType((expr.(*ast.Ident)).Name) {
 				dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "")
-			} else if build.Decimal == (expr.(*ast.Ident)).Name {
+			} else if build.Decimal == build.BaseType((expr.(*ast.Ident)).Name) {
 				dst.Import("github.com/shopspring/decimal", "")
-			} else if build.Int64 == (expr.(*ast.Ident).Name) || build.Uint64 == (expr.(*ast.Ident).Name) {
+			} else if build.Int64 == build.BaseType((expr.(*ast.Ident).Name)) || build.Uint64 == build.BaseType((expr.(*ast.Ident).Name)) {
 				dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "")
 			}
-			dst.Code(_types[(expr.(*ast.Ident)).Name])
+			dst.Code(_types[build.BaseType((expr.(*ast.Ident)).Name)])
 		}
 	case *ast.ArrayType:
 		ar := expr.(*ast.ArrayType)
 		dst.Code("[]")
-		b.printType(dst, ar.VType, false)
+		b.printType(dst, ar.VType, false, false)
 	case *ast.MapType:
 		ma := expr.(*ast.MapType)
 		dst.Code("map[")
-		b.printType(dst, ma.Key, true)
+		b.printType(dst, ma.Key, true, false)
 		dst.Code("]")
-		b.printType(dst, ma.VType, false)
+		b.printType(dst, ma.VType, false, false)
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
-		if t.Empty || emp {
-			dst.Code("*")
+		if !notEmp {
+			if t.Empty || emp {
+				dst.Code("*")
+			}
 		}
-		b.printType(dst, t.Type(), false)
+		b.printType(dst, t.Type(), false, false)
 	}
 }
 
@@ -300,7 +302,7 @@ func (b *Builder) getKey(dst *build.Writer, fields []*build.DBField, name string
 	for _, field := range fields {
 		if field.Field.Name.Name == name {
 			where.Code(build.StringToFirstLower(field.Field.Name.Name))
-			b.printType(param, field.Field.Type, false)
+			b.printType(param, field.Field.Type, false, false)
 			return param.String(), where.String(), true
 		}
 	}

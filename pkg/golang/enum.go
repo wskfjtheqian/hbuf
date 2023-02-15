@@ -39,4 +39,9 @@ func printEnumCode(dst *build.Writer, typ *ast.EnumType) {
 	dst.Import("errors", "")
 	dst.Code("\treturn 0, errors.New(name + \" not to " + name + "\")\n")
 	dst.Code("}\n\n")
+
+	dst.Code("func (e " + name + ") Pointer() *" + name + " {\n")
+	dst.Code("	pointer := e\n")
+	dst.Code("	return &pointer\n")
+	dst.Code("}\n\n")
 }

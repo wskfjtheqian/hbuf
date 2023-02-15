@@ -72,7 +72,7 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 		}
 
 		dst.Code("func Verify" + dName + "_" + fName + "(val ")
-		b.printType(dst, field.Type, false)
+		b.printType(dst, field.Type, false, false)
 		dst.Code(") error {\n")
 
 		for _, val := range verify.GetFormat() {

@@ -120,7 +120,7 @@ func (b *Builder) printCopy(dst *build.Writer, name string, expr ast.Expr, data 
 				dst.Code(name)
 			}
 		} else {
-			switch expr.(*ast.Ident).Name {
+			switch build.BaseType(expr.(*ast.Ident).Name) {
 			case build.Decimal:
 				if empty {
 					dst.Code("null == " + name + " ? null : Decimal.fromJson(" + name + "!.toJson())")

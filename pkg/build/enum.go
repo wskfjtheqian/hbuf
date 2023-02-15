@@ -7,7 +7,7 @@ import (
 
 func (b *Builder) checkEnum(file *ast.File, enum *ast.EnumType, index int) error {
 	name := enum.Name.Name
-	if _, ok := _keys[name]; ok {
+	if _, ok := _keys[BaseType(name)]; ok {
 		return scanner.Error{
 			Pos: b.fset.Position(enum.Name.Pos()),
 			Msg: "Invalid name: " + name,
@@ -36,7 +36,7 @@ func (b *Builder) checkEnumItem(file *ast.File, enum *ast.EnumType) error {
 		if err != nil {
 			return err
 		}
-		if _, ok := _keys[item.Name.Name]; ok {
+		if _, ok := _keys[BaseType(item.Name.Name)]; ok {
 			return scanner.Error{
 				Pos: b.fset.Position(enum.Name.Pos()),
 				Msg: "Invalid name: " + item.Name.Name,

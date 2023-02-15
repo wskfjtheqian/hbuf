@@ -26,20 +26,72 @@ func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
 		}
 
 		dst.Code("\t" + build.StringToHumpName(field.Name.Name) + " ")
-		b.printType(dst, field.Type, false)
+		b.printType(dst, field.Type, false, false)
 
 		dst.Code(" `json:\"" + build.StringToUnderlineName(field.Name.Name) + "\"`")
 		dst.Code("\n")
 	}
 	dst.Code("}\n\n")
 
-	dst.Code("func (g *" + build.StringToHumpName(typ.Name.Name) + ") ToData() ([]byte, error) {\n")
+	dst.Code("func (g " + build.StringToHumpName(typ.Name.Name) + ") ToData() ([]byte, error) {\n")
 	dst.Code("\treturn json.Marshal(g)\n")
 	dst.Code("}\n\n")
 
-	dst.Code("func (g *" + build.StringToHumpName(typ.Name.Name) + ") FormData(data []byte) error {\n")
+	dst.Code("func (g " + build.StringToHumpName(typ.Name.Name) + ") FormData(data []byte) error {\n")
 	dst.Code("\treturn json.Unmarshal(data, g)\n")
 	dst.Code("}\n\n")
+
+	for _, field := range typ.Fields.List {
+		dst.Code("func (g " + build.StringToHumpName(typ.Name.Name) + ") Get" + build.StringToHumpName(field.Name.Name) + "() ")
+		b.printType(dst, field.Type, false, true)
+		dst.Code(" {\n")
+		if field.Type.IsEmpty() {
+			dst.Code("\tif nil == g." + build.StringToHumpName(field.Name.Name) + " {\n")
+			dst.Code("\t\treturn ")
+			b.printDefault(dst, field.Type)
+			dst.Code("\n")
+			dst.Code("\t}\n")
+			dst.Code("\treturn *g." + build.StringToHumpName(field.Name.Name) + "\n")
+		} else {
+			dst.Code("\treturn g." + build.StringToHumpName(field.Name.Name) + "\n")
+		}
+		dst.Code("}\n\n")
+
+	}
+}
+
+func (b *Builder) printDefault(dst *build.Writer, expr ast.Expr) {
+	switch expr.(type) {
+	case *ast.Ident:
+		t := expr.(*ast.Ident)
+		if nil != t.Obj {
+			pack := b.getPackage(dst, expr)
+
+			dst.Code(pack + (expr.(*ast.Ident)).Name)
+			dst.Code("{}")
+		} else {
+			t := build.BaseType((expr.(*ast.Ident)).Name)
+			if build.Date == t || build.Uint64 == t || build.Int64 == t {
+				dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "")
+			} else if build.Decimal == t {
+				dst.Import("github.com/shopspring/decimal", "")
+			}
+			dst.Code(t.DefaultValue())
+		}
+	case *ast.ArrayType:
+		ar := expr.(*ast.ArrayType)
+		dst.Code("[]")
+		b.printType(dst, ar.VType, false, false)
+	case *ast.MapType:
+		ma := expr.(*ast.MapType)
+		dst.Code("map[")
+		b.printType(dst, ma.Key, true, false)
+		dst.Code("]")
+		b.printType(dst, ma.VType, false, false)
+	case *ast.VarType:
+		t := expr.(*ast.VarType)
+		b.printDefault(dst, t.Type())
+	}
 }
 
 func (b *Builder) printExtend(dst *build.Writer, extends []*ast.Ident) {

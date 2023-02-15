@@ -10,36 +10,58 @@ import (
 	"strings"
 )
 
+type BaseType string
+
+func (t BaseType) DefaultValue() string {
+	if val, ok := _types[t]; ok {
+		return val
+	}
+	return ""
+}
+
 const (
-	Int8    string = "int8"
-	Int16   string = "int16"
-	Int32   string = "int32"
-	Int64   string = "int64"
-	Uint8   string = "uint8"
-	Uint16  string = "uint16"
-	Uint32  string = "uint32"
-	Uint64  string = "uint64"
-	Bool    string = "bool"
-	Float   string = "float"
-	Double  string = "double"
-	Decimal string = "decimal"
-	String  string = "string"
-	Data    string = "data"
-	Server  string = "server"
-	Enum    string = "enum"
-	Import  string = "import"
-	Package string = "package"
-	Date    string = "date"
+	Int8    BaseType = "int8"
+	Int16   BaseType = "int16"
+	Int32   BaseType = "int32"
+	Int64   BaseType = "int64"
+	Uint8   BaseType = "uint8"
+	Uint16  BaseType = "uint16"
+	Uint32  BaseType = "uint32"
+	Uint64  BaseType = "uint64"
+	Bool    BaseType = "bool"
+	Float   BaseType = "float"
+	Double  BaseType = "double"
+	Decimal BaseType = "decimal"
+	String  BaseType = "string"
+	Data    BaseType = "data"
+	Server  BaseType = "server"
+	Enum    BaseType = "enum"
+	Import  BaseType = "import"
+	Package BaseType = "package"
+	Date    BaseType = "date"
 )
 
 type void struct {
 }
 
-var _types = map[string]void{
-	Int8: {}, Int16: {}, Int32: {}, Int64: {}, Uint8: {}, Uint16: {}, Uint32: {}, Uint64: {}, Bool: {}, Float: {}, Double: {}, String: {}, Date: {}, Decimal: {},
+var _types = map[BaseType]string{
+	Int8:    "int8(0)",
+	Int16:   "int16(0)",
+	Int32:   "int32(0)",
+	Int64:   "hbuf.Int64{}",
+	Uint8:   "uint8(0)",
+	Uint16:  "uint16(0)",
+	Uint32:  "uint32(0)",
+	Uint64:  "hbuf.Uint64{}",
+	Bool:    "false",
+	Float:   "float32(0)",
+	Double:  "float64(0)",
+	String:  "\"\"",
+	Date:    "hbuf.Time{}",
+	Decimal: "decimal.Zero",
 }
 
-var _keys = map[string]void{
+var _keys = map[BaseType]void{
 	Int8: {}, Int16: {}, Int32: {}, Int64: {}, Uint8: {}, Uint16: {}, Uint32: {}, Uint64: {}, Bool: {}, Float: {}, Double: {}, String: {}, Data: {}, Server: {}, Enum: {}, Import: {}, Package: {}, Date: {}, Decimal: {},
 }
 
@@ -218,7 +240,7 @@ func (b *Builder) checkDuplicateType(file *ast.File, index int, name string) boo
 
 func (b *Builder) registerServer(file *ast.File, enum *ast.ServerType) error {
 	name := enum.Name.Name
-	if _, ok := _keys[name]; ok {
+	if _, ok := _keys[BaseType(name)]; ok {
 		return scanner.Error{
 			Pos: b.fset.Position(enum.Name.Pos()),
 			Msg: "Invalid name: " + name,
@@ -246,7 +268,7 @@ func (b *Builder) checkDataMapKey(file *ast.File, varType *ast.VarType) error {
 	}
 	switch varType.TypeExpr.(type) {
 	case *ast.Ident:
-		if _, ok := _types[varType.TypeExpr.(*ast.Ident).Name]; ok {
+		if _, ok := _types[BaseType(varType.TypeExpr.(*ast.Ident).Name)]; ok {
 			return nil
 		}
 	}

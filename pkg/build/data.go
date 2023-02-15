@@ -11,7 +11,7 @@ func (b *Builder) checkData(file *ast.File, data *ast.DataType, index int) error
 		return err
 	}
 	name := data.Name.Name
-	if _, ok := _keys[name]; ok {
+	if _, ok := _keys[BaseType(name)]; ok {
 		return scanner.Error{
 			Pos: b.fset.Position(data.Name.Pos()),
 			Msg: "Invalid name: " + name,
@@ -41,7 +41,7 @@ func (b *Builder) checkData(file *ast.File, data *ast.DataType, index int) error
 
 func (b *Builder) checkDataExtends(file *ast.File, data *ast.DataType, index int) error {
 	for i, item := range data.Extends {
-		if _, ok := _keys[item.Name]; ok {
+		if _, ok := _keys[BaseType(item.Name)]; ok {
 			return scanner.Error{
 				Pos: b.fset.Position(data.Name.Pos()),
 				Msg: "Invalid name: " + item.Name,
@@ -131,7 +131,7 @@ func (b *Builder) checkDataItemType(file *ast.File, typ ast.Type) error {
 	switch typ.Type().(type) {
 	case *ast.Ident:
 		ident := typ.Type().(*ast.Ident)
-		if _, ok := _types[ident.Name]; ok {
+		if _, ok := _types[BaseType(ident.Name)]; ok {
 			return nil
 		}
 		obj := b.GetDataType(file, ident.Name)
@@ -179,7 +179,7 @@ func (b *Builder) checkDataItem(file *ast.File, data *ast.DataType) error {
 				return err
 			}
 		}
-		if _, ok := _keys[item.Name.Name]; ok {
+		if _, ok := _keys[BaseType(item.Name.Name)]; ok {
 			return scanner.Error{
 				Pos: b.fset.Position(item.Name.Pos()),
 				Msg: "Invalid name: " + item.Name.Name,

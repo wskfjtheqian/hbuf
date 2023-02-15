@@ -220,7 +220,7 @@ func (b *Builder) printToString(dst *build.Writer, expr ast.Expr, empty bool, di
 			b.getPackage(dst, expr, "")
 			b.printToString(dst, t.Obj.Decl.(*ast.TypeSpec).Type, empty, digit, format, val)
 		} else {
-			switch t.Name {
+			switch build.BaseType(t.Name) {
 			case build.Int8, build.Int16, build.Int32, build.Int64, build.Uint8, build.Uint16, build.Uint32, build.Uint64:
 				if empty {
 					dst.Code("?")
@@ -290,7 +290,7 @@ func (b *Builder) printFormString(dst *build.Writer, name string, expr ast.Expr,
 			b.getPackage(dst, expr, "")
 			b.printFormString(dst, name, t.Obj.Decl.(*ast.TypeSpec).Type, empty, digit, format)
 		} else {
-			switch t.Name {
+			switch build.BaseType(t.Name) {
 			case build.Int8, build.Int16, build.Int32, build.Uint8, build.Uint16, build.Uint32:
 				if empty {
 					dst.Code(name + "==null ? null : num.tryParse(" + name + "!)?.toInt()")

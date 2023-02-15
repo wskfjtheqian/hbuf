@@ -85,8 +85,12 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 		b.printScanData(dst, typ, dbs[0], fields, key)
 	}
 
-	if fDbs[0].Find {
-		b.printFindData(dst, typ, dbs[0], fields, fType, fFields, c)
+	if fDbs[0].List {
+		b.printListData(dst, typ, dbs[0], fields, fType, fFields, c)
+	}
+
+	if 0 < len(fDbs[0].Map) {
+		b.printMapData(dst, typ, dbs[0], fields, fType, fFields, fDbs[0].Map, c)
 	}
 
 	if fDbs[0].Count {
@@ -309,7 +313,7 @@ func (b *Builder) printWhere(where *build.Writer, text string, field *build.DBFi
 	where.Code(")\n")
 }
 
-func (b *Builder) printFindData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, fType *ast.DataType, fFields []*build.DBField, c *cache) {
+func (b *Builder) printListData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, fType *ast.DataType, fFields []*build.DBField, c *cache) {
 	fName := build.StringToHumpName(fType.Name.Name)
 	dName := build.StringToHumpName(typ.Name.Name)
 
@@ -318,7 +322,7 @@ func (b *Builder) printFindData(dst *build.Writer, typ *ast.DataType, db *build.
 	dst.AddImports(w.GetImports())
 
 	item, scan, _ := b.getItemAndValue(fields)
-	dst.Code("func DbFind" + fName + "(ctx context.Context" + p.GetCode().String() + ") ([]" + dName + ", error) {\n")
+	dst.Code("func DbList" + fName + "(ctx context.Context" + p.GetCode().String() + ") ([]" + dName + ", error) {\n")
 	dst.Code("\ts := db.NewSql()\n")
 	dst.Code("\ts.T(\"SELECT " + item.String() + " FROM " + db.Name + " WHERE del_time IS  NULL\")\n")
 	dst.Code(w.GetCode().String())
@@ -346,6 +350,64 @@ func (b *Builder) printFindData(dst *build.Writer, typ *ast.DataType, db *build.
 	dst.Code("\t\t\treturn nil, err\n")
 	dst.Code("\t\t}\n")
 	dst.Code("\t\tret = append(ret, val)\n")
+	dst.Code("\t}\n")
+	if nil != c {
+		dst.Import("math/rand", "")
+		dst.Import("time", "")
+		dst.Code("\t_ = cache.Set(ctx, key, &ret, ")
+		if 0 < c.min {
+			dst.Code("time.Duration(rand.Intn(" + strconv.Itoa(c.max) + "-" + strconv.Itoa(c.min) + ")+" + strconv.Itoa(c.min) + ")*time.Second")
+		} else {
+			dst.Code("0")
+		}
+		dst.Code(")\n")
+	}
+	dst.Code("\treturn ret, nil\n")
+	dst.Code("}\n")
+	dst.Code("\n")
+}
+
+func (b *Builder) printMapData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, fType *ast.DataType, fFields []*build.DBField, keyName string, c *cache) {
+	kType, KName, ok := b.getKey(dst, fields, keyName)
+	if !ok {
+		return
+	}
+	fName := build.StringToHumpName(fType.Name.Name)
+	dName := build.StringToHumpName(typ.Name.Name)
+
+	p, w := b.getParamWhere(dst, fFields, true, true)
+	dst.AddImports(p.GetImports())
+	dst.AddImports(w.GetImports())
+
+	item, scan, _ := b.getItemAndValue(fields)
+	dst.Code("func DbMap" + fName + "(ctx context.Context" + p.GetCode().String() + ") (map[" + kType + "]" + dName + ", error) {\n")
+	dst.Code("\ts := db.NewSql()\n")
+	dst.Code("\ts.T(\"SELECT " + item.String() + " FROM " + db.Name + " WHERE del_time IS  NULL\")\n")
+	dst.Code(w.GetCode().String())
+
+	dst.Code("\tret := make(map[" + kType + "]" + dName + ")\n")
+	if nil != c {
+		dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/cache", "")
+		dst.Code("\tlist, key, err := cache.DbGet(ctx, \"" + db.Name + "\", s, &ret)\n")
+		dst.Code("\tif list != nil {\n")
+		dst.Code("\t\treturn *list, nil\n")
+		dst.Code("\t}\n")
+	}
+
+	dst.Code("\tquery, err := s.Query(ctx)\n")
+	dst.Code("\tif err != nil {\n")
+	dst.Code("\t\treturn nil, err\n")
+	dst.Code("\t}\n")
+	dst.Code("\tdefer query.Close()\n")
+
+	dst.Code("\n")
+	dst.Code("\tfor query.Next() {\n")
+	dst.Code("\t\tvar val " + dName + "\n")
+	dst.Code("\t\terr = query.Scan(" + scan.String() + ")\n")
+	dst.Code("\t\tif err != nil {\n")
+	dst.Code("\t\t\treturn nil, err\n")
+	dst.Code("\t\t}\n")
+	dst.Code("\t\tret[val." + build.StringToHumpName(KName) + "] = val\n")
 	dst.Code("\t}\n")
 	if nil != c {
 		dst.Import("math/rand", "")

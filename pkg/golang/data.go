@@ -45,6 +45,8 @@ func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
 func (b *Builder) printExtend(dst *build.Writer, extends []*ast.Ident) {
 	for _, v := range extends {
 		dst.Code("\t")
+		pack := b.getPackage(dst, v)
+		dst.Code(pack)
 		dst.Code(build.StringToHumpName(v.Name))
 		dst.Code("\n\n")
 	}

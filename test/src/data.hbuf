@@ -1,11 +1,22 @@
-package go="parser"
-package java="com.parser"
+package go = "parser"
+package java = "com.parser"
 
-[dbName:key="ry"]
+[db:table="true"; insert="true"; update="true"; del="true"; get="true"; list="true"; inserts="true"; set="true"; count="true"]
 data TestB = 1 {
-  string?[] name_people = 1  //姓名
+    [db:key=""]
+    int64 id = 0
+
+    string name = 1
 }
 
-server Ts = 0{
-    void Tf(TestB b) = 0
+[db:table="TestB"; get="true"; set="is"; update="is"]
+data TestA = 0 {
+    [db:set="?"; where="name = ?"]
+    string name = 0
+
+    [db:set="?"; where="name = ?"]
+    string b = 1
+
+
 }
+

@@ -1,20 +1,20 @@
-package "parser"
-
-import "./people.hbuf"
-
-enum Gender{
-  Girl = 1  //女
-  Boy  = 2  //男
-}
-
-data _Student_Data : People{
-  int8 no = 1  //编号
-  Gender gender = 2
-  int8[]? ll = 3
-  string<int8> book_tags= 4
-}
-
-
-data AA{
-  People p = 1
-}
+//package "parser"
+//
+//import "./people.hbuf"
+//
+//enum Gender{
+//  Girl = 1  //女
+//  Boy  = 2  //男
+//}
+//
+//data _Student_Data : People{
+//  int8 no = 1  //编号
+//  Gender gender = 2
+//  int8[]? ll = 3
+//  string<int8> book_tags= 4
+//}
+//
+//
+//data AA{
+//  People p = 1
+//}

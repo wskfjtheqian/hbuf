@@ -66,9 +66,12 @@ func (b *Builder) printDefault(dst *build.Writer, expr ast.Expr) {
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
 			pack := b.getPackage(dst, expr)
-
 			dst.Code(pack + (expr.(*ast.Ident)).Name)
-			dst.Code("{}")
+			if t.Obj.Kind == ast.Enum {
+				dst.Code("(0)")
+			} else {
+				dst.Code("{}")
+			}
 		} else {
 			t := build.BaseType((expr.(*ast.Ident)).Name)
 			if build.Date == t || build.Uint64 == t || build.Int64 == t {

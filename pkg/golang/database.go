@@ -59,8 +59,8 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 	fDbs := dbs
 	fFields := fields
 	fType := typ
-	if !dbs[0].Table && 0 < len(dbs[0].Name) {
-		table := b.build.GetDataType(b.getFile(typ.Name), dbs[0].Name)
+	if 0 < len(dbs[0].Table) && "true" != strings.ToLower(dbs[0].Table) {
+		table := b.build.GetDataType(b.getFile(typ.Name), dbs[0].Table)
 		if nil == table {
 			return nil
 		}
@@ -78,10 +78,10 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 		return nil
 	}
 
-	if !dbs[0].Table {
+	if 0 == len(dbs[0].Table) {
 		return nil
 	}
-	if fDbs[0].Table {
+	if "true" == strings.ToLower(fDbs[0].Table) {
 		b.printScanData(dst, typ, dbs[0], fields, key)
 	}
 
@@ -121,12 +121,22 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 		b.printInsertListData(dst, typ, dbs[0], fields, key, nil != c)
 	}
 
-	if fDbs[0].Update {
-		b.printUpdateData(dst, typ, dbs[0], fields, key, nil != c)
+	update := strings.ToLower(fDbs[0].Update)
+	if "all" == update || "is" == update {
+		if typ == fType {
+			key.Dbs[0].Where = "AND id = ?"
+			fFields = []*build.DBField{key}
+		}
+		b.printUpdateData(dst, typ, update, dbs[0], fFields, fType, c)
 	}
 
-	if fDbs[0].Set {
-		b.printSetData(dst, typ, dbs[0], fields, key, nil != c)
+	set := strings.ToLower(fDbs[0].Set)
+	if "all" == set || "is" == set {
+		if typ == fType {
+			key.Dbs[0].Where = "AND id = ?"
+			fFields = []*build.DBField{key}
+		}
+		b.printSetData(dst, typ, set, dbs[0], fFields, fType, c)
 	}
 
 	if fDbs[0].Get {
@@ -594,10 +604,15 @@ func (b *Builder) printInsertListData(dst *build.Writer, typ *ast.DataType, db *
 	dst.Code("}\n\n")
 }
 
-func (b *Builder) printUpdateData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField, isCache bool) {
-	name := build.StringToHumpName(typ.Name.Name)
-	dst.Code("func (g " + name + ")DbUpdate(ctx context.Context) (int, error) {\n")
-	if isCache {
+func (b *Builder) printUpdateData(dst *build.Writer, typ *ast.DataType, key string, db *build.DB, fields []*build.DBField, fType *ast.DataType, c *cache) {
+	fName := build.StringToHumpName(fType.Name.Name)
+	//dName := build.StringToHumpName(typ.Name.Name)
+
+	w := b.getParamWhere(dst, fields, false, false)
+	dst.AddImports(w.GetImports())
+
+	dst.Code("func (g " + fName + ")DbUpdate(ctx context.Context) (int, error) {\n")
+	if nil != c {
 		dst.Code("\terr := cache.DbDel(ctx, \"" + db.Name + "\")\n")
 		dst.Code("\tif err != nil {\n")
 		dst.Code("\t\treturn 0, err\n")
@@ -605,23 +620,38 @@ func (b *Builder) printUpdateData(dst *build.Writer, typ *ast.DataType, db *buil
 	}
 	dst.Code("\ts := db.NewSql()\n")
 	dst.Code("\ts.T(\"UPDATE " + db.Name + " \")\n")
-	dst.Code("\ts.T(\"SET " + key.Dbs[0].Name + " = " + key.Dbs[0].Name + "\")\n")
+	i := 0
 	for _, field := range fields {
-		if field == key {
+		set := ""
+		if "all" == key {
+			set = field.Dbs[0].Name + " = ?"
+		} else if "is" == key {
+			if 0 < len(field.Dbs[0].Set) {
+				set = field.Dbs[0].Name + " = " + field.Dbs[0].Set
+			}
+		}
+		if 0 == len(set) {
 			continue
 		}
-		fName := build.StringToHumpName(field.Field.Name.Name)
+		name := build.StringToHumpName(field.Field.Name.Name)
 		if build.IsNil(field.Field.Type) {
-			dst.Code("\tif nil != g." + fName + " {\n")
+			dst.Code("\tif nil != g." + name + " {\n")
 			dst.Code("\t")
 		}
-		dst.Code("\ts.T(\", " + field.Dbs[0].Name + " =\").V(&g." + fName + ")\n")
+		if 0 == i {
+			dst.Code("\ts.T(\"SET " + set + " \").P(&g." + name + ")\n")
+		} else {
+			dst.Code("\ts.T(\", " + set + " \").P(&g." + name + ")\n")
+		}
+		i++
 		if build.IsNil(field.Field.Type) {
 			dst.Code("\t}\n")
 		}
 	}
 
-	dst.Code("\ts.T(\"WHERE del_time IS  NULL AND " + key.Dbs[0].Name + " = \").V(&g." + build.StringToHumpName(key.Field.Name.Name) + ")\n")
+	dst.Code("\ts.T(\"WHERE 1 == 1 \")\n")
+	dst.Code(w.String())
+	dst.Code("\n")
 
 	dst.Code("\tresult, err := s.Exec(ctx)\n")
 	dst.Code("\tif err != nil {\n")
@@ -632,11 +662,15 @@ func (b *Builder) printUpdateData(dst *build.Writer, typ *ast.DataType, db *buil
 	dst.Code("}\n\n")
 }
 
-func (b *Builder) printSetData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField, isCache bool) {
-	name := build.StringToHumpName(typ.Name.Name)
+func (b *Builder) printSetData(dst *build.Writer, typ *ast.DataType, key string, db *build.DB, fields []*build.DBField, fType *ast.DataType, c *cache) {
+	fName := build.StringToHumpName(fType.Name.Name)
+	//dName := build.StringToHumpName(typ.Name.Name)
 
-	dst.Code("func (g " + name + ")DbSet(ctx context.Context) (int, error) {\n")
-	if isCache {
+	w := b.getParamWhere(dst, fields, false, false)
+	dst.AddImports(w.GetImports())
+
+	dst.Code("func (g " + fName + ")DbSet(ctx context.Context) (int, error) {\n")
+	if nil != c {
 		dst.Code("\terr := cache.DbDel(ctx, \"" + db.Name + "\")\n")
 		dst.Code("\tif err != nil {\n")
 		dst.Code("\t\treturn 0, err\n")
@@ -644,21 +678,31 @@ func (b *Builder) printSetData(dst *build.Writer, typ *ast.DataType, db *build.D
 	}
 	dst.Code("\ts := db.NewSql()\n")
 	dst.Code("\ts.T(\"UPDATE " + db.Name + " \")\n")
-	isFist := true
+	i := 0
 	for _, field := range fields {
-		if field == key {
+		set := ""
+		if "all" == key {
+			set = field.Dbs[0].Name + " = ?"
+		} else if "is" == key {
+			if 0 < len(field.Dbs[0].Set) {
+				set = field.Dbs[0].Name + " = " + field.Dbs[0].Set
+			}
+		}
+		if 0 == len(set) {
 			continue
 		}
-		if isFist {
-			dst.Code("\ts.T(\"SET ")
+		name := build.StringToHumpName(field.Field.Name.Name)
+		if 0 == i {
+			dst.Code("\ts.T(\"SET " + set + " \").P(&g." + name + ")\n")
 		} else {
-			dst.Code("\ts.T(\", ")
+			dst.Code("\ts.T(\", " + set + " \").P(&g." + name + ")\n")
 		}
-		isFist = false
-		dst.Code(field.Dbs[0].Name + " =\").V(&g." + build.StringToHumpName(field.Field.Name.Name) + ")\n")
+		i++
 	}
 
-	dst.Code("\ts.T(\"WHERE del_time IS  NULL AND " + key.Dbs[0].Name + " = \").V(&g." + build.StringToHumpName(key.Field.Name.Name) + ")\n")
+	dst.Code("\ts.T(\"WHERE 1 == 1 \")\n")
+	dst.Code(w.String())
+	dst.Code("\n")
 
 	dst.Code("\tresult, err := s.Exec(ctx)\n")
 	dst.Code("\tif err != nil {\n")
@@ -719,4 +763,5 @@ func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, db *build.D
 	}
 	dst.Code("\treturn &val, nil\n")
 	dst.Code("}\n\n")
+
 }

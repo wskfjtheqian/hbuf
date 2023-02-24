@@ -1,15 +1,16 @@
 package go = "parser"
 package java = "com.parser"
 
-[db:table="true"]
+[db:]
 data TestB = 1 {
-    [db:key=""]
+    [db:key=""; get="COUNT(1)"]
     int64 id = 0
 
+    [db:get="?"]
     string name = 1
 }
 
-[db:table="TestB"; get="is"]
+[db:table="TestB"; get="is"; list="is"; map="name:is"]
 data TestA = 0 {
     [db:get="COUNT(1)"; where="name = ?"]
     string name = 0

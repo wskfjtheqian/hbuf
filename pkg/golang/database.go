@@ -59,7 +59,7 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 	fDbs := dbs
 	fFields := fields
 	fType := typ
-	if 0 < len(dbs[0].Table) && "true" != strings.ToLower(dbs[0].Table) {
+	if 0 < len(dbs[0].Table) {
 		table := b.build.GetDataType(b.getFile(typ.Name), dbs[0].Table)
 		if nil == table {
 			return nil
@@ -78,24 +78,23 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 		return nil
 	}
 
-	if 0 == len(dbs[0].Table) {
-		return nil
-	}
-	if "true" == strings.ToLower(fDbs[0].Table) {
+	if 0 == len(fDbs[0].Table) {
 		b.printScanData(dst, typ, dbs[0], fields, key)
 	}
 
 	val := strings.ToLower(fDbs[0].List)
 	if "all" == val || "is" == val {
-		if typ == fType {
-			key.Dbs[0].Where = "AND id = ?"
-			fFields = []*build.DBField{key}
-		}
-		//b.printListData(dst, typ, val, dbs[0], fFields, fType, c)
+		b.printListData(dst, typ, val, dbs[0], fields, fType, fFields, c)
 	}
 
 	if 0 < len(fDbs[0].Map) {
-		b.printMapData(dst, typ, dbs[0], fields, fType, fFields, fDbs[0].Map, c)
+		ks := strings.Split(fDbs[0].Map, ":")
+		if 1 < len(ks) {
+			val = strings.ToLower(ks[1])
+			if ("all" == val || "is" == val) && 0 < len(ks[0]) {
+				b.printMapData(dst, val, typ, dbs[0], fields, fType, fFields, ks[0], c)
+			}
+		}
 	}
 
 	if fDbs[0].Count {
@@ -187,8 +186,8 @@ func (b *Builder) getDBField(typ *ast.DataType) ([]*build.DB, []*build.DBField, 
 
 func (b *Builder) printScanData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField) {
 	name := build.StringToHumpName(typ.Name.Name)
-	item, scan, _ := b.getItemAndValue(fields, "")
-	dst.Code("func DbScan" + name + "(val *" + name + ") (string, []any) {\n")
+	item, scan, _ := b.getItemAndValue(fields, "all")
+	dst.Code("func (val *" + name + ")DbScan() (string, []any) {\n")
 	dst.Code("\treturn `" + item.String() + "`,\n")
 	dst.Code("\t\t[]any{" + scan.String() + "}\n")
 	dst.Code("}\n")
@@ -325,14 +324,14 @@ func (b *Builder) printWhere(where *build.Writer, text string, field *build.DBFi
 	where.Code(")\n")
 }
 
-func (b *Builder) printListData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, fType *ast.DataType, fFields []*build.DBField, c *cache) {
+func (b *Builder) printListData(dst *build.Writer, typ *ast.DataType, key string, db *build.DB, fields []*build.DBField, fType *ast.DataType, fFields []*build.DBField, c *cache) {
 	fName := build.StringToHumpName(fType.Name.Name)
 	dName := build.StringToHumpName(typ.Name.Name)
 
 	w := b.getParamWhere(dst, fFields, true, true)
 	dst.AddImports(w.GetImports())
 
-	item, scan, _ := b.getItemAndValue(fields, "")
+	item, scan, _ := b.getItemAndValue(fields, key)
 	dst.Code("func (g " + fName + ")DbList(ctx context.Context) ([]" + dName + ", error) {\n")
 	dst.Code("\ts := db.NewSql()\n")
 	dst.Code("\ts.T(\"SELECT " + item.String() + " FROM " + db.Name + " WHERE del_time IS  NULL\")\n")
@@ -378,7 +377,7 @@ func (b *Builder) printListData(dst *build.Writer, typ *ast.DataType, db *build.
 	dst.Code("\n")
 }
 
-func (b *Builder) printMapData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, fType *ast.DataType, fFields []*build.DBField, keyName string, c *cache) {
+func (b *Builder) printMapData(dst *build.Writer, val string, typ *ast.DataType, db *build.DB, fields []*build.DBField, fType *ast.DataType, fFields []*build.DBField, keyName string, c *cache) {
 	kType, KName, ok := b.getKey(dst, fields, keyName)
 	if !ok {
 		return
@@ -389,7 +388,7 @@ func (b *Builder) printMapData(dst *build.Writer, typ *ast.DataType, db *build.D
 	w := b.getParamWhere(dst, fFields, true, true)
 	dst.AddImports(w.GetImports())
 
-	item, scan, _ := b.getItemAndValue(fields, "")
+	item, scan, _ := b.getItemAndValue(fields, val)
 	dst.Code("func (g " + fName + ")DbMap(ctx context.Context) (map[" + kType + "]" + dName + ", error) {\n")
 	dst.Code("\ts := db.NewSql()\n")
 	dst.Code("\ts.T(\"SELECT " + item.String() + " FROM " + db.Name + " WHERE del_time IS  NULL\")\n")

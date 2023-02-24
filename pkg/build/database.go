@@ -12,13 +12,13 @@ type DB struct {
 	Name    string
 	Key     bool
 	typ     string
-	Insert  bool
-	Inserts bool
+	Insert  string
+	Inserts string
 	Update  string
 	Set     string
 	Del     bool
-	Get     bool
-	List    bool
+	Get     string
+	List    string
 	Map     string
 	Count   bool
 	Table   string
@@ -67,17 +67,17 @@ func GetDB(n string, tag []*ast.Tag) []*DB {
 					} else if "limit" == item.Name.Name {
 						db.Limit = item.Value.Value[1 : len(item.Value.Value)-1]
 					} else if "insert" == item.Name.Name {
-						db.Insert = "true" == strings.ToLower(item.Value.Value[1:len(item.Value.Value)-1])
+						db.Insert = item.Value.Value[1 : len(item.Value.Value)-1]
 					} else if "inserts" == item.Name.Name {
-						db.Inserts = "true" == strings.ToLower(item.Value.Value[1:len(item.Value.Value)-1])
+						db.Inserts = item.Value.Value[1 : len(item.Value.Value)-1]
 					} else if "update" == item.Name.Name {
 						db.Update = item.Value.Value[1 : len(item.Value.Value)-1]
 					} else if "del" == item.Name.Name {
 						db.Del = "true" == strings.ToLower(item.Value.Value[1:len(item.Value.Value)-1])
 					} else if "get" == item.Name.Name {
-						db.Get = "true" == strings.ToLower(item.Value.Value[1:len(item.Value.Value)-1])
+						db.Get = item.Value.Value[1 : len(item.Value.Value)-1]
 					} else if "list" == item.Name.Name {
-						db.List = "true" == strings.ToLower(item.Value.Value[1:len(item.Value.Value)-1])
+						db.List = item.Value.Value[1 : len(item.Value.Value)-1]
 					} else if "map" == item.Name.Name {
 						db.Map = strings.ToLower(item.Value.Value[1 : len(item.Value.Value)-1])
 					} else if "table" == item.Name.Name {

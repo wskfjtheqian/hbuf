@@ -85,8 +85,13 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 		b.printScanData(dst, typ, dbs[0], fields, key)
 	}
 
-	if fDbs[0].List {
-		b.printListData(dst, typ, dbs[0], fields, fType, fFields, c)
+	val := strings.ToLower(fDbs[0].List)
+	if "all" == val || "is" == val {
+		if typ == fType {
+			key.Dbs[0].Where = "AND id = ?"
+			fFields = []*build.DBField{key}
+		}
+		//b.printListData(dst, typ, val, dbs[0], fFields, fType, c)
 	}
 
 	if 0 < len(fDbs[0].Map) {
@@ -113,38 +118,41 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 		b.printRemoveData(dst, typ, dbs[0], fields, fType, fFields, nil != c)
 	}
 
-	if fDbs[0].Insert {
+	val = strings.ToLower(fDbs[0].Insert)
+	if "all" == val || "is" == val {
 		b.printInsertData(dst, typ, dbs[0], fields, key, nil != c)
 	}
 
-	if fDbs[0].Inserts {
+	val = strings.ToLower(fDbs[0].Inserts)
+	if "all" == val || "is" == val {
 		b.printInsertListData(dst, typ, dbs[0], fields, key, nil != c)
 	}
 
-	update := strings.ToLower(fDbs[0].Update)
-	if "all" == update || "is" == update {
+	val = strings.ToLower(fDbs[0].Update)
+	if "all" == val || "is" == val {
 		if typ == fType {
 			key.Dbs[0].Where = "AND id = ?"
 			fFields = []*build.DBField{key}
 		}
-		b.printUpdateData(dst, typ, update, dbs[0], fFields, fType, c)
+		b.printUpdateData(dst, typ, val, dbs[0], fFields, fType, c)
 	}
 
-	set := strings.ToLower(fDbs[0].Set)
-	if "all" == set || "is" == set {
+	val = strings.ToLower(fDbs[0].Set)
+	if "all" == val || "is" == val {
 		if typ == fType {
 			key.Dbs[0].Where = "AND id = ?"
 			fFields = []*build.DBField{key}
 		}
-		b.printSetData(dst, typ, set, dbs[0], fFields, fType, c)
+		b.printSetData(dst, typ, val, dbs[0], fFields, fType, c)
 	}
 
-	if fDbs[0].Get {
+	val = strings.ToLower(fDbs[0].Get)
+	if "all" == val || "is" == val {
 		if typ == fType {
 			key.Dbs[0].Where = "AND id = ?"
 			fFields = []*build.DBField{key}
 		}
-		b.printGetData(dst, typ, dbs[0], fields, fType, fFields, c)
+		b.printGetData(dst, typ, val, dbs[0], fields, fType, fFields, c)
 	}
 	return nil
 }
@@ -179,7 +187,7 @@ func (b *Builder) getDBField(typ *ast.DataType) ([]*build.DB, []*build.DBField, 
 
 func (b *Builder) printScanData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField) {
 	name := build.StringToHumpName(typ.Name.Name)
-	item, scan, _ := b.getItemAndValue(fields)
+	item, scan, _ := b.getItemAndValue(fields, "")
 	dst.Code("func DbScan" + name + "(val *" + name + ") (string, []any) {\n")
 	dst.Code("\treturn `" + item.String() + "`,\n")
 	dst.Code("\t\t[]any{" + scan.String() + "}\n")
@@ -187,19 +195,30 @@ func (b *Builder) printScanData(dst *build.Writer, typ *ast.DataType, db *build.
 	dst.Code("\n")
 }
 
-func (b *Builder) getItemAndValue(fields []*build.DBField) (strings.Builder, strings.Builder, strings.Builder) {
+func (b *Builder) getItemAndValue(fields []*build.DBField, key string) (strings.Builder, strings.Builder, strings.Builder) {
 	item := strings.Builder{}
 	scan := strings.Builder{}
 	ques := strings.Builder{}
 	isFist := true
 	for _, field := range fields {
+		get := ""
+		if "all" == key {
+			get = build.StringToUnderlineName(field.Dbs[0].Name)
+		} else if "is" == key {
+			if 0 < len(field.Dbs[0].Get) {
+				get = strings.ReplaceAll(field.Dbs[0].Get, "?", build.StringToUnderlineName(field.Dbs[0].Name))
+			}
+		}
+		if 0 == len(get) {
+			continue
+		}
 		if !isFist {
 			item.WriteString(", ")
 			scan.WriteString(", ")
 			ques.WriteString(", ")
 		}
 		isFist = false
-		item.WriteString(build.StringToUnderlineName(field.Dbs[0].Name))
+		item.WriteString(get)
 		scan.WriteString("&val." + build.StringToHumpName(field.Field.Name.Name))
 		ques.WriteString("?")
 	}
@@ -313,7 +332,7 @@ func (b *Builder) printListData(dst *build.Writer, typ *ast.DataType, db *build.
 	w := b.getParamWhere(dst, fFields, true, true)
 	dst.AddImports(w.GetImports())
 
-	item, scan, _ := b.getItemAndValue(fields)
+	item, scan, _ := b.getItemAndValue(fields, "")
 	dst.Code("func (g " + fName + ")DbList(ctx context.Context) ([]" + dName + ", error) {\n")
 	dst.Code("\ts := db.NewSql()\n")
 	dst.Code("\ts.T(\"SELECT " + item.String() + " FROM " + db.Name + " WHERE del_time IS  NULL\")\n")
@@ -370,7 +389,7 @@ func (b *Builder) printMapData(dst *build.Writer, typ *ast.DataType, db *build.D
 	w := b.getParamWhere(dst, fFields, true, true)
 	dst.AddImports(w.GetImports())
 
-	item, scan, _ := b.getItemAndValue(fields)
+	item, scan, _ := b.getItemAndValue(fields, "")
 	dst.Code("func (g " + fName + ")DbMap(ctx context.Context) (map[" + kType + "]" + dName + ", error) {\n")
 	dst.Code("\ts := db.NewSql()\n")
 	dst.Code("\ts.T(\"SELECT " + item.String() + " FROM " + db.Name + " WHERE del_time IS  NULL\")\n")
@@ -713,14 +732,14 @@ func (b *Builder) printSetData(dst *build.Writer, typ *ast.DataType, key string,
 	dst.Code("}\n\n")
 }
 
-func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, fType *ast.DataType, fFields []*build.DBField, c *cache) {
+func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, key string, db *build.DB, fields []*build.DBField, fType *ast.DataType, fFields []*build.DBField, c *cache) {
 	fName := build.StringToHumpName(fType.Name.Name)
 	dName := build.StringToHumpName(typ.Name.Name)
 
 	w := b.getParamWhere(dst, fFields, false, false)
 	dst.AddImports(w.GetImports())
 
-	item, scan, _ := b.getItemAndValue(fields)
+	item, scan, _ := b.getItemAndValue(fields, key)
 
 	dst.Code("func (g " + fName + ")DbGet(ctx context.Context) (*" + dName + ", error) {\n")
 	dst.Code("\ts := db.NewSql()\n")

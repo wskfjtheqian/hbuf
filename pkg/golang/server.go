@@ -25,7 +25,7 @@ func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
 	dst.Code("type " + serverName)
 	dst.Code(" interface {\n")
 	b.printExtend(dst, typ.Extends)
-	dst.Code("\tInit()\n")
+	dst.Code("\tInit()\n\n")
 
 	isFast := true
 	for _, method := range typ.Methods {

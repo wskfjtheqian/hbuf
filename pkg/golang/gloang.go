@@ -293,7 +293,7 @@ func (b *Builder) getOffset(fields []*build.DBField) (*build.DBField, bool) {
 	return nil, false
 }
 
-func (b *Builder) getKey(dst *build.Writer, fields []*build.DBField, name string) (string, string, bool) {
+func (b *Builder) getKey(dst *build.Writer, fields []*build.DBField, name string) (*build.Writer, *build.Writer, bool) {
 	param := build.NewWriter()
 	param.Packages = dst.Packages
 	where := build.NewWriter()
@@ -303,8 +303,8 @@ func (b *Builder) getKey(dst *build.Writer, fields []*build.DBField, name string
 		if field.Field.Name.Name == name {
 			where.Code(build.StringToFirstLower(field.Field.Name.Name))
 			b.printType(param, field.Field.Type, false, false)
-			return param.String(), where.String(), true
+			return param, where, true
 		}
 	}
-	return param.String(), where.String(), false
+	return param, where, false
 }

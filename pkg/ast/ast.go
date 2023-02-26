@@ -245,8 +245,8 @@ type Type interface {
 
 type (
 	KeyValue struct {
-		Name  *Ident    // local package name (including "."); or nil
-		Value *BasicLit // import path
+		Name   *Ident      // local package name (including "."); or nil
+		Values []*BasicLit // import path
 	}
 
 	Tag struct {
@@ -370,7 +370,7 @@ func (x *EnumType) End() token.Pos     { return x.Items[len(x.Items)-1].End() }
 func (x *EnumItem) End() token.Pos     { return x.Comment.End() }
 func (x *VarType) End() token.Pos      { return x.TypeExpr.End() }
 func (x *Tag) End() token.Pos          { return x.Closing }
-func (x *KeyValue) End() token.Pos     { return x.Value.End() }
+func (x *KeyValue) End() token.Pos     { return x.Values[len(x.Values)-1].End() }
 
 func (*BadExpr) exprNode()      {}
 func (*Ident) exprNode()        {}
@@ -421,7 +421,7 @@ type (
 		Doc     *CommentGroup // associated documentation; or nil
 		Path    *BasicLit     // import path
 		Comment *CommentGroup // line comments; or nil
-		EndPos  token.Pos     // end of spec (overrides Value.Pos if nonzero)
+		EndPos  token.Pos     // end of spec (overrides Values.Pos if nonzero)
 	}
 
 	PackageSpec struct {
@@ -429,7 +429,7 @@ type (
 		Name    *Ident        // local package name (including "."); or nil
 		Value   *BasicLit     // import path
 		Comment *CommentGroup // line comments; or nil
-		EndPos  token.Pos     // end of spec (overrides Value.Pos if nonzero)
+		EndPos  token.Pos     // end of spec (overrides Values.Pos if nonzero)
 	}
 
 	TypeSpec struct {

@@ -1,38 +1,19 @@
 package go = "parser"
 package java = "com.parser"
 
-//客户信息
-//配置
-[db:insert="self"; update="self"; get="self"]
-[ui:form="true"]
-[cache:]
+enum aa {
+    [format:reg="[A-Za-z\\d_@.]{2,40}"; null="false"; min="12"; max="100"]
+    ee = 201
+}
+
+enum E {
+    a = 0
+
+    b = 1
+}
+
+[verify:]
 data ConfigInfo = 53 {
-    //ID
-    [db:name="id"; key="true"]
-    [ui:form="label"]
-    int64 config_id = 2
-
-    //管理员默认密码
-    [db:]
-    [ui:form="text"]
-    [lang:zh="管理员默认密码"]
-    string? admin_default_pass = 1
-
-    //临时文件保存时间
-    [db:]
-    [ui:form="text"]
-    [lang:zh="临时文件保存时间"]
-    int32? temp_file_time = 0
-
-    //系统配置域名
-    [db:]
-    [ui:form="text"]
-    [lang:zh="系统配置域名"]
-    string host_name = 7
-
-    //必须绑定Google验证码
-    [db:]
-    [ui:form="text"]
-    [lang:zh="必须绑定Google验证码"; en="Bind the Google verification code"]
-    bool? google_code = 8
+    [verify:format="aa.ee"]
+    decimal? config_id = 2
 }

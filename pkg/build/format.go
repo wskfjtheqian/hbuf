@@ -5,8 +5,10 @@ import (
 )
 
 type Format struct {
-	IsNull bool
-	Reg    string
+	Null bool
+	Reg  string
+	Min  string
+	Max  string
 }
 
 func GetFormat(tags []*ast.Tag) *Format {
@@ -15,14 +17,18 @@ func GetFormat(tags []*ast.Tag) *Format {
 		return nil
 	}
 	f := &Format{
-		IsNull: true,
+		Null: true,
 	}
 	if nil != val.KV {
 		for _, item := range val.KV {
-			if "isNull" == item.Name.Name {
-				f.IsNull = "true" == item.Value.Value[1:len(item.Value.Value)-1]
+			if "null" == item.Name.Name {
+				f.Null = "true" == item.Values[0].Value[1:len(item.Values[0].Value)-1]
 			} else if "reg" == item.Name.Name {
-				f.Reg = item.Value.Value[1 : len(item.Value.Value)-1]
+				f.Reg = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
+			} else if "min" == item.Name.Name {
+				f.Min = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
+			} else if "max" == item.Name.Name {
+				f.Max = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 			}
 		}
 	}

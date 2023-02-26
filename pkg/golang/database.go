@@ -26,14 +26,14 @@ func getCache(name string, tags []*ast.Tag) *cache {
 	if nil != val.KV {
 		for _, item := range val.KV {
 			if "min" == item.Name.Name {
-				val, err := strconv.Atoi(item.Value.Value[1 : len(item.Value.Value)-1])
+				val, err := strconv.Atoi(item.Values[0].Value[1 : len(item.Values[0].Value)-1])
 				if err != nil {
 					//TODO 添加错误处理
 					return nil
 				}
 				c.min = val
 			} else if "max" == item.Name.Name {
-				val, err := strconv.Atoi(item.Value.Value[1 : len(item.Value.Value)-1])
+				val, err := strconv.Atoi(item.Values[0].Value[1 : len(item.Values[0].Value)-1])
 				if err != nil {
 					//TODO 添加错误处理
 					return nil

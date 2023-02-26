@@ -100,7 +100,7 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 	//dst.Code("\tString get name => \"" + build.StringToUnderlineName(typ.Name.Name) + "\";\n\n")
 	//
 	//dst.Code("\t@override\n")
-	//dst.Code("\tint get id => " + typ.Id.Value + ";\n\n")
+	//dst.Code("\tint get id => " + typ.Id.Values + ";\n\n")
 	//
 	//dst.Code("\tMap<String, ServerInvoke> _invokeNames = {};\n\n")
 	//
@@ -136,7 +136,7 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 	//
 	//dst.Code("\t\t_invokeIds = {\n")
 	//_ = build.EnumMethod(typ, func(method *ast.FuncType, server *ast.ServerType) error {
-	//	dst.Code("\t\t\t\t" + server.Id.Value + " << 32 | " + method.Id.Value + ": ServerInvoke(\n")
+	//	dst.Code("\t\t\t\t" + server.Id.Values + " << 32 | " + method.Id.Values + ": ServerInvoke(\n")
 	//	dst.Code("\t\t\t\ttoData: (List<int> buf) async {\n")
 	//	dst.Code("\t\t\t\t\treturn ")
 	//	b.printType(dst, method.Param.Type(), false)
@@ -162,7 +162,7 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 	////dst.Code("  ByteData invokeData(int id, ByteData data) {\n")
 	////dst.Code("    switch (id) {\n")
 	////_ = build.EnumMethod(typ, func(method *ast.FuncType, server *ast.ServerType) error {
-	////	dst.Code("      case " + server.Id.Value + " << 32 | " + method.Id.Value + " :\n")
+	////	dst.Code("      case " + server.Id.Values + " << 32 | " + method.Id.Values + " :\n")
 	////	dst.Code("        return server." + build.StringToFirstLower(method.Name.Name) + "(")
 	////	printType(dst, method.Param.Type(), false)
 	////	dst.Code(".fromData(data)!).toData();\n")

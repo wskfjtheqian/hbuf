@@ -158,7 +158,7 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 	//dst.Code("  ByteData invokeData(int id, ByteData data) {\n")
 	//dst.Code("    switch (id) {\n")
 	//_ = build.EnumMethod(typ, func(method *ast.FuncType, server *ast.ServerType) error {
-	//	dst.Code("      case " + server.Id.Value + " << 32 | " + method.Id.Value + " :\n")
+	//	dst.Code("      case " + server.Id.Values + " << 32 | " + method.Id.Values + " :\n")
 	//	dst.Code("        return server." + build.StringToFirstLower(method.Name.Name) + "(")
 	//	printType(dst, method.Param.Type(), false)
 	//	dst.Code(".fromData(data)!).toData();\n")

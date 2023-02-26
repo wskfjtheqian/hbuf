@@ -53,41 +53,41 @@ func GetDB(n string, tag []*ast.Tag) []*DB {
 			if nil != val.KV {
 				for _, item := range val.KV {
 					if "name" == item.Name.Name {
-						db.Name = item.Value.Value[1 : len(item.Value.Value)-1]
+						db.Name = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 					} else if "order" == item.Name.Name {
-						db.Order = item.Value.Value[1 : len(item.Value.Value)-1]
+						db.Order = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 					} else if "key" == item.Name.Name {
-						db.Key = "key" == item.Value.Value[1:len(item.Value.Value)-1]
+						db.Key = "key" == item.Values[0].Value[1:len(item.Values[0].Value)-1]
 					} else if "typ" == item.Name.Name {
-						db.typ = item.Value.Value[1 : len(item.Value.Value)-1]
+						db.typ = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 					} else if "where" == item.Name.Name {
-						db.Where = item.Value.Value[1 : len(item.Value.Value)-1]
+						db.Where = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 					} else if "offset" == item.Name.Name {
-						db.Offset = item.Value.Value[1 : len(item.Value.Value)-1]
+						db.Offset = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 					} else if "limit" == item.Name.Name {
-						db.Limit = item.Value.Value[1 : len(item.Value.Value)-1]
+						db.Limit = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 					} else if "insert" == item.Name.Name {
-						db.Insert = item.Value.Value[1 : len(item.Value.Value)-1]
+						db.Insert = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 					} else if "inserts" == item.Name.Name {
-						db.Inserts = item.Value.Value[1 : len(item.Value.Value)-1]
+						db.Inserts = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 					} else if "update" == item.Name.Name {
-						db.Update = item.Value.Value[1 : len(item.Value.Value)-1]
+						db.Update = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 					} else if "del" == item.Name.Name {
-						db.Del = "true" == strings.ToLower(item.Value.Value[1:len(item.Value.Value)-1])
+						db.Del = "true" == strings.ToLower(item.Values[0].Value[1:len(item.Values[0].Value)-1])
 					} else if "get" == item.Name.Name {
-						db.Get = item.Value.Value[1 : len(item.Value.Value)-1]
+						db.Get = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 					} else if "list" == item.Name.Name {
-						db.List = item.Value.Value[1 : len(item.Value.Value)-1]
+						db.List = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 					} else if "map" == item.Name.Name {
-						db.Map = strings.ToLower(item.Value.Value[1 : len(item.Value.Value)-1])
+						db.Map = strings.ToLower(item.Values[0].Value[1 : len(item.Values[0].Value)-1])
 					} else if "table" == item.Name.Name {
-						db.Table = item.Value.Value[1 : len(item.Value.Value)-1]
+						db.Table = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 					} else if "set" == item.Name.Name {
-						db.Set = item.Value.Value[1 : len(item.Value.Value)-1]
+						db.Set = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 					} else if "count" == item.Name.Name {
-						db.Count = "true" == strings.ToLower(item.Value.Value[1:len(item.Value.Value)-1])
+						db.Count = "true" == strings.ToLower(item.Values[0].Value[1:len(item.Values[0].Value)-1])
 					} else if "rm" == item.Name.Name {
-						db.Remove = "true" == strings.ToLower(item.Value.Value[1:len(item.Value.Value)-1])
+						db.Remove = "true" == strings.ToLower(item.Values[0].Value[1:len(item.Values[0].Value)-1])
 					}
 				}
 			}

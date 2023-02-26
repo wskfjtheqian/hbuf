@@ -547,6 +547,11 @@ func IsNil(expr ast.Expr) bool {
 		if t.Empty {
 			return true
 		}
+	case *ast.MapType:
+		t := expr.(*ast.MapType)
+		if t.Empty {
+			return true
+		}
 	}
 	return false
 }
@@ -557,4 +562,39 @@ func IsArray(expr ast.Expr) bool {
 		return true
 	}
 	return false
+}
+
+func IsMap(expr ast.Expr) bool {
+	switch expr.(type) {
+	case *ast.MapType:
+		return true
+	}
+	return false
+}
+
+func IsEnum(expr ast.Expr) bool {
+	switch expr.(type) {
+	case *ast.EnumType:
+		return true
+	case *ast.Ident:
+		i := expr.(*ast.Ident)
+		if nil != i.Obj && i.Obj.Kind == ast.Enum {
+			return true
+		}
+		return false
+	case *ast.VarType:
+		return IsEnum(expr.(*ast.VarType).Type())
+	}
+	return false
+}
+
+func GetBaseType(expr ast.Expr) BaseType {
+	switch expr.(type) {
+	case *ast.Ident:
+		return BaseType(expr.(*ast.Ident).Name)
+	case *ast.VarType:
+		return GetBaseType(expr.(*ast.VarType).Type())
+	}
+
+	return ""
 }

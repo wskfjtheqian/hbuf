@@ -66,43 +66,43 @@ func (b *Builder) getUI(tags []*ast.Tag) *ui {
 	if nil != val.KV {
 		for _, item := range val.KV {
 			if "onlyRead" == item.Name.Name {
-				form.onlyRead = "true" == item.Value.Value[1:len(item.Value.Value)-1]
+				form.onlyRead = "true" == item.Values[0].Value[1:len(item.Values[0].Value)-1]
 			} else if "form" == item.Name.Name {
-				form.form = item.Value.Value[1 : len(item.Value.Value)-1]
+				form.form = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 			} else if "table" == item.Name.Name {
-				form.table = item.Value.Value[1 : len(item.Value.Value)-1]
+				form.table = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 			} else if "digit" == item.Name.Name {
-				atoi, err := strconv.Atoi(item.Value.Value[1 : len(item.Value.Value)-1])
+				atoi, err := strconv.Atoi(item.Values[0].Value[1 : len(item.Values[0].Value)-1])
 				if err != nil {
 					//TODO 添加错误处理
 					return nil
 				}
 				form.digit = atoi
 			} else if "index" == item.Name.Name {
-				atoi, err := strconv.Atoi(item.Value.Value[1 : len(item.Value.Value)-1])
+				atoi, err := strconv.Atoi(item.Values[0].Value[1 : len(item.Values[0].Value)-1])
 				if err != nil {
 					//TODO 添加错误处理
 					return nil
 				}
 				form.index = atoi
 			} else if "format" == item.Name.Name {
-				form.format = item.Value.Value[1 : len(item.Value.Value)-1]
+				form.format = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 			} else if "width" == item.Name.Name {
-				atoi, err := strconv.ParseFloat(item.Value.Value[1:len(item.Value.Value)-1], 10)
+				atoi, err := strconv.ParseFloat(item.Values[0].Value[1:len(item.Values[0].Value)-1], 10)
 				if err != nil {
 					//TODO 添加错误处理
 					return nil
 				}
 				form.width = atoi
 			} else if "height" == item.Name.Name {
-				atoi, err := strconv.ParseFloat(item.Value.Value[1:len(item.Value.Value)-1], 10)
+				atoi, err := strconv.ParseFloat(item.Values[0].Value[1:len(item.Values[0].Value)-1], 10)
 				if err != nil {
 					//TODO 添加错误处理
 					return nil
 				}
 				form.height = atoi
 			} else if "maxLine" == item.Name.Name {
-				atoi, err := strconv.ParseInt(item.Value.Value[1:len(item.Value.Value)-1], 64, 10)
+				atoi, err := strconv.ParseInt(item.Values[0].Value[1:len(item.Values[0].Value)-1], 64, 10)
 				if err != nil {
 					//TODO 添加错误处理
 					return nil
@@ -293,7 +293,7 @@ func (b *Builder) printFormString(dst *build.Writer, name string, expr ast.Expr,
 			switch build.BaseType(t.Name) {
 			case build.Int8, build.Int16, build.Int32, build.Uint8, build.Uint16, build.Uint32:
 				if empty {
-					dst.Code(name + "==null ? null : num.tryParse(" + name + "!)?.toInt()")
+					dst.Code(name + "==null ? null : num.tryParse(" + name + ")?.toInt()")
 				} else {
 					dst.Code("num.tryParse(" + name + "!)!.toInt()")
 				}
@@ -301,13 +301,13 @@ func (b *Builder) printFormString(dst *build.Writer, name string, expr ast.Expr,
 			case build.Uint64, build.Int64:
 				dst.Import("package:fixnum/fixnum.dart", "")
 				if empty {
-					dst.Code(name + "==null ? null : Int64.parseInt(" + name + "!)")
+					dst.Code(name + "==null ? null : Int64.parseInt(" + name + ")")
 				} else {
 					dst.Code("Int64.parseInt(" + name + "!)")
 				}
 			case build.Float, build.Double:
 				if empty {
-					dst.Code(name + "==null ? null : num.tryParse(" + name + "!)?.toDouble()")
+					dst.Code(name + "==null ? null : num.tryParse(" + name + ")?.toDouble()")
 				} else {
 					dst.Code("num.tryParse(" + name + "!)!.toDouble()")
 				}
@@ -315,14 +315,14 @@ func (b *Builder) printFormString(dst *build.Writer, name string, expr ast.Expr,
 				dst.Code("\"true\" == " + name)
 			case build.Date:
 				if empty {
-					dst.Code(name + "==null ? null : DateTime.tryParse(" + name + "!)")
+					dst.Code(name + "==null ? null : DateTime.tryParse(" + name + ")")
 				} else {
 					dst.Code("DateTime.tryParse(" + name + "!) ?? DateTime.now()")
 				}
 			case build.Decimal:
 				dst.Import("package:decimal/decimal.dart", "")
 				if empty {
-					dst.Code(name + "==null ? null : Decimal.fromJson(" + name + "!)")
+					dst.Code(name + "==null ? null : Decimal.fromJson(" + name + ")")
 				} else {
 					dst.Code("Decimal.fromJson(" + name + "!)")
 				}

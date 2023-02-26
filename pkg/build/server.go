@@ -77,10 +77,10 @@ func (b *Builder) checkServerItem(file *ast.File, server *ast.ServerType) error 
 			}
 		}
 
-		//if b.checkDataDuplicateValue(server, index, item.Id.Value) {
+		//if b.checkDataDuplicateValue(server, index, item.Id.Values) {
 		//	return scanner.Error{
 		//		Pos: b.fset.Position(item.Id.Pos()),
-		//		Msg: "Duplicate item: " + item.Id.Value,
+		//		Msg: "Duplicate item: " + item.Id.Values,
 		//	}
 		//}
 	}

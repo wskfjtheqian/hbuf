@@ -52,7 +52,7 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 				continue
 			}
 			b.getPackage(dst, val.Enum.Name, "enum")
-			if !f.IsNull && build.IsNil(field.Type) {
+			if !f.Null && build.IsNil(field.Type) {
 				dst.Code("\tif (null == val) {\n")
 				dst.Code("\t\treturn " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
 				dst.Code("\t}\n")

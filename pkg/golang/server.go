@@ -60,7 +60,7 @@ func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 	//dst.Code("  @override\n")
 	//dst.Code("  String get name => \"" +serverName + "\";\n\n")
 	//dst.Code("  @override\n")
-	//dst.Code("  int get id => " + typ.Id.Value + ";\n\n")
+	//dst.Code("  int get id => " + typ.Id.Values + ";\n\n")
 	//
 	//_ = build.EnumMethod(typ, func(method *ast.FuncType, server *ast.ServerType) error {
 	//	dst.Code("  @override\n")
@@ -77,7 +77,7 @@ func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 	//	dst.Code(">(\"")
 	//	dst.Code(server.Name.Name + "/" + method.Name.Name)
 	//	dst.Code("\", ")
-	//	dst.Code(server.Id.Value + " << 32 | " + method.Id.Value)
+	//	dst.Code(server.Id.Values + " << 32 | " + method.Id.Values)
 	//	dst.Code(", ")
 	//	dst.Code(build.StringToHumpName(method.ParamName.Name))
 	//	dst.Code(", ")
@@ -102,7 +102,7 @@ func (b *Builder) getTag(tags []*ast.Tag) *Tag {
 	au := make(Tag, 0)
 	if nil != val.KV {
 		for _, item := range val.KV {
-			au[item.Name.Name] = item.Value.Value[1 : len(item.Value.Value)-1]
+			au[item.Name.Name] = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 		}
 	}
 	return &au

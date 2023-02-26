@@ -1033,22 +1033,31 @@ func (p *parser) parseTag() *ast.Tag {
 }
 
 func (p *parser) parseKeyValue() *ast.KeyValue {
-	pos := p.pos
 	name := p.parseIdent()
 	if token.ASSIGN != p.tok {
 		p.error(p.pos, "syntax error ")
 		return nil
 	}
 	p.next()
-	var value string
-	if p.tok == token.STRING {
-		value = p.lit
+
+	values := make([]*ast.BasicLit, 0)
+	for {
+		pos := p.pos
+		var value string
+		if p.tok == token.STRING {
+			value = p.lit
+			p.next()
+		} else {
+			p.expect(token.STRING)
+		}
+		values = append(values, &ast.BasicLit{ValuePos: pos, Kind: token.STRING, Value: value})
+		if token.COMMA != p.tok {
+			break
+		}
 		p.next()
-	} else {
-		p.expect(token.STRING)
 	}
 	return &ast.KeyValue{
-		Name:  name,
-		Value: &ast.BasicLit{ValuePos: pos, Kind: token.STRING, Value: value},
+		Name:   name,
+		Values: values,
 	}
 }

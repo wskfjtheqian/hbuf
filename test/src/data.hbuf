@@ -2,7 +2,7 @@ package go = "parser"
 package java = "com.parser"
 
 enum aa {
-    [format:reg="[A-Za-z\\d_@.]{2,40}"; null="false"; min="12"; max="100"]
+    [format:reg="[A-Za-z\\d_@.]{2,40}"; null="false"; min="2006-01-02T15:04:05Z"; max="2006-01-02T15:04:05Z"]
     ee = 201
 }
 
@@ -15,5 +15,5 @@ enum E {
 [verify:]
 data ConfigInfo = 53 {
     [verify:format="aa.ee"]
-    decimal? config_id = 2
+    date? config_id = 2
 }

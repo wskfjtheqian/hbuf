@@ -3,6 +3,8 @@ package golang
 import (
 	"hbuf/pkg/ast"
 	"hbuf/pkg/build"
+	"strconv"
+	"time"
 )
 
 func (b *Builder) printVerifyCode(dst *build.Writer, data *ast.DataType) error {
@@ -109,13 +111,13 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 					if 0 < len(f.Min) || 0 < len(f.Max) {
 						dst.Code("\tif ")
 						if 0 < len(f.Min) {
-							dst.Code(f.Min + " >= i.Get" + fName + "() ")
+							dst.Code(f.Min + " > i.Get" + fName + "() ")
 						}
 						if 0 < len(f.Max) {
 							if 0 < len(f.Min) {
-								dst.Code("&& ")
+								dst.Code("||")
 							}
-							dst.Code(f.Max + " <= i.Get" + fName + "() ")
+							dst.Code(f.Max + " < i.Get" + fName + "() ")
 						}
 						dst.Code("{\n")
 						dst.Code("\t\treturn &hbuf.Result{Code: int(" + pack + "), Msg: " + pack + ".ToName()}\n")
@@ -125,31 +127,55 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 					if 0 < len(f.Min) || 0 < len(f.Max) {
 						dst.Code("\tif ")
 						if 0 < len(f.Min) {
-							dst.Code(f.Min + " >= i.Get" + fName + "().Val ")
+							dst.Code(f.Min + " > i.Get" + fName + "().Val ")
 						}
 						if 0 < len(f.Max) {
 							if 0 < len(f.Min) {
-								dst.Code("&& ")
+								dst.Code("|| ")
 							}
-							dst.Code(f.Max + " <= i.Get" + fName + "().Val ")
+							dst.Code(f.Max + " < i.Get" + fName + "().Val ")
 						}
 						dst.Code("{\n")
 						dst.Code("\t\treturn &hbuf.Result{Code: int(" + pack + "), Msg: " + pack + ".ToName()}\n")
 						dst.Code("\t}\n")
 					}
 				case build.Date:
-
+					if 0 < len(f.Min) || 0 < len(f.Max) {
+						dst.Code("\tif ")
+						parse, err := time.Parse("2006-01-02T15:04:05Z", f.Min)
+						if err != nil {
+							return err
+						}
+						min := parse.UnixMilli()
+						if 0 < len(f.Min) {
+							dst.Code(strconv.FormatInt(min, 10) + " > i.Get" + fName + "().UnixMilli() ")
+						}
+						if 0 < len(f.Max) {
+							if 0 < len(f.Min) {
+								dst.Code("|| ")
+							}
+							parse, err = time.Parse("2006-01-02T15:04:05Z", f.Max)
+							if err != nil {
+								return err
+							}
+							max := parse.UnixMilli()
+							dst.Code(strconv.FormatInt(max, 10) + " < i.Get" + fName + "().UnixMilli() ")
+						}
+						dst.Code("{ //" + f.Min + "--" + f.Max + "\n")
+						dst.Code("\t\treturn &hbuf.Result{Code: int(" + pack + "), Msg: " + pack + ".ToName()}\n")
+						dst.Code("\t}\n")
+					}
 				case build.Decimal:
 					if 0 < len(f.Min) || 0 < len(f.Max) {
 						dst.Code("\tif ")
 						if 0 < len(f.Min) {
-							dst.Code("decimal.NewFromFloat(" + f.Min + ").GreaterThanOrEqual(i.Get" + fName + "()) ")
+							dst.Code("decimal.NewFromFloat(" + f.Min + ").GreaterThan(i.Get" + fName + "()) ")
 						}
 						if 0 < len(f.Max) {
 							if 0 < len(f.Min) {
-								dst.Code("&& ")
+								dst.Code("|| ")
 							}
-							dst.Code("decimal.NewFromFloat(" + f.Min + ").LessThanOrEqual(i.Get" + fName + "()) ")
+							dst.Code("decimal.NewFromFloat(" + f.Min + ").LessThan(i.Get" + fName + "()) ")
 						}
 						dst.Code("{\n")
 						dst.Code("\t\treturn &hbuf.Result{Code: int(" + pack + "), Msg: " + pack + ".ToName()}\n")

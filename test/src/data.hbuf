@@ -2,7 +2,7 @@ package go = "parser"
 package java = "com.parser"
 
 enum aa {
-    [format:reg="[A-Za-z\\d_@.]{2,40}"; null="false"; min="2006-01-02T15:04:05Z"; max="2006-01-02T15:04:05Z"]
+    [format:reg="[A-Za-z\\d_@.]{2,40}"; null="true"; min="2006-01-02T15:04:05Z"; max="2006-01-02T15:04:05Z"]
     ee = 201
 }
 

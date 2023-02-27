@@ -142,24 +142,22 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 				case build.Date:
 					if 0 < len(f.Min) || 0 < len(f.Max) {
 						dst.Code("\tif ")
-						parse, err := time.Parse("2006-01-02T15:04:05Z", f.Min)
-						if err != nil {
-							return err
-						}
-						min := parse.UnixMilli()
 						if 0 < len(f.Min) {
-							dst.Code(strconv.FormatInt(min, 10) + " > i.Get" + fName + "().UnixMilli() ")
+							parse, err := time.Parse("2006-01-02T15:04:05Z", f.Min)
+							if err != nil {
+								return err
+							}
+							dst.Code(strconv.FormatInt(parse.UnixMilli(), 10) + " > i.Get" + fName + "().UnixMilli() ")
 						}
 						if 0 < len(f.Max) {
 							if 0 < len(f.Min) {
 								dst.Code("|| ")
 							}
-							parse, err = time.Parse("2006-01-02T15:04:05Z", f.Max)
+							parse, err := time.Parse("2006-01-02T15:04:05Z", f.Max)
 							if err != nil {
 								return err
 							}
-							max := parse.UnixMilli()
-							dst.Code(strconv.FormatInt(max, 10) + " < i.Get" + fName + "().UnixMilli() ")
+							dst.Code(strconv.FormatInt(parse.UnixMilli(), 10) + " < i.Get" + fName + "().UnixMilli() ")
 						}
 						dst.Code("{ //" + f.Min + "--" + f.Max + "\n")
 						dst.Code("\t\treturn &hbuf.Result{Code: int(" + pack + "), Msg: " + pack + ".ToName()}\n")

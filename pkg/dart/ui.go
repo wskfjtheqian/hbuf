@@ -44,6 +44,7 @@ type ui struct {
 	suffix   string
 	onlyRead bool
 	form     string
+	toNull   bool
 	table    string
 	format   string
 	digit    int
@@ -108,6 +109,8 @@ func (b *Builder) getUI(tags []*ast.Tag) *ui {
 					return nil
 				}
 				form.maxLine = int(atoi)
+			} else if "toNull" == item.Name.Name {
+				form.toNull = "true" == item.Values[0].Value[1:len(item.Values[0].Value)-1]
 			}
 		}
 	}
@@ -397,6 +400,9 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			b.printToString(setValue, field.Type, false, form.digit, form.format, "??\"\"")
 			setValue.Code(";\n")
 			setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = ")
+			if form.toNull {
+				setValue.Code("\"\" == val ? null : ")
+			}
 			b.printFormString(setValue, "val", field.Type, false, form.digit, form.format)
 			setValue.Code(";\n")
 			setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")

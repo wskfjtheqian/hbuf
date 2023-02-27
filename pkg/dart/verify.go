@@ -135,7 +135,7 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 						dst.Code("\t}\n")
 					}
 				case build.String:
-					dst.Code("\tif (!RegExp(\"" + f.Reg + "\").hasMatch(text)) {\n")
+					dst.Code("\tif (!RegExp(\"" + f.Reg + "\").hasMatch(text!)) {\n")
 					dst.Code("\t\treturn " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
 					dst.Code("\t}\n")
 				}

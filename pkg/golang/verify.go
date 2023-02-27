@@ -87,11 +87,11 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 
 			if build.IsNil(field.Type) && 0 == i {
 				if !f.Null {
-					dst.Code("\tif nil == i." + fName + " {\n")
+					dst.Code("\tif nil == i." + fName + " || 0 == len(i.Get" + fName + "()){\n")
 					dst.Code("\t\treturn &hbuf.Result{Code: int(" + pack + "), Msg: " + pack + ".ToName()}\n")
 					dst.Code("\t}\n")
 				} else {
-					dst.Code("\tif nil == i." + fName + " {\n")
+					dst.Code("\tif nil == i." + fName + " || 0 == len(i.Get" + fName + "()){\n")
 					dst.Code("\t\treturn nil\n")
 					dst.Code("\t}\n")
 				}

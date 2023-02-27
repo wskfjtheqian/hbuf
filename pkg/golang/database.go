@@ -667,8 +667,9 @@ func (b *Builder) printInsertListData(dst *build.Writer, typ *ast.DataType, db *
 
 func (b *Builder) printUpdateData(dst *build.Writer, typ *ast.DataType, key string, db *build.DB, wFields []*build.DBField, fields []*build.DBField, fType *ast.DataType, c *cache) {
 	fName := build.StringToHumpName(fType.Name.Name)
-	//dName := build.StringToHumpName(typ.Name.Name)
-
+	if typ != fType {
+		key = "parent"
+	}
 	w := b.getParamWhere(dst, fields, false, false)
 	dst.AddImports(w.GetImports())
 
@@ -722,8 +723,9 @@ func (b *Builder) printUpdateData(dst *build.Writer, typ *ast.DataType, key stri
 
 func (b *Builder) printSetData(dst *build.Writer, typ *ast.DataType, key string, db *build.DB, wFields []*build.DBField, fields []*build.DBField, fType *ast.DataType, c *cache) {
 	fName := build.StringToHumpName(fType.Name.Name)
-	//dName := build.StringToHumpName(typ.Name.Name)
-
+	if typ != fType {
+		key = "parent"
+	}
 	w := b.getParamWhere(dst, wFields, false, false)
 	dst.AddImports(w.GetImports())
 

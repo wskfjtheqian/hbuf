@@ -416,6 +416,28 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 
 			fields.Code("\t\t\t" + fieldName + ".build(context),\n")
 			lang.Add(fieldName, field.Tags)
+		} else if "file" == form.form {
+			dst.Code("\tfinal FileFormBuild " + fieldName + " = FileFormBuild();\n\n")
+			setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName)
+			b.printToString(setValue, field.Type, false, form.digit, form.format, "??\"\"")
+			setValue.Code(";\n")
+			setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = ")
+			if form.toNull {
+				setValue.Code("\"\" == val ? null : ")
+			}
+			b.printFormString(setValue, "val", field.Type, false, form.digit, form.format)
+			setValue.Code(";\n")
+			setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
+			setValue.Code("\t\t" + fieldName + ".widthSizes = sizes;\n")
+			setValue.Code("\t\t" + fieldName + ".padding = padding;\n")
+			if nil != verify {
+				b.getPackage(dst, typ.Name, "verify")
+				setValue.Code("\t\t" + fieldName + ".validator = (val) => verify" + name + "_" + build.StringToHumpName(fieldName) + "(context, val!);\n")
+			}
+			setValue.Code("\t\t" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n\n")
+
+			fields.Code("\t\t\t" + fieldName + ".build(context),\n")
+			lang.Add(fieldName, field.Tags)
 		} else if "image" == form.form {
 			dst.Code("\tfinal ImageFormBuild " + fieldName + " =  ImageFormBuild();\n\n")
 

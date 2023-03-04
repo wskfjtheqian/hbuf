@@ -26,7 +26,7 @@ func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
 		}
 
 		dst.Code("\t" + build.StringToHumpName(field.Name.Name) + " ")
-		b.printType(dst, field.Type, false, false)
+		b.printType(dst, field.Type, true)
 
 		dst.Code(" `json:\"" + build.StringToUnderlineName(field.Name.Name) + "\"`")
 		dst.Code("\n")
@@ -43,7 +43,7 @@ func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
 
 	for _, field := range typ.Fields.List {
 		dst.Code("func (g " + build.StringToHumpName(typ.Name.Name) + ") Get" + build.StringToHumpName(field.Name.Name) + "() ")
-		b.printType(dst, field.Type, false, true)
+		b.printType(dst, field.Type, false)
 		dst.Code(" {\n")
 		if field.Type.IsEmpty() {
 			dst.Code("\tif nil == g." + build.StringToHumpName(field.Name.Name) + " {\n")
@@ -84,13 +84,13 @@ func (b *Builder) printDefault(dst *build.Writer, expr ast.Expr) {
 	case *ast.ArrayType:
 		ar := expr.(*ast.ArrayType)
 		dst.Code("[]")
-		b.printType(dst, ar.VType, false, false)
+		b.printType(dst, ar.VType, true)
 	case *ast.MapType:
 		ma := expr.(*ast.MapType)
 		dst.Code("map[")
-		b.printType(dst, ma.Key, true, false)
+		b.printType(dst, ma.Key, true)
 		dst.Code("]")
-		b.printType(dst, ma.VType, false, false)
+		b.printType(dst, ma.VType, true)
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
 		b.printDefault(dst, t.Type())

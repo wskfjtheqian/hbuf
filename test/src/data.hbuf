@@ -15,5 +15,15 @@ enum E {
 [verify:]
 data ConfigInfo = 53 {
     [verify:format="aa.ee"]
+    [ui:form="text"; onlyRead="true"]
     date? config_id = 2
 }
+
+[ui:form="true"]
+data Info:ConfigInfo = 54 {
+    [verify:format="aa.ee"]
+    [ui:form="text"; onlyRead="true"]
+    int64<int64>? name = 2
+}
+
+

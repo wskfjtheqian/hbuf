@@ -322,7 +322,8 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 func (b *Builder) printWhere(where *build.Writer, text string, field *build.DBField, s string) {
 	count := strings.Count(text, "?")
 	if build.IsArray(field.Field.Type) {
-		temp := "\" + hbuf.ToQuestions(g." + build.StringToHumpName(field.Field.Name.Name) + ", \",\") + \""
+		where.Import("github.com/wskfjtheqian/hbuf_golang/pkg/utils", "utl")
+		temp := "\" + utl.ToQuestions(g." + build.StringToHumpName(field.Field.Name.Name) + ", \",\") + \""
 		rex := regexp.MustCompile(`\?`)
 		match := rex.FindAllStringSubmatchIndex(text, -1)
 		if nil != match {
@@ -347,8 +348,8 @@ func (b *Builder) printWhere(where *build.Writer, text string, field *build.DBFi
 			where.Code(", ")
 		}
 		if build.IsArray(field.Field.Type) {
-			where.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "")
-			where.Code("hbuf.ToAnyList(g." + build.StringToHumpName(field.Field.Name.Name) + ")...")
+			where.Import("github.com/wskfjtheqian/hbuf_golang/pkg/utils", "utl")
+			where.Code("utl.ToAnyList(g." + build.StringToHumpName(field.Field.Name.Name) + ")...")
 		} else {
 			where.Code("g.")
 			where.Code(build.StringToHumpName(field.Field.Name.Name))

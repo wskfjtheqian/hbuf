@@ -203,7 +203,7 @@ func (b *Builder) printTypeSpec(dst *GoWriter, expr ast.Expr) {
 	}
 }
 
-func (b *Builder) printType(dst *build.Writer, expr ast.Expr, emp bool, notEmp bool) {
+func (b *Builder) printType(dst *build.Writer, expr ast.Expr, b2 bool) {
 	switch expr.(type) {
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
@@ -223,21 +223,19 @@ func (b *Builder) printType(dst *build.Writer, expr ast.Expr, emp bool, notEmp b
 	case *ast.ArrayType:
 		ar := expr.(*ast.ArrayType)
 		dst.Code("[]")
-		b.printType(dst, ar.VType, false, false)
+		b.printType(dst, ar.VType, true)
 	case *ast.MapType:
 		ma := expr.(*ast.MapType)
 		dst.Code("map[")
-		b.printType(dst, ma.Key, true, false)
+		b.printType(dst, ma.Key, true)
 		dst.Code("]")
-		b.printType(dst, ma.VType, false, false)
+		b.printType(dst, ma.VType, true)
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
-		if !notEmp {
-			if t.Empty || emp {
-				dst.Code("*")
-			}
+		if b2 && t.Empty {
+			dst.Code("*")
 		}
-		b.printType(dst, t.Type(), false, false)
+		b.printType(dst, t.Type(), true)
 	}
 }
 
@@ -302,7 +300,7 @@ func (b *Builder) getKey(dst *build.Writer, fields []*build.DBField, name string
 	for _, field := range fields {
 		if field.Field.Name.Name == name {
 			where.Code(build.StringToFirstLower(field.Field.Name.Name))
-			b.printType(param, field.Field.Type, false, false)
+			b.printType(param, field.Field.Type, true)
 			return param, where, true
 		}
 	}

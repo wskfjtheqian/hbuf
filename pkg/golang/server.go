@@ -15,8 +15,10 @@ func (b *Builder) printServerCode(dst *build.Writer, typ *ast.ServerType) {
 	b.printServer(dst, typ)
 	b.printServerImp(dst, typ)
 	b.printServerRouter(dst, typ)
+	b.printServerDefault(dst, typ)
 	b.printGetServerRouter(dst, typ)
 }
+
 func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
 	serverName := build.StringToHumpName(typ.Name.Name)
 	if nil != typ.Doc && 0 < len(typ.Doc.Text()) {
@@ -47,6 +49,37 @@ func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
 		dst.Code(", error)\n")
 	}
 	dst.Code("}\n\n")
+}
+
+func (b *Builder) printServerDefault(dst *build.Writer, typ *ast.ServerType) {
+	serverName := build.StringToHumpName(typ.Name.Name)
+	if nil != typ.Doc && 0 < len(typ.Doc.Text()) {
+		dst.Code("//" + build.StringToHumpName(serverName) + " " + typ.Doc.Text())
+	}
+	dst.Code("type default" + serverName)
+	dst.Code(" struct {\n")
+	dst.Code("}\n\n")
+
+	dst.Code("func (s *default" + serverName + ")Init(){\n")
+	dst.Code("}\n\n")
+
+	for _, method := range typ.Methods {
+		if nil != method.Doc && 0 < len(method.Doc.Text()) {
+			dst.Code("//" + build.StringToHumpName(method.Name.Name) + " " + method.Doc.Text())
+		}
+
+		dst.Code("func (s *default" + serverName + ")")
+		dst.Code(build.StringToHumpName(method.Name.Name))
+		dst.Code("(ctx context.Context, ")
+		dst.Code(build.StringToFirstLower(method.ParamName.Name))
+		dst.Code(" *")
+		b.printType(dst, method.Param, false, false)
+		dst.Code(") (*")
+		b.printType(dst, method.Result.Type(), false, false)
+		dst.Code(", error){\n")
+		dst.Code("\treturn nil, utl.Wrap(errors.New(\"not find server\"))\n")
+		dst.Code("}\n\n")
+	}
 }
 
 func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
@@ -174,15 +207,18 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 func (b *Builder) printGetServerRouter(dst *build.Writer, typ *ast.ServerType) {
 	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/manage", "")
 	serverName := build.StringToHumpName(typ.Name.Name)
-	dst.Code("func Get" + serverName + "(ctx context.Context) (" + serverName + ", error) {\n")
+
+	dst.Code("var notFound" + serverName + " = &default" + serverName + "{}\n\n")
+
+	dst.Code("func Get" + serverName + "(ctx context.Context) (" + serverName + ") {\n")
 	dst.Code("\trouter := manage.GET(ctx).Get(&" + serverName + "Router{})\n")
 	dst.Code("\tif nil == router {\n")
-	dst.Code("\t\treturn nil, utl.Wrap(errors.New(\"not find server\"))\n")
+	dst.Code("\t\treturn notFound" + serverName + "\n")
 	dst.Code("\t}\n")
 	dst.Code("\tswitch router.(type) {\n")
 	dst.Code("\tcase *" + serverName + "Router:\n")
-	dst.Code("\t\treturn router.(*" + serverName + "Router).server, nil\n")
+	dst.Code("\t\treturn router.(*" + serverName + "Router).server\n")
 	dst.Code("\t}\n")
-	dst.Code("\treturn nil, utl.Wrap(errors.New(\"not find server\"))\n")
+	dst.Code("\treturn notFound" + serverName + "\n")
 	dst.Code("}\n\n")
 }

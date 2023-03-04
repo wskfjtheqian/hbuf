@@ -41,17 +41,18 @@ func (b *Builder) printEnumUi(dst *build.Writer, typ *ast.EnumType) {
 }
 
 type ui struct {
-	suffix   string
-	onlyRead bool
-	form     string
-	toNull   bool
-	table    string
-	format   string
-	digit    int
-	index    int
-	width    float64
-	height   float64
-	maxLine  int
+	suffix     string
+	onlyRead   bool
+	form       string
+	toNull     bool
+	table      string
+	format     string
+	digit      int
+	index      int
+	width      float64
+	height     float64
+	maxLine    int
+	extensions []string
 }
 
 func (b *Builder) getUI(tags []*ast.Tag) *ui {
@@ -60,9 +61,10 @@ func (b *Builder) getUI(tags []*ast.Tag) *ui {
 		return nil
 	}
 	form := ui{
-		width:   300,
-		height:  300,
-		maxLine: 1,
+		width:      300,
+		height:     300,
+		maxLine:    1,
+		extensions: []string{},
 	}
 	if nil != val.KV {
 		for _, item := range val.KV {
@@ -111,6 +113,10 @@ func (b *Builder) getUI(tags []*ast.Tag) *ui {
 				form.maxLine = int(atoi)
 			} else if "toNull" == item.Name.Name {
 				form.toNull = "true" == item.Values[0].Value[1:len(item.Values[0].Value)-1]
+			} else if "extensions" == item.Name.Name {
+				for _, value := range item.Values {
+					form.extensions = append(form.extensions, value.Value[1:len(value.Value)-1])
+				}
 			}
 		}
 	}
@@ -430,6 +436,16 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
 			setValue.Code("\t\t" + fieldName + ".widthSizes = sizes;\n")
 			setValue.Code("\t\t" + fieldName + ".padding = padding;\n")
+			if 0 < len(form.extensions) {
+				setValue.Code("\t\t" + fieldName + ".extensions = <String>[")
+				for i, extension := range form.extensions {
+					if 0 < i {
+						setValue.Code(", ")
+					}
+					setValue.Code("\"" + extension + "\"")
+				}
+				setValue.Code("];\n")
+			}
 			if nil != verify {
 				b.getPackage(dst, typ.Name, "verify")
 				setValue.Code("\t\t" + fieldName + ".validator = (val) => verify" + name + "_" + build.StringToHumpName(fieldName) + "(context, val!);\n")
@@ -453,6 +469,16 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			setValue.Code("\t\t" + fieldName + ".padding = padding;\n")
 			setValue.Code("\t\t" + fieldName + ".outWidth = " + strconv.FormatFloat(form.width, 'G', -1, 64) + ";\n")
 			setValue.Code("\t\t" + fieldName + ".outHeight = " + strconv.FormatFloat(form.height, 'G', -1, 64) + ";\n")
+			if 0 < len(form.extensions) {
+				setValue.Code("\t\t" + fieldName + ".extensions = <String>[")
+				for i, extension := range form.extensions {
+					if 0 < i {
+						setValue.Code(", ")
+					}
+					setValue.Code("\"" + extension + "\"")
+				}
+				setValue.Code("];\n")
+			}
 			if nil != verify {
 				b.getPackage(dst, typ.Name, "verify")
 				setValue.Code("\t\t" + fieldName + ".validator = (val) => verify" + name + "_" + build.StringToHumpName(fieldName) + "(context, val!);\n")

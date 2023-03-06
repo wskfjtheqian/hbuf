@@ -378,27 +378,24 @@ func (b *Builder) printListData(dst *build.Writer, typ *ast.DataType, key string
 	dst.Code("\tret := make([]" + dName + ", 0)\n")
 	if nil != c {
 		dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/cache", "")
-		dst.Code("\tlist, key, err := cache.DbGet(ctx, \"" + db.Name + "\", s, &ret)\n")
+		dst.Code("\tlist, key, _ := cache.DbGet(ctx, \"" + db.Name + "\", s, &ret)\n")
 		dst.Code("\tif list != nil {\n")
 		dst.Code("\t\treturn *list, nil\n")
 		dst.Code("\t}\n")
 	}
-
-	dst.Code("\tquery, err := s.Query(ctx)\n")
+	dst.Import("database/sql", "")
+	dst.Code("\t_, err := s.Query(context.TODO(), func(rows *sql.Rows) (bool, error) {\n")
+	dst.Code("\t\tvar val " + dName + "\n")
+	dst.Code("\t\terr:= rows.Scan(" + scan.String() + ")\n")
+	dst.Code("\t\tif err == nil {\n")
+	dst.Code("\t\t\tret = append(ret, val)\n")
+	dst.Code("\t\t}\n")
+	dst.Code("\t\treturn false, err\n")
+	dst.Code("\t})\n")
 	dst.Code("\tif err != nil {\n")
 	dst.Code("\t\treturn nil, err\n")
 	dst.Code("\t}\n")
-	dst.Code("\tdefer query.Close()\n")
 
-	dst.Code("\n")
-	dst.Code("\tfor query.Next() {\n")
-	dst.Code("\t\tvar val " + dName + "\n")
-	dst.Code("\t\terr = query.Scan(" + scan.String() + ")\n")
-	dst.Code("\t\tif err != nil {\n")
-	dst.Code("\t\t\treturn nil, err\n")
-	dst.Code("\t\t}\n")
-	dst.Code("\t\tret = append(ret, val)\n")
-	dst.Code("\t}\n")
 	if nil != c {
 		dst.Import("math/rand", "")
 		dst.Import("time", "")
@@ -441,27 +438,24 @@ func (b *Builder) printMapData(dst *build.Writer, key string, typ *ast.DataType,
 	dst.Code("\tret := make(map[" + kType.String() + "]" + dName + ")\n")
 	if nil != c {
 		dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/cache", "")
-		dst.Code("\tlist, key, err := cache.DbGet(ctx, \"" + db.Name + "\", s, &ret)\n")
+		dst.Code("\tlist, key, _ := cache.DbGet(ctx, \"" + db.Name + "\", s, &ret)\n")
 		dst.Code("\tif list != nil {\n")
 		dst.Code("\t\treturn *list, nil\n")
 		dst.Code("\t}\n")
 	}
-
-	dst.Code("\tquery, err := s.Query(ctx)\n")
+	dst.Import("database/sql", "")
+	dst.Code("\t_, err := s.Query(context.TODO(), func(rows *sql.Rows) (bool, error) {\n")
+	dst.Code("\t\tvar val " + dName + "\n")
+	dst.Code("\t\terr:= rows.Scan(" + scan.String() + ")\n")
+	dst.Code("\t\tif err == nil {\n")
+	dst.Code("\t\t\tret[val." + build.StringToHumpName(KName.String()) + "] = val\n")
+	dst.Code("\t\t}\n")
+	dst.Code("\t\treturn false, err\n")
+	dst.Code("\t})\n")
 	dst.Code("\tif err != nil {\n")
 	dst.Code("\t\treturn nil, err\n")
 	dst.Code("\t}\n")
-	dst.Code("\tdefer query.Close()\n")
 
-	dst.Code("\n")
-	dst.Code("\tfor query.Next() {\n")
-	dst.Code("\t\tvar val " + dName + "\n")
-	dst.Code("\t\terr = query.Scan(" + scan.String() + ")\n")
-	dst.Code("\t\tif err != nil {\n")
-	dst.Code("\t\t\treturn nil, err\n")
-	dst.Code("\t\t}\n")
-	dst.Code("\t\tret[val." + build.StringToHumpName(KName.String()) + "] = val\n")
-	dst.Code("\t}\n")
 	if nil != c {
 		dst.Import("math/rand", "")
 		dst.Import("time", "")
@@ -491,25 +485,19 @@ func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build
 
 	dst.Code("\tvar count int64\n")
 	if nil != c {
-		dst.Code("\tc, key, err := cache.DbGet(ctx, \"" + db.Name + "\", s, &count)\n")
+		dst.Code("\tc, key, _ := cache.DbGet(ctx, \"" + db.Name + "\", s, &count)\n")
 		dst.Code("\tif c != nil {\n")
 		dst.Code("\t\treturn *c, nil\n")
 		dst.Code("\t}\n")
 	}
+	dst.Import("database/sql", "")
+	dst.Code("\t_, err := s.Query(context.TODO(), func(rows *sql.Rows) (bool, error) {\n")
+	dst.Code("\t\treturn false, rows.Scan(&count)\n")
+	dst.Code("\t})\n")
+	dst.Code("\tif err != nil {\n")
+	dst.Code("\t\treturn 0, err\n")
+	dst.Code("\t}\n")
 
-	dst.Code("\tquery, err := s.Query(ctx)\n")
-	dst.Code("\tif err != nil {\n")
-	dst.Code("\t\treturn 0, err\n")
-	dst.Code("\t}\n")
-	dst.Code("\tdefer query.Close()\n")
-	dst.Code("\n")
-	dst.Code("\tif !query.Next() {\n")
-	dst.Code("\t\treturn 0, nil\n")
-	dst.Code("\t}\n")
-	dst.Code("\terr = query.Scan(&count)\n")
-	dst.Code("\tif err != nil {\n")
-	dst.Code("\t\treturn 0, err\n")
-	dst.Code("\t}\n")
 	if nil != c {
 		dst.Import("math/rand", "")
 		dst.Import("time", "")
@@ -532,7 +520,7 @@ func (b *Builder) printDeleteData(dst *build.Writer, db *build.DB, wFields []*bu
 	w := b.getParamWhere(dst, wFields, false, false)
 	dst.AddImports(w.GetImports())
 
-	dst.Code("func (g " + fName + ")DbDel(ctx context.Context) (int, error) {\n")
+	dst.Code("func (g " + fName + ")DbDel(ctx context.Context) (int64, error) {\n")
 	if isCache {
 		dst.Code("\terr := cache.DbDel(ctx, \"" + db.Name + "\")\n")
 		dst.Code("\tif err != nil {\n")
@@ -544,13 +532,7 @@ func (b *Builder) printDeleteData(dst *build.Writer, db *build.DB, wFields []*bu
 	dst.Code("\ts.T(\"UPDATE " + db.Name + " SET del_time = NOW() WHERE 1 = 1\")\n")
 	dst.Code(w.GetCode().String())
 
-	dst.Code("\tresult, err := s.Exec(ctx)\n")
-	dst.Code("\tif err != nil {\n")
-	dst.Code("\t\treturn 0, err\n")
-	dst.Code("\t}\n")
-
-	dst.Code("\tcount, err := result.RowsAffected()\n")
-	dst.Code("\treturn int(count), err\n")
+	dst.Code("\treturn s.Exec(ctx)\n")
 	dst.Code("}\n\n")
 }
 
@@ -560,7 +542,7 @@ func (b *Builder) printRemoveData(dst *build.Writer, db *build.DB, wFields []*bu
 	w := b.getParamWhere(dst, wFields, false, false)
 	dst.AddImports(w.GetImports())
 
-	dst.Code("func (g " + fName + ")DbRemove(ctx context.Context) (int, error) {\n")
+	dst.Code("func (g " + fName + ")DbRemove(ctx context.Context) (int64, error) {\n")
 	if isCache {
 		dst.Code("\terr := cache.DbDel(ctx, \"" + db.Name + "\")\n")
 		dst.Code("\tif err != nil {\n")
@@ -572,19 +554,13 @@ func (b *Builder) printRemoveData(dst *build.Writer, db *build.DB, wFields []*bu
 	dst.Code("\ts.T(\"DELETE FROM " + db.Name + " WHERE 1 = 1\")\n")
 	dst.Code(w.GetCode().String())
 
-	dst.Code("\tresult, err := s.Exec(ctx)\n")
-	dst.Code("\tif err != nil {\n")
-	dst.Code("\t\treturn 0, err\n")
-	dst.Code("\t}\n")
-
-	dst.Code("\tcount, err := result.RowsAffected()\n")
-	dst.Code("\treturn int(count), err\n")
+	dst.Code("\treturn s.Exec(ctx)\n")
 	dst.Code("}\n\n")
 }
 
 func (b *Builder) printInsertData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField, isCache bool) {
 	name := build.StringToHumpName(typ.Name.Name)
-	dst.Code("func (g " + name + ")DbInsert(ctx context.Context) (int, error) {\n")
+	dst.Code("func (g " + name + ")DbInsert(ctx context.Context) (int64, error) {\n")
 	if isCache {
 		dst.Code("\terr := cache.DbDel(ctx, \"" + db.Name + "\")\n")
 		dst.Code("\tif err != nil {\n")
@@ -609,18 +585,13 @@ func (b *Builder) printInsertData(dst *build.Writer, typ *ast.DataType, db *buil
 		}
 	}
 
-	dst.Code("\tresult, err := s.Exec(ctx)\n")
-	dst.Code("\tif err != nil {\n")
-	dst.Code("\t\treturn 0, err\n")
-	dst.Code("\t}\n")
-	dst.Code("\tcount, err := result.RowsAffected()\n")
-	dst.Code("\treturn int(count), err\n")
+	dst.Code("\treturn s.Exec(ctx)\n")
 	dst.Code("}\n\n")
 }
 
 func (b *Builder) printInsertListData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField, isCache bool) {
 	name := build.StringToHumpName(typ.Name.Name)
-	dst.Code("func (g " + name + ")DbInsertList(ctx context.Context, val []*" + name + ") (int, error) {\n")
+	dst.Code("func (g " + name + ")DbInsertList(ctx context.Context, val []*" + name + ") (int64, error) {\n")
 	dst.Code("\tif nil == val || 0 == len(val) {\n")
 	dst.Code("\t\treturn 0, nil\n")
 	dst.Code("\t}\n")
@@ -657,12 +628,7 @@ func (b *Builder) printInsertListData(dst *build.Writer, typ *ast.DataType, db *
 	dst.Code(").T(\")\")\n")
 	dst.Code("\t}\n")
 
-	dst.Code("\tresult, err := s.Exec(ctx)\n")
-	dst.Code("\tif err != nil {\n")
-	dst.Code("\t\treturn 0, err\n")
-	dst.Code("\t}\n")
-	dst.Code("\tcount, err := result.RowsAffected()\n")
-	dst.Code("\treturn int(count), err\n\n")
+	dst.Code("\treturn s.Exec(ctx)\n")
 	dst.Code("}\n\n")
 }
 
@@ -674,7 +640,7 @@ func (b *Builder) printUpdateData(dst *build.Writer, typ *ast.DataType, key stri
 	w := b.getParamWhere(dst, fields, false, false)
 	dst.AddImports(w.GetImports())
 
-	dst.Code("func (g " + fName + ")DbUpdate(ctx context.Context) (int, error) {\n")
+	dst.Code("func (g " + fName + ")DbUpdate(ctx context.Context) (int64, error) {\n")
 	if nil != c {
 		dst.Code("\terr := cache.DbDel(ctx, \"" + db.Name + "\")\n")
 		dst.Code("\tif err != nil {\n")
@@ -713,12 +679,7 @@ func (b *Builder) printUpdateData(dst *build.Writer, typ *ast.DataType, key stri
 	dst.Code(w.String())
 	dst.Code("\n")
 
-	dst.Code("\tresult, err := s.Exec(ctx)\n")
-	dst.Code("\tif err != nil {\n")
-	dst.Code("\t\treturn 0, err\n")
-	dst.Code("\t}\n")
-	dst.Code("\tcount, err := result.RowsAffected()\n")
-	dst.Code("\treturn int(count), err\n")
+	dst.Code("\treturn s.Exec(ctx)\n")
 	dst.Code("}\n\n")
 }
 
@@ -730,7 +691,7 @@ func (b *Builder) printSetData(dst *build.Writer, typ *ast.DataType, key string,
 	w := b.getParamWhere(dst, wFields, false, false)
 	dst.AddImports(w.GetImports())
 
-	dst.Code("func (g " + fName + ")DbSet(ctx context.Context) (int, error) {\n")
+	dst.Code("func (g " + fName + ")DbSet(ctx context.Context) (int64, error) {\n")
 	if nil != c {
 		dst.Code("\terr := cache.DbDel(ctx, \"" + db.Name + "\")\n")
 		dst.Code("\tif err != nil {\n")
@@ -762,12 +723,7 @@ func (b *Builder) printSetData(dst *build.Writer, typ *ast.DataType, key string,
 	dst.Code(w.String())
 	dst.Code("\n")
 
-	dst.Code("\tresult, err := s.Exec(ctx)\n")
-	dst.Code("\tif err != nil {\n")
-	dst.Code("\t\treturn 0, err\n")
-	dst.Code("\t}\n")
-	dst.Code("\tcount, err := result.RowsAffected()\n")
-	dst.Code("\treturn int(count), err\n")
+	dst.Code("\treturn s.Exec(ctx)\n")
 	dst.Code("}\n\n")
 }
 
@@ -794,22 +750,15 @@ func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, key string,
 
 	if nil != c {
 		dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/cache", "")
-		dst.Code("\tcv, key, err := cache.DbGet(ctx, \"" + db.Name + "\", s, &val)\n")
+		dst.Code("\tcv, key, _ := cache.DbGet(ctx, \"" + db.Name + "\", s, &val)\n")
 		dst.Code("\tif cv != nil {\n")
 		dst.Code("\t\treturn cv, nil\n")
 		dst.Code("\t}\n")
 	}
-	dst.Code("\tquery, err := s.Query(ctx)\n")
-	dst.Code("\tif err != nil {\n")
-	dst.Code("\t\treturn nil, err\n")
-	dst.Code("\t}\n")
-	dst.Code("\tdefer query.Close()\n")
-
-	dst.Code("\tif !query.Next() {\n")
-	dst.Code("\t\treturn nil, nil\n")
-	dst.Code("\t}\n")
-
-	dst.Code("\terr = query.Scan(" + scan.String() + ")\n")
+	dst.Import("database/sql", "")
+	dst.Code("\t_, err := s.Query(context.TODO(), func(rows *sql.Rows) (bool, error) {\n")
+	dst.Code("\t\treturn false, rows.Scan(" + scan.String() + ")\n")
+	dst.Code("\t})\n")
 	dst.Code("\tif err != nil {\n")
 	dst.Code("\t\treturn nil, err\n")
 	dst.Code("\t}\n")

@@ -405,12 +405,14 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName)
 			b.printToString(setValue, field.Type, false, form.digit, form.format, "??\"\"")
 			setValue.Code(";\n")
-			setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = ")
-			if form.toNull {
-				setValue.Code("\"\" == val ? null : ")
+			if !form.onlyRead {
+				setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = ")
+				if form.toNull {
+					setValue.Code("\"\" == val ? null : ")
+				}
+				b.printFormString(setValue, "val", field.Type, false, form.digit, form.format)
+				setValue.Code(";\n")
 			}
-			b.printFormString(setValue, "val", field.Type, false, form.digit, form.format)
-			setValue.Code(";\n")
 			setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
 			setValue.Code("\t\t" + fieldName + ".widthSizes = sizes;\n")
 			setValue.Code("\t\t" + fieldName + ".padding = padding;\n")
@@ -427,12 +429,14 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName)
 			b.printToString(setValue, field.Type, false, form.digit, form.format, "??\"\"")
 			setValue.Code(";\n")
-			setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = ")
-			if form.toNull {
-				setValue.Code("\"\" == val ? null : ")
+			if !form.onlyRead {
+				setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = ")
+				if form.toNull {
+					setValue.Code("\"\" == val ? null : ")
+				}
+				b.printFormString(setValue, "val", field.Type, false, form.digit, form.format)
+				setValue.Code(";\n")
 			}
-			b.printFormString(setValue, "val", field.Type, false, form.digit, form.format)
-			setValue.Code(";\n")
 			setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
 			setValue.Code("\t\t" + fieldName + ".widthSizes = sizes;\n")
 			setValue.Code("\t\t" + fieldName + ".padding = padding;\n")
@@ -459,10 +463,14 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 
 			if build.IsNil(field.Type) {
 				setValue.Code("\t\t" + fieldName + ".initialValue = [if (info." + fieldName + "?.startsWith(\"http\") ?? false) NetworkImage(info." + fieldName + "!)];\n")
-				setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = ((val?.isEmpty ?? true) ? null : val!.first.url);\n")
+				if !form.onlyRead {
+					setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = ((val?.isEmpty ?? true) ? null : val!.first.url);\n")
+				}
 			} else {
 				setValue.Code("\t\t" + fieldName + ".initialValue = [NetworkImage(info." + fieldName + ")];\n")
-				setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = val!.first.url;\n")
+				if !form.onlyRead {
+					setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = val!.first.url;\n")
+				}
 			}
 			setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
 			setValue.Code("\t\t" + fieldName + ".widthSizes = sizes;\n")
@@ -492,11 +500,13 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			b.printType(dst, field.Type, true)
 			dst.Code("> " + fieldName + " = MenuFormBuild();\n\n")
 			setValue.Code("\t\t" + fieldName + ".value = info." + fieldName + ";\n")
-			setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = val")
-			if !build.IsNil(field.Type) {
-				setValue.Code("!")
+			if !form.onlyRead {
+				setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = val")
+				if !build.IsNil(field.Type) {
+					setValue.Code("!")
+				}
+				setValue.Code(";\n")
 			}
-			setValue.Code(";\n")
 			setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
 			setValue.Code("\t\t" + fieldName + ".widthSizes = sizes;\n")
 			setValue.Code("\t\t" + fieldName + ".padding = padding;\n")

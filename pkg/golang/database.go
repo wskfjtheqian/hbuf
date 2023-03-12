@@ -280,10 +280,14 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 		for _, field := range fields {
 			order := field.Dbs[0].Order
 			if 0 < len(order) {
-				where.Code("\tif \"ASC\" == g." + build.StringToHumpName(field.Field.Name.Name) + " || \"DESC\" == g." + build.StringToHumpName(field.Field.Name.Name))
+				where.Code("\tif ")
 				if build.IsNil(field.Field.Type) {
-					where.Code("&& nil != g." + build.StringToHumpName(field.Field.Name.Name))
+					where.Code("nil != g." + build.StringToHumpName(field.Field.Name.Name))
+					where.Code("&& \"ASC\" == *g." + build.StringToHumpName(field.Field.Name.Name) + " || \"DESC\" == *g." + build.StringToHumpName(field.Field.Name.Name))
+				} else {
+					where.Code("\"ASC\" == g." + build.StringToHumpName(field.Field.Name.Name) + " || \"DESC\" == g." + build.StringToHumpName(field.Field.Name.Name))
 				}
+
 				where.Code(" {\n")
 
 				if isOrderFist {
@@ -295,7 +299,11 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 				where.Import("strings", "")
 				where.Code("strings.ReplaceAll(\"")
 				where.Code(order)
-				where.Code("\", \"$\", g.")
+				if build.IsNil(field.Field.Type) {
+					where.Code("\", \"$\", *g.")
+				} else {
+					where.Code("\", \"$\", g.")
+				}
 				where.Code(build.StringToHumpName(field.Field.Name.Name))
 				where.Code("))\n")
 
@@ -767,11 +775,11 @@ func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, key string,
 	dst.Code("\tcount, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
 	dst.Code("\t\treturn false, rows.Scan(" + scan.String() + ")\n")
 	dst.Code("\t})\n")
-	dst.Code("\tif 0 == count {\n")
-	dst.Code("\t\treturn nil, nil\n")
-	dst.Code("\t}\n")
 	dst.Code("\tif err != nil {\n")
 	dst.Code("\t\treturn nil, err\n")
+	dst.Code("\t}\n")
+	dst.Code("\tif 0 == count {\n")
+	dst.Code("\t\treturn nil, nil\n")
 	dst.Code("\t}\n")
 	if nil != c {
 		dst.Import("math/rand", "")

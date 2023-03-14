@@ -327,13 +327,18 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 	return where
 }
 
+var quesRex = regexp.MustCompile(`\?`)
+var paramRex = regexp.MustCompile(`\{age\}`)
+var strRex = regexp.MustCompile(`(\${\w+})`)
+var allRex = regexp.MustCompile(`(\${\w+})|(\{\w+})|\?`)
+
 func (b *Builder) printWhere(where *build.Writer, text string, field *build.DBField, s string) {
 	count := strings.Count(text, "?")
 	if build.IsArray(field.Field.Type) {
 		where.Import("github.com/wskfjtheqian/hbuf_golang/pkg/utils", "utl")
 		temp := "\" + utl.ToQuestions(g." + build.StringToHumpName(field.Field.Name.Name) + ", \",\") + \""
-		rex := regexp.MustCompile(`\?`)
-		match := rex.FindAllStringSubmatchIndex(text, -1)
+
+		match := quesRex.FindAllStringSubmatchIndex(text, -1)
 		if nil != match {
 			var index = 0
 			buf := strings.Builder{}

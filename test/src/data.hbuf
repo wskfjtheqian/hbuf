@@ -1,29 +1,39 @@
 package go = "parser"
 package java = "com.parser"
 
-enum aa {
-    [format:reg="[A-Za-z\\d_@.]{2,40}"; null="true"; min="2006-01-02T15:04:05Z"; max="2006-01-02T15:04:05Z"]
-    ee = 201
-}
+//enum aa {
+//    [format:reg="[A-Za-z\\d_@.]{2,40}"; null="true"; min="2006-01-02T15:04:05Z"; max="2006-01-02T15:04:05Z"]
+//    ee = 201
+//}
+//
+//enum E {
+//    a = 0
+//
+//    b = 1
+//}
+//
+//[verify:]
+//data ConfigInfo = 53 {
+//    [verify:format="aa.ee"]
+//    [ui:form="text"; onlyRead="true"]
+//    date? config_id = 2
+//}
+//
+//[ui:form="true"]
+//data Info:ConfigInfo = 54 {
+//    [verify:format="aa.ee"]
+//    [ui:form="text"; onlyRead="true"]
+//    int64<int64>? name = 2
+//}
 
-enum E {
-    a = 0
-
-    b = 1
-}
-
-[verify:]
-data ConfigInfo = 53 {
-    [verify:format="aa.ee"]
-    [ui:form="text"; onlyRead="true"]
+[db:]
+data AA = 53 {
+    [db:]
     date? config_id = 2
 }
 
-[ui:form="true"]
-data Info:ConfigInfo = 54 {
-    [verify:format="aa.ee"]
-    [ui:form="text"; onlyRead="true"]
-    int64<int64>? name = 2
+[db:table="AA"; list="parent"; count="true"]
+data BB = 52 {
+    [db:where="AND config_id = ?"]
+    date? config_id = 2
 }
-
-

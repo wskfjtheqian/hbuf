@@ -316,11 +316,11 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 	if page {
 		if limit, ok := b.getLimit(fields); ok {
 			if offset, ok := b.getOffset(fields); ok {
-				where.Code("\ts.T(\" LIMIT " + offset.Dbs[0].Offset + ", " + limit.Dbs[0].Limit + "\")\n")
-				where.Code("\ts.P(g." + build.StringToHumpName(offset.Field.Name.Name) + ", g." + build.StringToHumpName(limit.Field.Name.Name) + ")\n")
+				where.Code("\ts.T(\" LIMIT " + offset.Dbs[0].Offset + ", " + limit.Dbs[0].Limit + "\")")
+				where.Code(".P(g." + build.StringToHumpName(offset.Field.Name.Name) + ", g." + build.StringToHumpName(limit.Field.Name.Name) + ")\n")
 			} else {
-				where.Code("\ts.T(\" LIMIT " + limit.Dbs[0].Limit + "\")\n")
-				where.Code("\ts.P(g." + build.StringToHumpName(limit.Field.Name.Name) + ")\n")
+				where.Code("\ts.T(\" LIMIT " + limit.Dbs[0].Limit + "\")")
+				where.Code(".P(g." + build.StringToHumpName(limit.Field.Name.Name) + ")\n")
 			}
 		}
 	}
@@ -350,7 +350,7 @@ func (b *Builder) printWhere(where *build.Writer, text string, field *build.DBFi
 	}
 	where.Code(s + "\ts.T(\" " + text + "\")")
 	if 0 < count {
-		where.Code(s + ".P(")
+		where.Code(".P(")
 		for i := 0; i < count; i++ {
 			if 0 != i {
 				where.Code(", ")
@@ -482,10 +482,10 @@ func (b *Builder) printMapData(dst *build.Writer, key string, typ *ast.DataType,
 	dst.Code("\n")
 }
 
-func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, fType *ast.DataType, fFields []*build.DBField, c *cache) {
+func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build.DB, wFields []*build.DBField, fType *ast.DataType, fFields []*build.DBField, c *cache) {
 	fName := build.StringToHumpName(fType.Name.Name)
 
-	w := b.getParamWhere(dst, fFields, false, false)
+	w := b.getParamWhere(dst, wFields, false, false)
 	dst.AddImports(w.GetImports())
 
 	dst.Code("func (g " + fName + ") DbCount(ctx context.Context) (int64, error) {\n")

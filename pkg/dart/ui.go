@@ -497,7 +497,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 
 		} else if "menu" == form.form {
 			dst.Code("\tfinal MenuFormBuild<")
-			b.printType(dst, field.Type, true)
+			b.printType(dst, field.Type, false)
 			dst.Code("> " + fieldName + " = MenuFormBuild();\n\n")
 			setValue.Code("\t\t" + fieldName + ".value = info." + fieldName + ";\n")
 			if !form.onlyRead {
@@ -531,9 +531,9 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		return
 	}
 
-	dst.Code("\tList<Widget> build(BuildContext context, {Function(Form" + name + build.StringToHumpName(u.suffix) + "Build ui)? builder}) {\n")
+	dst.Code("\tList<Widget> build(BuildContext context, {Function(BuildContext context, Form" + name + build.StringToHumpName(u.suffix) + "Build ui)? builder}) {\n")
 	dst.Code(setValue.String())
-	dst.Code("\t\tbuilder?.call(this);\n")
+	dst.Code("\t\tbuilder?.call(context, this);\n")
 	dst.Code("\t\treturn <Widget>[\n")
 	dst.Code(fields.String())
 	dst.Code("\t\t];\n")

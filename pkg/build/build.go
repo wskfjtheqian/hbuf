@@ -341,31 +341,30 @@ func GetKeyValue(kvs []*ast.KeyValue, key string) (*ast.KeyValue, bool) {
 	return nil, false
 }
 
-func EnumField(typ *ast.DataType, call func(field *ast.Field, data *ast.DataType) error) error {
-	fields := map[string]int{}
+func enumField(typ *ast.DataType, fields map[string]struct{}, call func(field *ast.Field, data *ast.DataType) error) error {
 	for _, field := range typ.Fields.List {
+		if _, ok := fields[field.Name.Name]; ok {
+			continue
+		}
 		err := call(field, typ)
 		if err != nil {
 			return err
 		}
-		fields[field.Name.Name] = 0
+		fields[field.Name.Name] = struct{}{}
 	}
-
 	for _, extend := range typ.Extends {
 		types := extend.Obj.Decl.(*ast.TypeSpec)
 		data := types.Type.(*ast.DataType)
-		for _, field := range data.Fields.List {
-			if _, ok := fields[field.Name.Name]; ok {
-				continue
-			}
-			err := call(field, data)
-			if err != nil {
-				return err
-			}
-			fields[field.Name.Name] = 0
+		err := enumField(data, fields, call)
+		if err != nil {
+			return err
 		}
 	}
 	return nil
+}
+func EnumField(typ *ast.DataType, call func(field *ast.Field, data *ast.DataType) error) error {
+	fields := map[string]struct{}{}
+	return enumField(typ, fields, call)
 }
 
 func CheckSuperField(name string, typ *ast.DataType) bool {
@@ -381,31 +380,32 @@ func CheckSuperField(name string, typ *ast.DataType) bool {
 	return false
 }
 
-func EnumMethod(typ *ast.ServerType, call func(method *ast.FuncType, server *ast.ServerType) error) error {
-	fields := map[string]int{}
+func enumMethod(typ *ast.ServerType, fields map[string]struct{}, call func(method *ast.FuncType, server *ast.ServerType) error) error {
 	for _, field := range typ.Methods {
+		if _, ok := fields[field.Name.Name]; ok {
+			continue
+		}
 		err := call(field, typ)
 		if err != nil {
 			return err
 		}
-		fields[field.Name.Name] = 0
+		fields[field.Name.Name] = struct{}{}
 	}
 
 	for _, extend := range typ.Extends {
 		types := extend.Obj.Decl.(*ast.TypeSpec)
 		server := types.Type.(*ast.ServerType)
-		for _, field := range server.Methods {
-			if _, ok := fields[field.Name.Name]; ok {
-				continue
-			}
-			err := call(field, server)
-			if err != nil {
-				return err
-			}
-			fields[field.Name.Name] = 0
+		err := enumMethod(server, fields, call)
+		if err != nil {
+			return err
 		}
 	}
 	return nil
+}
+
+func EnumMethod(typ *ast.ServerType, call func(method *ast.FuncType, server *ast.ServerType) error) error {
+	fields := map[string]struct{}{}
+	return enumMethod(typ, fields, call)
 }
 
 func CheckSuperMethod(name string, typ *ast.ServerType) bool {

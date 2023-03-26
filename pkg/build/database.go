@@ -23,7 +23,7 @@ type DB struct {
 	Count   bool
 	Table   string
 	Remove  bool
-	Where   string
+	Where   []string
 	Offset  string
 	Limit   string
 	Order   string
@@ -61,7 +61,11 @@ func GetDB(n string, tag []*ast.Tag) []*DB {
 					} else if "typ" == item.Name.Name {
 						db.typ = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 					} else if "where" == item.Name.Name {
-						db.Where = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
+						where := make([]string, len(item.Values))
+						for i, val := range item.Values {
+							where[i] = val.Value[1 : len(item.Values[0].Value)-1]
+						}
+						db.Where = where
 					} else if "offset" == item.Name.Name {
 						db.Offset = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 					} else if "limit" == item.Name.Name {

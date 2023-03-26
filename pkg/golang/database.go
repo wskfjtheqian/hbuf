@@ -114,7 +114,7 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 	if fDbs[0].Del {
 		w := wFields
 		if typ == fType {
-			key.Dbs[0].Where = "AND id = ?"
+			key.Dbs[0].Where = []string{"AND id = ?"}
 			w = []*build.DBField{key}
 		}
 		b.printDeleteData(dst, dbs[0], w, fType, nil != c)
@@ -123,7 +123,7 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 	if fDbs[0].Remove {
 		w := wFields
 		if typ == fType {
-			key.Dbs[0].Where = "AND id = ?"
+			key.Dbs[0].Where = []string{"AND id = ?"}
 			w = []*build.DBField{key}
 		}
 		b.printRemoveData(dst, dbs[0], w, fType, nil != c)
@@ -155,7 +155,7 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 			f = wFields
 		}
 		if typ == fType {
-			key.Dbs[0].Where = "AND id = ?"
+			key.Dbs[0].Where = []string{"AND id = ?"}
 			w = []*build.DBField{key}
 		}
 		b.printUpdateData(dst, typ, val, dbs[0], w, f, fType, c)
@@ -169,7 +169,7 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 			f = wFields
 		}
 		if typ == fType {
-			key.Dbs[0].Where = "AND id = ?"
+			key.Dbs[0].Where = []string{"AND id = ?"}
 			w = []*build.DBField{key}
 		}
 		b.printSetData(dst, typ, val, dbs[0], w, f, fType, c)
@@ -183,7 +183,7 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 			f = wFields
 		}
 		if typ == fType {
-			key.Dbs[0].Where = "AND id = ?"
+			key.Dbs[0].Where = []string{"AND id = ?"}
 			w = []*build.DBField{key}
 		}
 		b.printGetData(dst, typ, val, dbs[0], w, f, fType, c)
@@ -264,13 +264,29 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 
 	for _, field := range fields {
 		text := field.Dbs[0].Where
-		if 0 < len(text) {
-			if build.IsNil(field.Field.Type) {
-				where.Code("\tif nil != g." + build.StringToHumpName(field.Field.Name.Name) + " {\n")
-				b.printWhere(where, text, field, "\t")
-				where.Code("\t}\n")
+		fieldName := build.StringToHumpName(field.Field.Name.Name)
+		for i, item := range text {
+			if 1 == len(text) || !build.IsArray(field.Field.Type) {
+				if build.IsNil(field.Field.Type) {
+					where.Code("\tif nil != g." + fieldName + " {\n")
+					b.printWhere(where, item, fieldName, "\t", build.IsArray(field.Field.Type))
+					where.Code("\t}\n")
+				} else {
+					b.printWhere(where, item, fieldName, "", build.IsArray(field.Field.Type))
+				}
 			} else {
-				b.printWhere(where, text, field, "")
+				if build.IsNil(field.Field.Type) {
+					where.Code("\tif nil != g." + fieldName + " && " + strconv.Itoa(i) + " < len(g." + fieldName + ")")
+					array := field.Field.Type.(*ast.ArrayType)
+					if array.VType.Empty {
+						where.Code(" && nil != g." + fieldName + "[" + strconv.Itoa(i) + "]")
+					}
+					where.Code(" {\n")
+					b.printWhere(where, item, fieldName+"["+strconv.Itoa(i)+"]", "\t", false)
+					where.Code("\t}\n")
+				} else {
+					b.printWhere(where, item, fieldName+"["+strconv.Itoa(i)+"]", "", false)
+				}
 			}
 		}
 	}
@@ -332,11 +348,11 @@ var paramRex = regexp.MustCompile(`\{age\}`)
 var strRex = regexp.MustCompile(`(\${\w+})`)
 var allRex = regexp.MustCompile(`(\${\w+})|(\{\w+})|\?`)
 
-func (b *Builder) printWhere(where *build.Writer, text string, field *build.DBField, s string) {
+func (b *Builder) printWhere(where *build.Writer, text, fieldName, s string, isArray bool) {
 	count := strings.Count(text, "?")
-	if build.IsArray(field.Field.Type) {
+	if isArray {
 		where.Import("github.com/wskfjtheqian/hbuf_golang/pkg/utils", "utl")
-		temp := "\" + utl.ToQuestions(g." + build.StringToHumpName(field.Field.Name.Name) + ", \",\") + \""
+		temp := "\" + utl.ToQuestions(g." + fieldName + ", \",\") + \""
 
 		match := quesRex.FindAllStringSubmatchIndex(text, -1)
 		if nil != match {
@@ -353,6 +369,7 @@ func (b *Builder) printWhere(where *build.Writer, text string, field *build.DBFi
 			text = buf.String()
 		}
 	}
+
 	where.Code(s + "\ts.T(\" " + text + "\")")
 	if 0 < count {
 		where.Code(".P(")
@@ -360,12 +377,12 @@ func (b *Builder) printWhere(where *build.Writer, text string, field *build.DBFi
 			if 0 != i {
 				where.Code(", ")
 			}
-			if build.IsArray(field.Field.Type) {
+			if isArray {
 				where.Import("github.com/wskfjtheqian/hbuf_golang/pkg/utils", "utl")
-				where.Code("utl.ToAnyList(g." + build.StringToHumpName(field.Field.Name.Name) + ")...")
+				where.Code("utl.ToAnyList(g." + fieldName + ")...")
 			} else {
 				where.Code("g.")
-				where.Code(build.StringToHumpName(field.Field.Name.Name))
+				where.Code(fieldName)
 			}
 		}
 		where.Code(")")
@@ -762,7 +779,7 @@ func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, key string,
 
 	item, scan, _ := b.getItemAndValue(fields, key)
 
-	dst.Code("func (g " + fName + ")DbGet(ctx context.Context) (*" + dName + ", error) {\n")
+	dst.Code("func (g " + fName + ") DbGet(ctx context.Context) (*" + dName + ", error) {\n")
 	dst.Code("\ts := db.NewSql()\n")
 	dst.Code("\ts.T(\"SELECT " + item.String() + " FROM " + db.Name + " WHERE del_time IS NULL\")\n")
 	dst.Code(w.GetCode().String())

@@ -258,7 +258,7 @@ func (b *Builder) printToString(dst *build.Writer, expr ast.Expr, empty bool, di
 				if empty {
 					dst.Code("?")
 				}
-				dst.Code(".toString()")
+				dst.Code(".toStringAsFixed(" + strconv.Itoa(digit) + ")")
 			}
 		}
 	case *ast.ArrayType:
@@ -521,7 +521,28 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 
 			fields.Code("\t\t\t" + fieldName + ".build(context),\n")
 			lang.Add(fieldName, field.Tags)
-		} else if "time" == form.form {
+		} else if "date" == form.form {
+			dst.Code("\tfinal DatetimeFormBuild " + fieldName + " =  DatetimeFormBuild();\n\n")
+			setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName)
+			b.printToString(setValue, field.Type, false, form.digit, form.format, "??\"\"")
+			setValue.Code(";\n")
+			if !form.onlyRead {
+				setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = ")
+				if form.toNull {
+					setValue.Code("\"\" == val ? null : ")
+				}
+				setValue.Code("val ;\n")
+			}
+			setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
+			setValue.Code("\t\t" + fieldName + ".widthSizes = sizes;\n")
+			setValue.Code("\t\t" + fieldName + ".padding = padding;\n")
+			if nil != verify {
+				b.getPackage(dst, typ.Name, "verify")
+				setValue.Code("\t\t" + fieldName + ".validator = (val) => verify" + name + "_" + build.StringToHumpName(fieldName) + "(context, val!);\n")
+			}
+			setValue.Code("\t\t" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n\n")
+
+			fields.Code("\t\t\t" + fieldName + ".build(context),\n")
 			lang.Add(fieldName, field.Tags)
 		}
 

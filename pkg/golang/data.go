@@ -45,7 +45,7 @@ func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
 		dst.Code("func (g " + build.StringToHumpName(typ.Name.Name) + ") Get" + build.StringToHumpName(field.Name.Name) + "() ")
 		b.printType(dst, field.Type, false)
 		dst.Code(" {\n")
-		if field.Type.IsEmpty() {
+		if field.Type.IsEmpty() && !build.IsArray(field.Type) && !build.IsMap(field.Type) {
 			dst.Code("\tif nil == g." + build.StringToHumpName(field.Name.Name) + " {\n")
 			dst.Code("\t\treturn ")
 			b.printDefault(dst, field.Type)
@@ -85,12 +85,14 @@ func (b *Builder) printDefault(dst *build.Writer, expr ast.Expr) {
 		ar := expr.(*ast.ArrayType)
 		dst.Code("[]")
 		b.printType(dst, ar.VType, true)
+		dst.Code("{}")
 	case *ast.MapType:
 		ma := expr.(*ast.MapType)
 		dst.Code("map[")
 		b.printType(dst, ma.Key, true)
 		dst.Code("]")
 		b.printType(dst, ma.VType, true)
+		dst.Code("{}")
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
 		b.printDefault(dst, t.Type())

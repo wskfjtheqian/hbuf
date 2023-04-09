@@ -9,11 +9,12 @@ func (b *Builder) printServerCode(dst *build.Writer, typ *ast.ServerType) {
 	dst.Import("context", "")
 	dst.Import("encoding/json", "")
 	dst.Import("errors", "")
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/rpc", "")
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/erro", "")
 	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "")
-	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/utils", "")
-
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/manage", "")
 	b.printServer(dst, typ)
-	b.printServerImp(dst, typ)
+	b.printClient(dst, typ)
 	b.printServerRouter(dst, typ)
 	b.printServerDefault(dst, typ)
 	b.printGetServerRouter(dst, typ)
@@ -77,52 +78,64 @@ func (b *Builder) printServerDefault(dst *build.Writer, typ *ast.ServerType) {
 		dst.Code(") (*")
 		b.printType(dst, method.Result.Type(), true)
 		dst.Code(", error){\n")
-		dst.Code("\treturn nil, utl.Wrap(errors.New(\"not find server\"))\n")
+		dst.Code("\treturn nil, erro.Wrap(errors.New(\"not find server\"))\n")
 		dst.Code("}\n\n")
 	}
 }
 
-func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
-	//
-	//dst.Code("class " +serverName + "Client extends ServerClient implements " +serverName)
-	//
-	//dst.Code("{\n")
-	//
-	//dst.Code("  " +serverName + "Client(Client client):super(client);\n\n")
-	//
-	//dst.Code("  @override\n")
-	//dst.Code("  String get name => \"" +serverName + "\";\n\n")
-	//dst.Code("  @override\n")
-	//dst.Code("  int get id => " + typ.Id.Values + ";\n\n")
-	//
-	//_ = build.EnumMethod(typ, func(method *ast.FuncType, server *ast.ServerType) error {
-	//	dst.Code("  @override\n")
-	//	dst.Code("  Future<")
-	//	printType(dst, method.Result.Type(), false)
-	//	dst.Code("> " + build.StringToHumpName(method.Name.Name))
-	//	dst.Code("(")
-	//	printType(dst, method.Param, false)
-	//	dst.Code(" " + build.StringToHumpName(method.ParamName.Name))
-	//	dst.Code(", [Context? ctx]){\n")
-	//
-	//	dst.Code("    return invoke<")
-	//	printType(dst, method.Result.Type(), false)
-	//	dst.Code(">(\"")
-	//	dst.Code(server.Name.Name + "/" + method.Name.Name)
-	//	dst.Code("\", ")
-	//	dst.Code(server.Id.Values + " << 32 | " + method.Id.Values)
-	//	dst.Code(", ")
-	//	dst.Code(build.StringToHumpName(method.ParamName.Name))
-	//	dst.Code(", ")
-	//	printType(dst, method.Result.Type(), false)
-	//	dst.Code(".fromMap, ")
-	//	printType(dst, method.Result.Type(), false)
-	//	dst.Code(".fromData);\n")
-	//
-	//	dst.Code("  }\n\n")
-	//	return nil
-	//})
-	//dst.Code("}\n\n")
+func (b *Builder) printClient(dst *build.Writer, typ *ast.ServerType) {
+	serverName := build.StringToHumpName(typ.Name.Name)
+	dst.Code("type " + serverName + "Client struct {\n")
+	dst.Code("\tclient rpc.Client\n")
+	dst.Code("}\n\n")
+
+	dst.Code("func (p *" + serverName + "Client) Init() {\n")
+	dst.Code("}\n\n")
+
+	dst.Code("func New" + serverName + "Client(client rpc.Client) *" + serverName + "Client {\n")
+	dst.Code("\treturn &" + serverName + "Client{\n")
+	dst.Code("\t\tclient: client,\n")
+	dst.Code("\t}\n")
+	dst.Code("}\n")
+	name := build.StringToUnderlineName(typ.Name.Name)
+	err := build.EnumMethod(typ, func(method *ast.FuncType, server *ast.ServerType) error {
+		if nil != method.Doc && 0 < len(method.Doc.Text()) {
+			dst.Code("\t//" + build.StringToHumpName(method.Name.Name) + " " + method.Doc.Text())
+		}
+		dst.Code("func (r *" + serverName + "Client) ")
+		dst.Code(build.StringToHumpName(method.Name.Name))
+		dst.Code("(ctx context.Context, ")
+		dst.Code(build.StringToFirstLower(method.ParamName.Name))
+		dst.Code(" *")
+		b.printType(dst, method.Param, true)
+		dst.Code(") (*")
+		b.printType(dst, method.Result.Type(), true)
+		dst.Code(", error) {\n")
+
+		dst.Code("\tret, err := r.client.Invoke(ctx, req, \"" + name + "/" + build.StringToUnderlineName(typ.Name.Name) + "/" + build.StringToUnderlineName(method.Name.Name) + "\", &rpc.ClientInvoke{\n")
+		dst.Code("\t\tToData: func(buf []byte) (hbuf.Data, error) {\n")
+		dst.Code("\t\t\tvar req ")
+		b.printType(dst, method.Result.Type(), true)
+		dst.Code("\n")
+		dst.Code("\t\t\treturn &req, json.Unmarshal(buf, &req)\n")
+		dst.Code("\t\t},\n")
+		dst.Code("\t\tFormData: func(data hbuf.Data) ([]byte, error) {\n")
+		dst.Code("\t\t\treturn json.Marshal(&data)\n")
+		dst.Code("\t\t},\n")
+		dst.Code("\t}, 1, &rpc.ClientInvoke{})\n")
+		dst.Code("\tif err != nil {\n")
+		dst.Code("\t\treturn nil, err\n")
+		dst.Code("\t}\n")
+		dst.Code("\treturn ret.(*")
+		b.printType(dst, method.Result.Type(), true)
+		dst.Code("), nil\n")
+		dst.Code("}\n")
+		dst.Code("\n")
+		return nil
+	})
+	if err != nil {
+		return
+	}
 }
 
 type Tag map[string]string
@@ -145,7 +158,7 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 	serverName := build.StringToHumpName(typ.Name.Name)
 	dst.Code("type " + serverName + "Router struct {\n")
 	dst.Code("\tserver " + serverName + "\n")
-	dst.Code("\tnames  map[string]*hbuf.ServerInvoke\n")
+	dst.Code("\tnames  map[string]*rpc.ServerInvoke\n")
 	dst.Code("}\n\n")
 
 	dst.Code("func (p *" + serverName + "Router) GetName() string {\n")
@@ -156,18 +169,18 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 	dst.Code("\treturn 1\n")
 	dst.Code("}\n\n")
 
-	dst.Code("func (p *" + serverName + "Router) GetServer() hbuf.Init {\n")
+	dst.Code("func (p *" + serverName + "Router) GetServer() rpc.Init {\n")
 	dst.Code("\treturn p.server\n")
 	dst.Code("}\n\n")
 
-	dst.Code("func (p *" + serverName + "Router) GetInvoke() map[string]*hbuf.ServerInvoke {\n")
+	dst.Code("func (p *" + serverName + "Router) GetInvoke() map[string]*rpc.ServerInvoke {\n")
 	dst.Code("\treturn p.names\n")
 	dst.Code("}\n\n")
 
 	dst.Code("func New" + serverName + "Router(server " + serverName + ") *" + serverName + "Router {\n")
 	dst.Code("\treturn &" + serverName + "Router{\n")
 	dst.Code("\t\tserver: server,\n")
-	dst.Code("\t\tnames: map[string]*hbuf.ServerInvoke{\n")
+	dst.Code("\t\tnames: map[string]*rpc.ServerInvoke{\n")
 	err := build.EnumMethod(typ, func(method *ast.FuncType, server *ast.ServerType) error {
 		dst.Code("\t\t\t\"" + build.StringToUnderlineName(typ.Name.Name) + "/" + build.StringToUnderlineName(method.Name.Name) + "\": {\n")
 		dst.Code("\t\t\t\tToData: func(buf []byte) (hbuf.Data, error) {\n")
@@ -184,7 +197,7 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 		au := b.getTag(method.Tags)
 		if nil != au {
 			for key, val := range *au {
-				dst.Code("\t\t\t\t\thbuf.SetTag(ctx, \"" + key + "\", \"" + val + "\")\n")
+				dst.Code("\t\t\t\t\trpc.SetTag(ctx, \"" + key + "\", \"" + val + "\")\n")
 			}
 		}
 		dst.Code("\t\t\t\t},\n")

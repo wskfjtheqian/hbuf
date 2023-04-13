@@ -300,7 +300,7 @@ func (b *Builder) getKey(dst *build.Writer, fields []*build.DBField, name string
 	for _, field := range fields {
 		if field.Field.Name.Name == name {
 			where.Code(build.StringToFirstLower(field.Field.Name.Name))
-			b.printType(param, field.Field.Type, true)
+			b.printType(param, field.Field.Type, false)
 			return param, where, true
 		}
 	}

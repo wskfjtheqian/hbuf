@@ -480,7 +480,7 @@ func (b *Builder) printMapData(dst *build.Writer, key string, typ *ast.DataType,
 	dst.Code("\t\tvar val " + dName + "\n")
 	dst.Code("\t\terr:= rows.Scan(" + scan.String() + ")\n")
 	dst.Code("\t\tif err == nil {\n")
-	dst.Code("\t\t\tret[val." + build.StringToHumpName(KName.String()) + "] = val\n")
+	dst.Code("\t\t\tret[val.Get" + build.StringToHumpName(KName.String()) + "()] = val\n")
 	dst.Code("\t\t}\n")
 	dst.Code("\t\treturn true, err\n")
 	dst.Code("\t})\n")

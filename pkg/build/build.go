@@ -342,6 +342,15 @@ func GetKeyValue(kvs []*ast.KeyValue, key string) (*ast.KeyValue, bool) {
 }
 
 func enumField(typ *ast.DataType, fields map[string]struct{}, call func(field *ast.Field, data *ast.DataType) error) error {
+	for _, extend := range typ.Extends {
+		types := extend.Obj.Decl.(*ast.TypeSpec)
+		data := types.Type.(*ast.DataType)
+		err := enumField(data, fields, call)
+		if err != nil {
+			return err
+		}
+	}
+
 	for _, field := range typ.Fields.List {
 		if _, ok := fields[field.Name.Name]; ok {
 			continue
@@ -351,14 +360,6 @@ func enumField(typ *ast.DataType, fields map[string]struct{}, call func(field *a
 			return err
 		}
 		fields[field.Name.Name] = struct{}{}
-	}
-	for _, extend := range typ.Extends {
-		types := extend.Obj.Decl.(*ast.TypeSpec)
-		data := types.Type.(*ast.DataType)
-		err := enumField(data, fields, call)
-		if err != nil {
-			return err
-		}
 	}
 	return nil
 }

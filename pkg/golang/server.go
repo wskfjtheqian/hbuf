@@ -28,7 +28,7 @@ func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
 	dst.Code("type " + serverName)
 	dst.Code(" interface {\n")
 	b.printExtend(dst, typ.Extends)
-	dst.Code("\tInit()\n\n")
+	dst.Code("\tInit(ctx context.Context)\n\n")
 
 	isFast := true
 	for _, method := range typ.Methods {
@@ -61,7 +61,7 @@ func (b *Builder) printServerDefault(dst *build.Writer, typ *ast.ServerType) {
 	dst.Code(" struct {\n")
 	dst.Code("}\n\n")
 
-	dst.Code("func (s *default" + serverName + ")Init(){\n")
+	dst.Code("func (s *default" + serverName + ")Init(ctx context.Context){\n")
 	dst.Code("}\n\n")
 
 	for _, method := range typ.Methods {
@@ -89,7 +89,7 @@ func (b *Builder) printClient(dst *build.Writer, typ *ast.ServerType) {
 	dst.Code("\tclient rpc.Client\n")
 	dst.Code("}\n\n")
 
-	dst.Code("func (p *" + serverName + "Client) Init() {\n")
+	dst.Code("func (p *" + serverName + "Client) Init(ctx context.Context) {\n")
 	dst.Code("}\n\n")
 
 	dst.Code("func New" + serverName + "Client(client rpc.Client) *" + serverName + "Client {\n")

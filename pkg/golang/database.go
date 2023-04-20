@@ -552,11 +552,11 @@ func (b *Builder) printDeleteData(dst *build.Writer, db *build.DB, wFields []*bu
 	w := b.getParamWhere(dst, wFields, false, false)
 	dst.AddImports(w.GetImports())
 
-	dst.Code("func (g " + fName + ") DbDel(ctx context.Context) (int64, error) {\n")
+	dst.Code("func (g " + fName + ") DbDel(ctx context.Context) (int64, int64, error) {\n")
 	if isCache {
 		dst.Code("\terr := cache.DbDel(ctx, \"" + db.Name + "\")\n")
 		dst.Code("\tif err != nil {\n")
-		dst.Code("\t\treturn 0, err\n")
+		dst.Code("\t\treturn 0, 0, err\n")
 		dst.Code("\t}\n")
 	}
 
@@ -574,11 +574,11 @@ func (b *Builder) printRemoveData(dst *build.Writer, db *build.DB, wFields []*bu
 	w := b.getParamWhere(dst, wFields, false, false)
 	dst.AddImports(w.GetImports())
 
-	dst.Code("func (g " + fName + ") DbRemove(ctx context.Context) (int64, error) {\n")
+	dst.Code("func (g " + fName + ") DbRemove(ctx context.Context) (int64, int64, error) {\n")
 	if isCache {
 		dst.Code("\terr := cache.DbDel(ctx, \"" + db.Name + "\")\n")
 		dst.Code("\tif err != nil {\n")
-		dst.Code("\t\treturn 0, err\n")
+		dst.Code("\t\treturn 0, 0, err\n")
 		dst.Code("\t}\n")
 	}
 
@@ -592,11 +592,11 @@ func (b *Builder) printRemoveData(dst *build.Writer, db *build.DB, wFields []*bu
 
 func (b *Builder) printInsertData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField, isCache bool) {
 	name := build.StringToHumpName(typ.Name.Name)
-	dst.Code("func (g " + name + ") DbInsert(ctx context.Context) (int64, error) {\n")
+	dst.Code("func (g " + name + ") DbInsert(ctx context.Context) (int64, int64, error) {\n")
 	if isCache {
 		dst.Code("\terr := cache.DbDel(ctx, \"" + db.Name + "\")\n")
 		dst.Code("\tif err != nil {\n")
-		dst.Code("\t\treturn 0, err\n")
+		dst.Code("\t\treturn 0, 0, err\n")
 		dst.Code("\t}\n")
 	}
 	dst.Code("\ts := db.NewSql()\n")
@@ -623,14 +623,14 @@ func (b *Builder) printInsertData(dst *build.Writer, typ *ast.DataType, db *buil
 
 func (b *Builder) printInsertListData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField, isCache bool) {
 	name := build.StringToHumpName(typ.Name.Name)
-	dst.Code("func (g " + name + ") DbInsertList(ctx context.Context, val []*" + name + ") (int64, error) {\n")
+	dst.Code("func (g " + name + ") DbInsertList(ctx context.Context, val []*" + name + ") (int64, int64, error) {\n")
 	dst.Code("\tif nil == val || 0 == len(val) {\n")
-	dst.Code("\t\treturn 0, nil\n")
+	dst.Code("\t\treturn 0, 0, nil\n")
 	dst.Code("\t}\n")
 	if isCache {
 		dst.Code("\terr := cache.DbDel(ctx, \"" + db.Name + "\")\n")
 		dst.Code("\tif err != nil {\n")
-		dst.Code("\t\treturn 0, err\n")
+		dst.Code("\t\treturn 0, 0, err\n")
 		dst.Code("\t}\n")
 	}
 	dst.Code("\ts := db.NewSql()\n")
@@ -672,11 +672,11 @@ func (b *Builder) printUpdateData(dst *build.Writer, typ *ast.DataType, key stri
 	w := b.getParamWhere(dst, fields, false, false)
 	dst.AddImports(w.GetImports())
 
-	dst.Code("func (g " + fName + ") DbUpdate(ctx context.Context) (int64, error) {\n")
+	dst.Code("func (g " + fName + ") DbUpdate(ctx context.Context) (int64, int64, error) {\n")
 	if nil != c {
 		dst.Code("\terr := cache.DbDel(ctx, \"" + db.Name + "\")\n")
 		dst.Code("\tif err != nil {\n")
-		dst.Code("\t\treturn 0, err\n")
+		dst.Code("\t\treturn 0, 0, err\n")
 		dst.Code("\t}\n")
 	}
 	dst.Code("\ts := db.NewSql()\n")
@@ -702,11 +702,11 @@ func (b *Builder) printSetData(dst *build.Writer, typ *ast.DataType, key string,
 	w := b.getParamWhere(dst, wFields, false, false)
 	dst.AddImports(w.GetImports())
 
-	dst.Code("func (g " + fName + ") DbSet(ctx context.Context) (int64, error) {\n")
+	dst.Code("func (g " + fName + ") DbSet(ctx context.Context) (int64, int64, error) {\n")
 	if nil != c {
 		dst.Code("\terr := cache.DbDel(ctx, \"" + db.Name + "\")\n")
 		dst.Code("\tif err != nil {\n")
-		dst.Code("\t\treturn 0, err\n")
+		dst.Code("\t\treturn 0, 0, err\n")
 		dst.Code("\t}\n")
 	}
 	dst.Code("\ts := db.NewSql()\n")

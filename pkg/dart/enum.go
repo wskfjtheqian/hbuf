@@ -60,7 +60,7 @@ func (b *Builder) printEnum(dst *build.Writer, typ *ast.EnumType) {
 			dst.Code("\t///" + item.Doc.Text())
 		}
 		itemName := build.StringToAllUpper(item.Name.Name)
-		dst.Code("\tstatic final " + itemName + " = " + enumName + "._(" + item.Id.Value + ", '" + itemName + "'")
+		dst.Code("\tstatic final " + itemName + " = " + enumName + "._(" + item.Id.Value + ", '" + build.StringToHumpName(item.Name.Name) + "'")
 		if isUi {
 			dst.Code(", (context) => " + enumName + "Localizations.of(context)." + itemName)
 		}

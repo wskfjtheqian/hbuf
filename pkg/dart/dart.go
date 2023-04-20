@@ -150,7 +150,7 @@ func writerFile(data *build.Writer, out string) error {
 			print(err)
 		}
 	}(fc)
-
+	_, _ = fc.WriteString("// @dart = 2.12\n\n")
 	if 0 < len(data.GetImports()) {
 		imps := make([]string, len(data.GetImports()))
 

@@ -23,7 +23,7 @@ func printEnumCode(dst *build.Writer, typ *ast.EnumType) {
 	dst.Code("\tswitch e {\n")
 	for _, item := range typ.Items {
 		dst.Code("\tcase " + name + build.StringToHumpName(item.Name.Name) + ":\n")
-		dst.Code("\t\treturn \"" + build.StringToAllUpper(item.Name.Name) + "\"\n")
+		dst.Code("\t\treturn \"" + build.StringToHumpName(item.Name.Name) + "\"\n")
 	}
 	dst.Code("\t}\n")
 	dst.Code("\treturn \"\"\n")
@@ -32,7 +32,7 @@ func printEnumCode(dst *build.Writer, typ *ast.EnumType) {
 	dst.Code("func (e " + name + ") OfName(name string) (" + name + ", error) {\n")
 	dst.Code("\tswitch name {\n")
 	for _, item := range typ.Items {
-		dst.Code("\tcase \"" + build.StringToAllUpper(item.Name.Name) + "\":\n")
+		dst.Code("\tcase \"" + build.StringToHumpName(item.Name.Name) + "\":\n")
 		dst.Code("\t\treturn " + name + build.StringToHumpName(item.Name.Name) + ", nil\n")
 	}
 	dst.Code("\t}\n")

@@ -299,7 +299,7 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 				where.Code("\tif ")
 				if build.IsNil(field.Field.Type) {
 					where.Code("nil != g." + build.StringToHumpName(field.Field.Name.Name))
-					where.Code("&& \"ASC\" == *g." + build.StringToHumpName(field.Field.Name.Name) + " || \"DESC\" == *g." + build.StringToHumpName(field.Field.Name.Name))
+					where.Code(" && (\"ASC\" == *g." + build.StringToHumpName(field.Field.Name.Name) + " || \"DESC\" == *g." + build.StringToHumpName(field.Field.Name.Name) + ")")
 				} else {
 					where.Code("\"ASC\" == g." + build.StringToHumpName(field.Field.Name.Name) + " || \"DESC\" == g." + build.StringToHumpName(field.Field.Name.Name))
 				}

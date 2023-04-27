@@ -552,6 +552,9 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
 			setValue.Code("\t\t" + fieldName + ".widthSizes = sizes;\n")
 			setValue.Code("\t\t" + fieldName + ".padding = padding;\n")
+			if form.toNull {
+				setValue.Code("\t\t" + fieldName + ".toNull = true;\n")
+			}
 			setValue.Code("\t\t" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n")
 			if nil != verify {
 				b.getPackage(dst, typ.Name, "verify")
@@ -593,10 +596,12 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			setValue.Code(";\n")
 			if !form.onlyRead {
 				setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = ")
-				if form.toNull {
-					setValue.Code("\"\" == val ? null : ")
+				if !build.IsNil(field.Type) {
+					setValue.Code("val ?? false ;\n")
+				} else {
+					setValue.Code("val ;\n")
 				}
-				setValue.Code("val ;\n")
+
 			}
 			setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
 			setValue.Code("\t\t" + fieldName + ".widthSizes = sizes;\n")

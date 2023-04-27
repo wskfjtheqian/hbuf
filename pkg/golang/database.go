@@ -311,7 +311,7 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 				} else {
 					where.Code("\t\ts.T(\", \" + ")
 				}
-				isOrderFist = false
+				isOrderFist = true
 				where.Import("strings", "")
 				where.Code("strings.ReplaceAll(\"")
 				where.Code(order)

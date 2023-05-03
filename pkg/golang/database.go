@@ -438,6 +438,7 @@ func (b *Builder) printListData(dst *build.Writer, typ *ast.DataType, key string
 			dst.Code("0")
 		}
 		dst.Code(")\n")
+		dst.Code("\tdefer cache.DbUnlock(ctx)\n")
 	}
 	dst.Code("\treturn ret, nil\n")
 	dst.Code("}\n")
@@ -498,6 +499,7 @@ func (b *Builder) printMapData(dst *build.Writer, key string, typ *ast.DataType,
 			dst.Code("0")
 		}
 		dst.Code(")\n")
+		dst.Code("\tdefer cache.DbUnlock(ctx)\n")
 	}
 	dst.Code("\treturn ret, nil\n")
 	dst.Code("}\n")
@@ -540,6 +542,7 @@ func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build
 			dst.Code("0")
 		}
 		dst.Code(")\n")
+		dst.Code("\tdefer cache.DbUnlock(ctx)\n")
 	}
 	dst.Code("\treturn count, nil\n")
 	dst.Code("}\n")
@@ -558,6 +561,7 @@ func (b *Builder) printDeleteData(dst *build.Writer, db *build.DB, wFields []*bu
 		dst.Code("\tif err != nil {\n")
 		dst.Code("\t\treturn 0, 0, err\n")
 		dst.Code("\t}\n")
+		dst.Code("\tdefer cache.DbUnlock(ctx)\n")
 	}
 
 	dst.Code("\ts := db.NewSql()\n")
@@ -580,6 +584,7 @@ func (b *Builder) printRemoveData(dst *build.Writer, db *build.DB, wFields []*bu
 		dst.Code("\tif err != nil {\n")
 		dst.Code("\t\treturn 0, 0, err\n")
 		dst.Code("\t}\n")
+		dst.Code("\tdefer cache.DbUnlock(ctx)\n")
 	}
 
 	dst.Code("\ts := db.NewSql()\n")
@@ -598,6 +603,7 @@ func (b *Builder) printInsertData(dst *build.Writer, typ *ast.DataType, db *buil
 		dst.Code("\tif err != nil {\n")
 		dst.Code("\t\treturn 0, 0, err\n")
 		dst.Code("\t}\n")
+		dst.Code("\tdefer cache.DbUnlock(ctx)\n")
 	}
 	dst.Code("\ts := db.NewSql()\n")
 	dst.Code("\ts.T(\"INSERT INTO " + db.Name + " \")\n")
@@ -632,6 +638,7 @@ func (b *Builder) printInsertListData(dst *build.Writer, typ *ast.DataType, db *
 		dst.Code("\tif err != nil {\n")
 		dst.Code("\t\treturn 0, 0, err\n")
 		dst.Code("\t}\n")
+		dst.Code("\tdefer cache.DbUnlock(ctx)\n")
 	}
 	dst.Code("\ts := db.NewSql()\n")
 	dst.Code("\ts.T(\"INSERT INTO " + db.Name + " (")
@@ -678,6 +685,7 @@ func (b *Builder) printUpdateData(dst *build.Writer, typ *ast.DataType, key stri
 		dst.Code("\tif err != nil {\n")
 		dst.Code("\t\treturn 0, 0, err\n")
 		dst.Code("\t}\n")
+		dst.Code("\tdefer cache.DbUnlock(ctx)\n")
 	}
 	dst.Code("\ts := db.NewSql()\n")
 	dst.Code("\ts.T(\"UPDATE " + db.Name + " SET id = id\")\n")
@@ -708,6 +716,7 @@ func (b *Builder) printSetData(dst *build.Writer, typ *ast.DataType, key string,
 		dst.Code("\tif err != nil {\n")
 		dst.Code("\t\treturn 0, 0, err\n")
 		dst.Code("\t}\n")
+		dst.Code("\tdefer cache.DbUnlock(ctx)\n")
 	}
 	dst.Code("\ts := db.NewSql()\n")
 	dst.Code("\ts.T(\"UPDATE " + db.Name + " SET id = id\")\n")
@@ -813,6 +822,7 @@ func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, key string,
 			dst.Code("0")
 		}
 		dst.Code(")\n")
+		dst.Code("\tdefer cache.DbUnlock(ctx)\n")
 	}
 	dst.Code("\treturn &val, nil\n")
 	dst.Code("}\n\n")

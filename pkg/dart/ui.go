@@ -237,6 +237,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Code("\t\t\t\t\t\t\tdata." + fieldName)
 			b.printToString(dst, field.Type, false, table.digit, table.format, "??\"\"")
 			dst.Code(",\n")
+			dst.Code("\t\t\t\t\t\t\tmaxLines: 1,\n")
 			dst.Code("\t\t\t\t\t\t\toverflow: TextOverflow.ellipsis,\n")
 			dst.Code("\t\t\t\t\t\t),\n")
 			dst.Code("\t\t\t\t\t),\n")

@@ -31,7 +31,6 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 	dName := build.StringToHumpName(data.Name.Name)
 	err := build.EnumField(data, func(field *ast.Field, data *ast.DataType) error {
 		fName := build.StringToHumpName(field.Name.Name)
-
 		verify, err := build.GetVerify(field.Tags, dst.File, b.GetDataType)
 		if err != nil {
 			return err
@@ -109,31 +108,40 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 						dst.Code("\t}\n")
 					}
 				case build.Decimal:
-					dst.Code("\tif (!RegExp(\"-?[1-9]\\\\d*.\\\\d*|0.\\\\d*[1-9]\\\\d*\").hasMatch(text")
-					if build.IsNil(field.Type) {
-						dst.Code("!")
-					}
-					dst.Code(")) {\n")
-					dst.Code("\t\treturn " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
-					dst.Code("\t}\n")
-					dst.Code("\tDecimal? val = Decimal.tryParse(text!);\n")
-					dst.Code("\tif (null == val) {\n")
-					dst.Code("\t\treturn " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
-					dst.Code("\t}\n")
-					if 0 < len(f.Min) || 0 < len(f.Max) {
-						dst.Code("\tif (")
-						if 0 < len(f.Min) {
-							dst.Code("1 == val.compareTo(Decimal.fromInt(" + f.Max + "))")
-						}
-						if 0 < len(f.Max) {
-							if 0 < len(f.Min) {
-								dst.Code(" || ")
-							}
-							dst.Code("-1 == val.compareTo(Decimal.fromInt(" + f.Max + "))")
-						}
-						dst.Code(") {\n")
+					if 0 < len(f.Reg) {
+						dst.Code("\tif (!RegExp(\"" + strings.ReplaceAll(f.Reg, "$", "\\$") + "\").hasMatch(text!)) {\n")
 						dst.Code("\t\treturn " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
 						dst.Code("\t}\n")
+					}
+					if i == len(verify.GetFormat())-1 {
+						dst.Code("\tif (!RegExp(\"-?[1-9]\\\\d*.\\\\d*|0.\\\\d*[1-9]\\\\d*\").hasMatch(text")
+						if build.IsNil(field.Type) {
+							dst.Code("!")
+						}
+						dst.Code(")) {\n")
+						dst.Code("\t\treturn " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
+						dst.Code("\t}\n")
+
+						dst.Import("package:decimal/decimal.dart", "")
+						dst.Code("\tDecimal? val = Decimal.tryParse(text!);\n")
+						dst.Code("\tif (null == val) {\n")
+						dst.Code("\t\treturn " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
+						dst.Code("\t}\n")
+						if 0 < len(f.Min) || 0 < len(f.Max) {
+							dst.Code("\tif (")
+							if 0 < len(f.Min) {
+								dst.Code("1 == val.compareTo(Decimal.fromInt(" + f.Min + "))")
+							}
+							if 0 < len(f.Max) {
+								if 0 < len(f.Min) {
+									dst.Code(" || ")
+								}
+								dst.Code("-1 == val.compareTo(Decimal.fromInt(" + f.Max + "))")
+							}
+							dst.Code(") {\n")
+							dst.Code("\t\treturn " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
+							dst.Code("\t}\n")
+						}
 					}
 				case build.String:
 					dst.Code("\tif (!RegExp(\"" + strings.ReplaceAll(f.Reg, "$", "\\$") + "\").hasMatch(text!)) {\n")

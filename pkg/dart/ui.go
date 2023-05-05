@@ -105,9 +105,9 @@ func (b *Builder) getUI(tags []*ast.Tag) *ui {
 				}
 				form.height = atoi
 			} else if "maxLine" == item.Name.Name {
-				atoi, err := strconv.ParseInt(item.Values[0].Value[1:len(item.Values[0].Value)-1], 64, 10)
+				atoi, err := strconv.ParseInt(item.Values[0].Value[1:len(item.Values[0].Value)-1], 10, 64)
 				if err != nil {
-					//TODO 添加错误处理
+					println(err.Error())
 					return nil
 				}
 				form.maxLine = int(atoi)
@@ -237,7 +237,6 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Code("\t\t\t\t\t\t\tdata." + fieldName)
 			b.printToString(dst, field.Type, false, table.digit, table.format, "??\"\"")
 			dst.Code(",\n")
-			dst.Code("\t\t\t\t\t\t\tmaxLines: " + strconv.Itoa(table.maxLine) + ",\n")
 			dst.Code("\t\t\t\t\t\t\toverflow: TextOverflow.ellipsis,\n")
 			dst.Code("\t\t\t\t\t\t),\n")
 			dst.Code("\t\t\t\t\t),\n")
@@ -457,6 +456,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
 			setValue.Code("\t\t" + fieldName + ".widthSizes = sizes;\n")
+			setValue.Code("\t\t" + fieldName + ".maxLines = " + strconv.Itoa(form.maxLine) + ";\n")
 			setValue.Code("\t\t" + fieldName + ".padding = padding;\n")
 			if nil != verify {
 				b.getPackage(dst, typ.Name, "verify")

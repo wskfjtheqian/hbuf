@@ -126,7 +126,7 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 						}
 						if 0 < len(f.Max) {
 							if 0 < len(f.Min) {
-								dst.Code("||")
+								dst.Code("|| ")
 							}
 							dst.Code(f.Max + " < i.Get" + fName + "() ")
 						}
@@ -198,7 +198,21 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 						dst.Import("regexp", "")
 						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/rpc", "")
 						pack := b.getPackage(dst, val.Enum.Name) + build.StringToHumpName(val.Enum.Name.Name) + build.StringToHumpName(val.Item.Name.Name)
-
+						if 0 < len(f.Min) || 0 < len(f.Max) {
+							dst.Code("\tif ")
+							if 0 < len(f.Min) {
+								dst.Code(f.Min + " > len(i.Get" + fName + "()) ")
+							}
+							if 0 < len(f.Max) {
+								if 0 < len(f.Min) {
+									dst.Code("|| ")
+								}
+								dst.Code(f.Max + " < len(i.Get" + fName + "()) ")
+							}
+							dst.Code("{\n")
+							dst.Code("\t\treturn &rpc.Result{Code: int(" + pack + "), Msg: " + pack + ".ToName()}\n")
+							dst.Code("\t}\n")
+						}
 						dst.Code("\tmatch, err ")
 						if first {
 							dst.Code(":")

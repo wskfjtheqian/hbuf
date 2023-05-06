@@ -69,16 +69,24 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 			} else {
 				t := build.GetBaseType(field.Type)
 				switch t {
-				case build.Int8, build.Int16, build.Int32:
-					b.verifyNum(dst, val, f, "-?[1-9]\\\\d*", field.Type)
-				case build.Uint8, build.Uint16, build.Uint32:
-					b.verifyNum(dst, val, f, "[1-9]\\\\d*", field.Type)
+				case build.Int8:
+					b.verifyNum(dst, val, f, "-?[1-9]\\\\d*", field.Type, "–128", "127")
+				case build.Int16:
+					b.verifyNum(dst, val, f, "-?[1-9]\\\\d*", field.Type, "-32768", "32767")
+				case build.Int32:
+					b.verifyNum(dst, val, f, "-?[1-9]\\\\d*", field.Type, "-2147483648", "2147483647")
+				case build.Uint8:
+					b.verifyNum(dst, val, f, "[1-9]\\\\d*", field.Type, "0", "255")
+				case build.Uint16:
+					b.verifyNum(dst, val, f, "[1-9]\\\\d*", field.Type, "0", "65535")
+				case build.Uint32:
+					b.verifyNum(dst, val, f, "[1-9]\\\\d*", field.Type, "0", "4294967295")
 				case build.Float, build.Double:
-					b.verifyNum(dst, val, f, "-?[1-9]\\\\d*.\\\\d*|0.\\\\d*[1-9]\\\\d*", field.Type)
+					b.verifyNum(dst, val, f, "-?[1-9]\\\\d*.\\\\d*|0.\\\\d*[1-9]\\\\d*", field.Type, "", "")
 				case build.Int64:
-					b.verify(dst, val, f, "-?[1-9]\\\\d*")
+					b.verifyNum(dst, val, f, "[1-9]\\\\d*", field.Type, "-9223372036854775808", "9223372036854775808")
 				case build.Uint64:
-					b.verify(dst, val, f, "[1-9]\\\\d*")
+					b.verifyNum(dst, val, f, "[1-9]\\\\d*", field.Type, "0", "18446744073709551615615")
 				case build.Date:
 					dst.Code("\tDateTime? val = DateTime.tryParse(text!);\n")
 					dst.Code("\tif (null == val) {\n")
@@ -160,54 +168,37 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 	return nil
 }
 
-func (b *Builder) verify(dst *build.Writer, val *build.VerifyEnum, f *build.Format, reg string) {
-	dst.Import("package:fixnum/fixnum.dart", "")
-	dst.Code("\tif (!RegExp(\"" + reg + "\").hasMatch(text)) {\n")
-	dst.Code("\t\treturn " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
-	dst.Code("\t}\n")
-	dst.Code("\tInt64? val = Int64.tryParse(text!);\n")
-	dst.Code("\tif (null == val) {\n")
-	dst.Code("\t\treturn " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
-	dst.Code("\t}\n")
-	if 0 < len(f.Min) || 0 < len(f.Max) {
-		dst.Code("\tif (")
-		if 0 < len(f.Min) {
-			dst.Code("1 == val.compareTo(Int64(" + f.Max + "))")
-		}
-		if 0 < len(f.Max) {
-			if 0 < len(f.Min) {
-				dst.Code(" || ")
-			}
-			dst.Code("-1 == val.compareTo(Int64(" + f.Max + "))")
-		}
-		dst.Code(") {\n")
-		dst.Code("\t\treturn " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
-		dst.Code("\t}\n")
-	}
-}
-
-func (b *Builder) verifyNum(dst *build.Writer, val *build.VerifyEnum, f *build.Format, reg string, field ast.Type) {
+func (b *Builder) verifyNum(dst *build.Writer, val *build.VerifyEnum, f *build.Format, reg string, field ast.Type, min, max string) {
 	dst.Code("\tif (!RegExp(\"" + reg + "\").hasMatch(text")
 	if build.IsNil(field) {
 		dst.Code("!")
 	}
+
 	dst.Code(")) {\n")
 	dst.Code("\t\treturn " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
 	dst.Code("\t}\n")
-	dst.Code("\tnum? val = num.tryParse(text!);\n")
+	dst.Import("package:decimal/decimal.dart", "")
+	dst.Code("\tvar val = Decimal.tryParse(text!);\n")
 	dst.Code("\tif (null == val) {\n")
 	dst.Code("\t\treturn " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
 	dst.Code("\t}\n")
+
+	if 0 < len(min) {
+		dst.Code("\tif (val < Decimal.parse(\"" + min + "\") || val > Decimal.parse(\"" + max + "\")) {\n")
+		dst.Code("\t\treturn " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
+		dst.Code("\t}\n")
+	}
+
 	if 0 < len(f.Min) || 0 < len(f.Max) {
 		dst.Code("\tif (")
 		if 0 < len(f.Min) {
-			dst.Code(f.Min + " > val")
+			dst.Code("Decimal.tryParse(" + f.Min + ") > val")
 		}
 		if 0 < len(f.Max) {
 			if 0 < len(f.Min) {
 				dst.Code(" || ")
 			}
-			dst.Code(f.Max + " < val")
+			dst.Code("Decimal.tryParse(" + f.Max + ") < val")
 		}
 		dst.Code(") {\n")
 		dst.Code("\t\treturn " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")

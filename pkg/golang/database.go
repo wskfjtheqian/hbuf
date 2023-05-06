@@ -410,7 +410,7 @@ func (b *Builder) printListData(dst *build.Writer, typ *ast.DataType, key string
 	dst.Code("\tret := make([]" + dName + ", 0)\n")
 	if nil != c {
 		dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/cache", "")
-		dst.Code("\tlist, key, _ := cache.DbGet(ctx, \"" + db.Name + "\", s, &ret)\n")
+		dst.Code("\tlist, key, _ := cache.DbGet(ctx, \"\", \"" + db.Name + "\", s, &ret)\n")
 		dst.Code("\tif list != nil {\n")
 		dst.Code("\t\treturn *list, nil\n")
 		dst.Code("\t}\n")
@@ -431,13 +431,14 @@ func (b *Builder) printListData(dst *build.Writer, typ *ast.DataType, key string
 	if nil != c {
 		dst.Import("math/rand", "")
 		dst.Import("time", "")
-		dst.Code("\t_ = cache.Set(ctx, key, &ret, ")
+		dst.Code("\t_, _ = cache.DbSet(ctx, key, \"" + db.Name + "\", s, &ret, ")
 		if 0 < c.min {
 			dst.Code("time.Duration(rand.Intn(" + strconv.Itoa(c.max) + "-" + strconv.Itoa(c.min) + ")+" + strconv.Itoa(c.min) + ")*time.Second")
 		} else {
 			dst.Code("0")
 		}
 		dst.Code(")\n")
+		dst.Code("\tdefer cache.DbUnlock(ctx, \"" + db.Name + "\")\n")
 	}
 	dst.Code("\treturn ret, nil\n")
 	dst.Code("}\n")
@@ -470,7 +471,7 @@ func (b *Builder) printMapData(dst *build.Writer, key string, typ *ast.DataType,
 	dst.Code("\tret := make(map[" + kType.String() + "]" + dName + ")\n")
 	if nil != c {
 		dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/cache", "")
-		dst.Code("\tlist, key, _ := cache.DbGet(ctx, \"" + db.Name + "\", s, &ret)\n")
+		dst.Code("\tlist, key, _ := cache.DbGet(ctx, \"\", \"" + db.Name + "\", s, &ret)\n")
 		dst.Code("\tif list != nil {\n")
 		dst.Code("\t\treturn *list, nil\n")
 		dst.Code("\t}\n")
@@ -491,13 +492,14 @@ func (b *Builder) printMapData(dst *build.Writer, key string, typ *ast.DataType,
 	if nil != c {
 		dst.Import("math/rand", "")
 		dst.Import("time", "")
-		dst.Code("\t_ = cache.Set(ctx, key, &ret, ")
+		dst.Code("\t_, _ = cache.DbSet(ctx, key, \"" + db.Name + "\", s, &ret, ")
 		if 0 < c.min {
 			dst.Code("time.Duration(rand.Intn(" + strconv.Itoa(c.max) + "-" + strconv.Itoa(c.min) + ")+" + strconv.Itoa(c.min) + ")*time.Second")
 		} else {
 			dst.Code("0")
 		}
 		dst.Code(")\n")
+		dst.Code("\tdefer cache.DbUnlock(ctx, \"" + db.Name + "\")\n")
 	}
 	dst.Code("\treturn ret, nil\n")
 	dst.Code("}\n")
@@ -517,7 +519,7 @@ func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build
 
 	dst.Code("\tvar count int64\n")
 	if nil != c {
-		dst.Code("\tc, key, _ := cache.DbGet(ctx, \"" + db.Name + "\", s, &count)\n")
+		dst.Code("\tc, key, _ := cache.DbGet(ctx, \"\", \"" + db.Name + "\", s, &count)\n")
 		dst.Code("\tif c != nil {\n")
 		dst.Code("\t\treturn *c, nil\n")
 		dst.Code("\t}\n")
@@ -533,13 +535,14 @@ func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build
 	if nil != c {
 		dst.Import("math/rand", "")
 		dst.Import("time", "")
-		dst.Code("\t_ = cache.Set(ctx, key, &count, ")
+		dst.Code("\t_, _ = cache.DbSet(ctx, key, \"" + db.Name + "\", s, &count, ")
 		if 0 < c.min {
 			dst.Code("time.Duration(rand.Intn(" + strconv.Itoa(c.max) + "-" + strconv.Itoa(c.min) + ")+" + strconv.Itoa(c.min) + ")*time.Second")
 		} else {
 			dst.Code("0")
 		}
 		dst.Code(")\n")
+		dst.Code("\tdefer cache.DbUnlock(ctx, \"" + db.Name + "\")\n")
 	}
 	dst.Code("\treturn count, nil\n")
 	dst.Code("}\n")
@@ -558,6 +561,7 @@ func (b *Builder) printDeleteData(dst *build.Writer, db *build.DB, wFields []*bu
 		dst.Code("\tif err != nil {\n")
 		dst.Code("\t\treturn 0, 0, err\n")
 		dst.Code("\t}\n")
+		dst.Code("\tdefer cache.DbUnlock(ctx, \"" + db.Name + "\")\n")
 	}
 
 	dst.Code("\ts := db.NewSql()\n")
@@ -580,6 +584,7 @@ func (b *Builder) printRemoveData(dst *build.Writer, db *build.DB, wFields []*bu
 		dst.Code("\tif err != nil {\n")
 		dst.Code("\t\treturn 0, 0, err\n")
 		dst.Code("\t}\n")
+		dst.Code("\tdefer cache.DbUnlock(ctx, \"" + db.Name + "\")\n")
 	}
 
 	dst.Code("\ts := db.NewSql()\n")
@@ -598,6 +603,7 @@ func (b *Builder) printInsertData(dst *build.Writer, typ *ast.DataType, db *buil
 		dst.Code("\tif err != nil {\n")
 		dst.Code("\t\treturn 0, 0, err\n")
 		dst.Code("\t}\n")
+		dst.Code("\tdefer cache.DbUnlock(ctx, \"" + db.Name + "\")\n")
 	}
 	dst.Code("\ts := db.NewSql()\n")
 	dst.Code("\ts.T(\"INSERT INTO " + db.Name + " \")\n")
@@ -632,6 +638,7 @@ func (b *Builder) printInsertListData(dst *build.Writer, typ *ast.DataType, db *
 		dst.Code("\tif err != nil {\n")
 		dst.Code("\t\treturn 0, 0, err\n")
 		dst.Code("\t}\n")
+		dst.Code("\tdefer cache.DbUnlock(ctx, \"" + db.Name + "\")\n")
 	}
 	dst.Code("\ts := db.NewSql()\n")
 	dst.Code("\ts.T(\"INSERT INTO " + db.Name + " (")
@@ -678,6 +685,7 @@ func (b *Builder) printUpdateData(dst *build.Writer, typ *ast.DataType, key stri
 		dst.Code("\tif err != nil {\n")
 		dst.Code("\t\treturn 0, 0, err\n")
 		dst.Code("\t}\n")
+		dst.Code("\tdefer cache.DbUnlock(ctx, \"" + db.Name + "\")\n")
 	}
 	dst.Code("\ts := db.NewSql()\n")
 	dst.Code("\ts.T(\"UPDATE " + db.Name + " SET id = id\")\n")
@@ -708,6 +716,7 @@ func (b *Builder) printSetData(dst *build.Writer, typ *ast.DataType, key string,
 		dst.Code("\tif err != nil {\n")
 		dst.Code("\t\treturn 0, 0, err\n")
 		dst.Code("\t}\n")
+		dst.Code("\tdefer cache.DbUnlock(ctx, \"" + db.Name + "\")\n")
 	}
 	dst.Code("\ts := db.NewSql()\n")
 	dst.Code("\ts.T(\"UPDATE " + db.Name + " SET id = id\")\n")
@@ -788,7 +797,7 @@ func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, key string,
 
 	if nil != c {
 		dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/cache", "")
-		dst.Code("\tcv, key, _ := cache.DbGet(ctx, \"" + db.Name + "\", s, &val)\n")
+		dst.Code("\tcv, key, _ := cache.DbGet(ctx, \"\", \"" + db.Name + "\", s, &val)\n")
 		dst.Code("\tif cv != nil {\n")
 		dst.Code("\t\treturn cv, nil\n")
 		dst.Code("\t}\n")
@@ -806,13 +815,14 @@ func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, key string,
 	if nil != c {
 		dst.Import("math/rand", "")
 		dst.Import("time", "")
-		dst.Code("\t_ = cache.Set(ctx, key, &val, ")
+		dst.Code("\t_, _ = cache.DbSet(ctx, key, \"" + db.Name + "\", s, &val, ")
 		if 0 < c.min {
 			dst.Code("time.Duration(rand.Intn(" + strconv.Itoa(c.max) + "-" + strconv.Itoa(c.min) + ")+" + strconv.Itoa(c.min) + ")*time.Second")
 		} else {
 			dst.Code("0")
 		}
 		dst.Code(")\n")
+		dst.Code("\tdefer cache.DbUnlock(ctx, \"" + db.Name + "\")\n")
 	}
 	dst.Code("\treturn &val, nil\n")
 	dst.Code("}\n\n")

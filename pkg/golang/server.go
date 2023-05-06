@@ -223,14 +223,13 @@ func (b *Builder) printGetServerRouter(dst *build.Writer, typ *ast.ServerType) {
 
 	dst.Code("var notFound" + serverName + " = &default" + serverName + "{}\n\n")
 
-	dst.Code("func Get" + serverName + "(ctx context.Context) (" + serverName + ") {\n")
+	dst.Code("func Get" + serverName + "(ctx context.Context) " + serverName + " {\n")
 	dst.Code("\trouter := manage.GET(ctx).Get(&" + serverName + "Router{})\n")
 	dst.Code("\tif nil == router {\n")
 	dst.Code("\t\treturn notFound" + serverName + "\n")
 	dst.Code("\t}\n")
-	dst.Code("\tswitch router.(type) {\n")
-	dst.Code("\tcase *" + serverName + "Router:\n")
-	dst.Code("\t\treturn router.(*" + serverName + "Router).server\n")
+	dst.Code("\tif val, ok := router.(" + serverName + "); ok {\n")
+	dst.Code("\t	return val\n")
 	dst.Code("\t}\n")
 	dst.Code("\treturn notFound" + serverName + "\n")
 	dst.Code("}\n\n")

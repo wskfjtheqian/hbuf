@@ -201,13 +201,15 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 						if 0 < len(f.Min) || 0 < len(f.Max) {
 							dst.Code("\tif ")
 							if 0 < len(f.Min) {
-								dst.Code(f.Min + " > len(i.Get" + fName + "()) ")
+								dst.Import("unicode/utf8", "")
+								dst.Code(f.Min + " > utf8.RuneCountInString(i.Get" + fName + "()) ")
 							}
 							if 0 < len(f.Max) {
 								if 0 < len(f.Min) {
 									dst.Code("|| ")
 								}
-								dst.Code(f.Max + " < len(i.Get" + fName + "()) ")
+								dst.Import("unicode/utf8", "")
+								dst.Code(f.Max + " < utf8.RuneCountInString(i.Get" + fName + "()) ")
 							}
 							dst.Code("{\n")
 							dst.Code("\t\treturn &rpc.Result{Code: int(" + pack + "), Msg: " + pack + ".ToName()}\n")
@@ -229,6 +231,7 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 				}
 			}
 		}
+
 		dst.Code("\treturn nil\n")
 		dst.Code("}\n\n")
 		return nil

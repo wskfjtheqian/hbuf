@@ -107,7 +107,7 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 			}
 			if build.IsEnum(field.Type) {
 				dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/rpc", "")
-				dst.Code("\tif 0 < len(i.Get" + fName + "().ToName()) {\n")
+				dst.Code("\tif 0 == len(i.Get" + fName + "().ToName()) {\n")
 				dst.Code("\t\treturn &rpc.Result{Code: int(" + pack + "), Msg: " + pack + ".ToName()}\n")
 				dst.Code("\t}\n")
 			} else if build.IsMap(field.Type) {

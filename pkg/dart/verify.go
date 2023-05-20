@@ -24,10 +24,6 @@ func (b *Builder) printVerifyCode(dst *build.Writer, data *ast.DataType) error {
 		return nil
 	}
 
-	err = b.printVerifyDataCode(dst, data)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -35,7 +31,6 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 	dName := build.StringToHumpName(data.Name.Name)
 	err := build.EnumField(data, func(field *ast.Field, data *ast.DataType) error {
 		fName := build.StringToHumpName(field.Name.Name)
-
 		verify, err := build.GetVerify(field.Tags, dst.File, b.GetDataType)
 		if err != nil {
 			return err
@@ -74,16 +69,24 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 			} else {
 				t := build.GetBaseType(field.Type)
 				switch t {
-				case build.Int8, build.Int16, build.Int32:
-					b.verifyNum(dst, val, f, "-?[1-9]\\\\d*")
-				case build.Uint8, build.Uint16, build.Uint32:
-					b.verifyNum(dst, val, f, "[1-9]\\\\d*")
+				case build.Int8:
+					b.verifyNum(dst, val, f, "-?[1-9]\\\\d*", field.Type, "–128", "127")
+				case build.Int16:
+					b.verifyNum(dst, val, f, "-?[1-9]\\\\d*", field.Type, "-32768", "32767")
+				case build.Int32:
+					b.verifyNum(dst, val, f, "-?[1-9]\\\\d*", field.Type, "-2147483648", "2147483647")
+				case build.Uint8:
+					b.verifyNum(dst, val, f, "[1-9]\\\\d*", field.Type, "0", "255")
+				case build.Uint16:
+					b.verifyNum(dst, val, f, "[1-9]\\\\d*", field.Type, "0", "65535")
+				case build.Uint32:
+					b.verifyNum(dst, val, f, "[1-9]\\\\d*", field.Type, "0", "4294967295")
 				case build.Float, build.Double:
-					b.verifyNum(dst, val, f, "-?[1-9]\\\\d*.\\\\d*|0.\\\\d*[1-9]\\\\d*")
+					b.verifyNum(dst, val, f, "-?[1-9]\\\\d*.\\\\d*|0.\\\\d*[1-9]\\\\d*", field.Type, "", "")
 				case build.Int64:
-					b.verify(dst, val, f, "-?[1-9]\\\\d*")
+					b.verifyNum(dst, val, f, "[1-9]\\\\d*", field.Type, "-9223372036854775808", "9223372036854775808")
 				case build.Uint64:
-					b.verify(dst, val, f, "[1-9]\\\\d*")
+					b.verifyNum(dst, val, f, "[1-9]\\\\d*", field.Type, "0", "18446744073709551615615")
 				case build.Date:
 					dst.Code("\tDateTime? val = DateTime.tryParse(text!);\n")
 					dst.Code("\tif (null == val) {\n")
@@ -113,27 +116,40 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 						dst.Code("\t}\n")
 					}
 				case build.Decimal:
-					dst.Code("\tif (!RegExp(\"-?[1-9]\\\\d*.\\\\d*|0.\\\\d*[1-9]\\\\d*\").hasMatch(text)) {\n")
-					dst.Code("\t\treturn " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
-					dst.Code("\t}\n")
-					dst.Code("\tDecimal? val = Decimal.tryParse(text!);\n")
-					dst.Code("\tif (null == val) {\n")
-					dst.Code("\t\treturn " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
-					dst.Code("\t}\n")
-					if 0 < len(f.Min) || 0 < len(f.Max) {
-						dst.Code("\tif (")
-						if 0 < len(f.Min) {
-							dst.Code("1 == val.compareTo(Decimal.fromInt(" + f.Max + "))")
-						}
-						if 0 < len(f.Max) {
-							if 0 < len(f.Min) {
-								dst.Code(" || ")
-							}
-							dst.Code("-1 == val.compareTo(Decimal.fromInt(" + f.Max + "))")
-						}
-						dst.Code(") {\n")
+					if 0 < len(f.Reg) {
+						dst.Code("\tif (!RegExp(\"" + strings.ReplaceAll(f.Reg, "$", "\\$") + "\").hasMatch(text!)) {\n")
 						dst.Code("\t\treturn " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
 						dst.Code("\t}\n")
+					}
+					if i == len(verify.GetFormat())-1 {
+						dst.Code("\tif (!RegExp(\"-?[1-9]\\\\d*.\\\\d*|0.\\\\d*[1-9]\\\\d*\").hasMatch(text")
+						if build.IsNil(field.Type) {
+							dst.Code("!")
+						}
+						dst.Code(")) {\n")
+						dst.Code("\t\treturn " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
+						dst.Code("\t}\n")
+
+						dst.Import("package:decimal/decimal.dart", "")
+						dst.Code("\tDecimal? val = Decimal.tryParse(text!);\n")
+						dst.Code("\tif (null == val) {\n")
+						dst.Code("\t\treturn " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
+						dst.Code("\t}\n")
+						if 0 < len(f.Min) || 0 < len(f.Max) {
+							dst.Code("\tif (")
+							if 0 < len(f.Min) {
+								dst.Code("1 == val.compareTo(Decimal.fromInt(" + f.Min + "))")
+							}
+							if 0 < len(f.Max) {
+								if 0 < len(f.Min) {
+									dst.Code(" || ")
+								}
+								dst.Code("-1 == val.compareTo(Decimal.fromInt(" + f.Max + "))")
+							}
+							dst.Code(") {\n")
+							dst.Code("\t\treturn " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
+							dst.Code("\t}\n")
+						}
 					}
 				case build.String:
 					dst.Code("\tif (!RegExp(\"" + strings.ReplaceAll(f.Reg, "$", "\\$") + "\").hasMatch(text!)) {\n")
@@ -152,85 +168,40 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 	return nil
 }
 
-func (b *Builder) verify(dst *build.Writer, val *build.VerifyEnum, f *build.Format, reg string) {
-	dst.Import("package:fixnum/fixnum.dart", "")
-	dst.Code("\tif (!RegExp(\"" + reg + "\").hasMatch(text)) {\n")
+func (b *Builder) verifyNum(dst *build.Writer, val *build.VerifyEnum, f *build.Format, reg string, field ast.Type, min, max string) {
+	dst.Code("\tif (!RegExp(\"" + reg + "\").hasMatch(text")
+	if build.IsNil(field) {
+		dst.Code("!")
+	}
+
+	dst.Code(")) {\n")
 	dst.Code("\t\treturn " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
 	dst.Code("\t}\n")
-	dst.Code("\tInt64? val = Int64.tryParse(text!);\n")
+	dst.Import("package:decimal/decimal.dart", "")
+	dst.Code("\tvar val = Decimal.tryParse(text!);\n")
 	dst.Code("\tif (null == val) {\n")
 	dst.Code("\t\treturn " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
 	dst.Code("\t}\n")
+
+	if 0 < len(min) {
+		dst.Code("\tif (val < Decimal.parse(\"" + min + "\") || val > Decimal.parse(\"" + max + "\")) {\n")
+		dst.Code("\t\treturn " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
+		dst.Code("\t}\n")
+	}
+
 	if 0 < len(f.Min) || 0 < len(f.Max) {
 		dst.Code("\tif (")
 		if 0 < len(f.Min) {
-			dst.Code("1 == val.compareTo(Int64(" + f.Max + "))")
+			dst.Code("Decimal.tryParse(" + f.Min + ") > val")
 		}
 		if 0 < len(f.Max) {
 			if 0 < len(f.Min) {
 				dst.Code(" || ")
 			}
-			dst.Code("-1 == val.compareTo(Int64(" + f.Max + "))")
+			dst.Code("Decimal.tryParse(" + f.Max + ") < val")
 		}
 		dst.Code(") {\n")
 		dst.Code("\t\treturn " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
 		dst.Code("\t}\n")
 	}
-}
-
-func (b *Builder) verifyNum(dst *build.Writer, val *build.VerifyEnum, f *build.Format, reg string) {
-	dst.Code("\tif (!RegExp(\"" + reg + "\").hasMatch(text)) {\n")
-	dst.Code("\t\treturn " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
-	dst.Code("\t}\n")
-	dst.Code("\tnum? val = num.tryParse(text!);\n")
-	dst.Code("\tif (null == val) {\n")
-	dst.Code("\t\treturn " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
-	dst.Code("\t}\n")
-	if 0 < len(f.Min) || 0 < len(f.Max) {
-		dst.Code("\tif (")
-		if 0 < len(f.Min) {
-			dst.Code(f.Min + " > val")
-		}
-		if 0 < len(f.Max) {
-			if 0 < len(f.Min) {
-				dst.Code(" || ")
-			}
-			dst.Code(f.Max + " < val")
-		}
-		dst.Code(") {\n")
-		dst.Code("\t\treturn " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
-		dst.Code("\t}\n")
-	}
-}
-
-func (b *Builder) printVerifyDataCode(dst *build.Writer, data *ast.DataType) error {
-	dName := build.StringToHumpName(data.Name.Name)
-	b.getPackage(dst, data.Name, "data")
-
-	dst.Code("extension Verify" + dName + " on " + dName + " {\n")
-	dst.Code("\tString? verify(BuildContext context) {\n")
-	isErr := true
-	err := build.EnumField(data, func(field *ast.Field, data *ast.DataType) error {
-		fName := build.StringToHumpName(field.Name.Name)
-		_, ok := build.GetTag(field.Tags, "verify")
-		if ok {
-			if isErr {
-				dst.Code("\t\tString? err;\n")
-				isErr = false
-			}
-			dst.Code("\t\terr = verify" + dName + "_" + fName + "(context, " + build.StringToFirstLower(field.Name.Name) + ");\n")
-			dst.Code("\t\tif (err != null) {\n")
-			dst.Code("\t\t\treturn err;\n")
-			dst.Code("\t\t}\n")
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-	dst.Code("\t\treturn null;\n")
-	dst.Code("\t}\n")
-	dst.Code("}\n\n")
-
-	return nil
 }

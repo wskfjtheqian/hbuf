@@ -88,18 +88,26 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 			if build.IsNil(field.Type) && 0 == i {
 				dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/rpc", "")
 				if !f.Null {
-					dst.Code("\tif nil == i." + fName + " || 0 == len(i.Get" + fName + "()){\n")
+					dst.Code("\tif nil == i." + fName)
+					if build.GetBaseType(field.Type) == build.String {
+						dst.Code(" || len(i.Get" + fName + "()) == 0")
+					}
+					dst.Code("{\n")
 					dst.Code("\t\treturn &rpc.Result{Code: int(" + pack + "), Msg: " + pack + ".ToName()}\n")
 					dst.Code("\t}\n")
 				} else {
-					dst.Code("\tif nil == i." + fName + " || 0 == len(i.Get" + fName + "()){\n")
+					dst.Code("\tif nil == i." + fName)
+					if build.GetBaseType(field.Type) == build.String {
+						dst.Code(" || len(i.Get" + fName + "()) == 0")
+					}
+					dst.Code("{\n")
 					dst.Code("\t\treturn nil\n")
 					dst.Code("\t}\n")
 				}
 			}
 			if build.IsEnum(field.Type) {
 				dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/rpc", "")
-				dst.Code("\tif 0 < len(i.Get" + fName + "().ToName()) {\n")
+				dst.Code("\tif 0 == len(i.Get" + fName + "().ToName()) {\n")
 				dst.Code("\t\treturn &rpc.Result{Code: int(" + pack + "), Msg: " + pack + ".ToName()}\n")
 				dst.Code("\t}\n")
 			} else if build.IsMap(field.Type) {
@@ -118,7 +126,7 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 						}
 						if 0 < len(f.Max) {
 							if 0 < len(f.Min) {
-								dst.Code("||")
+								dst.Code("|| ")
 							}
 							dst.Code(f.Max + " < i.Get" + fName + "() ")
 						}
@@ -190,7 +198,23 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 						dst.Import("regexp", "")
 						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/rpc", "")
 						pack := b.getPackage(dst, val.Enum.Name) + build.StringToHumpName(val.Enum.Name.Name) + build.StringToHumpName(val.Item.Name.Name)
-
+						if 0 < len(f.Min) || 0 < len(f.Max) {
+							dst.Code("\tif ")
+							if 0 < len(f.Min) {
+								dst.Import("unicode/utf8", "")
+								dst.Code(f.Min + " > utf8.RuneCountInString(i.Get" + fName + "()) ")
+							}
+							if 0 < len(f.Max) {
+								if 0 < len(f.Min) {
+									dst.Code("|| ")
+								}
+								dst.Import("unicode/utf8", "")
+								dst.Code(f.Max + " < utf8.RuneCountInString(i.Get" + fName + "()) ")
+							}
+							dst.Code("{\n")
+							dst.Code("\t\treturn &rpc.Result{Code: int(" + pack + "), Msg: " + pack + ".ToName()}\n")
+							dst.Code("\t}\n")
+						}
 						dst.Code("\tmatch, err ")
 						if first {
 							dst.Code(":")
@@ -207,6 +231,7 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 				}
 			}
 		}
+
 		dst.Code("\treturn nil\n")
 		dst.Code("}\n\n")
 		return nil

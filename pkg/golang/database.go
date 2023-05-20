@@ -746,7 +746,7 @@ func (b *Builder) printSet(fields []*build.DBField, key string, isNil bool) *bui
 		}
 
 		name := build.StringToHumpName(field.Field.Name.Name)
-		if isNil && build.IsNil(field.Field.Type) {
+		if isNil && build.IsNil(field.Field.Type) && !field.Dbs[0].Force {
 			dst.Code("\tif nil != g.")
 			dst.Code(name)
 			dst.Code(" {\n")
@@ -767,7 +767,7 @@ func (b *Builder) printSet(fields []*build.DBField, key string, isNil bool) *bui
 		}
 		dst.Code("\n")
 
-		if isNil && build.IsNil(field.Field.Type) {
+		if isNil && build.IsNil(field.Field.Type) && !field.Dbs[0].Force {
 			dst.Code("\t}\n")
 		}
 	}

@@ -11,6 +11,7 @@ type DB struct {
 	index   int
 	Name    string
 	Key     bool
+	Force   bool
 	typ     string
 	Insert  string
 	Inserts string
@@ -90,6 +91,8 @@ func GetDB(n string, tag []*ast.Tag) []*DB {
 						db.Set = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 					} else if "count" == item.Name.Name {
 						db.Count = "true" == strings.ToLower(item.Values[0].Value[1:len(item.Values[0].Value)-1])
+					} else if "force" == item.Name.Name {
+						db.Force = "true" == strings.ToLower(item.Values[0].Value[1:len(item.Values[0].Value)-1])
 					} else if "rm" == item.Name.Name {
 						db.Remove = "true" == strings.ToLower(item.Values[0].Value[1:len(item.Values[0].Value)-1])
 					}

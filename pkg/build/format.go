@@ -17,7 +17,7 @@ func GetFormat(tags []*ast.Tag) *Format {
 		return nil
 	}
 	f := &Format{
-		Null: true,
+		Null: false,
 	}
 	if nil != val.KV {
 		for _, item := range val.KV {

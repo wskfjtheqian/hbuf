@@ -61,7 +61,7 @@ func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
 		b.printType(dst, field.Type, false)
 		dst.Code(") {\n")
 		dst.Code("\tg." + build.StringToHumpName(field.Name.Name) + " = ")
-		if field.Type.IsEmpty() {
+		if field.Type.IsEmpty() && !build.IsArray(field.Type) && !build.IsMap(field.Type) {
 			dst.Code("&val\n")
 		} else {
 			dst.Code("val\n")

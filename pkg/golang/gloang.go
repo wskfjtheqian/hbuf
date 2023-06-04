@@ -306,3 +306,11 @@ func (b *Builder) getKey(dst *build.Writer, fields []*build.DBField, name string
 	}
 	return param, where, false
 }
+
+func (b *Builder) converter(field *build.DBField, name string) string {
+	fName := build.StringToHumpName(field.Field.Name.Name)
+	if "json" == field.Dbs[0].Converter {
+		return "db.NewJson(&" + name + "." + fName + ")"
+	}
+	return "&" + name + "." + fName
+}

@@ -518,8 +518,14 @@ func (b *Builder) printToMap(dst *build.Writer, name string, expr ast.Expr, data
 			}
 		} else {
 			switch build.BaseType(expr.(*ast.Ident).Name) {
-			case build.Int8, build.Int16, build.Int32, build.Uint8, build.Uint16, build.Uint32, build.Float, build.Double, build.String, build.Bool:
+			case build.Int8, build.Int16, build.Int32, build.Uint8, build.Uint16, build.Float, build.Double, build.String, build.Bool:
 				dst.Code(name)
+			case build.Uint32:
+				if empty {
+					dst.Code(name + "?.toInt()")
+				} else {
+					dst.Code(name + ".toInt()")
+				}
 			case build.Uint64, build.Int64:
 				if empty {
 					dst.Code(name + "?.toString()")

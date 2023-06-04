@@ -54,6 +54,7 @@ type ui struct {
 	maxLine    int
 	extensions []string
 	clip       bool
+	maxCount   int
 }
 
 func (b *Builder) getUI(tags []*ast.Tag) *ui {
@@ -65,6 +66,7 @@ func (b *Builder) getUI(tags []*ast.Tag) *ui {
 		width:      300,
 		height:     300,
 		maxLine:    1,
+		maxCount:   1,
 		extensions: []string{},
 	}
 	if nil != val.KV {
@@ -112,6 +114,13 @@ func (b *Builder) getUI(tags []*ast.Tag) *ui {
 					return nil
 				}
 				form.maxLine = int(atoi)
+			} else if "maxCount" == item.Name.Name {
+				atoi, err := strconv.ParseInt(item.Values[0].Value[1:len(item.Values[0].Value)-1], 10, 64)
+				if err != nil {
+					println(err.Error())
+					return nil
+				}
+				form.maxCount = int(atoi)
 			} else if "clip" == item.Name.Name {
 				form.clip = "true" == item.Values[0].Value[1:len(item.Values[0].Value)-1]
 			} else if "toNull" == item.Name.Name {
@@ -217,13 +226,25 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 		if "image" == table.table {
 			dst.Code("\t\t\t\t\treturn TablesCell(\n")
 			dst.Code("\t\t\t\t\t\tchild: (data." + fieldName)
-			if build.IsNil(field.Type) {
+			if build.IsArray(field.Type) {
+				if build.IsNil(field.Type) {
+					dst.Code("?")
+				}
+				dst.Code(".first")
+				dst.Code("??\"\"")
+			} else if build.IsNil(field.Type) {
 				dst.Code("??\"\"")
 			}
 			dst.Code(").startsWith(\"http\")\n")
 			dst.Code("\t\t\t\t\t\t\t\t? Image.network(\n")
 			dst.Code("\t\t\t\t\t\t\t\t\t\tdata." + fieldName)
-			if build.IsNil(field.Type) {
+			if build.IsArray(field.Type) {
+				if build.IsNil(field.Type) {
+					dst.Code("!")
+				}
+				dst.Code(".first")
+				dst.Code("!")
+			} else if build.IsNil(field.Type) {
 				dst.Code("!")
 			}
 			dst.Code(",\n")
@@ -442,6 +463,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		if form.onlyRead {
 			onlyRead = "true"
 		}
+
 		verify, err := build.GetVerify(field.Tags, dst.File, b.GetDataType)
 		if err != nil {
 			return err
@@ -472,16 +494,16 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			fields.Code("\t\t\t" + fieldName + ".build(context),\n")
 			lang.Add(fieldName, field.Tags)
 		} else if "click" == form.form {
-			dst.Code("\tfinal ClickFormBuild " + fieldName + " = ClickFormBuild();\n\n")
-			setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName)
-			b.printToString(setValue, field.Type, false, form.digit, form.format, "??\"\"")
-			setValue.Code(";\n")
+			dst.Code("\tfinal ClickFormBuild<")
+			b.printType(dst, field.Type, false)
+			dst.Code("> " + fieldName + " = ClickFormBuild();\n\n")
+
+			setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName + ";\n")
 			if !form.onlyRead {
-				setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = ")
-				if form.toNull {
-					setValue.Code("\"\" == val ? null : ")
+				setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = val")
+				if !build.IsNil(field.Type) {
+					setValue.Code("!")
 				}
-				b.printFormString(setValue, "val", field.Type, false, form.digit, form.format)
 				setValue.Code(";\n")
 			}
 			setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
@@ -532,18 +554,34 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		} else if "image" == form.form {
 			dst.Code("\tfinal ImageFormBuild " + fieldName + " =  ImageFormBuild();\n\n")
 
-			if build.IsNil(field.Type) {
-				setValue.Code("\t\t" + fieldName + ".initialValue = [if (info." + fieldName + "?.startsWith(\"http\") ?? false) ImageFormImage(info." + fieldName + "!)];\n")
-				if !form.onlyRead {
-					setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = ((val?.isEmpty ?? true) ? null : val!.first.url);\n")
+			if build.IsArray(field.Type) {
+				if build.IsNil(field.Type) {
+					setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName + "?.map((e) => ImageFormImage(e))?.toList() ?? [];\n")
+					if !form.onlyRead {
+						setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = val!.map((e) => e.url).toList();\n")
+					}
+				} else {
+					setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName + ".map((e) => ImageFormImage(e)).toList();\n")
+					if !form.onlyRead {
+						setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = val!.map((e) => e.url).toList();\n")
+					}
 				}
 			} else {
-				setValue.Code("\t\t" + fieldName + ".initialValue = [ImageFormImage(info." + fieldName + ")];\n")
-				if !form.onlyRead {
-					setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = val!.first.url;\n")
+				if build.IsNil(field.Type) {
+					setValue.Code("\t\t" + fieldName + ".initialValue = [if (info." + fieldName + "?.startsWith(\"http\") ?? false) ImageFormImage(info." + fieldName + "!)];\n")
+					if !form.onlyRead {
+						setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = ((val?.isEmpty ?? true) ? null : val!.first.url);\n")
+					}
+				} else {
+					setValue.Code("\t\t" + fieldName + ".initialValue = [ImageFormImage(info." + fieldName + ")];\n")
+					if !form.onlyRead {
+						setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = val!.first.url;\n")
+					}
 				}
 			}
+
 			setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
+			setValue.Code("\t\t" + fieldName + ".maxCount = " + strconv.Itoa(form.maxCount) + ";\n")
 			setValue.Code("\t\t" + fieldName + ".widthSizes = sizes;\n")
 			setValue.Code("\t\t" + fieldName + ".padding = padding;\n")
 			if form.clip {

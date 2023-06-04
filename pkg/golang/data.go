@@ -57,6 +57,16 @@ func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
 		}
 		dst.Code("}\n\n")
 
+		dst.Code("func (g " + build.StringToHumpName(typ.Name.Name) + ") Set" + build.StringToHumpName(field.Name.Name) + "(val ")
+		b.printType(dst, field.Type, false)
+		dst.Code(") {\n")
+		dst.Code("\tg." + build.StringToHumpName(field.Name.Name) + " = ")
+		if field.Type.IsEmpty() {
+			dst.Code("&val\n")
+		} else {
+			dst.Code("val\n")
+		}
+		dst.Code("}\n\n")
 	}
 }
 

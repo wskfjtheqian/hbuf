@@ -268,11 +268,11 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 		for i, item := range text {
 			if 1 == len(text) || !build.IsArray(field.Field.Type) {
 				if build.IsNil(field.Field.Type) {
-					where.Code("\tif nil != g." + fieldName + " {\n")
-					b.printWhere(where, item, fieldName, "\t", build.IsArray(field.Field.Type), field)
-					where.Code("\t}\n")
+					where.Code("\tif nil != g." + fieldName + " {\n\t\t")
+					b.printParam(where, item, field, fields, "")
+					where.Code("\n\t}\n")
 				} else {
-					b.printWhere(where, item, fieldName, "", build.IsArray(field.Field.Type), field)
+					b.printParam(where, item, field, fields, "")
 				}
 			} else {
 				if build.IsNil(field.Field.Type) {
@@ -281,11 +281,11 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 					if array.VType.Empty {
 						where.Code(" && nil != g." + fieldName + "[" + strconv.Itoa(i) + "]")
 					}
-					where.Code(" {\n")
-					b.printWhere(where, item, fieldName+"["+strconv.Itoa(i)+"]", "\t", false, field)
-					where.Code("\t}\n")
+					where.Code(" {\n\t\t")
+					b.printParam(where, item, field, fields, "["+strconv.Itoa(i)+"]")
+					where.Code("\n\t}\n")
 				} else {
-					b.printWhere(where, item, fieldName+"["+strconv.Itoa(i)+"]", "", false, field)
+					b.printParam(where, item, field, fields, "["+strconv.Itoa(i)+"]")
 				}
 			}
 		}
@@ -343,50 +343,73 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 	return where
 }
 
+func (b *Builder) findField(fields []*build.DBField, name string) *build.DBField {
+	for _, item := range fields {
+		if item.Field.Name.Name == name {
+			return item
+		}
+	}
+	return nil
+}
+
 var quesRex = regexp.MustCompile(`\?`)
-var paramRex = regexp.MustCompile(`\{age\}`)
-var strRex = regexp.MustCompile(`(\${\w+})`)
-var allRex = regexp.MustCompile(`(\${\w+})|(\{\w+})|\?`)
+var paramRex = regexp.MustCompile(`(\?{\w+})|(\${\w+})|\$|\?`)
 
-func (b *Builder) printWhere(where *build.Writer, text, fieldName, s string, isArray bool, field *build.DBField) {
-	count := strings.Count(text, "?")
-	if isArray {
-		where.Import("github.com/wskfjtheqian/hbuf_golang/pkg/utils", "utl")
-		temp := "\" + utl.ToQuestions(g." + fieldName + ", \",\") + \""
+func (b *Builder) printParam(buf *build.Writer, text string, self *build.DBField, fields []*build.DBField, array string) {
+	match := paramRex.FindAllStringSubmatchIndex(text, -1)
+	buf.Code("s")
+	if nil != match {
+		var index = 0
+		for _, item := range match {
+			buf.Code(".T(\"")
+			buf.Code(text[index:item[0]])
+			buf.Code("\")")
+			t := text[item[0]:item[1]]
+			if t == "$" || (2 < len(t) && "${" == t[0:2]) {
+				field := self
+				if t != "$" {
+					field = b.findField(fields, t[2:len(t)-1])
+				}
 
-		match := quesRex.FindAllStringSubmatchIndex(text, -1)
-		if nil != match {
-			var index = 0
-			buf := strings.Builder{}
-			for _, item := range match {
-				buf.WriteString(text[index:item[0]])
-				index = item[0] + 1
-				buf.WriteString(temp)
+				buf.Code(".T(")
+				if build.IsNil(field.Field.Type) {
+					buf.Code("*g.")
+				} else {
+					buf.Code("g.")
+				}
+				buf.Code(build.StringToHumpName(field.Field.Name.Name))
+				buf.Code(")")
+
+			} else if t == "?" || (2 < len(t) && "?{" == t[0:2]) {
+				field := self
+				temp := array
+				if t != "?" {
+					field = b.findField(fields, t[2:len(t)-1])
+					temp = ""
+				}
+				if 0 == len(field.Dbs[0].Converter) && build.IsArray(field.Field.Type) && 0 == len(temp) {
+					buf.Code(".L(\",\", ")
+					buf.Import("github.com/wskfjtheqian/hbuf_golang/pkg/utils", "utl")
+					buf.Code("utl.ToAnyList(g." + build.StringToHumpName(field.Field.Name.Name) + ")...")
+				} else {
+					buf.Code(".V(")
+					buf.Code(b.converter(field, "g"))
+					buf.Code(temp)
+				}
+				buf.Code(")")
 			}
-			if index < len(text) {
-				buf.WriteString(text[index:])
-			}
-			text = buf.String()
+			index = item[1]
 		}
-	}
-
-	where.Code(s + "\ts.T(\" " + text + "\")")
-	if 0 < count {
-		where.Code(".P(")
-		for i := 0; i < count; i++ {
-			if 0 != i {
-				where.Code(", ")
-			}
-			if isArray {
-				where.Import("github.com/wskfjtheqian/hbuf_golang/pkg/utils", "utl")
-				where.Code("utl.ToAnyList(g." + fieldName + ")...")
-			} else {
-				where.Code(b.converter(field, "g"))
-			}
+		if index < len(text) {
+			buf.Code(".T(\"")
+			buf.Code(text[index:])
+			buf.Code("\")")
 		}
-		where.Code(")")
+	} else {
+		buf.Code(".T(\"")
+		buf.Code(text)
+		buf.Code("\")")
 	}
-	where.Code("\n")
 }
 
 func (b *Builder) printListData(dst *build.Writer, typ *ast.DataType, key string, db *build.DB, wFields []*build.DBField, fields []*build.DBField, fType *ast.DataType, c *cache) {
@@ -417,7 +440,7 @@ func (b *Builder) printListData(dst *build.Writer, typ *ast.DataType, key string
 	dst.Import("database/sql", "")
 	dst.Code("\t_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
 	dst.Code("\t\tvar val " + dName + "\n")
-	dst.Code("\t\terr:= rows.Scan(" + scan.String() + ")\n")
+	dst.Code("\t\terr := rows.Scan(" + scan.String() + ")\n")
 	dst.Code("\t\tif err == nil {\n")
 	dst.Code("\t\t\tret = append(ret, val)\n")
 	dst.Code("\t\t}\n")

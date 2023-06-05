@@ -34,13 +34,15 @@ data AA = 53 {
 
 [db:table="AA"; list="parent"; count="true"]
 data BB = 52 {
-    [db:where="AND config_id >= ?", "AND config_id <= ?"]
-    date[]? config_id = 2
+    //    [db:where="AND config_id >= ?", "AND config_id <= ?"]
+    //    date[]? config_id = 2
 
-//
-//    [db:where="AND config_id = ?{config_id}"]
-//    date[]? config_id = 2
 
+    [db:where="AND config_id = ?{bbb}"]
+    date? config_id = 2
+
+    [db:]
+    string bbb = 0
 
 }
 

@@ -3,6 +3,7 @@ package golang
 import (
 	"hbuf/pkg/ast"
 	"hbuf/pkg/build"
+	"hbuf/pkg/scanner"
 	"regexp"
 	"strconv"
 	"strings"
@@ -268,11 +269,11 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 		for i, item := range text {
 			if 1 == len(text) || !build.IsArray(field.Field.Type) {
 				if build.IsNil(field.Field.Type) {
-					where.Code("\tif nil != g." + fieldName + " {\n\t\t")
-					b.printParam(where, item, field, fields, "")
-					where.Code("\n\t}\n")
+					where.Code("\tif nil != g." + fieldName + " {\n")
+					b.printParam(where, item, field, fields, "", "\t\t")
+					where.Code("\t}\n")
 				} else {
-					b.printParam(where, item, field, fields, "")
+					b.printParam(where, item, field, fields, "", "\t")
 				}
 			} else {
 				if build.IsNil(field.Field.Type) {
@@ -281,11 +282,11 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 					if array.VType.Empty {
 						where.Code(" && nil != g." + fieldName + "[" + strconv.Itoa(i) + "]")
 					}
-					where.Code(" {\n\t\t")
-					b.printParam(where, item, field, fields, "["+strconv.Itoa(i)+"]")
-					where.Code("\n\t}\n")
+					where.Code(" {\n")
+					b.printParam(where, item, field, fields, "["+strconv.Itoa(i)+"]", "\t\t")
+					where.Code("\t}\n")
 				} else {
-					b.printParam(where, item, field, fields, "["+strconv.Itoa(i)+"]")
+					b.printParam(where, item, field, fields, "["+strconv.Itoa(i)+"]", "\t")
 				}
 			}
 		}
@@ -355,8 +356,9 @@ func (b *Builder) findField(fields []*build.DBField, name string) *build.DBField
 var quesRex = regexp.MustCompile(`\?`)
 var paramRex = regexp.MustCompile(`(\?{\w+})|(\${\w+})|\$|\?`)
 
-func (b *Builder) printParam(buf *build.Writer, text string, self *build.DBField, fields []*build.DBField, array string) {
+func (b *Builder) printParam(buf *build.Writer, text string, self *build.DBField, fields []*build.DBField, array, tab string) error {
 	match := paramRex.FindAllStringSubmatchIndex(text, -1)
+	buf.Code(tab)
 	buf.Code("s")
 	if nil != match {
 		var index = 0
@@ -387,6 +389,12 @@ func (b *Builder) printParam(buf *build.Writer, text string, self *build.DBField
 					field = b.findField(fields, t[2:len(t)-1])
 					temp = ""
 				}
+				if nil == field {
+					return scanner.Error{
+						//Pos: b.Position(data.Name.Pos()),
+						Msg: "Invalid name: " + t[2:len(t)-1],
+					}
+				}
 				if 0 == len(field.Dbs[0].Converter) && build.IsArray(field.Field.Type) && 0 == len(temp) {
 					buf.Code(".L(\",\", ")
 					buf.Import("github.com/wskfjtheqian/hbuf_golang/pkg/utils", "utl")
@@ -410,6 +418,8 @@ func (b *Builder) printParam(buf *build.Writer, text string, self *build.DBField
 		buf.Code(text)
 		buf.Code("\")")
 	}
+	buf.Code("\n")
+	return nil
 }
 
 func (b *Builder) printListData(dst *build.Writer, typ *ast.DataType, key string, db *build.DB, wFields []*build.DBField, fields []*build.DBField, fType *ast.DataType, c *cache) {

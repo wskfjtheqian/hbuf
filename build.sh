@@ -1,6 +1,6 @@
 #!/bin/zsh
 
-DEL A ./bin
+rm -rf ./bin
 mkdir "./bin"
 
 export GOARCH=amd64
@@ -18,6 +18,7 @@ echo "打包 hbuf darwin版本 成功"
 cp ./bin/hbuf_darwin /Users/heqian/dev/hbuf/hbuf_frame/hbuf_darwin
 cp ./bin/hbuf_darwin /Users/heqian/dev/apk_rebuild/hbuf_darwin
 cp ./bin/hbuf_darwin /Users/heqian/dev/h_im/hbuf_darwin
+cp ./bin/hbuf_darwin /Users/heqian/dev/apk_manage/hbuf_darwin
 
 export CGO_ENABdeLED=0
 export GOOS=windows

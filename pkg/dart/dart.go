@@ -12,7 +12,7 @@ import (
 
 var _types = map[build.BaseType]string{
 	build.Int8: "int", build.Int16: "int", build.Int32: "int", build.Int64: "Int64", build.Uint8: "int",
-	build.Uint16: "int", build.Uint32: "Int64", build.Uint64: "Int64", build.Bool: "bool", build.Float: "double",
+	build.Uint16: "int", build.Uint32: "int", build.Uint64: "Int64", build.Bool: "bool", build.Float: "double",
 	build.Double: "double", build.String: "String", build.Date: "DateTime", build.Decimal: "Decimal",
 }
 

@@ -403,13 +403,13 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 			}
 		} else {
 			switch build.BaseType(expr.(*ast.Ident).Name) {
-			case build.Int8, build.Int16, build.Int32, build.Uint8, build.Uint16, build.Uint64:
+			case build.Int8, build.Int16, build.Int32, build.Uint8, build.Uint16, build.Uint32:
 				if empty {
 					dst.Code("null == " + name + " ? null : (" + v + " is num ? " + v + ".toInt() : num.tryParse(" + v + ".toString())?.toInt())")
 				} else {
 					dst.Code("null == " + name + " ? 0 : (" + v + " is num ? " + v + ".toInt() : num.tryParse(" + v + ".toString())?.toInt() ?? 0)")
 				}
-			case build.Int64, build.Uint32:
+			case build.Int64, build.Uint64:
 				if empty {
 					dst.Code("null == " + name + " ? null : Int64.parseInt(" + v + ".toString())")
 				} else {
@@ -518,14 +518,8 @@ func (b *Builder) printToMap(dst *build.Writer, name string, expr ast.Expr, data
 			}
 		} else {
 			switch build.BaseType(expr.(*ast.Ident).Name) {
-			case build.Int8, build.Int16, build.Int32, build.Uint8, build.Uint16, build.Float, build.Double, build.String, build.Bool:
+			case build.Int8, build.Int16, build.Int32, build.Uint32, build.Uint8, build.Uint16, build.Float, build.Double, build.String, build.Bool:
 				dst.Code(name)
-			case build.Uint32:
-				if empty {
-					dst.Code(name + "?.toInt()")
-				} else {
-					dst.Code(name + ".toInt()")
-				}
 			case build.Uint64, build.Int64:
 				if empty {
 					dst.Code(name + "?.toString()")

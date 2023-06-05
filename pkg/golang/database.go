@@ -270,10 +270,10 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 			if 1 == len(text) || !build.IsArray(field.Field.Type) {
 				if build.IsNil(field.Field.Type) {
 					where.Code("\tif nil != g." + fieldName + " {\n")
-					b.printParam(where, item, field, fields, "", "\t\t")
+					b.printParam(where, item, field, fields, "", "\t\ts")
 					where.Code("\t}\n")
 				} else {
-					b.printParam(where, item, field, fields, "", "\t")
+					b.printParam(where, item, field, fields, "", "\ts")
 				}
 			} else {
 				if build.IsNil(field.Field.Type) {
@@ -283,10 +283,10 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 						where.Code(" && nil != g." + fieldName + "[" + strconv.Itoa(i) + "]")
 					}
 					where.Code(" {\n")
-					b.printParam(where, item, field, fields, "["+strconv.Itoa(i)+"]", "\t\t")
+					b.printParam(where, item, field, fields, "["+strconv.Itoa(i)+"]", "\t\ts")
 					where.Code("\t}\n")
 				} else {
-					b.printParam(where, item, field, fields, "["+strconv.Itoa(i)+"]", "\t")
+					b.printParam(where, item, field, fields, "["+strconv.Itoa(i)+"]", "\ts")
 				}
 			}
 		}
@@ -308,24 +308,14 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 				where.Code(" {\n")
 
 				if isOrderFist {
-					where.Code("\t\ts.T(\" ORDER BY \" + ")
+					where.Code("\t\ts.T(\" ORDER BY \")")
 				} else {
-					where.Code("\t\ts.T(\", \" + ")
+					where.Code("\t\ts.T(\", \")")
 				}
-				isOrderFist = true
-				where.Import("strings", "")
-				where.Code("strings.ReplaceAll(\"")
-				where.Code(order)
-				if build.IsNil(field.Field.Type) {
-					where.Code("\", \"$\", *g.")
-				} else {
-					where.Code("\", \"$\", g.")
-				}
-				where.Code(build.StringToHumpName(field.Field.Name.Name))
-				where.Code("))\n")
+
+				b.printParam(where, order, field, fields, "", "")
 
 				where.Code("\t}\n")
-
 			}
 		}
 	}
@@ -359,7 +349,6 @@ var paramRex = regexp.MustCompile(`(\?{\w+})|(\${\w+})|\$|\?`)
 func (b *Builder) printParam(buf *build.Writer, text string, self *build.DBField, fields []*build.DBField, array, tab string) error {
 	match := paramRex.FindAllStringSubmatchIndex(text, -1)
 	buf.Code(tab)
-	buf.Code("s")
 	if nil != match {
 		var index = 0
 		for _, item := range match {

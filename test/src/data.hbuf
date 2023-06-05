@@ -38,11 +38,17 @@ data BB = 52 {
     //    date[]? config_id = 2
 
 
-    [db:where="AND config_id = ?{bbb}"]
-    date? config_id = 2
+    // 职位发布时间排序
+    [db:order="ST_DISTANCE_SPHERE(Point(longitude,latitude),Point(?{longitude},?{latitude})) ASC, push_time DESC, id DESC"]
+    string order_push_time = 3
 
+    //工作城市经度
     [db:]
-    string bbb = 0
+    double longitude = 8
+
+    //工作城市纬度
+    [db:]
+    double latitude = 9
 
 }
 

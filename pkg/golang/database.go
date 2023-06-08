@@ -803,7 +803,7 @@ func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, key string,
 		dName = fName
 	}
 
-	w := b.getParamWhere(dst, wFields, false, false)
+	w := b.getParamWhere(dst, wFields, false, true)
 	dst.AddImports(w.GetImports())
 
 	item, scan, _ := b.getItemAndValue(fields, key)

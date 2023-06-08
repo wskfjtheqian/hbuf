@@ -470,17 +470,31 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		}
 		if "text" == form.form {
 			dst.Code("\tfinal TextFormBuild " + fieldName + " = TextFormBuild();\n\n")
-			setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName)
-			b.printToString(setValue, field.Type, false, form.digit, form.format, "??\"\"")
-			setValue.Code(";\n")
-			if !form.onlyRead {
-				setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = ")
-				if form.toNull {
-					setValue.Code("\"\" == val ? null : ")
+			if build.IsArray(field.Type) {
+				setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName)
+				setValue.Code("?.map((e) => e")
+				b.printToString(setValue, field.Type, false, form.digit, form.format, "??\"\"")
+				setValue.Code(").join(\",\");\n")
+				if !form.onlyRead {
+					setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = ")
+					setValue.Code("val?.split(\",\").map((e) =>e")
+					b.printFormString(setValue, "val", field.Type, false, form.digit, form.format)
+					setValue.Code(").toList();\n")
 				}
-				b.printFormString(setValue, "val", field.Type, false, form.digit, form.format)
+			} else {
+				setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName)
+				b.printToString(setValue, field.Type, false, form.digit, form.format, "??\"\"")
 				setValue.Code(";\n")
+				if !form.onlyRead {
+					setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = ")
+					if form.toNull {
+						setValue.Code("\"\" == val ? null : ")
+					}
+					b.printFormString(setValue, "val", field.Type, false, form.digit, form.format)
+					setValue.Code(";\n")
+				}
 			}
+
 			setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
 			setValue.Code("\t\t" + fieldName + ".widthSizes = sizes;\n")
 			setValue.Code("\t\t" + fieldName + ".maxLines = " + strconv.Itoa(form.maxLine) + ";\n")

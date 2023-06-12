@@ -3,6 +3,7 @@ package golang
 import (
 	"hbuf/pkg/ast"
 	"hbuf/pkg/build"
+	"sort"
 )
 
 func (b *Builder) printServerCode(dst *build.Writer, typ *ast.ServerType) {
@@ -27,10 +28,10 @@ func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
 	}
 	dst.Code("type " + serverName)
 	dst.Code(" interface {\n")
-	b.printExtend(dst, typ.Extends)
+	isFast := true
+	b.printExtend(dst, typ.Extends, &isFast)
 	dst.Code("\tInit(ctx context.Context)\n\n")
 
-	isFast := true
 	for _, method := range typ.Methods {
 		if !isFast {
 			dst.Code("\n")
@@ -61,7 +62,7 @@ func (b *Builder) printServerDefault(dst *build.Writer, typ *ast.ServerType) {
 	dst.Code(" struct {\n")
 	dst.Code("}\n\n")
 
-	dst.Code("func (s *default" + serverName + ")Init(ctx context.Context){\n")
+	dst.Code("func (s *default" + serverName + ") Init(ctx context.Context) {\n")
 	dst.Code("}\n\n")
 
 	for _, method := range typ.Methods {
@@ -69,7 +70,7 @@ func (b *Builder) printServerDefault(dst *build.Writer, typ *ast.ServerType) {
 			dst.Code("//" + build.StringToHumpName(method.Name.Name) + " " + method.Doc.Text())
 		}
 
-		dst.Code("func (s *default" + serverName + ")")
+		dst.Code("func (s *default" + serverName + ") ")
 		dst.Code(build.StringToHumpName(method.Name.Name))
 		dst.Code("(ctx context.Context, ")
 		dst.Code(build.StringToFirstLower(method.ParamName.Name))
@@ -77,7 +78,7 @@ func (b *Builder) printServerDefault(dst *build.Writer, typ *ast.ServerType) {
 		b.printType(dst, method.Param, true)
 		dst.Code(") (*")
 		b.printType(dst, method.Result.Type(), true)
-		dst.Code(", error){\n")
+		dst.Code(", error) {\n")
 		dst.Code("\treturn nil, erro.Wrap(errors.New(\"not find server\"))\n")
 		dst.Code("}\n\n")
 	}
@@ -96,11 +97,11 @@ func (b *Builder) printClient(dst *build.Writer, typ *ast.ServerType) {
 	dst.Code("\treturn &" + serverName + "Client{\n")
 	dst.Code("\t\tclient: client,\n")
 	dst.Code("\t}\n")
-	dst.Code("}\n")
+	dst.Code("}\n\n")
 	name := build.StringToUnderlineName(typ.Name.Name)
 	err := build.EnumMethod(typ, func(method *ast.FuncType, server *ast.ServerType) error {
 		if nil != method.Doc && 0 < len(method.Doc.Text()) {
-			dst.Code("\t//" + build.StringToHumpName(method.Name.Name) + " " + method.Doc.Text())
+			dst.Code("//" + build.StringToHumpName(method.Name.Name) + " " + method.Doc.Text())
 		}
 		dst.Code("func (r *" + serverName + "Client) ")
 		dst.Code(build.StringToHumpName(method.Name.Name))
@@ -196,8 +197,10 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 
 		au := b.getTag(method.Tags)
 		if nil != au {
-			for key, val := range *au {
-				dst.Code("\t\t\t\t\trpc.SetTag(ctx, \"" + key + "\", \"" + val + "\")\n")
+			keys := build.GetKeysByMap(*au)
+			sort.Strings(keys)
+			for _, key := range keys {
+				dst.Code("\t\t\t\t\trpc.SetTag(ctx, \"" + key + "\", \"" + (*au)[key] + "\")\n")
 			}
 		}
 		dst.Code("\t\t\t\t},\n")

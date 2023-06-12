@@ -53,7 +53,7 @@ func printEnumCode(dst *build.Writer, typ *ast.EnumType) {
 	}
 	dst.Code("}\n\n")
 
-	dst.Code("func " + name + "Values() map[string]" + name + "{\n")
+	dst.Code("func " + name + "Values() map[string]" + name + " {\n")
 	dst.Code("\treturn " + build.StringToFirstLower(typ.Name.Name) + "Values\n")
 	dst.Code("}\n\n")
 

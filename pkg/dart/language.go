@@ -2,10 +2,14 @@ package dart
 
 import (
 	"hbuf/pkg/build"
+	"sort"
 )
 
 func printLanguge(dst *build.Writer) {
-	for _, l := range dst.GetLangs() {
+	langsKeys := build.GetKeysByMap(dst.GetLangs())
+	sort.Strings(langsKeys)
+	for _, langsKey := range langsKeys {
+		l := dst.GetLangs()[langsKey]
 		if 0 >= len(l.Lang) {
 			continue
 		}
@@ -21,7 +25,10 @@ func printLanguge(dst *build.Writer) {
 		dst.Code("  @override\n")
 		dst.Code("  Future<" + l.Name + "Localizations> load(Locale locale) {\n")
 		dst.Code("    switch (locale.languageCode) {\n")
-		for key, _ := range l.Key {
+
+		keyKeys := build.GetKeysByMap(l.Key)
+		sort.Strings(keyKeys)
+		for _, key := range keyKeys {
 			keyName := "_" + build.StringToHumpName(key)
 			dst.Code("      case '" + key + "':\n")
 			dst.Code("        return SynchronousFuture<" + l.Name + "Localizations>(const " + keyName + l.Name + "Localizations());\n")
@@ -45,7 +52,9 @@ func printLanguge(dst *build.Writer) {
 		dst.Code("  static const LocalizationsDelegate<" + l.Name + "Localizations> delegate = _" + l.Name + "LocalizationsDelegate();\n")
 		dst.Code("\n")
 
-		for key, _ := range l.Lang {
+		lanKeys := build.GetKeysByMap(l.Lang)
+		sort.Strings(lanKeys)
+		for _, key := range lanKeys {
 			dst.Code("  String get " + key + ";\n")
 			dst.Code("\n")
 		}
@@ -61,21 +70,21 @@ func printLanguge(dst *build.Writer) {
 		dst.Code("  }\n")
 		dst.Code("\n")
 
-		for f, lan := range l.Lang {
+		for _, key := range lanKeys {
 			dst.Code("  @override\n")
-			dst.Code("  String get " + f + " => \"" + build.GetLang(f, "____", lan) + "\";\n")
+			dst.Code("  String get " + key + " => \"" + build.GetLang(key, "____", l.Lang[key]) + "\";\n")
 			dst.Code("\n")
 		}
 		dst.Code("}\n")
 		dst.Code("\n")
 
-		for key, _ := range l.Key {
+		for _, key := range keyKeys {
 			keyName := "_" + build.StringToHumpName(key)
 			dst.Code("class " + keyName + l.Name + "Localizations implements " + l.Name + "Localizations {\n")
 			dst.Code("  const " + keyName + l.Name + "Localizations();\n")
-			for f, lan := range l.Lang {
+			for _, f := range lanKeys {
 				dst.Code("  @override\n")
-				dst.Code("  String get " + f + " => \"" + build.GetLang(f, key, lan) + "\";\n")
+				dst.Code("  String get " + f + " => \"" + build.GetLang(f, key, l.Lang[f]) + "\";\n")
 				dst.Code("\n")
 			}
 			dst.Code("}\n")

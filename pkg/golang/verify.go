@@ -92,7 +92,7 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 					if build.GetBaseType(field.Type) == build.String {
 						dst.Code(" || len(i.Get" + fName + "()) == 0")
 					}
-					dst.Code("{\n")
+					dst.Code(" {\n")
 					dst.Code("\t\treturn &rpc.Result{Code: int(" + pack + "), Msg: " + pack + ".ToName()}\n")
 					dst.Code("\t}\n")
 				} else {
@@ -100,7 +100,7 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 					if build.GetBaseType(field.Type) == build.String {
 						dst.Code(" || len(i.Get" + fName + "()) == 0")
 					}
-					dst.Code("{\n")
+					dst.Code(" {\n")
 					dst.Code("\t\treturn nil\n")
 					dst.Code("\t}\n")
 				}

@@ -500,7 +500,7 @@ func (b *Builder) printMapData(dst *build.Writer, key string, typ *ast.DataType,
 	dst.Import("database/sql", "")
 	dst.Code("\t_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
 	dst.Code("\t\tvar val " + dName + "\n")
-	dst.Code("\t\terr:= rows.Scan(" + scan.String() + ")\n")
+	dst.Code("\t\terr := rows.Scan(" + scan.String() + ")\n")
 	dst.Code("\t\tif err == nil {\n")
 	dst.Code("\t\t\tret[val.Get" + build.StringToHumpName(KName.String()) + "()] = val\n")
 	dst.Code("\t\t}\n")

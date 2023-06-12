@@ -599,3 +599,27 @@ func GetBaseType(expr ast.Expr) BaseType {
 
 	return ""
 }
+
+func GetFieldsByList[F any, E any](list []E, call func(item E) F) []F {
+	field := make([]F, len(list))
+	if nil == list {
+		return field
+	}
+	for i, item := range list {
+		field[i] = call(item)
+	}
+	return field
+}
+
+func GetKeysByMap[F string, E any](maps map[F]E) []F {
+	keys := make([]F, len(maps))
+	if nil == maps {
+		return keys
+	}
+	i := 0
+	for key, _ := range maps {
+		keys[i] = key
+		i++
+	}
+	return keys
+}

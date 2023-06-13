@@ -33,16 +33,16 @@ func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
 	}
 	dst.Code("}\n\n")
 
-	dst.Code("func (g " + build.StringToHumpName(typ.Name.Name) + ") ToData() ([]byte, error) {\n")
+	dst.Code("func (g *" + build.StringToHumpName(typ.Name.Name) + ") ToData() ([]byte, error) {\n")
 	dst.Code("\treturn json.Marshal(g)\n")
 	dst.Code("}\n\n")
 
-	dst.Code("func (g " + build.StringToHumpName(typ.Name.Name) + ") FormData(data []byte) error {\n")
+	dst.Code("func (g *" + build.StringToHumpName(typ.Name.Name) + ") FormData(data []byte) error {\n")
 	dst.Code("\treturn json.Unmarshal(data, g)\n")
 	dst.Code("}\n\n")
 
 	for _, field := range typ.Fields.List {
-		dst.Code("func (g " + build.StringToHumpName(typ.Name.Name) + ") Get" + build.StringToHumpName(field.Name.Name) + "() ")
+		dst.Code("func (g *" + build.StringToHumpName(typ.Name.Name) + ") Get" + build.StringToHumpName(field.Name.Name) + "() ")
 		b.printType(dst, field.Type, false)
 		dst.Code(" {\n")
 		if field.Type.IsEmpty() && !build.IsArray(field.Type) && !build.IsMap(field.Type) {
@@ -57,7 +57,7 @@ func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
 		}
 		dst.Code("}\n\n")
 
-		dst.Code("func (g " + build.StringToHumpName(typ.Name.Name) + ") Set" + build.StringToHumpName(field.Name.Name) + "(val ")
+		dst.Code("func (g *" + build.StringToHumpName(typ.Name.Name) + ") Set" + build.StringToHumpName(field.Name.Name) + "(val ")
 		b.printType(dst, field.Type, false)
 		dst.Code(") {\n")
 		dst.Code("\tg." + build.StringToHumpName(field.Name.Name) + " = ")

@@ -259,7 +259,7 @@ func (b *Builder) getItemAndValue(fields []*build.DBField, key string) (strings.
 
 }
 
-func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page bool, orderBy bool) *build.Writer {
+func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page, orderBy, groupBy bool) *build.Writer {
 	where := build.NewWriter()
 	where.Packages = dst.Packages
 
@@ -292,8 +292,29 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 		}
 	}
 
+	if groupBy {
+		isFist := true
+		for _, field := range fields {
+			group := field.Dbs[0].Group
+			if 0 < len(group) {
+				if build.IsNil(field.Field.Type) {
+					where.Code("\tif nil != g." + build.StringToHumpName(field.Field.Name.Name) + " {\t")
+				}
+				if isFist {
+					where.Code("\ts.T(\" GROUP BY \")")
+				} else {
+					where.Code("\ts.T(\", \")")
+				}
+				b.printParam(where, group, field, fields, "", "")
+				if build.IsNil(field.Field.Type) {
+					where.Code("\t}\n")
+				}
+			}
+		}
+	}
+
 	if orderBy {
-		isOrderFist := true
+		isFist := true
 		for _, field := range fields {
 			order := field.Dbs[0].Order
 			if 0 < len(order) {
@@ -307,7 +328,7 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 
 				where.Code(" {\n")
 
-				if isOrderFist {
+				if isFist {
 					where.Code("\t\ts.T(\" ORDER BY \")")
 				} else {
 					where.Code("\t\ts.T(\", \")")
@@ -352,9 +373,11 @@ func (b *Builder) printParam(buf *build.Writer, text string, self *build.DBField
 	if nil != match {
 		var index = 0
 		for _, item := range match {
-			buf.Code(".T(\"")
-			buf.Code(text[index:item[0]])
-			buf.Code("\")")
+			if 0 < item[0] {
+				buf.Code(".T(\"")
+				buf.Code(text[index:item[0]])
+				buf.Code("\")")
+			}
 			t := text[item[0]:item[1]]
 			if t == "$" || (2 < len(t) && "${" == t[0:2]) {
 				field := self
@@ -419,7 +442,7 @@ func (b *Builder) printListData(dst *build.Writer, typ *ast.DataType, key string
 	} else if "self" == key {
 		dName = fName
 	}
-	w := b.getParamWhere(dst, wFields, true, true)
+	w := b.getParamWhere(dst, wFields, true, true, true)
 	dst.AddImports(w.GetImports())
 
 	item, scan, _ := b.getItemAndValue(fields, key)
@@ -478,7 +501,7 @@ func (b *Builder) printMapData(dst *build.Writer, key string, typ *ast.DataType,
 	} else if "self" == key {
 		dName = fName
 	}
-	w := b.getParamWhere(dst, wFields, true, true)
+	w := b.getParamWhere(dst, wFields, true, true, true)
 	dst.AddImports(w.GetImports())
 	dst.AddImports(kType.GetImports())
 	dst.AddImports(KName.GetImports())
@@ -530,7 +553,7 @@ func (b *Builder) printMapData(dst *build.Writer, key string, typ *ast.DataType,
 func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build.DB, wFields []*build.DBField, fType *ast.DataType, fFields []*build.DBField, c *cache) {
 	fName := build.StringToHumpName(fType.Name.Name)
 
-	w := b.getParamWhere(dst, wFields, false, false)
+	w := b.getParamWhere(dst, wFields, false, false, true)
 	dst.AddImports(w.GetImports())
 
 	dst.Code("func (g " + fName + ") DbCount(ctx context.Context) (int64, error) {\n")
@@ -573,7 +596,7 @@ func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build
 func (b *Builder) printDeleteData(dst *build.Writer, db *build.DB, wFields []*build.DBField, fType *ast.DataType, isCache bool) {
 	fName := build.StringToHumpName(fType.Name.Name)
 
-	w := b.getParamWhere(dst, wFields, false, false)
+	w := b.getParamWhere(dst, wFields, false, false, false)
 	dst.AddImports(w.GetImports())
 
 	dst.Code("func (g " + fName + ") DbDel(ctx context.Context) (int64, int64, error) {\n")
@@ -596,7 +619,7 @@ func (b *Builder) printDeleteData(dst *build.Writer, db *build.DB, wFields []*bu
 func (b *Builder) printRemoveData(dst *build.Writer, db *build.DB, wFields []*build.DBField, fType *ast.DataType, isCache bool) {
 	fName := build.StringToHumpName(fType.Name.Name)
 
-	w := b.getParamWhere(dst, wFields, false, false)
+	w := b.getParamWhere(dst, wFields, false, false, false)
 	dst.AddImports(w.GetImports())
 
 	dst.Code("func (g " + fName + ") DbRemove(ctx context.Context) (int64, int64, error) {\n")
@@ -697,7 +720,7 @@ func (b *Builder) printUpdateData(dst *build.Writer, typ *ast.DataType, key stri
 	if typ != fType {
 		key = "parent"
 	}
-	w := b.getParamWhere(dst, fields, false, false)
+	w := b.getParamWhere(dst, fields, false, false, false)
 	dst.AddImports(w.GetImports())
 
 	dst.Code("func (g " + fName + ") DbUpdate(ctx context.Context) (int64, int64, error) {\n")
@@ -728,7 +751,7 @@ func (b *Builder) printSetData(dst *build.Writer, typ *ast.DataType, key string,
 	if typ != fType {
 		key = "parent"
 	}
-	w := b.getParamWhere(dst, wFields, false, false)
+	w := b.getParamWhere(dst, wFields, false, false, false)
 	dst.AddImports(w.GetImports())
 
 	dst.Code("func (g " + fName + ") DbSet(ctx context.Context) (int64, int64, error) {\n")
@@ -803,7 +826,7 @@ func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, key string,
 		dName = fName
 	}
 
-	w := b.getParamWhere(dst, wFields, false, true)
+	w := b.getParamWhere(dst, wFields, false, true, true)
 	dst.AddImports(w.GetImports())
 
 	item, scan, _ := b.getItemAndValue(fields, key)

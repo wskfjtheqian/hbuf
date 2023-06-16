@@ -36,19 +36,21 @@ data AA = 53 {
 data BB = 52 {
     //    [db:where="AND config_id >= ?", "AND config_id <= ?"]
     //    date[]? config_id = 2
+    //
+    //
+    //    // 职位发布时间排序
+    //    [db:order="ST_DISTANCE_SPHERE(Point(longitude,latitude),Point(?{longitude},?{latitude})) ASC, push_time DESC, id DESC"]
+    //    string order_push_time = 3
+    //
+    //    //工作城市经度
+    //    [db:]
+    //    double longitude = 8
+    //
+    //    //工作城市纬度
+    //    [db:]
+    //    double latitude = 9
 
-
-    // 职位发布时间排序
-    [db:order="ST_DISTANCE_SPHERE(Point(longitude,latitude),Point(?{longitude},?{latitude})) ASC, push_time DESC, id DESC"]
-    string order_push_time = 3
-
-    //工作城市经度
-    [db:]
-    double longitude = 8
-
-    //工作城市纬度
-    [db:]
-    double latitude = 9
-
+    [db:group="$"]
+    string group = 10
 }
 

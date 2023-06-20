@@ -214,6 +214,9 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 			return nil
 		}
 
+		isArray := build.IsArray(field.Type)
+		isNull := build.IsNil(field.Type)
+
 		dst.Code("\t\ttables.columns[\"")
 		fieldName := build.StringToFirstLower(field.Name.Name)
 		dst.Code(fieldName)
@@ -226,25 +229,25 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 		if "image" == table.table {
 			dst.Code("\t\t\t\t\treturn TablesCell(\n")
 			dst.Code("\t\t\t\t\t\tchild: (data." + fieldName)
-			if build.IsArray(field.Type) {
-				if build.IsNil(field.Type) {
+			if isArray {
+				if isNull {
 					dst.Code("?")
 				}
 				dst.Code(".first")
 				dst.Code("??\"\"")
-			} else if build.IsNil(field.Type) {
+			} else if isNull {
 				dst.Code("??\"\"")
 			}
 			dst.Code(").startsWith(\"http\")\n")
 			dst.Code("\t\t\t\t\t\t\t\t? Image.network(\n")
 			dst.Code("\t\t\t\t\t\t\t\t\t\tdata." + fieldName)
-			if build.IsArray(field.Type) {
-				if build.IsNil(field.Type) {
+			if isArray {
+				if isNull {
 					dst.Code("!")
 				}
 				dst.Code(".first")
 				dst.Code("!")
-			} else if build.IsNil(field.Type) {
+			} else if isNull {
 				dst.Code("!")
 			}
 			dst.Code(",\n")
@@ -256,11 +259,35 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Code("\t\t\t\treturn TablesCell(\n")
 			dst.Code("\t\t\t\t\tchild: Tooltip(\n")
 			dst.Code("\t\t\t\t\t\tmessage: data." + fieldName)
-			b.printToString(dst, field.Type, false, table.digit, table.format, "??\"\"")
+			if isArray {
+				if isNull {
+					dst.Code("?")
+				}
+				dst.Code(".map((e) => e")
+				b.printToString(dst, field.Type, false, table.digit, table.format, "??\"\"")
+				dst.Code(").join(',')")
+				if isNull {
+					dst.Code(" ?? ''")
+				}
+			} else {
+				b.printToString(dst, field.Type, false, table.digit, table.format, "??\"\"")
+			}
 			dst.Code(",\n")
 			dst.Code("\t\t\t\t\t\tchild: Text(\n")
 			dst.Code("\t\t\t\t\t\t\tdata." + fieldName)
-			b.printToString(dst, field.Type, false, table.digit, table.format, "??\"\"")
+			if isArray {
+				if isNull {
+					dst.Code("?")
+				}
+				dst.Code(".map((e) => e")
+				b.printToString(dst, field.Type, false, table.digit, table.format, "??\"\"")
+				dst.Code(").join(',')")
+				if isNull {
+					dst.Code(" ?? ''")
+				}
+			} else {
+				b.printToString(dst, field.Type, false, table.digit, table.format, "??\"\"")
+			}
 			dst.Code(",\n")
 			dst.Code("\t\t\t\t\t\t\tmaxLines: 1,\n")
 			dst.Code("\t\t\t\t\t\t\toverflow: TextOverflow.ellipsis,\n")
@@ -463,6 +490,8 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		if form.onlyRead {
 			onlyRead = "true"
 		}
+		isArray := build.IsArray(field.Type)
+		isNil := build.IsNil(field.Type)
 
 		verify, err := build.GetVerify(field.Tags, dst.File, b.GetDataType)
 		if err != nil {
@@ -470,17 +499,26 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		}
 		if "text" == form.form {
 			dst.Code("\tfinal TextFormBuild " + fieldName + " = TextFormBuild();\n\n")
-			if build.IsArray(field.Type) {
+			if isArray {
 				setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName)
-				setValue.Code("?.map((e) => e")
+				if isNil {
+					setValue.Code("?")
+				}
+				setValue.Code(".map((e) => e")
 				b.printToString(setValue, field.Type, false, form.digit, form.format, "??\"\"")
 				setValue.Code(").join(\",\");\n")
 				if !form.onlyRead {
 					setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = ")
 					setValue.Code("val?.split(\",\").map((e) =>e")
 					b.printFormString(setValue, "val", field.Type, false, form.digit, form.format)
-					setValue.Code(").toList();\n")
+					setValue.Code(").toList()")
+					if !isNil {
+						setValue.Code(" ?? [] ")
+					}
+					setValue.Code(";\n")
+
 				}
+
 			} else {
 				setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName)
 				b.printToString(setValue, field.Type, false, form.digit, form.format, "??\"\"")
@@ -568,7 +606,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		} else if "image" == form.form {
 			dst.Code("\tfinal ImageFormBuild " + fieldName + " =  ImageFormBuild();\n\n")
 
-			if build.IsArray(field.Type) {
+			if isArray {
 				if build.IsNil(field.Type) {
 					setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName + "?.map((e) => ImageFormImage(e))?.toList() ?? [];\n")
 					if !form.onlyRead {

@@ -316,6 +316,26 @@ func (b *Builder) printDataEntity(dst *build.Writer, typ *ast.DataType) {
 	dst.Code("\t\t);\n")
 	dst.Code("\t}\n")
 
+	dst.Code("\t@override\n")
+	dst.Code("\tString toString(){\n")
+	dst.Code("\t\treturn '''")
+	isFast := true
+	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
+		if !isFast {
+			dst.Code("\n\t\t\t")
+		}
+		isFast = false
+		dst.Code(build.StringToFirstLower(field.Name.Name))
+		dst.Code(": $")
+		dst.Code(build.StringToFirstLower(field.Name.Name))
+		return nil
+	})
+	if err != nil {
+		return
+	}
+	dst.Code("\t\t''';\n")
+	dst.Code("\t}\n")
+
 	dst.Code("}\n\n")
 }
 

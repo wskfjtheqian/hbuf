@@ -32,7 +32,11 @@ data AA = 53 {
     date? config_id = 2
 }
 
+data CB = 0 {
+}
+
 [db:table="AA"; list="parent"; count="true"]
+[ui:table="true"]
 data BB = 52 {
     //    [db:where="AND config_id >= ?", "AND config_id <= ?"]
     //    date[]? config_id = 2
@@ -50,7 +54,13 @@ data BB = 52 {
     //    [db:]
     //    double latitude = 9
 
+    [ui:table="text"; form="text"]
     [db:group="$"]
     string group = 10
+
+    [ui:table="text"; form="text"]
+    CB cb = 0
+
+
 }
 

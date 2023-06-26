@@ -379,6 +379,12 @@ func (b *Builder) printToString(dst *build.Writer, expr ast.Expr, empty bool, di
 		if t.Empty {
 			dst.Code(val)
 		}
+	default:
+		if empty {
+			dst.Code("?.toString()")
+		} else {
+			dst.Code(".toString()")
+		}
 	}
 }
 

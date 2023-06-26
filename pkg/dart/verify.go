@@ -40,14 +40,14 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 		}
 
 		dst.Code("String? verify" + dName + "_" + fName + "(BuildContext context, String? text) {\n")
-		//first := true
+		isNull := build.IsNil(field.Type)
 		for i, val := range verify.GetFormat() {
 			f := build.GetFormat(val.Item.Tags)
 			if nil == f {
 				continue
 			}
 			b.getPackage(dst, val.Enum.Name, "enum")
-			if build.IsNil(field.Type) && 0 == i {
+			if isNull && 0 == i {
 				if !f.Null {
 					dst.Code("\tif (text?.isEmpty ?? true) {\n")
 					dst.Code("\t\treturn " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
@@ -152,9 +152,26 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 						}
 					}
 				case build.String:
-					dst.Code("\tif (!RegExp(\"" + strings.ReplaceAll(f.Reg, "$", "\\$") + "\").hasMatch(text!)) {\n")
-					dst.Code("\t\treturn " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
-					dst.Code("\t}\n")
+					if 0 < len(f.Min) || 0 < len(f.Max) {
+						dst.Code("\tif (")
+						if 0 < len(f.Min) {
+							dst.Code(f.Min + " > (text?.length ?? 0)")
+						}
+						if 0 < len(f.Max) {
+							if 0 < len(f.Min) {
+								dst.Code(" || ")
+							}
+							dst.Code(f.Max + " < (text?.length ?? 0)")
+						}
+						dst.Code(") {\n")
+						dst.Code("\t\treturn " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
+						dst.Code("\t}\n")
+					}
+					if len(f.Reg) > 0 {
+						dst.Code("\tif (!RegExp(\"" + strings.ReplaceAll(f.Reg, "$", "\\$") + "\").hasMatch(text!)) {\n")
+						dst.Code("\t\treturn " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
+						dst.Code("\t}\n")
+					}
 				}
 			}
 		}

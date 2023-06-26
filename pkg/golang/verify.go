@@ -194,27 +194,28 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 						dst.Code("\t}\n")
 					}
 				case build.String:
-					if 0 < len(f.Reg) {
-						dst.Import("regexp", "")
-						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/rpc", "")
-						pack := b.getPackage(dst, val.Enum.Name) + build.StringToHumpName(val.Enum.Name.Name) + build.StringToHumpName(val.Item.Name.Name)
-						if 0 < len(f.Min) || 0 < len(f.Max) {
-							dst.Code("\tif ")
-							if 0 < len(f.Min) {
-								dst.Import("unicode/utf8", "")
-								dst.Code(f.Min + " > utf8.RuneCountInString(i.Get" + fName + "()) ")
-							}
-							if 0 < len(f.Max) {
-								if 0 < len(f.Min) {
-									dst.Code("|| ")
-								}
-								dst.Import("unicode/utf8", "")
-								dst.Code(f.Max + " < utf8.RuneCountInString(i.Get" + fName + "()) ")
-							}
-							dst.Code("{\n")
-							dst.Code("\t\treturn &rpc.Result{Code: int(" + pack + "), Msg: " + pack + ".ToName()}\n")
-							dst.Code("\t}\n")
+
+					dst.Import("regexp", "")
+					dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/rpc", "")
+					pack := b.getPackage(dst, val.Enum.Name) + build.StringToHumpName(val.Enum.Name.Name) + build.StringToHumpName(val.Item.Name.Name)
+					if 0 < len(f.Min) || 0 < len(f.Max) {
+						dst.Code("\tif ")
+						if 0 < len(f.Min) {
+							dst.Import("unicode/utf8", "")
+							dst.Code(f.Min + " > utf8.RuneCountInString(i.Get" + fName + "()) ")
 						}
+						if 0 < len(f.Max) {
+							if 0 < len(f.Min) {
+								dst.Code("|| ")
+							}
+							dst.Import("unicode/utf8", "")
+							dst.Code(f.Max + " < utf8.RuneCountInString(i.Get" + fName + "()) ")
+						}
+						dst.Code("{\n")
+						dst.Code("\t\treturn &rpc.Result{Code: int(" + pack + "), Msg: " + pack + ".ToName()}\n")
+						dst.Code("\t}\n")
+					}
+					if 0 < len(f.Reg) {
 						dst.Code("\tmatch, err ")
 						if first {
 							dst.Code(":")

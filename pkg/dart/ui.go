@@ -6,7 +6,7 @@ import (
 	"strconv"
 )
 
-//创建表单代码
+// 创建表单代码
 func (b *Builder) printFormCode(dst *build.Writer, expr ast.Expr) {
 	dst.Import("package:flutter/material.dart", "")
 
@@ -228,7 +228,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 		dst.Code("\t\t\t\tcellBuilder: (context, x, y, data) {\n")
 		if "image" == table.table {
 			dst.Code("\t\t\t\t\treturn TablesCell(\n")
-			dst.Code("\t\t\t\t\t\tchild: (data." + fieldName)
+			dst.Code("\t\t\t\t\t\tchild: (data." + fieldName + ".isEmpty ? \"\" : data." + fieldName)
 			if isArray {
 				if isNull {
 					dst.Code("?")

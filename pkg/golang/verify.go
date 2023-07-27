@@ -194,8 +194,6 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 						dst.Code("\t}\n")
 					}
 				case build.String:
-
-					dst.Import("regexp", "")
 					dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/rpc", "")
 					pack := b.getPackage(dst, val.Enum.Name) + build.StringToHumpName(val.Enum.Name.Name) + build.StringToHumpName(val.Item.Name.Name)
 					if 0 < len(f.Min) || 0 < len(f.Max) {
@@ -220,6 +218,7 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 						if first {
 							dst.Code(":")
 						}
+						dst.Import("regexp", "")
 						dst.Code("= regexp.MatchString(\"" + f.Reg + "\", i.Get" + fName + "())\n")
 						dst.Code("\tif err != nil {\n")
 						dst.Code("\t\treturn err\n")

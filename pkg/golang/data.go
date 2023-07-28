@@ -42,6 +42,9 @@ func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
 	dst.Code("}\n\n")
 
 	for _, field := range typ.Fields.List {
+		if nil != field.Doc && 0 < len(field.Doc.Text()) {
+			dst.Code("// Get" + build.StringToHumpName(field.Name.Name) + " Get " + field.Doc.Text())
+		}
 		dst.Code("func (g *" + build.StringToHumpName(typ.Name.Name) + ") Get" + build.StringToHumpName(field.Name.Name) + "() ")
 		b.printType(dst, field.Type, false)
 		dst.Code(" {\n")
@@ -57,6 +60,9 @@ func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
 		}
 		dst.Code("}\n\n")
 
+		if nil != field.Doc && 0 < len(field.Doc.Text()) {
+			dst.Code("// Set" + build.StringToHumpName(field.Name.Name) + " Set " + field.Doc.Text())
+		}
 		dst.Code("func (g *" + build.StringToHumpName(typ.Name.Name) + ") Set" + build.StringToHumpName(field.Name.Name) + "(val ")
 		b.printType(dst, field.Type, false)
 		dst.Code(") {\n")

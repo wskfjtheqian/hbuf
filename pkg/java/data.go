@@ -165,11 +165,11 @@ func (b *Builder) printCopy(dst *build.Writer, name string, expr ast.Expr, data 
 	}
 }
 
-func (b *Builder) printExtend(dst *build.Writer, extends []*ast.Ident, start bool) {
+func (b *Builder) printExtend(dst *build.Writer, extends []*ast.Extends, start bool) {
 	for i, v := range extends {
 		if 0 != i || start {
 			dst.Code(", ")
 		}
-		dst.Code(build.StringToHumpName(v.Name))
+		dst.Code(build.StringToHumpName(v.Name.Name))
 	}
 }

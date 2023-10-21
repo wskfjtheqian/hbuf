@@ -147,27 +147,27 @@ func (b *Builder) checkServerDuplicateItem(server *ast.ServerType, index int, na
 
 func (b *Builder) checkServerExtends(file *ast.File, server *ast.ServerType, index int) error {
 	for i, item := range server.Extends {
-		if _, ok := _keys[BaseType(item.Name)]; ok {
+		if _, ok := _keys[BaseType(item.Name.Name)]; ok {
 			return scanner.Error{
 				Pos: b.fset.Position(server.Name.Pos()),
-				Msg: "Invalid name: " + item.Name,
+				Msg: "Invalid name: " + item.Name.Name,
 			}
 		}
-		if b.checkServerDuplicateExtends(server, i, item.Name) {
+		if b.checkServerDuplicateExtends(server, i, item.Name.Name) {
 			return scanner.Error{
-				Pos: b.fset.Position(item.NamePos),
-				Msg: "Duplicate item: " + item.Name,
+				Pos: b.fset.Position(item.Name.NamePos),
+				Msg: "Duplicate item: " + item.Name.Name,
 			}
 		}
 
-		obj := b.getServerExtends(file, index, item.Name)
+		obj := b.getServerExtends(file, index, item.Name.Name)
 		if nil == obj {
 			return scanner.Error{
-				Pos: b.fset.Position(item.NamePos),
-				Msg: "Not find: " + item.Name,
+				Pos: b.fset.Position(item.Name.NamePos),
+				Msg: "Not find: " + item.Name.Name,
 			}
 		}
-		item.Obj = obj
+		item.Name.Obj = obj
 	}
 	return nil
 }
@@ -204,7 +204,7 @@ func (b *Builder) getServerExtends(file *ast.File, index int, name string) *ast.
 func (b *Builder) checkServerDuplicateExtends(server *ast.ServerType, index int, name string) bool {
 	for i := index + 1; i < len(server.Extends); i++ {
 		s := server.Extends[i]
-		if s.Name == name {
+		if s.Name.Name == name {
 			return true
 		}
 	}

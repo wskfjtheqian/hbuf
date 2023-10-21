@@ -283,23 +283,26 @@ type (
 		Fields     *FieldList // list of field declarations
 		Incomplete bool       // true if (source) fields are missing in the Fields list
 		Name       *Ident
-		Extends    []*Ident
-		Id         *BasicLit     // field Id; or nil
+		Extends    []*Extends
 		Doc        *CommentGroup // associated documentation; or nil
 		Comment    *CommentGroup // line comments; or nil
+	}
+
+	Extends struct {
+		Name *Ident
+		Id   *BasicLit // extends Id; or nil
 	}
 
 	ServerType struct {
 		Tags    []*Tag
 		Server  token.Pos // position of "server" keyword
 		Name    *Ident
-		Extends []*Ident
+		Extends []*Extends
 		Opening token.Pos // position of opening parenthesis/brace, if any
 		Methods []*FuncType
 		Closing token.Pos     // position of closing parenthesis/brace, if any
 		Doc     *CommentGroup // associated documentation; or nil
 		Comment *CommentGroup // line comments; or nil
-		Id      *BasicLit     // field Id; or nil
 	}
 
 	FuncType struct {
@@ -332,6 +335,14 @@ type (
 		Comment *CommentGroup // line comments; or nil
 	}
 )
+
+func (e *Extends) Pos() token.Pos {
+	return e.Name.Pos()
+}
+
+func (e *Extends) End() token.Pos {
+	return e.Id.End()
+}
 
 func (x *BadExpr) Pos() token.Pos  { return x.From }
 func (x *Ident) Pos() token.Pos    { return x.NamePos }

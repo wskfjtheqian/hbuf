@@ -343,7 +343,7 @@ func GetKeyValue(kvs []*ast.KeyValue, key string) (*ast.KeyValue, bool) {
 
 func enumField(typ *ast.DataType, fields map[string]struct{}, call func(field *ast.Field, data *ast.DataType) error) error {
 	for _, extend := range typ.Extends {
-		types := extend.Obj.Decl.(*ast.TypeSpec)
+		types := extend.Name.Obj.Decl.(*ast.TypeSpec)
 		data := types.Type.(*ast.DataType)
 		err := enumField(data, fields, call)
 		if err != nil {
@@ -370,7 +370,7 @@ func EnumField(typ *ast.DataType, call func(field *ast.Field, data *ast.DataType
 
 func CheckSuperField(name string, typ *ast.DataType) bool {
 	for _, extend := range typ.Extends {
-		types := extend.Obj.Decl.(*ast.TypeSpec)
+		types := extend.Name.Obj.Decl.(*ast.TypeSpec)
 		data := types.Type.(*ast.DataType)
 		for _, field := range data.Fields.List {
 			if name == field.Name.Name {
@@ -394,7 +394,7 @@ func enumMethod(typ *ast.ServerType, fields map[string]struct{}, call func(metho
 	}
 
 	for _, extend := range typ.Extends {
-		types := extend.Obj.Decl.(*ast.TypeSpec)
+		types := extend.Name.Obj.Decl.(*ast.TypeSpec)
 		server := types.Type.(*ast.ServerType)
 		err := enumMethod(server, fields, call)
 		if err != nil {
@@ -411,7 +411,7 @@ func EnumMethod(typ *ast.ServerType, call func(method *ast.FuncType, server *ast
 
 func CheckSuperMethod(name string, typ *ast.ServerType) bool {
 	for _, extend := range typ.Extends {
-		types := extend.Obj.Decl.(*ast.TypeSpec)
+		types := extend.Name.Obj.Decl.(*ast.TypeSpec)
 		data := types.Type.(*ast.ServerType)
 		for _, field := range data.Methods {
 			if name == field.Name.Name {

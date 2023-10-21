@@ -54,7 +54,8 @@ func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 	dst.Code("  @override\n")
 	dst.Code("  String get name => \"" + build.StringToUnderlineName(typ.Name.Name) + "\";\n\n")
 	dst.Code("  @override\n")
-	dst.Code("  int get id => " + typ.Id.Value + ";\n\n")
+	//TODO dst.Code("  int get id => " + typ.Id.Value + ";\n\n")
+	dst.Code("  int get id => " + "0" + ";\n\n")
 
 	_ = build.EnumMethod(typ, func(method *ast.FuncType, server *ast.ServerType) error {
 		dst.Code("  @override\n")
@@ -71,7 +72,8 @@ func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 		dst.Code(">(\"")
 		dst.Code(build.StringToUnderlineName(server.Name.Name) + "/" + build.StringToUnderlineName(method.Name.Name))
 		dst.Code("\", ")
-		dst.Code(server.Id.Value + " << 32 | " + method.Id.Value)
+		//TODO dst.Code(server.Id.Value + " << 32 | " + method.Id.Value)
+		dst.Code("0 << 32 | " + method.Id.Value)
 		dst.Code(", ")
 		dst.Code(build.StringToFirstLower(method.ParamName.Name))
 		dst.Code(", ")
@@ -96,7 +98,8 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 	dst.Code("  String get name => \"" + build.StringToUnderlineName(typ.Name.Name) + "\";\n\n")
 
 	dst.Code("  @override\n")
-	dst.Code("  int get id => " + typ.Id.Value + ";\n\n")
+	//TODO dst.Code("  int get id => " + typ.Id.Value + ";\n\n")
+	dst.Code("  int get id => 0;\n\n")
 
 	dst.Code("  Map<String, ServerInvoke> _invokeNames = {};\n\n")
 
@@ -132,7 +135,8 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 
 	dst.Code("    _invokeIds = {\n")
 	_ = build.EnumMethod(typ, func(method *ast.FuncType, server *ast.ServerType) error {
-		dst.Code("        " + server.Id.Value + " << 32 | " + method.Id.Value + ": ServerInvoke(\n")
+		//dst.Code("        " + server.Id.Value + " << 32 | " + method.Id.Value + ": ServerInvoke(\n")
+		dst.Code("        0 << 32 | " + method.Id.Value + ": ServerInvoke(\n")
 		dst.Code("        toData: (List<int> buf) async {\n")
 		dst.Code("          return ")
 		b.printType(dst, method.Param.Type(), false)

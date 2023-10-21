@@ -27,17 +27,17 @@ package java = "com.parser"
 //}
 
 [db:]
-data AA = 53 {
+data AA {
     [db:]
     date? config_id = 2
 }
 
-data CB = 0 {
+data CB {
 }
 
 [db:table="AA"; list="parent"; count="true"]
 [ui:table="true"]
-data BB = 52 {
+data BB {
     //    [db:where="AND config_id >= ?", "AND config_id <= ?"]
     //    date[]? config_id = 2
     //

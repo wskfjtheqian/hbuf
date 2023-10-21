@@ -109,16 +109,16 @@ func (b *Builder) printDefault(dst *build.Writer, expr ast.Expr) {
 	}
 }
 
-func (b *Builder) printExtend(dst *build.Writer, extends []*ast.Ident, isFast *bool) {
+func (b *Builder) printExtend(dst *build.Writer, extends []*ast.Extends, isFast *bool) {
 	for _, v := range extends {
 		if !*isFast {
 			dst.Code("\n")
 		}
 		*isFast = false
 		dst.Code("\t")
-		pack := b.getPackage(dst, v)
+		pack := b.getPackage(dst, v.Name)
 		dst.Code(pack)
-		dst.Code(build.StringToHumpName(v.Name))
+		dst.Code(build.StringToHumpName(v.Name.Name))
 		dst.Code("\n")
 	}
 }

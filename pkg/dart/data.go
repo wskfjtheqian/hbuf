@@ -596,13 +596,13 @@ func (b *Builder) printToMap(dst *build.Writer, name string, expr ast.Expr, data
 	}
 }
 
-func (b *Builder) printExtend(dst *build.Writer, extends []*ast.Ident, start bool) {
+func (b *Builder) printExtend(dst *build.Writer, extends []*ast.Extends, start bool) {
 	for i, v := range extends {
 		if 0 != i || start {
 			dst.Code(", ")
 		}
-		b.getPackage(dst, v, "")
-		dst.Code(build.StringToHumpName(v.Name))
+		b.getPackage(dst, v.Name, "")
+		dst.Code(build.StringToHumpName(v.Name.Name))
 
 	}
 }

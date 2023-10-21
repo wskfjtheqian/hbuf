@@ -560,18 +560,26 @@ func (p *parser) parseFieldDecl(scope *ast.Scope) *ast.Field {
 }
 
 ///解析继承的
-func (p *parser) parseExtend() []*ast.Ident {
-	var extends []*ast.Ident
+func (p *parser) parseExtends() []*ast.Extends {
+	var extends []*ast.Extends
 	if p.tok == token.COLON {
 		for p.tok == token.COLON || p.tok == token.COMMA {
-			p.next()
-			if p.tok != token.IDENT {
-				p.error(p.pos, "Data not found Extend Type")
-			}
-			extends = append(extends, p.parseIdent())
+			extends = append(extends, p.parseExtend())
 		}
 	}
 	return extends
+}
+
+///解析继承的
+func (p *parser) parseExtend() *ast.Extends {
+	ret := &ast.Extends{}
+	p.next()
+	if p.tok != token.IDENT {
+		p.error(p.pos, "Extend not found name")
+	}
+	ret.Name = p.parseIdent()
+	ret.Id = p.parseId()
+	return ret
 }
 
 func (p *parser) parseVarType() ast.Type {
@@ -741,8 +749,7 @@ func (p *parser) parseDataSpec(doc *ast.CommentGroup, tags []*ast.Tag) ast.Spec 
 	pos := p.pos
 	p.expect(token.DATA)
 	name := p.parseIdent()
-	extends := p.parseExtend()
-	id := p.parseId()
+	extends := p.parseExtends()
 
 	lbrace := p.expect(token.LBRACE)
 	scope := ast.NewScope(nil) // struct scope
@@ -763,7 +770,6 @@ func (p *parser) parseDataSpec(doc *ast.CommentGroup, tags []*ast.Tag) ast.Spec 
 		Data:    pos,
 		Name:    name,
 		Extends: extends,
-		Id:      id,
 		Fields: &ast.FieldList{
 			Opening: lbrace,
 			List:    list,
@@ -848,8 +854,7 @@ func (p *parser) parseServerSpec(doc *ast.CommentGroup, tags []*ast.Tag) ast.Spe
 	pos := p.pos
 	p.expect(token.SERVER)
 	name := p.parseIdent()
-	extends := p.parseExtend()
-	id := p.parseId()
+	extends := p.parseExtends()
 
 	lbrace := p.expect(token.LBRACE)
 	var list []*ast.FuncType
@@ -873,7 +878,6 @@ func (p *parser) parseServerSpec(doc *ast.CommentGroup, tags []*ast.Tag) ast.Spe
 		Opening: lbrace,
 		Methods: list,
 		Closing: rbrace,
-		Id:      id,
 		Doc:     doc,
 	}
 	p.expectSemi()

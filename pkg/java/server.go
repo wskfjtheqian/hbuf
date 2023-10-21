@@ -59,7 +59,8 @@ func (b *Builder) printServerClient(dst *build.Writer, typ *ast.ServerType) {
 	dst.Code("\t\t}\n\n")
 	dst.Code("\t\t@Override\n")
 	dst.Code("\t\tpublic long getId() {\n")
-	dst.Code("\t\t\treturn " + typ.Id.Value + ";\n")
+	//TODO dst.Code("\t\t\treturn " + typ.Id.Value + ";\n")
+	dst.Code("\t\t\treturn 0;\n")
 	dst.Code("\t\t}\n\n")
 
 	_ = build.EnumMethod(typ, func(method *ast.FuncType, server *ast.ServerType) error {
@@ -75,7 +76,8 @@ func (b *Builder) printServerClient(dst *build.Writer, typ *ast.ServerType) {
 		dst.Code("\t\t\treturn invoke(\"")
 		dst.Code(build.StringToUnderlineName(server.Name.Name) + "/" + build.StringToUnderlineName(method.Name.Name))
 		dst.Code("\", ")
-		dst.Code(server.Id.Value + " << 32 | " + method.Id.Value)
+		//TODO dst.Code(server.Id.Value + " << 32 | " + method.Id.Value)
+		dst.Code("0 << 32 | " + method.Id.Value)
 		dst.Code(", ")
 		dst.Code(build.StringToFirstLower(method.ParamName.Name))
 		dst.Code(", (data) -> Data.formJson.invoke(new String(data), ")

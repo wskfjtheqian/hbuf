@@ -6,7 +6,7 @@ import (
 	"strconv"
 )
 
-//创建表单代码
+// 创建表单代码
 func (b *Builder) printFormCode(dst *build.Writer, expr ast.Expr) {
 	dst.Import("package:flutter/material.dart", "")
 
@@ -48,7 +48,7 @@ type ui struct {
 	table      string
 	format     string
 	digit      int
-	index      int
+	index      *int
 	width      float64
 	height     float64
 	maxLine    int
@@ -90,7 +90,7 @@ func (b *Builder) getUI(tags []*ast.Tag) *ui {
 					//TODO 添加错误处理
 					return nil
 				}
-				form.index = atoi
+				form.index = &atoi
 			} else if "format" == item.Name.Name {
 				form.format = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 			} else if "width" == item.Name.Name {
@@ -207,6 +207,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Code("\t\t\t);\n")
 	dst.Code("\t\t}\n\n")
 
+	i := 0
 	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 
 		table := b.getUI(field.Tags)
@@ -216,19 +217,31 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 
 		isArray := build.IsArray(field.Type)
 		isNull := build.IsNil(field.Type)
-
+		i++
+		index := i
+		if nil != table.index {
+			index = *table.index
+		}
 		dst.Code("\t\ttables.columns[\"")
 		fieldName := build.StringToFirstLower(field.Name.Name)
 		dst.Code(fieldName)
 		dst.Code("\"] = TablesColumn(\n")
-		dst.Code("\t\t\t\tindex: " + strconv.Itoa(table.index) + ",\n")
+		dst.Code("\t\t\t\tindex: " + strconv.Itoa(index) + ",\n")
 		dst.Code("\t\t\t\theaderBuilder: (context) {\n")
 		dst.Code("\t\t\t\t\treturn TablesCell(child: Text(" + name + "Localizations.of(context)." + fieldName + "));\n")
 		dst.Code("\t\t\t\t},\n")
 		dst.Code("\t\t\t\tcellBuilder: (context, x, y, data) {\n")
 		if "image" == table.table {
 			dst.Code("\t\t\t\t\treturn TablesCell(\n")
-			dst.Code("\t\t\t\t\t\tchild: (data." + fieldName)
+			dst.Code("\t\t\t\t\t\tchild: ((data." + fieldName)
+			if isNull {
+				dst.Code("?")
+			}
+			dst.Code(".isEmpty ")
+			if isNull {
+				dst.Code("?? false")
+			}
+			dst.Code(") ? \"\" : data." + fieldName)
 			if isArray {
 				if isNull {
 					dst.Code("?")
@@ -522,9 +535,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 						setValue.Code(" ?? [] ")
 					}
 					setValue.Code(";\n")
-
 				}
-
 			} else {
 				setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName)
 				b.printToString(setValue, field.Type, false, form.digit, form.format, "??\"\"")
@@ -688,7 +699,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			setValue.Code("\t\t" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n")
 			if nil != verify {
 				b.getPackage(dst, typ.Name, "verify")
-				setValue.Code("\t\t" + fieldName + ".validator = (val) => verify" + name + "_" + build.StringToHumpName(fieldName) + "(context, val!);\n")
+				setValue.Code("\t\t" + fieldName + ".validator = (val) => verify" + name + "_" + build.StringToHumpName(fieldName) + "(context, val?.toString());\n")
 			}
 			setValue.Code("\t\t" + fieldName + ".items = [\n")
 			b.printMenuItem(setValue, field.Type, false)

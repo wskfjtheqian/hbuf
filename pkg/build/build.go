@@ -33,12 +33,12 @@ const (
 	Double  BaseType = "double"
 	Decimal BaseType = "decimal"
 	String  BaseType = "string"
+	Date    BaseType = "date"
+	Enum    BaseType = "enum"
 	Data    BaseType = "data"
 	Server  BaseType = "server"
-	Enum    BaseType = "enum"
 	Import  BaseType = "import"
 	Package BaseType = "package"
-	Date    BaseType = "date"
 )
 
 type void struct {

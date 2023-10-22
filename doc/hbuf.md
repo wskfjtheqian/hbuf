@@ -6,11 +6,11 @@
 
 package 语言 = "包名"
 
-|   语言    | 说明  |
-|:-------:|:---:|
-| Flutter | 不支持 |
-| Golang  | 支持  |
-|  Java   | 支持  |
+|   语言   | 说明  |
+|:------:|:---:|
+|  Dart  | 不支持 |
+| Golang | 支持  |
+|  Java  | 支持  |
 
 ```hbuf
 package go = "admin"

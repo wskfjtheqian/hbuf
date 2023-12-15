@@ -1,66 +1,38 @@
 package go = "parser"
 package java = "com.parser"
 
-//enum aa {
-//    [format:reg="[A-Za-z\\d_@.]{2,40}"; null="true"; min="2006-01-02T15:04:05Z"; max="2006-01-02T15:04:05Z"]
-//    ee = 201
-//}
-//
-//enum E {
-//    a = 0
-//
-//    b = 1
-//}
-//
-//[verify:]
-//data ConfigInfo = 53 {
-//    [verify:format="aa.ee"]
-//    [ui:form="text"; onlyRead="true"]
-//    date? config_id = 2
-//}
-//
-//[ui:form="true"]
-//data Info:ConfigInfo = 54 {
-//    [verify:format="aa.ee"]
-//    [ui:form="text"; onlyRead="true"]
-//    int64<int64>? name = 2
-//}
+//12
+enum Status {
+    //启用
+    Enable = 0
 
-[db:]
-data AA {
-    [db:]
-    date? config_id = 2
+    //禁用
+    Disabled = 1
 }
 
-data CB {
+//12
+data GetInfoReq {
+    int64? user_id = 1
 }
 
-[db:table="AA"; list="parent"; count="true"]
-[ui:table="true"]
-data BB {
-    //    [db:where="AND config_id >= ?", "AND config_id <= ?"]
-    //    date[]? config_id = 2
-    //
-    //
-    //    // 职位发布时间排序
-    //    [db:order="ST_DISTANCE_SPHERE(Point(longitude,latitude),Point(?{longitude},?{latitude})) ASC, push_time DESC, id DESC"]
-    //    string order_push_time = 3
-    //
-    //    //工作城市经度
-    //    [db:]
-    //    double longitude = 8
-    //
-    //    //工作城市纬度
-    //    [db:]
-    //    double latitude = 9
+//12
+data GetInfoResp {
+    //姓名
+    string? name = 1
 
-    [ui:table="text"; form="text"]
-    [db:group="$"]
-    string group = 10
+    //年龄
+    int32? age = 2
 
-    [ui:table="text"; form="text"]
-    CB cb = 0
+    //注册时间
+    date? register_time = 3
 
+    //状态
+    Status? status = 4
+}
 
+//12
+server UserServer {
+    //12
+    GetInfoResp GetInfo(GetInfoReq req) = 0
 }
 

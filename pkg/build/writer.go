@@ -23,8 +23,12 @@ func (w *Writer) GetValue(key string) (interface{}, bool) {
 	return val, ok
 }
 
-func (w *Writer) Import(text string, s string) {
+func (w *Writer) Import(text string, s string) string {
+	if as, ok := w.imp[text]; ok {
+		return as
+	}
 	w.imp[text] = s
+	return s
 }
 
 func (w *Writer) Code(text string) {

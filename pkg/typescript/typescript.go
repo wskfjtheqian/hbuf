@@ -12,9 +12,9 @@ import (
 )
 
 var _types = map[build.BaseType]string{
-	build.Int8: "number", build.Int16: "number", build.Int32: "number", build.Int64: "Decimal", build.Uint8: "number",
-	build.Uint16: "number", build.Uint32: "number", build.Uint64: "Decimal", build.Bool: "boolean", build.Float: "number",
-	build.Double: "number", build.String: "string", build.Date: "Date", build.Decimal: "Decimal",
+	build.Int8: "number", build.Int16: "number", build.Int32: "number", build.Int64: "Long", build.Uint8: "number",
+	build.Uint16: "number", build.Uint32: "number", build.Uint64: "Long", build.Bool: "boolean", build.Float: "number",
+	build.Double: "number", build.String: "string", build.Date: "Date", build.Decimal: "d.Decimal",
 }
 
 type DartWriter struct {
@@ -221,10 +221,8 @@ func (b *Builder) printType(dst *build.Writer, expr ast.Expr, notEmpty bool) {
 		} else {
 			if build.Decimal == build.BaseType((expr.(*ast.Ident).Name)) {
 				dst.Import("decimal.js", "d")
-				dst.Code("d.")
 			} else if build.Int64 == build.BaseType((expr.(*ast.Ident).Name)) || build.Uint64 == build.BaseType((expr.(*ast.Ident).Name)) {
-				dst.Import("decimal.js", "d")
-				dst.Code("d.")
+				dst.Import("long", "Long")
 			}
 			dst.Code(_types[build.BaseType((expr.(*ast.Ident).Name))])
 		}

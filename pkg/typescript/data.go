@@ -25,7 +25,7 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) {
 			dst.Code("\t///" + field.Doc.Text())
 		}
 		dst.Code("\t")
-		dst.Code(build.StringToFirstLower(field.Name.Name) + " : ")
+		dst.Code(build.StringToFirstLower(field.Name.Name) + ": ")
 		b.printType(dst, field.Type, false)
 
 		dst.Code(";\n\n")
@@ -35,14 +35,15 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) {
 		return
 	}
 
-	dst.Code("\tpublic static fromJson(json: {}): " + build.StringToHumpName(typ.Name.Name) + "{\n")
+	dst.Code("\tpublic static fromJson(json: {}): " + build.StringToHumpName(typ.Name.Name) + " {\n")
 	dst.Code("\t\tif (null == json) return \n\n")
 	dst.Code("\t\tlet ret = new " + build.StringToHumpName(typ.Name.Name) + "()\n")
-
+	dst.Code("\t\tlet temp:any\n")
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
-		dst.Code("\t\tret." + build.StringToFirstLower(field.Name.Name) + " = json[\"")
-		dst.Code(build.StringToUnderlineName(field.Name.Name))
-		dst.Code("\"]\n")
+		dst.Code("\t\tret." + build.StringToFirstLower(field.Name.Name) + " = ")
+		jsonName := build.StringToUnderlineName(field.Name.Name)
+		b.printFormMap(dst, "(temp = json[\""+jsonName+"\"])", "temp", field.Type, data, false)
+		dst.Code("\n")
 		return nil
 	})
 	if err != nil {
@@ -146,17 +147,18 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
+			p := b.getPackage(dst, t, "")
 			if ast.Enum == t.Obj.Kind {
 				if empty {
-					dst.Code("null == " + name + " ? null :" + v + " is num ? " + t.Name + ".valueOf(" + v + ".toInt()) : null == num.tryParse(" + v + ".toString()) ? null : " + t.Name + ".valueOf(num.tryParse(" + v + ".toString())!.toInt())")
+					dst.Code("null == " + name + " ? null : " + p + "." + t.Name + ".valueOf(Number(" + v + ").valueOf())")
 				} else {
-					dst.Code("null == " + name + " ? " + t.Name + ".valueOf(0) : " + t.Name + ".valueOf(" + v + " is num ? " + v + ".toInt() : num.tryParse(" + v + ".toString())?.toInt() ?? 0)")
+					dst.Code("null == " + name + " ? " + p + "." + t.Name + ".valueOf(0) : " + p + "." + t.Name + ".valueOf(Number(" + v + ").valueOf())")
 				}
 			} else if ast.Data == t.Obj.Kind {
 				if empty {
-					dst.Code("null == " + name + " ? null : " + t.Name + ".fromMap(" + v + ")")
+					dst.Code("null == " + name + " ? null : " + p + "." + t.Name + ".fromJson(" + v + ")")
 				} else {
-					dst.Code("null == " + name + " ? " + t.Name + ".fromMap({}) : " + t.Name + ".fromMap(" + v + ")")
+					dst.Code("null == " + name + " ? " + p + "." + t.Name + ".fromJson({}) : " + p + "." + t.Name + ".fromJson(" + v + ")")
 				}
 			} else {
 				dst.Code("map[\"" + name + "\"]")
@@ -165,45 +167,47 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 			switch build.BaseType(expr.(*ast.Ident).Name) {
 			case build.Int8, build.Int16, build.Int32, build.Uint8, build.Uint16, build.Uint32:
 				if empty {
-					dst.Code("null == " + name + " ? null : (" + v + " is num ? " + v + ".toInt() : num.tryParse(" + v + ".toString())?.toInt())")
+					dst.Code("null == " + name + " ? 0 : Number(" + v + ").valueOf()")
 				} else {
-					dst.Code("null == " + name + " ? 0 : (" + v + " is num ? " + v + ".toInt() : num.tryParse(" + v + ".toString())?.toInt() ?? 0)")
+					dst.Code("null == " + name + " ? 0 : (Number(" + v + ").valueOf() || 0)")
 				}
 			case build.Int64, build.Uint64:
+				dst.Import("long", "Long")
 				if empty {
-					dst.Code("null == " + name + " ? null : Int64.parseInt(" + v + ".toString())")
+					dst.Code("null == " + name + " ? null : Long.fromString(" + v + ")")
 				} else {
-					dst.Code("null == " + name + " ? Int64.ZERO : Int64.parseInt(" + v + ".toString())")
+					dst.Code("null == " + name + " ? Long.ZERO : Long.fromString(" + v + ")")
 				}
 			case build.Float, build.Double:
 				if empty {
-					dst.Code("null == " + name + " ? null : (" + v + " is num ? " + v + ".toDouble() : num.tryParse(" + v + ".toString())?.toDouble())")
+					dst.Code("null == " + name + " ? 0 : Number(" + v + ").valueOf()")
 				} else {
-					dst.Code("null == " + name + " ? 0 : (" + v + " is num ? " + v + ".toDouble() : num.tryParse(" + v + ".toString())?.toDouble() ?? 0)")
+					dst.Code("null == " + name + " ? 0 : (Number(" + v + ").valueOf() || 0)")
 				}
 			case build.String:
 				if empty {
-					dst.Code("null == " + name + " ? null : (" + v + " is String ? " + v + " : " + v + ".toString())")
+					dst.Code("null == " + name + " ? null : (\"\" + " + v + ")")
 				} else {
-					dst.Code("null == " + name + " ? \"\" : (" + v + " is String ? " + v + " : " + v + ".toString())")
+					dst.Code("null == " + name + " ? \"\" : (\"\" + " + v + ")")
 				}
 			case build.Date:
 				if empty {
-					dst.Code("null == " + name + " ? null : " + v + " is num ? DateTime.fromMillisecondsSinceEpoch(" + v + ".toInt()) : null == num.tryParse(" + v + ".toString()) ? null : DateTime.fromMillisecondsSinceEpoch(num.tryParse(" + v + ".toString())!.toInt())")
+					dst.Code("null == " + name + " ? null : new Date(" + v + ")")
 				} else {
-					dst.Code("null == " + name + " ? DateTime.fromMillisecondsSinceEpoch(0) : DateTime.fromMillisecondsSinceEpoch(" + v + " is num ? " + v + ".toInt() : num.tryParse(" + v + ".toString())?.toInt() ?? 0)")
+					dst.Code("null == " + name + " ? new Date(0): new Date(" + v + ")")
 				}
 			case build.Bool:
 				if empty {
-					dst.Code("null == " + name + " ? null : (" + v + " is bool ? " + v + " : (" + v + " is num ? 0 != " + v + " : (null == num.tryParse(" + v + ".toString()) ? null : 0 != num.tryParse(" + v + ".toString()))))")
+					dst.Code("null == " + name + " ? null : (\"true\" === " + v + " ? true : Boolean(" + v + "))")
 				} else {
-					dst.Code("null == " + name + " ? false:(" + v + " is bool ? " + v + " : 0 != (" + v + " is num ? " + v + " : num.tryParse(" + v + ".toString()) ?? 0))")
+					dst.Code("null == " + name + " ? false : (\"true\" === " + v + " ? true : Boolean(" + v + "))")
 				}
 			case build.Decimal:
+				dst.Import("decimal.js", "d")
 				if empty {
-					dst.Code("null == " + name + " ? null : Decimal.tryParse(" + v + ".toString())")
+					dst.Code("null == " + name + " ? null : new d.Decimal(" + v + ")")
 				} else {
-					dst.Code("null == " + name + " ? Decimal.zero : (Decimal.tryParse(" + v + ".toString()) ?? Decimal.zero)")
+					dst.Code("null == " + name + " ? new d.Decimal(0) : new d.Decimal(" + v + ") ")
 				}
 			default:
 				dst.Code("map[\"" + name + "\"]")
@@ -213,42 +217,39 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 		t := expr.(*ast.ArrayType)
 		empty = t.IsEmpty()
 		if empty {
-			dst.Code("null == " + name + " ? null : (" + v + "! is! List ? null : (temp as List).map((temp) => ")
-			b.printFormMap(dst, "temp", "temp", t.VType, data, empty)
-			dst.Code("))")
-		} else {
-			dst.Code("null == " + name + " ? <")
-			b.printType(dst, t.VType, false)
-			dst.Code(">[] : (temp! is! List ? <")
-			b.printType(dst, t.VType, false)
-			dst.Code(">[] : (temp as List).map((item) => ")
+			dst.Code("null == " + name + " ? null : (")
+			dst.Code("Object.is(" + v + ", \"array\") ? null : ")
+			dst.Code("(h.arrayMap(" + v + ", (item) => ")
 			b.printFormMap(dst, "item", "item", t.VType, data, empty)
-			dst.Code("))")
+			dst.Code(")))")
+		} else {
+			dst.Code("null == " + name + " ? [] : (")
+			dst.Code("Object.is(" + v + ", \"array\") ? [] : ")
+			dst.Code("(h.arrayMap(" + v + ", (item) => ")
+			b.printFormMap(dst, "item", "item", t.VType, data, empty)
+			dst.Code(")))")
 		}
 	case *ast.MapType:
 		t := expr.(*ast.MapType)
 		empty = t.IsEmpty()
-		if empty {
-			dst.Code("null == " + name + " ? null : (" + v + "! is! Map ? null : (temp as Map).map((key,value) => MapEntry(")
-			b.printFormMap(dst, "key", "key", t.Key, data, empty)
-			dst.Code(",")
-			b.printFormMap(dst, "value", "value", t.VType, data, empty)
-			dst.Code(")))")
-		} else {
-			dst.Code("null == " + name + " ? <")
-			b.printType(dst, t.Key, false)
-			dst.Code(",")
-			b.printType(dst, t.VType, false)
-			dst.Code(">{}: (temp! is! Map ?<")
-			b.printType(dst, t.Key, false)
-			dst.Code(",")
-			b.printType(dst, t.VType, false)
-			dst.Code(">{} : (temp as Map).map((key,value) => MapEntry(")
-			b.printFormMap(dst, "key", "key", t.Key, data, empty)
-			dst.Code(",")
-			b.printFormMap(dst, "value", "value", t.VType, data, empty)
-			dst.Code(")))")
-		}
+		dst.Code("{}")
+		//if empty {
+		//	dst.Code("null == " + name + " ? null : (" + v + "! is! Map ? null : (temp as Map).map((key,value) => MapEntry(")
+		//	b.printFormMap(dst, "key", "key", t.Key, data, empty)
+		//	dst.Code(",")
+		//	b.printFormMap(dst, "value", "value", t.VType, data, empty)
+		//	dst.Code(")))")
+		//} else {
+		//	dst.Code("null == " + name + " ? {}: (temp! is! Map ?<")
+		//	b.printType(dst, t.Key, false)
+		//	dst.Code(",")
+		//	b.printType(dst, t.VType, false)
+		//	dst.Code(">{} : (temp as Map).map((key,value) => MapEntry(")
+		//	b.printFormMap(dst, "key", "key", t.Key, data, empty)
+		//	dst.Code(",")
+		//	b.printFormMap(dst, "value", "value", t.VType, data, empty)
+		//	dst.Code(")))")
+		//}
 
 	case *ast.VarType:
 		t := expr.(*ast.VarType)

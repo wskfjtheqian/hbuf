@@ -19,11 +19,13 @@ SET GOOS=windows
 
 echo "开始打包 hbuf window版本..........."
 go build -o ./bin/hbuf.exe ./pkg/compile/main.go
-copy D:\dev\1.hbuf\hbuf\bin\hbuf.exe D:\dev\9.recruit\hbuf.exe
-copy D:\dev\1.hbuf\hbuf\bin\hbuf_darwin D:\dev\9.recruit\hbuf_darwin
-copy D:\dev\1.hbuf\hbuf\bin\hbuf_linux D:\dev\9.recruit\hbuf_linux
-
 echo "打包 hbuf window版本 成功"s
+
+copy E:\dev\3.hbuf\hbuf\bin\hbuf.exe E:\dev\9.slot\hbuf.exe
+copy E:\dev\3.hbuf\hbuf\bin\hbuf_darwin E:\dev\9.slot\hbuf_darwin
+copy E:\dev\3.hbuf\hbuf\bin\hbuf_linux E:\dev\9.slot\hbuf_linux
+
+
 
 
 

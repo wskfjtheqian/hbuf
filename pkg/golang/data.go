@@ -14,7 +14,7 @@ func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
 	dst.Code("type " + name + " struct")
 	dst.Code(" {\n")
 	isFast := true
-	b.printExtend(dst, typ.Extends, &isFast)
+	b.printDataExtend(dst, typ.Extends, &isFast)
 
 	for _, field := range typ.Fields.List {
 		if !isFast {
@@ -115,7 +115,7 @@ func (b *Builder) printDefault(dst *build.Writer, expr ast.Expr) {
 	}
 }
 
-func (b *Builder) printExtend(dst *build.Writer, extends []*ast.Extends, isFast *bool) {
+func (b *Builder) printDataExtend(dst *build.Writer, extends []*ast.Extends, isFast *bool) {
 	for _, v := range extends {
 		if !*isFast {
 			dst.Code("\n")

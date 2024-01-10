@@ -27,7 +27,8 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) {
 		dst.Code("\t")
 		dst.Code(build.StringToFirstLower(field.Name.Name) + ": ")
 		b.printType(dst, field.Type, false)
-
+		dst.Code(" = ")
+		b.printDefault(dst, field.Type, false)
 		dst.Code(";\n\n")
 		return nil
 	})
@@ -35,8 +36,7 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) {
 		return
 	}
 
-	dst.Code("\tpublic static fromJson(json: {}): " + build.StringToHumpName(typ.Name.Name) + " {\n")
-	dst.Code("\t\tif (null == json) return \n\n")
+	dst.Code("\tpublic static fromJson(json: Record<string, any>): " + build.StringToHumpName(typ.Name.Name) + "{\n")
 	dst.Code("\t\tlet ret = new " + build.StringToHumpName(typ.Name.Name) + "()\n")
 	dst.Code("\t\tlet temp:any\n")
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
@@ -54,7 +54,7 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) {
 	dst.Code("\t}\n\n")
 
 	dst.Code("\n")
-	dst.Code("\tpublic toJson(): {} {\n")
+	dst.Code("\tpublic toJson(): Record<string, any> {\n")
 	dst.Code("\t\treturn {\n")
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 		dst.Code("\t\t\t\"" + build.StringToUnderlineName(field.Name.Name))
@@ -69,12 +69,13 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) {
 	dst.Code("\t\t};\n")
 	dst.Code("\t}\n\n")
 
-	dst.Code("\tpublic static fromData(data: BinaryData): " + build.StringToHumpName(typ.Name.Name) + "{\n")
-	dst.Code("\t\treturn undefined\n")
+	dst.Code("\tpublic static fromData(data: BinaryData): " + build.StringToHumpName(typ.Name.Name) + " {\n")
+	dst.Code("\t\tlet ret = new " + build.StringToHumpName(typ.Name.Name) + "()\n")
+	dst.Code("\t\treturn ret\n")
 	dst.Code("\t}\n\n")
 
 	dst.Code("\tpublic toData(): BinaryData {\n")
-	dst.Code("\t\treturn undefined\n")
+	dst.Code("\t\treturn new ArrayBuffer(0)\n")
 	dst.Code("\t}\n\n")
 
 	dst.Code("}\n\n")
@@ -167,7 +168,7 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 			switch build.BaseType(expr.(*ast.Ident).Name) {
 			case build.Int8, build.Int16, build.Int32, build.Uint8, build.Uint16, build.Uint32:
 				if empty {
-					dst.Code("null == " + name + " ? 0 : Number(" + v + ").valueOf()")
+					dst.Code("null == " + name + " ? null : Number(" + v + ").valueOf()")
 				} else {
 					dst.Code("null == " + name + " ? 0 : (Number(" + v + ").valueOf() || 0)")
 				}
@@ -180,7 +181,7 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 				}
 			case build.Float, build.Double:
 				if empty {
-					dst.Code("null == " + name + " ? 0 : Number(" + v + ").valueOf()")
+					dst.Code("null == " + name + " ? null : Number(" + v + ").valueOf()")
 				} else {
 					dst.Code("null == " + name + " ? 0 : (Number(" + v + ").valueOf() || 0)")
 				}
@@ -203,7 +204,7 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 					dst.Code("null == " + name + " ? false : (\"true\" === " + v + " ? true : Boolean(" + v + "))")
 				}
 			case build.Decimal:
-				dst.Import("decimal.js", "d")
+				dst.Import("decimal.js", "* as d")
 				if empty {
 					dst.Code("null == " + name + " ? null : new d.Decimal(" + v + ")")
 				} else {

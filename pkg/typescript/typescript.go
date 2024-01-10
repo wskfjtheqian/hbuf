@@ -17,6 +17,12 @@ var _types = map[build.BaseType]string{
 	build.Double: "number", build.String: "string", build.Date: "Date", build.Decimal: "d.Decimal",
 }
 
+var _typesValue = map[build.BaseType]string{
+	build.Int8: "0", build.Int16: "0", build.Int32: "0", build.Int64: "Long.ZERO", build.Uint8: "0",
+	build.Uint16: "0", build.Uint32: "0", build.Uint64: "Long.ZERO", build.Bool: "false", build.Float: "0.0",
+	build.Double: "0.0", build.String: "\"\"", build.Date: "new Date()", build.Decimal: "new d.Decimal(0)",
+}
+
 type DartWriter struct {
 	data   *build.Writer
 	enum   *build.Writer
@@ -162,7 +168,7 @@ func writerFile(data *build.Writer, out string) error {
 		}
 		sort.Strings(imps)
 		for _, val := range imps {
-			_, _ = fc.WriteString("import * as " + temp[val] + " from \"" + val + "\"\n")
+			_, _ = fc.WriteString("import " + temp[val] + " from \"" + val + "\"\n")
 		}
 	}
 	_, _ = fc.WriteString("\n")
@@ -215,41 +221,45 @@ func (b *Builder) printType(dst *build.Writer, expr ast.Expr, notEmpty bool) {
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
-			dst.Code(b.getPackage(dst, expr, ""))
+			pkg := b.getPackage(dst, expr, "")
+			dst.Code(pkg)
 			dst.Code(".")
 			dst.Code(expr.(*ast.Ident).Name)
 		} else {
 			if build.Decimal == build.BaseType((expr.(*ast.Ident).Name)) {
-				dst.Import("decimal.js", "d")
+				dst.Import("decimal.js", "* as d")
 			} else if build.Int64 == build.BaseType((expr.(*ast.Ident).Name)) || build.Uint64 == build.BaseType((expr.(*ast.Ident).Name)) {
 				dst.Import("long", "Long")
 			}
 			dst.Code(_types[build.BaseType((expr.(*ast.Ident).Name))])
+
 		}
 	case *ast.ArrayType:
 		ar := expr.(*ast.ArrayType)
+		dst.Code("(")
 		b.printType(dst, ar.VType, false)
-		dst.Code("[]")
-		//if ar.Empty && !notEmpty {
-		//	dst.Code("?")
-		//}
+		dst.Code(")[]")
+		if ar.Empty && !notEmpty {
+			dst.Code(" | null")
+		}
 	case *ast.MapType:
 		ma := expr.(*ast.MapType)
-		dst.Code("Map<")
+		dst.Code("Record<(")
 		b.printType(dst, ma.Key, false)
-		dst.Code(", ")
+		dst.Code("), (")
 		b.printType(dst, ma.VType, false)
-		dst.Code(">")
-		//if ma.Empty && !notEmpty {
-		//	dst.Code("?")
-		//}
+		dst.Code(")>")
+		if ma.Empty && !notEmpty {
+			dst.Code(" | null")
+		}
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
-		b.printType(dst, t.Type(), false)
-		//if t.Empty && !notEmpty {
-		//	dst.Code("?")
-		//}
+		b.printType(dst, t.Type(), t.Empty)
+		if t.Empty && !notEmpty {
+			dst.Code(" | null")
+		}
 	}
+	return
 }
 
 func (b *Builder) getPackage(dst *build.Writer, expr ast.Expr, s string) string {
@@ -276,5 +286,58 @@ func (b *Builder) getPackage(dst *build.Writer, expr ast.Expr, s string) string 
 		}
 	}
 
-	return dst.Import("./"+name, "$"+strconv.Itoa(len(dst.GetImports())))
+	p := dst.Import("./"+name, "* as $"+strconv.Itoa(len(dst.GetImports())))
+	return p[5:]
+}
+
+func (b *Builder) printDefault(dst *build.Writer, expr ast.Expr, notEmpty bool) string {
+	switch expr.(type) {
+	case *ast.Ident:
+		t := expr.(*ast.Ident)
+		if nil != t.Obj {
+			if ast.Enum == t.Obj.Kind {
+				pkg := b.getPackage(dst, expr, "")
+				dst.Code(pkg)
+				dst.Code(".")
+				dst.Code(expr.(*ast.Ident).Name)
+				dst.Code(".valueOf(0)")
+			} else {
+				dst.Code("new ")
+				pkg := b.getPackage(dst, expr, "")
+				dst.Code(pkg)
+				dst.Code(".")
+				dst.Code(expr.(*ast.Ident).Name)
+				dst.Code("()")
+			}
+		} else {
+			if build.Decimal == build.BaseType((expr.(*ast.Ident).Name)) {
+				dst.Import("decimal.js", "* as d")
+			} else if build.Int64 == build.BaseType((expr.(*ast.Ident).Name)) || build.Uint64 == build.BaseType((expr.(*ast.Ident).Name)) {
+				dst.Import("long", "Long")
+			}
+			dst.Code(_typesValue[build.BaseType((expr.(*ast.Ident).Name))])
+		}
+	case *ast.ArrayType:
+		ar := expr.(*ast.ArrayType)
+		if ar.Empty && !notEmpty {
+			dst.Code("null")
+		} else {
+			dst.Code("[]")
+		}
+	case *ast.MapType:
+		ma := expr.(*ast.MapType)
+		if ma.Empty && !notEmpty {
+			dst.Code("null")
+		} else {
+			dst.Code("{}")
+		}
+	case *ast.VarType:
+		t := expr.(*ast.VarType)
+		if t.Empty && !notEmpty {
+			dst.Code("null")
+		} else {
+			b.printDefault(dst, t.Type(), t.Empty)
+		}
+	}
+	return ""
 }

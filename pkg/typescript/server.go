@@ -10,7 +10,7 @@ func (b *Builder) printServerCode(dst *build.Writer, typ *ast.ServerType) {
 
 	b.printServer(dst, typ)
 	b.printServerImp(dst, typ)
-	//b.printServerRouter(dst, typ)
+	b.printServerRouter(dst, typ)
 
 }
 
@@ -98,73 +98,50 @@ func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 }
 
 func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
-	dst.Code("class " + build.StringToHumpName(typ.Name.Name) + "Router extends h.ServerRouter")
 
-	dst.Code("{\n")
-	dst.Code("\tfinal " + build.StringToHumpName(typ.Name.Name) + " server;\n\n")
-
-	dst.Code("\t@override\n")
-	dst.Code("\tString get name => \"" + build.StringToUnderlineName(typ.Name.Name) + "\";\n\n")
-
-	dst.Code("\t@override\n")
-	//TODO dst.Code("  int get id => " + typ.Id.Value + ";\n\n")
-	dst.Code("\tint get id => 0;\n\n")
-
-	dst.Code("\tMap<String, ServerInvoke> _invokeNames = {};\n\n")
-
-	dst.Code("\tMap<int, ServerInvoke> _invokeIds = {};\n\n")
-
-	dst.Code("\t@override\n")
-	dst.Code("\tMap<String, ServerInvoke> get invokeNames => _invokeNames;\n\n")
-
-	dst.Code("\t@override\n")
-	dst.Code("\tMap<int, ServerInvoke> get invokeIds => _invokeIds;\n\n")
-
-	dst.Code("\t" + build.StringToHumpName(typ.Name.Name) + "Router(this.server){\n")
-	dst.Code("\t\t_invokeNames = {\n")
-	_ = build.EnumMethod(typ, func(method *ast.FuncType, server *ast.ServerType) error {
-		dst.Code("\t\t\t\"" + build.StringToUnderlineName(server.Name.Name) + "/" + build.StringToUnderlineName(method.Name.Name) + "\": ServerInvoke(\n")
-		dst.Code("\t\t\t\ttoData: (List<int> buf) async {\n")
+	dst.Code("class " + build.StringToHumpName(typ.Name.Name) + "Router implements h.ServerRouter {\n")
+	dst.Code("\treadonly server: " + build.StringToHumpName(typ.Name.Name) + "\n")
+	dst.Code("\n")
+	dst.Code("\tinvoke: Record<string, h.ServerInvoke>\n")
+	dst.Code("\n")
+	dst.Code("\tgetInvoke(): Record<string, h.ServerInvoke> {\n")
+	dst.Code("\t\treturn this.invoke\n")
+	dst.Code("\t}\n")
+	dst.Code("\n")
+	dst.Code("\tgetName(): string {\n")
+	dst.Code("\t\treturn \"" + build.StringToUnderlineName(typ.Name.Name) + "\"\n")
+	dst.Code("\t}\n")
+	dst.Code("\n")
+	dst.Code("\tgetId(): number {\n")
+	dst.Code("\t\treturn 0\n")
+	dst.Code("\t}\n")
+	dst.Code("\n")
+	dst.Code("\tconstructor(server: " + build.StringToHumpName(typ.Name.Name) + ") {\n")
+	dst.Code("\t\tthis.server = server\n")
+	dst.Code("\t\tthis.invoke = {\n")
+	err := build.EnumMethod(typ, func(method *ast.FuncType, server *ast.ServerType) error {
+		dst.Code("\t\t\t\"" + build.StringToUnderlineName(server.Name.Name) + "/" + build.StringToUnderlineName(method.Name.Name) + "\": {\n")
+		dst.Code("\t\t\t\tformData(data: BinaryData | Record<string, any>): h.Data {\n")
 		dst.Code("\t\t\t\t\treturn ")
 		b.printType(dst, method.Param.Type(), false)
-		dst.Code(".fromMap(json.decode(utf8.decode(buf)));\n")
+		dst.Code(".fromJson(data)\n")
 		dst.Code("\t\t\t\t},\n")
-		dst.Code("\t\t\t\tformData: (Data data) async {\n")
-		dst.Code("\t\t\t\t\t return utf8.encode(json.encode(data.toMap()));\n")
+		dst.Code("\t\t\t\ttoData(data: h.Data): BinaryData | Record<string, any> {\n")
+		dst.Code("\t\t\t\t\treturn data.toJson()\n")
 		dst.Code("\t\t\t\t},\n")
-		dst.Code("\t\t\t\tinvoke: (Context ctx, Data data) async {\n")
-		dst.Code("\t\t\t\t\t return await server." + build.StringToFirstLower(method.Name.Name) + "(data as ")
+		dst.Code("\t\t\t\tinvoke(data: h.Data, ctx?: h.Context): Promise<h.Data> {\n")
+		dst.Code("\t\t\t\t\treturn server." + build.StringToFirstLower(method.Name.Name) + "(data as ")
 		b.printType(dst, method.Param.Type(), false)
 		dst.Code(", ctx);\n")
-		dst.Code("\t\t\t\t},\n")
-		dst.Code("\t\t\t),\n")
+		dst.Code("\t\t\t\t}\n")
+		dst.Code("\t\t\t},\n")
 		return nil
 	})
-	dst.Code("\t\t};\n\n")
+	if err != nil {
+		return
+	}
 
-	dst.Code("\t\t_invokeIds = {\n")
-	_ = build.EnumMethod(typ, func(method *ast.FuncType, server *ast.ServerType) error {
-		//dst.Code("        " + server.Id.Value + " << 32 | " + method.Id.Value + ": ServerInvoke(\n")
-		dst.Code("\t\t\t\t0 << 32 | " + method.Id.Value + ": ServerInvoke(\n")
-		dst.Code("\t\t\t\ttoData: (List<int> buf) async {\n")
-		dst.Code("\t\t\t\t\treturn ")
-		b.printType(dst, method.Param.Type(), false)
-		dst.Code(".fromData(ByteData.view(Uint8List.fromList(buf).buffer));\n")
-		dst.Code("\t\t\t\t},\n")
-		dst.Code("\t\t\t\tformData: (Data data) async {\n")
-		dst.Code("\t\t\t\t\t return data.toData().buffer.asUint8List();\n")
-		dst.Code("\t\t\t\t},\n")
-		dst.Code("\t\t\t\tinvoke: (Context ctx, Data data) async {\n")
-		dst.Code("\t\t\t\t\t return await server." + build.StringToFirstLower(method.Name.Name) + "(data as ")
-		b.printType(dst, method.Param.Type(), false)
-		dst.Code(", ctx);\n")
-		dst.Code("\t\t\t\t},\n")
-		dst.Code("\t\t\t),\n")
-		return nil
-	})
-	dst.Code("\t\t};\n\n")
-
-	dst.Code("\t}\n\n")
-
-	dst.Code("}\n\n")
+	dst.Code("\t\t}\n")
+	dst.Code("\t}\n")
+	dst.Code("}\n")
 }

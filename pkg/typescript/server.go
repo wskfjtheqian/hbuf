@@ -99,7 +99,7 @@ func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 
 func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 
-	dst.Code("class " + build.StringToHumpName(typ.Name.Name) + "Router implements h.ServerRouter {\n")
+	dst.Code("export class " + build.StringToHumpName(typ.Name.Name) + "Router implements h.ServerRouter {\n")
 	dst.Code("\treadonly server: " + build.StringToHumpName(typ.Name.Name) + "\n")
 	dst.Code("\n")
 	dst.Code("\tinvoke: Record<string, h.ServerInvoke>\n")

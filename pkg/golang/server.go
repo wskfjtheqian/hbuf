@@ -96,6 +96,14 @@ func (b *Builder) printClient(dst *build.Writer, typ *ast.ServerType) {
 	dst.Code("func (p *" + serverName + "Client) Init(ctx context.Context) {\n")
 	dst.Code("}\n\n")
 
+	dst.Code("func (p *" + serverName + "Client) GetName() string {\n")
+	dst.Code("\treturn \"" + build.StringToUnderlineName(typ.Name.Name) + "\"\n")
+	dst.Code("}\n\n")
+
+	dst.Code("func (p *" + serverName + "Client) GetId() uint32 {\n")
+	dst.Code("\treturn 1\n")
+	dst.Code("}\n\n")
+
 	dst.Code("func New" + serverName + "Client(client rpc.Client) *" + serverName + "Client {\n")
 	dst.Code("\treturn &" + serverName + "Client{\n")
 	dst.Code("\t\tclient: client,\n")

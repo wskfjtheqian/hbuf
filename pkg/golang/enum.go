@@ -9,7 +9,7 @@ import (
 func printEnumCode(dst *build.Writer, typ *ast.EnumType) {
 	name := build.StringToHumpName(typ.Name.Name)
 	if nil != typ.Doc && 0 < len(typ.Doc.Text()) {
-		dst.Code("//" + name + " " + typ.Doc.Text())
+		dst.Code("// " + name + " " + typ.Doc.Text())
 	}
 	maxLen := 0
 	dst.Code("type " + name + " int\n\n")
@@ -20,7 +20,7 @@ func printEnumCode(dst *build.Writer, typ *ast.EnumType) {
 			maxLen = l
 		}
 		if nil != item.Doc && 0 < len(item.Doc.Text()) {
-			dst.Code("//" + name + itemName + " " + item.Doc.Text())
+			dst.Code("// " + name + itemName + " " + item.Doc.Text())
 		}
 		dst.Code("const " + name + itemName + " " + name + " = " + item.Id.Value + "\n\n")
 	}

@@ -21,7 +21,7 @@ func (b *Builder) printServerCode(dst *build.Writer, typ *ast.ServerType) {
 func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
 	serverName := build.StringToHumpName(typ.Name.Name)
 	if nil != typ.Doc && 0 < len(typ.Doc.Text()) {
-		dst.Code("//" + build.StringToHumpName(serverName) + " " + typ.Doc.Text())
+		dst.Code("// " + build.StringToHumpName(serverName) + " " + typ.Doc.Text())
 	}
 	dst.Code("type " + serverName)
 	dst.Code(" interface {\n")
@@ -53,7 +53,7 @@ func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
 func (b *Builder) printServerDefault(dst *build.Writer, typ *ast.ServerType) {
 	serverName := build.StringToHumpName(typ.Name.Name)
 	if nil != typ.Doc && 0 < len(typ.Doc.Text()) {
-		dst.Code("//" + build.StringToHumpName(serverName) + " " + typ.Doc.Text())
+		dst.Code("// " + build.StringToHumpName(serverName) + " " + typ.Doc.Text())
 	}
 	dst.Code("type Default" + serverName)
 	dst.Code(" struct {\n")
@@ -66,7 +66,7 @@ func (b *Builder) printServerDefault(dst *build.Writer, typ *ast.ServerType) {
 
 	for _, method := range typ.Methods {
 		if nil != method.Doc && 0 < len(method.Doc.Text()) {
-			dst.Code("//" + build.StringToHumpName(method.Name.Name) + " " + method.Doc.Text())
+			dst.Code("// " + build.StringToHumpName(method.Name.Name) + " " + method.Doc.Text())
 		}
 
 		dst.Import("errors", "")
@@ -112,7 +112,7 @@ func (b *Builder) printClient(dst *build.Writer, typ *ast.ServerType) {
 	name := build.StringToUnderlineName(typ.Name.Name)
 	err := build.EnumMethod(typ, func(method *ast.FuncType, server *ast.ServerType) error {
 		if nil != method.Doc && 0 < len(method.Doc.Text()) {
-			dst.Code("//" + build.StringToHumpName(method.Name.Name) + " " + method.Doc.Text())
+			dst.Code("// " + build.StringToHumpName(method.Name.Name) + " " + method.Doc.Text())
 		}
 		dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "")
 

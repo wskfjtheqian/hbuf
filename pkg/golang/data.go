@@ -9,7 +9,7 @@ func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
 	dst.Import("encoding/json", "")
 	name := build.StringToHumpName(typ.Name.Name)
 	if nil != typ.Doc && 0 < len(typ.Doc.Text()) {
-		dst.Code("//" + name + " " + typ.Doc.Text())
+		dst.Code("// " + name + " " + typ.Doc.Text())
 	}
 	dst.Code("type " + name + " struct")
 	dst.Code(" {\n")

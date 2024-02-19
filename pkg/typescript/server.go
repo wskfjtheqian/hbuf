@@ -28,6 +28,7 @@ func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
 		if nil != method.Doc && 0 < len(method.Doc.Text()) {
 			dst.Code("\t//" + method.Doc.Text())
 		}
+		isMethod := method.Result.Type().(*ast.Ident).Name == "void"
 
 		dst.Code("\t" + build.StringToFirstLower(method.Name.Name))
 		dst.Code("(")
@@ -36,7 +37,11 @@ func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
 
 		dst.Code(", ctx?: h.Context): ")
 		dst.Code("Promise<")
-		b.printType(dst, method.Result.Type(), false)
+		if isMethod {
+			dst.Code("void")
+		} else {
+			b.printType(dst, method.Result.Type(), false)
+		}
 		dst.Code(">\n\n")
 	}
 	dst.Code("}\n\n")
@@ -66,6 +71,7 @@ func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 		if nil != method.Doc && 0 < len(method.Doc.Text()) {
 			dst.Code("\t//" + method.Doc.Text())
 		}
+		isMethod := method.Result.Type().(*ast.Ident).Name == "void"
 
 		dst.Code("\t" + build.StringToFirstLower(method.Name.Name))
 		dst.Code("(")
@@ -74,11 +80,20 @@ func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 
 		dst.Code(", ctx?: h.Context): ")
 		dst.Code("Promise<")
-		b.printType(dst, method.Result.Type(), false)
+		if isMethod {
+			dst.Code("void")
+		} else {
+			b.printType(dst, method.Result.Type(), false)
+		}
+
 		dst.Code("> {\n")
 
 		dst.Code("\t\treturn this.invoke<")
-		b.printType(dst, method.Result.Type(), false)
+		if isMethod {
+			dst.Code("void")
+		} else {
+			b.printType(dst, method.Result.Type(), false)
+		}
 		dst.Code(">(\"")
 		dst.Code(build.StringToUnderlineName(server.Name.Name) + "/" + build.StringToUnderlineName(method.Name.Name))
 		dst.Code("\", ")
@@ -86,10 +101,14 @@ func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 		dst.Code(", ")
 		dst.Code(build.StringToFirstLower(method.ParamName.Name))
 		dst.Code(", ")
-		b.printType(dst, method.Result.Type(), false)
-		dst.Code(".fromJson, ")
-		b.printType(dst, method.Result.Type(), false)
-		dst.Code(".fromData);\n")
+		if isMethod {
+			dst.Code("null, null);\n")
+		} else {
+			b.printType(dst, method.Result.Type(), false)
+			dst.Code(".fromJson, ")
+			b.printType(dst, method.Result.Type(), false)
+			dst.Code(".fromData);\n")
+		}
 
 		dst.Code("\t}\n\n")
 		return nil
@@ -129,7 +148,7 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 		dst.Code("\t\t\t\ttoData(data: h.Data): BinaryData | Record<string, any> {\n")
 		dst.Code("\t\t\t\t\treturn data.toJson()\n")
 		dst.Code("\t\t\t\t},\n")
-		dst.Code("\t\t\t\tinvoke(data: h.Data, ctx?: h.Context): Promise<h.Data> {\n")
+		dst.Code("\t\t\t\tinvoke(data: h.Data, ctx?: h.Context): Promise<h.Data | void> {\n")
 		dst.Code("\t\t\t\t\treturn server." + build.StringToFirstLower(method.Name.Name) + "(data as ")
 		b.printType(dst, method.Param.Type(), false)
 		dst.Code(", ctx);\n")

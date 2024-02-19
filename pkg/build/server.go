@@ -46,9 +46,12 @@ func (b *Builder) checkServerItem(file *ast.File, server *ast.ServerType) error 
 			return err
 		}
 
-		err = b.checkServerItemType(file, item.Result)
-		if err != nil {
-			return err
+		ident := item.Result.TypeExpr.(*ast.Ident)
+		if "void" != ident.Name {
+			err = b.checkServerItemType(file, item.Result)
+			if err != nil {
+				return err
+			}
 		}
 
 		if _, ok := _keys[BaseType(item.Name.Name)]; ok {

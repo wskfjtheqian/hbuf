@@ -37,15 +37,21 @@ func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
 		if nil != method.Doc && 0 < len(method.Doc.Text()) {
 			dst.Code("\t//" + build.StringToHumpName(method.Name.Name) + " " + method.Doc.Text())
 		}
+		isMethod := method.Result.Type().(*ast.Ident).Name == "void"
 
 		dst.Code("\t" + build.StringToHumpName(method.Name.Name))
 		dst.Code("(ctx context.Context, ")
 		dst.Code(build.StringToFirstLower(method.ParamName.Name))
 		dst.Code(" *")
 		b.printType(dst, method.Param, true)
-		dst.Code(") (*")
-		b.printType(dst, method.Result.Type(), true)
-		dst.Code(", error)\n")
+		dst.Code(") ")
+		if isMethod {
+			dst.Code("error\n")
+		} else {
+			dst.Code("(*")
+			b.printType(dst, method.Result.Type(), true)
+			dst.Code(", error)\n")
+		}
 	}
 	dst.Code("}\n\n")
 }
@@ -68,6 +74,7 @@ func (b *Builder) printServerDefault(dst *build.Writer, typ *ast.ServerType) {
 		if nil != method.Doc && 0 < len(method.Doc.Text()) {
 			dst.Code("// " + build.StringToHumpName(method.Name.Name) + " " + method.Doc.Text())
 		}
+		isMethod := method.Result.Type().(*ast.Ident).Name == "void"
 
 		dst.Import("errors", "")
 		dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/erro", "")
@@ -78,11 +85,15 @@ func (b *Builder) printServerDefault(dst *build.Writer, typ *ast.ServerType) {
 		dst.Code(build.StringToFirstLower(method.ParamName.Name))
 		dst.Code(" *")
 		b.printType(dst, method.Param, true)
-		dst.Code(") (*")
-		b.printType(dst, method.Result.Type(), true)
-		dst.Code(", error) {\n")
-		dst.Code("\treturn nil, erro.Wrap(errors.New(\"not find server\"))\n")
-
+		if isMethod {
+			dst.Code(") error {\n")
+			dst.Code("\treturn erro.Wrap(errors.New(\"not find server " + build.StringToUnderlineName(typ.Name.Name) + "\"))\n")
+		} else {
+			dst.Code(") (*")
+			b.printType(dst, method.Result.Type(), true)
+			dst.Code(", error) {\n")
+			dst.Code("\treturn nil, erro.Wrap(errors.New(\"not find server " + build.StringToUnderlineName(typ.Name.Name) + "\"))\n")
+		}
 		dst.Code("}\n\n")
 	}
 }
@@ -116,33 +127,54 @@ func (b *Builder) printClient(dst *build.Writer, typ *ast.ServerType) {
 		}
 		dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "")
 
+		isMethod := method.Result.Type().(*ast.Ident).Name == "void"
+
 		dst.Code("func (r *" + serverName + "Client) ")
 		dst.Code(build.StringToHumpName(method.Name.Name))
 		dst.Code("(ctx context.Context, ")
 		dst.Code(build.StringToFirstLower(method.ParamName.Name))
 		dst.Code(" *")
 		b.printType(dst, method.Param, true)
-		dst.Code(") (*")
-		b.printType(dst, method.Result.Type(), true)
-		dst.Code(", error) {\n")
+		dst.Code(") ")
+		if isMethod {
+			dst.Code("error {\n")
+		} else {
+			dst.Code("(*")
+			b.printType(dst, method.Result.Type(), true)
+			dst.Code(", error) {\n")
+		}
 		dst.Import("encoding/json", "")
-		dst.Code("\tret, err := r.client.Invoke(ctx, req, \"" + name + "/" + build.StringToUnderlineName(typ.Name.Name) + "/" + build.StringToUnderlineName(method.Name.Name) + "\", &rpc.ClientInvoke{\n")
-		dst.Code("\t\tToData: func(buf []byte) (hbuf.Data, error) {\n")
-		dst.Code("\t\t\tvar req ")
-		b.printType(dst, method.Result.Type(), true)
-		dst.Code("\n")
-		dst.Code("\t\t\treturn &req, json.Unmarshal(buf, &req)\n")
-		dst.Code("\t\t},\n")
+		if isMethod {
+			dst.Code("\t_")
+		} else {
+			dst.Code("\tret")
+		}
+		dst.Code("\t, err := r.client.Invoke(ctx, req, \"" + name + "/" + build.StringToUnderlineName(typ.Name.Name) + "/" + build.StringToUnderlineName(method.Name.Name) + "\", &rpc.ClientInvoke{\n")
+		if !isMethod {
+			dst.Code("\t\tToData: func(buf []byte) (hbuf.Data, error) {\n")
+			dst.Code("\t\t\tvar req ")
+			b.printType(dst, method.Result.Type(), true)
+			dst.Code("\n")
+			dst.Code("\t\t\treturn &req, json.Unmarshal(buf, &req)\n")
+			dst.Code("\t\t},\n")
+		}
 		dst.Code("\t\tFormData: func(data hbuf.Data) ([]byte, error) {\n")
 		dst.Code("\t\t\treturn json.Marshal(&data)\n")
 		dst.Code("\t\t},\n")
 		dst.Code("\t}, 1, &rpc.ClientInvoke{})\n")
-		dst.Code("\tif err != nil {\n")
-		dst.Code("\t\treturn nil, err\n")
-		dst.Code("\t}\n")
-		dst.Code("\treturn ret.(*")
-		b.printType(dst, method.Result.Type(), true)
-		dst.Code("), nil\n")
+		if isMethod {
+			dst.Code("\tif err != nil {\n")
+			dst.Code("\t\treturn err\n")
+			dst.Code("\t}\n")
+			dst.Code("\treturn nil\n")
+		} else {
+			dst.Code("\tif err != nil {\n")
+			dst.Code("\t\treturn nil, err\n")
+			dst.Code("\t}\n")
+			dst.Code("\treturn ret.(*")
+			b.printType(dst, method.Result.Type(), true)
+			dst.Code("), nil\n")
+		}
 		dst.Code("}\n")
 		dst.Code("\n")
 		return nil
@@ -198,6 +230,8 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 	err := build.EnumMethod(typ, func(method *ast.FuncType, server *ast.ServerType) error {
 		dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "")
 
+		isMethod := method.Result.Type().(*ast.Ident).Name == "void"
+
 		dst.Code("\t\t\t\"" + build.StringToUnderlineName(typ.Name.Name) + "/" + build.StringToUnderlineName(method.Name.Name) + "\": {\n")
 		dst.Code("\t\t\t\tToData: func(buf []byte) (hbuf.Data, error) {\n")
 		dst.Code("\t\t\t\t\tvar req ")
@@ -206,9 +240,11 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 		dst.Import("encoding/json", "")
 		dst.Code("\t\t\t\t\treturn &req, json.Unmarshal(buf, &req)\n")
 		dst.Code("\t\t\t\t},\n")
-		dst.Code("\t\t\t\tFormData: func(data hbuf.Data) ([]byte, error) {\n")
-		dst.Code("\t\t\t\t\treturn json.Marshal(&data)\n")
-		dst.Code("\t\t\t\t},\n")
+		if !isMethod {
+			dst.Code("\t\t\t\tFormData: func(data hbuf.Data) ([]byte, error) {\n")
+			dst.Code("\t\t\t\t\treturn json.Marshal(&data)\n")
+			dst.Code("\t\t\t\t},\n")
+		}
 		dst.Code("\t\t\t\tSetInfo: func(ctx context.Context) {\n")
 
 		au := b.getTag(method.Tags)
@@ -221,7 +257,11 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 		}
 		dst.Code("\t\t\t\t},\n")
 		dst.Code("\t\t\t\tInvoke: func(ctx context.Context, data hbuf.Data) (hbuf.Data, error) {\n")
-		dst.Code("\t\t\t\t\treturn server." + build.StringToHumpName(method.Name.Name) + "(ctx, data.(*")
+		dst.Code("\t\t\t\t\treturn ")
+		if isMethod {
+			dst.Code("nil, ")
+		}
+		dst.Code("server." + build.StringToHumpName(method.Name.Name) + "(ctx, data.(*")
 		b.printType(dst, method.Param, true)
 		dst.Code("))\n")
 		dst.Code("\t\t\t\t},\n")

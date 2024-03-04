@@ -834,24 +834,22 @@ func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, key string,
 	dst.Code("\ts.T(\"SELECT " + item.String() + " FROM " + db.Name + " WHERE del_time IS NULL\")\n")
 	dst.Code(w.GetCode().String())
 	dst.Code("\ts.T(\" LIMIT 1\")\n")
-	dst.Code("\tvar val " + dName + "\n")
+	dst.Code("\tvar val *" + dName + "\n")
 
 	if nil != c {
 		dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/cache", "")
 		dst.Code("\tcv, key, _ := cache.DbGet(ctx, \"\", \"" + db.Name + "\", s, &val)\n")
 		dst.Code("\tif cv != nil {\n")
-		dst.Code("\t\treturn cv, nil\n")
+		dst.Code("\t\treturn *cv, nil\n")
 		dst.Code("\t}\n")
 	}
 	dst.Import("database/sql", "")
-	dst.Code("\tcount, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
+	dst.Code("\t_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
+	dst.Code("\t\tval = &" + dName + "{}\n")
 	dst.Code("\t\treturn false, rows.Scan(" + scan.String() + ")\n")
 	dst.Code("\t})\n")
 	dst.Code("\tif err != nil {\n")
 	dst.Code("\t\treturn nil, err\n")
-	dst.Code("\t}\n")
-	dst.Code("\tif 0 == count {\n")
-	dst.Code("\t\treturn nil, nil\n")
 	dst.Code("\t}\n")
 	if nil != c {
 		dst.Import("math/rand", "")
@@ -865,7 +863,7 @@ func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, key string,
 		dst.Code(")\n")
 		dst.Code("\tdefer cache.DbUnlock(ctx, \"" + db.Name + "\")\n")
 	}
-	dst.Code("\treturn &val, nil\n")
+	dst.Code("\treturn val, nil\n")
 	dst.Code("}\n\n")
 
 }

@@ -149,7 +149,7 @@ func (b *Builder) printClient(dst *build.Writer, typ *ast.ServerType) {
 		} else {
 			dst.Code("\tret")
 		}
-		dst.Code("\t, err := r.client.Invoke(ctx, req, \"" + name + "/" + build.StringToUnderlineName(typ.Name.Name) + "/" + build.StringToUnderlineName(method.Name.Name) + "\", &rpc.ClientInvoke{\n")
+		dst.Code(", err := r.client.Invoke(ctx, req, \"" + name + "/" + build.StringToUnderlineName(typ.Name.Name) + "/" + build.StringToUnderlineName(method.Name.Name) + "\", &rpc.ClientInvoke{\n")
 		if !isMethod {
 			dst.Code("\t\tToData: func(buf []byte) (hbuf.Data, error) {\n")
 			dst.Code("\t\t\tvar req ")

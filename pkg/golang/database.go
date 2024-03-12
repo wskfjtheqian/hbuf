@@ -778,8 +778,20 @@ func (b *Builder) printSet(fields []*build.DBField, key string, isNil bool) *bui
 		} else {
 			continue
 		}
+		if isNil && build.IsNil(field.Field.Type) && !field.Dbs[0].Force {
+			name := build.StringToHumpName(field.Field.Name.Name)
+			dst.Code("\tif nil != g.")
+			dst.Code(name)
+			dst.Code(" {\n")
+			dst.Code("\t")
+		}
+
 		dst.Code("\ts.T(\",\")")
 		_ = b.printParam(dst, set, field, fields, "", "")
+
+		if isNil && build.IsNil(field.Field.Type) && !field.Dbs[0].Force {
+			dst.Code("\t}\n")
+		}
 	}
 	return dst
 

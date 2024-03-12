@@ -9,6 +9,10 @@ import (
 // GetInfoReq 12
 type GetInfoReq struct {
 	UserId *hbuf.Int64 `json:"user_id"`
+
+	Name *string `json:"name"`
+
+	Age *int32 `json:"age"`
 }
 
 func (g *GetInfoReq) ToData() ([]byte, error) {
@@ -28,6 +32,28 @@ func (g *GetInfoReq) GetUserId() hbuf.Int64 {
 
 func (g *GetInfoReq) SetUserId(val hbuf.Int64) {
 	g.UserId = &val
+}
+
+func (g *GetInfoReq) GetName() string {
+	if nil == g.Name {
+		return ""
+	}
+	return *g.Name
+}
+
+func (g *GetInfoReq) SetName(val string) {
+	g.Name = &val
+}
+
+func (g *GetInfoReq) GetAge() int32 {
+	if nil == g.Age {
+		return int32(0)
+	}
+	return *g.Age
+}
+
+func (g *GetInfoReq) SetAge(val int32) {
+	g.Age = &val
 }
 
 type InfoReq struct {
@@ -51,6 +77,55 @@ func (g *InfoReq) GetUserId() hbuf.Int64 {
 
 func (g *InfoReq) SetUserId(val hbuf.Int64) {
 	g.UserId = &val
+}
+
+type InfoSet struct {
+	UserId *hbuf.Int64 `json:"user_id"`
+
+	Name *string `json:"name"`
+
+	Age *int32 `json:"age"`
+}
+
+func (g *InfoSet) ToData() ([]byte, error) {
+	return json.Marshal(g)
+}
+
+func (g *InfoSet) FormData(data []byte) error {
+	return json.Unmarshal(data, g)
+}
+
+func (g *InfoSet) GetUserId() hbuf.Int64 {
+	if nil == g.UserId {
+		return hbuf.Int64(0)
+	}
+	return *g.UserId
+}
+
+func (g *InfoSet) SetUserId(val hbuf.Int64) {
+	g.UserId = &val
+}
+
+func (g *InfoSet) GetName() string {
+	if nil == g.Name {
+		return ""
+	}
+	return *g.Name
+}
+
+func (g *InfoSet) SetName(val string) {
+	g.Name = &val
+}
+
+func (g *InfoSet) GetAge() int32 {
+	if nil == g.Age {
+		return int32(0)
+	}
+	return *g.Age
+}
+
+func (g *InfoSet) SetAge(val int32) {
+	g.Age = &val
 }
 
 // GetInfoResp 12

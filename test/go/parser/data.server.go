@@ -108,7 +108,7 @@ func (s *DefaultUserServer) Init(ctx context.Context) {
 
 // GetInfo 12
 func (s *DefaultUserServer) GetInfo(ctx context.Context, req *GetInfoReq) (*GetInfoResp, error) {
-	return nil, erro.Wrap(errors.New("not find server"))
+	return nil, erro.Wrap(errors.New("not find server user_server"))
 }
 
 var NotFoundUserServer = &DefaultUserServer{}

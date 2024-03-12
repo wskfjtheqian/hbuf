@@ -271,10 +271,10 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 			if 1 == len(text) || !build.IsArray(field.Field.Type) {
 				if build.IsNil(field.Field.Type) {
 					where.Code("\tif nil != g." + fieldName + " {\n")
-					b.printParam(where, item, field, fields, "", "\t\ts")
+					_ = b.printParam(where, item, field, fields, "", "\t\ts")
 					where.Code("\t}\n")
 				} else {
-					b.printParam(where, item, field, fields, "", "\ts")
+					_ = b.printParam(where, item, field, fields, "", "\ts")
 				}
 			} else {
 				if build.IsNil(field.Field.Type) {
@@ -284,10 +284,10 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 						where.Code(" && nil != g." + fieldName + "[" + strconv.Itoa(i) + "]")
 					}
 					where.Code(" {\n")
-					b.printParam(where, item, field, fields, "["+strconv.Itoa(i)+"]", "\t\ts")
+					_ = b.printParam(where, item, field, fields, "["+strconv.Itoa(i)+"]", "\t\ts")
 					where.Code("\t}\n")
 				} else {
-					b.printParam(where, item, field, fields, "["+strconv.Itoa(i)+"]", "\ts")
+					_ = b.printParam(where, item, field, fields, "["+strconv.Itoa(i)+"]", "\ts")
 				}
 			}
 		}
@@ -306,7 +306,7 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 				} else {
 					where.Code("\ts.T(\", \")")
 				}
-				b.printParam(where, group, field, fields, "", "")
+				_ = b.printParam(where, group, field, fields, "", "")
 				if build.IsNil(field.Field.Type) {
 					where.Code("\t}\n")
 				}
@@ -315,7 +315,7 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 	}
 
 	if orderBy {
-		isFist := true
+
 		for _, field := range fields {
 			order := field.Dbs[0].Order
 			if 0 < len(order) {
@@ -328,14 +328,9 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 				}
 
 				where.Code(" {\n")
+				where.Code("\t\ts.T(\" ORDER BY \")")
 
-				if isFist {
-					where.Code("\t\ts.T(\" ORDER BY \")")
-				} else {
-					where.Code("\t\ts.T(\", \")")
-				}
-
-				b.printParam(where, order, field, fields, "", "")
+				_ = b.printParam(where, order, field, fields, "", "")
 
 				where.Code("\t}\n")
 			}
@@ -365,7 +360,6 @@ func (b *Builder) findField(fields []*build.DBField, name string) *build.DBField
 	return nil
 }
 
-var quesRex = regexp.MustCompile(`\?`)
 var paramRex = regexp.MustCompile(`(\?{\w+})|(\${\w+})|\$|\?`)
 
 func (b *Builder) printParam(buf *build.Writer, text string, self *build.DBField, fields []*build.DBField, array, tab string) error {
@@ -784,33 +778,11 @@ func (b *Builder) printSet(fields []*build.DBField, key string, isNil bool) *bui
 		} else {
 			continue
 		}
-
-		name := build.StringToHumpName(field.Field.Name.Name)
-		if isNil && build.IsNil(field.Field.Type) && !field.Dbs[0].Force {
-			dst.Code("\tif nil != g.")
-			dst.Code(name)
-			dst.Code(" {\n")
-			dst.Code("\t")
-		}
-		dst.Code("\ts.T(\", " + set + " \")")
-		count := strings.Count(set, "?")
-		if 0 < count {
-			dst.Code(".P(")
-			for i := 0; i < count; i++ {
-				if 0 != i {
-					dst.Code(", ")
-				}
-				dst.Code(b.converter(field, "g"))
-			}
-			dst.Code(")")
-		}
-		dst.Code("\n")
-
-		if isNil && build.IsNil(field.Field.Type) && !field.Dbs[0].Force {
-			dst.Code("\t}\n")
-		}
+		dst.Code("\ts.T(\",\")")
+		_ = b.printParam(dst, set, field, fields, "", "")
 	}
 	return dst
+
 }
 
 func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, key string, db *build.DB, wFields []*build.DBField, fields []*build.DBField, fType *ast.DataType, c *cache) {

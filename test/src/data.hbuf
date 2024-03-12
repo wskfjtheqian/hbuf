@@ -15,14 +15,31 @@ enum Status {
 data GetInfoReq {
     [db:]
     int64? user_id = 1
+
+    [db:]
+    string? name = 0
+
+    [db:]
+    int32? age = 2
 }
 
 [db:table="GetInfoReq"; get="parent"]
 data InfoReq {
     [db:converter="json"]
     int64? user_id = 1
-}
 
+}
+[db:table="GetInfoReq"; set="self"]
+data InfoSet {
+    [db:converter="json";where="AND user_id = ?"]
+    int64? user_id = 1
+
+    [db:set="if(user_id > ${user_id},\"asdsa\", ?)"]
+    string? name = 0
+
+    [db:set="?"]
+    int32? age = 2
+}
 
 //12
 data GetInfoResp {

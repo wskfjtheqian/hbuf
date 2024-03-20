@@ -271,6 +271,11 @@ func (b *Builder) checkDataMapKey(file *ast.File, varType *ast.VarType) error {
 		if _, ok := _types[BaseType(varType.TypeExpr.(*ast.Ident).Name)]; ok {
 			return nil
 		}
+		obj := b.GetDataType(file, varType.TypeExpr.(*ast.Ident).Name)
+		if obj.Kind == ast.Enum {
+			varType.TypeExpr.(*ast.Ident).Obj = obj
+			return nil
+		}
 	}
 	return scanner.Error{
 		Pos: b.fset.Position(varType.TypeExpr.Pos()),

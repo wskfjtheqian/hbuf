@@ -33,14 +33,14 @@ func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
 		dst.Code("\t" + build.StringToFirstLower(method.Name.Name))
 		dst.Code("(")
 		dst.Code(build.StringToFirstLower(method.ParamName.Name) + ": ")
-		b.printType(dst, method.Param, false)
+		b.printType(dst, method.Param, false, false)
 
 		dst.Code(", ctx?: h.Context): ")
 		dst.Code("Promise<")
 		if isMethod {
 			dst.Code("void")
 		} else {
-			b.printType(dst, method.Result.Type(), false)
+			b.printType(dst, method.Result.Type(), false, false)
 		}
 		dst.Code(">\n\n")
 	}
@@ -76,14 +76,14 @@ func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 		dst.Code("\t" + build.StringToFirstLower(method.Name.Name))
 		dst.Code("(")
 		dst.Code(build.StringToFirstLower(method.ParamName.Name) + ": ")
-		b.printType(dst, method.Param, false)
+		b.printType(dst, method.Param, false, false)
 
 		dst.Code(", ctx?: h.Context): ")
 		dst.Code("Promise<")
 		if isMethod {
 			dst.Code("void")
 		} else {
-			b.printType(dst, method.Result.Type(), false)
+			b.printType(dst, method.Result.Type(), false, false)
 		}
 
 		dst.Code("> {\n")
@@ -92,7 +92,7 @@ func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 		if isMethod {
 			dst.Code("void")
 		} else {
-			b.printType(dst, method.Result.Type(), false)
+			b.printType(dst, method.Result.Type(), false, false)
 		}
 		dst.Code(">(\"")
 		dst.Code(build.StringToUnderlineName(server.Name.Name) + "/" + build.StringToUnderlineName(method.Name.Name))
@@ -104,9 +104,9 @@ func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 		if isMethod {
 			dst.Code("null, null);\n")
 		} else {
-			b.printType(dst, method.Result.Type(), false)
+			b.printType(dst, method.Result.Type(), false, false)
 			dst.Code(".fromJson, ")
-			b.printType(dst, method.Result.Type(), false)
+			b.printType(dst, method.Result.Type(), false, false)
 			dst.Code(".fromData);\n")
 		}
 
@@ -142,7 +142,7 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 		dst.Code("\t\t\t\"" + build.StringToUnderlineName(server.Name.Name) + "/" + build.StringToUnderlineName(method.Name.Name) + "\": {\n")
 		dst.Code("\t\t\t\tformData(data: BinaryData | Record<string, any>): h.Data {\n")
 		dst.Code("\t\t\t\t\treturn ")
-		b.printType(dst, method.Param.Type(), false)
+		b.printType(dst, method.Param.Type(), false, false)
 		dst.Code(".fromJson(data)\n")
 		dst.Code("\t\t\t\t},\n")
 		dst.Code("\t\t\t\ttoData(data: h.Data): BinaryData | Record<string, any> {\n")
@@ -150,7 +150,7 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 		dst.Code("\t\t\t\t},\n")
 		dst.Code("\t\t\t\tinvoke(data: h.Data, ctx?: h.Context): Promise<h.Data | void> {\n")
 		dst.Code("\t\t\t\t\treturn server." + build.StringToFirstLower(method.Name.Name) + "(data as ")
-		b.printType(dst, method.Param.Type(), false)
+		b.printType(dst, method.Param.Type(), false, false)
 		dst.Code(", ctx);\n")
 		dst.Code("\t\t\t\t}\n")
 		dst.Code("\t\t\t},\n")

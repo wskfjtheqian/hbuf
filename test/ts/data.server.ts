@@ -55,7 +55,7 @@ export class UserServerRouter implements h.ServerRouter {
 				toData(data: h.Data): BinaryData | Record<string, any> {
 					return data.toJson()
 				},
-				invoke(data: h.Data, ctx?: h.Context): Promise<h.Data> {
+				invoke(data: h.Data, ctx?: h.Context): Promise<h.Data | void> {
 					return server.getInfo(data as $1.GetInfoReq, ctx);
 				}
 			},

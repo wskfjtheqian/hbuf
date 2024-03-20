@@ -116,7 +116,7 @@ data GetInfoResp {
 
     GetInfoReq?[]? b19 = 68
 
-    GetInfoReq<string> v18 = 17
+    GetInfoReq<Status> v18 = 17
 
     GetInfoReq<string>? b18 = 67
 

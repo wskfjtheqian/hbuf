@@ -216,28 +216,43 @@ func (b *Builder) printTypeSpec(dst *DartWriter, expr ast.Expr) {
 	}
 }
 
-func (b *Builder) printType(dst *build.Writer, expr ast.Expr, notEmpty bool) {
+func (b *Builder) printType(dst *build.Writer, expr ast.Expr, notEmpty bool, isRecordKey bool) {
 	switch expr.(type) {
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
-			pkg := b.getPackage(dst, expr, "")
-			dst.Code(pkg)
-			dst.Code(".")
-			dst.Code(expr.(*ast.Ident).Name)
-		} else {
-			if build.Decimal == build.BaseType((expr.(*ast.Ident).Name)) {
-				dst.Import("decimal.js", "* as d")
-			} else if build.Int64 == build.BaseType((expr.(*ast.Ident).Name)) || build.Uint64 == build.BaseType((expr.(*ast.Ident).Name)) {
-				dst.Import("long", "Long")
+			if isRecordKey {
+				dst.Code("number")
+			} else {
+				pkg := b.getPackage(dst, expr, "")
+				dst.Code(pkg)
+				dst.Code(".")
+				dst.Code(expr.(*ast.Ident).Name)
 			}
-			dst.Code(_types[build.BaseType((expr.(*ast.Ident).Name))])
-
+		} else {
+			if isRecordKey {
+				if build.Decimal == build.BaseType((expr.(*ast.Ident).Name)) {
+					dst.Code("string")
+				} else if build.Int64 == build.BaseType((expr.(*ast.Ident).Name)) || build.Uint64 == build.BaseType((expr.(*ast.Ident).Name)) {
+					dst.Code("string")
+				} else if build.Date == build.BaseType((expr.(*ast.Ident).Name)) {
+					dst.Code("number")
+				} else {
+					dst.Code(_types[build.BaseType((expr.(*ast.Ident).Name))])
+				}
+			} else {
+				if build.Decimal == build.BaseType((expr.(*ast.Ident).Name)) {
+					dst.Import("decimal.js", "* as d")
+				} else if build.Int64 == build.BaseType((expr.(*ast.Ident).Name)) || build.Uint64 == build.BaseType((expr.(*ast.Ident).Name)) {
+					dst.Import("long", "Long")
+				}
+				dst.Code(_types[build.BaseType((expr.(*ast.Ident).Name))])
+			}
 		}
 	case *ast.ArrayType:
 		ar := expr.(*ast.ArrayType)
 		dst.Code("(")
-		b.printType(dst, ar.VType, false)
+		b.printType(dst, ar.VType, false, false)
 		dst.Code(")[]")
 		if ar.Empty && !notEmpty {
 			dst.Code(" | null")
@@ -245,16 +260,16 @@ func (b *Builder) printType(dst *build.Writer, expr ast.Expr, notEmpty bool) {
 	case *ast.MapType:
 		ma := expr.(*ast.MapType)
 		dst.Code("Record<(")
-		b.printType(dst, ma.Key, false)
+		b.printType(dst, ma.Key, false, true)
 		dst.Code("), (")
-		b.printType(dst, ma.VType, false)
+		b.printType(dst, ma.VType, false, false)
 		dst.Code(")>")
 		if ma.Empty && !notEmpty {
 			dst.Code(" | null")
 		}
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
-		b.printType(dst, t.Type(), t.Empty)
+		b.printType(dst, t.Type(), t.Empty, isRecordKey)
 		if t.Empty && !notEmpty {
 			dst.Code(" | null")
 		}

@@ -58,8 +58,8 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) {
 	dst.Code("\t\treturn {\n")
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 		dst.Code("\t\t\t\"" + build.StringToUnderlineName(field.Name.Name))
-		dst.Code("\": this.")
-		b.printToJson(dst, build.StringToFirstLower(field.Name.Name), field.Type, data, false)
+		dst.Code("\": ")
+		b.printToJson(dst, "this.", build.StringToFirstLower(field.Name.Name), field.Type, data, false, false)
 		dst.Code(",\n")
 		return nil
 	})
@@ -190,9 +190,9 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 				} else {
 					dst.Import("long", "Long")
 					if empty {
-						dst.Code("null == " + name + " ? null : Long.fromString(" + v + ")")
+						dst.Code("null == " + name + " ? null : Long.fromString(" + v + ".toString())")
 					} else {
-						dst.Code("null == " + name + " ? Long.ZERO : Long.fromString(" + v + ")")
+						dst.Code("null == " + name + " ? Long.ZERO : Long.fromString(" + v + ".toString())")
 					}
 				}
 			case build.Float, build.Double:
@@ -216,9 +216,9 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 					}
 				} else {
 					if empty {
-						dst.Code("null == " + name + " ? null : new Date(" + v + ")")
+						dst.Code("null == " + name + " ? null : new Date(Number(" + v + ").valueOf())")
 					} else {
-						dst.Code("null == " + name + " ? new Date(0): new Date(" + v + ")")
+						dst.Code("null == " + name + " ? new Date(0): new Date(Number(" + v + ").valueOf())")
 					}
 				}
 			case build.Bool:
@@ -268,7 +268,7 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 			dst.Code("h.isArray(" + v + ") ? [] : ")
 			dst.Code("(h.convertArray(" + v + ", (item) => ")
 			b.printFormMap(dst, "item", "item", t.VType, data, empty, false)
-			dst.Code(")))")
+			dst.Code("))!)")
 		}
 	case *ast.MapType:
 		t := expr.(*ast.MapType)
@@ -288,7 +288,7 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 			b.printFormMap(dst, "key", "key", t.Key, data, empty, true)
 			dst.Code(",")
 			b.printFormMap(dst, "value", "value", t.VType, data, empty, false)
-			dst.Code("))))")
+			dst.Code(")))!)")
 		}
 
 	case *ast.VarType:
@@ -297,16 +297,20 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 	}
 }
 
-func (b *Builder) printToJson(dst *build.Writer, name string, expr ast.Expr, data *ast.DataType, empty bool) {
+func (b *Builder) printToJson(dst *build.Writer, key string, name string, expr ast.Expr, data *ast.DataType, empty bool, isRecordKey bool) {
 	switch expr.(type) {
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
 			if ast.Enum == t.Obj.Kind {
-				if empty {
-					dst.Code(name + "?.value")
+				if isRecordKey {
+					dst.Code(name)
 				} else {
-					dst.Code(name + ".value")
+					if empty {
+						dst.Code(name + "?.value")
+					} else {
+						dst.Code(name + ".value")
+					}
 				}
 			} else if ast.Data == t.Obj.Kind {
 				if empty {
@@ -322,17 +326,27 @@ func (b *Builder) printToJson(dst *build.Writer, name string, expr ast.Expr, dat
 			case build.Int8, build.Int16, build.Int32, build.Uint32, build.Uint8, build.Uint16, build.Float, build.Double, build.String, build.Bool:
 				dst.Code(name)
 			case build.Uint64, build.Int64:
-				if empty {
-					dst.Code(name + "?.toString()")
+				if isRecordKey {
+					dst.Code(name)
 				} else {
-					dst.Code(name + ".toString()")
+					if empty {
+						dst.Code(name + "?.toString()")
+					} else {
+						dst.Code(name + ".toString()")
+					}
 				}
+
 			case build.Date:
-				if empty {
-					dst.Code(name + "?.getTime()")
+				if isRecordKey {
+					dst.Code(name)
 				} else {
-					dst.Code(name + ".getTime()")
+					if empty {
+						dst.Code(name + "?.getTime()")
+					} else {
+						dst.Code(name + ".getTime()")
+					}
 				}
+
 			case build.Decimal:
 				if empty {
 					dst.Code(name + "?.toString()")
@@ -347,33 +361,34 @@ func (b *Builder) printToJson(dst *build.Writer, name string, expr ast.Expr, dat
 		t := expr.(*ast.ArrayType)
 		empty = t.IsEmpty()
 		if empty {
-			dst.Code(name + "?.map((e) => ")
-			b.printToJson(dst, "e", t.VType, data, empty)
+			dst.Code("h.convertArray(" + key + name + ",(e) => ")
+			b.printToJson(dst, "", "e", t.VType, data, empty, false)
 			dst.Code(")")
 		} else {
-			dst.Code(name + ".map((e) => ")
-			b.printToJson(dst, "e", t.VType, data, empty)
+			dst.Code("h.convertArray(" + key + name + ",(e) => ")
+			b.printToJson(dst, "", "e", t.VType, data, empty, false)
 			dst.Code(")")
 		}
 	case *ast.MapType:
 		t := expr.(*ast.MapType)
 		empty = t.IsEmpty()
 		if empty {
-			dst.Code(name + "?.map((key,value) => MapEntry(")
-			b.printToJson(dst, "key", t.Key, data, empty)
+			dst.Code("h.convertRecord(" + key + name + ", (key, value) => new h.RecordEntry(")
+			b.printToJson(dst, "", "key", t.Key, data, empty, true)
 			dst.Code(",")
-			b.printToJson(dst, "value", t.Key, data, empty)
-			dst.Code(")")
+			b.printToJson(dst, "", "value", t.VType, data, empty, false)
+			dst.Code("))")
 		} else {
-			dst.Code(name + ".map((key,value) => MapEntry(")
-			b.printToJson(dst, "key", t.Key, data, empty)
+			dst.Code("h.convertRecord(" + key + name + ", (key, value) => new h.RecordEntry(")
+			b.printToJson(dst, "", "key", t.Key, data, empty, true)
 			dst.Code(",")
-			b.printToJson(dst, "value", t.Key, data, empty)
+			b.printToJson(dst, "", "value", t.VType, data, empty, false)
 			dst.Code("))")
 		}
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
-		b.printToJson(dst, name, t.Type(), data, t.Empty)
+		dst.Code(key)
+		b.printToJson(dst, "", name, t.Type(), data, t.Empty, isRecordKey)
 	}
 }
 

@@ -15,7 +15,7 @@ export class GetInfoReq implements h.Data {
 	public static fromJson(json: Record<string, any>): GetInfoReq{
 		let ret = new GetInfoReq()
 		let temp:any
-		ret.userId = null == (temp = json["user_id"]) ? null : Long.fromString(temp)
+		ret.userId = null == (temp = json["user_id"]) ? null : Long.fromString(temp.toString())
 		ret.name = null == (temp = json["name"]) ? null : temp.toString()
 		ret.age = null == (temp = json["age"]) ? null : Number(temp).valueOf()
 		return ret
@@ -47,7 +47,7 @@ export class InfoReq implements h.Data {
 	public static fromJson(json: Record<string, any>): InfoReq{
 		let ret = new InfoReq()
 		let temp:any
-		ret.userId = null == (temp = json["user_id"]) ? null : Long.fromString(temp)
+		ret.userId = null == (temp = json["user_id"]) ? null : Long.fromString(temp.toString())
 		return ret
 	}
 
@@ -79,7 +79,7 @@ export class InfoSet implements h.Data {
 	public static fromJson(json: Record<string, any>): InfoSet{
 		let ret = new InfoSet()
 		let temp:any
-		ret.userId = null == (temp = json["user_id"]) ? null : Long.fromString(temp)
+		ret.userId = null == (temp = json["user_id"]) ? null : Long.fromString(temp.toString())
 		ret.name = null == (temp = json["name"]) ? null : temp.toString()
 		ret.age = null == (temp = json["age"]) ? null : Number(temp).valueOf()
 		return ret
@@ -196,16 +196,16 @@ export class GetInfoResp implements h.Data {
 		ret.b2 = null == (temp = json["b2"]) ? null : Number(temp).valueOf()
 		ret.v3 = null == (temp = json["v3"]) ? 0 : (Number(temp).valueOf() || 0)
 		ret.b3 = null == (temp = json["b3"]) ? null : Number(temp).valueOf()
-		ret.v4 = null == (temp = json["v4"]) ? Long.ZERO : Long.fromString(temp)
-		ret.b4 = null == (temp = json["b4"]) ? null : Long.fromString(temp)
+		ret.v4 = null == (temp = json["v4"]) ? Long.ZERO : Long.fromString(temp.toString())
+		ret.b4 = null == (temp = json["b4"]) ? null : Long.fromString(temp.toString())
 		ret.v5 = null == (temp = json["v5"]) ? 0 : (Number(temp).valueOf() || 0)
 		ret.b5 = null == (temp = json["b5"]) ? null : Number(temp).valueOf()
 		ret.v6 = null == (temp = json["v6"]) ? 0 : (Number(temp).valueOf() || 0)
 		ret.b6 = null == (temp = json["b6"]) ? null : Number(temp).valueOf()
 		ret.v7 = null == (temp = json["v7"]) ? 0 : (Number(temp).valueOf() || 0)
 		ret.b7 = null == (temp = json["b7"]) ? null : Number(temp).valueOf()
-		ret.v8 = null == (temp = json["v8"]) ? Long.ZERO : Long.fromString(temp)
-		ret.b8 = null == (temp = json["b8"]) ? null : Long.fromString(temp)
+		ret.v8 = null == (temp = json["v8"]) ? Long.ZERO : Long.fromString(temp.toString())
+		ret.b8 = null == (temp = json["b8"]) ? null : Long.fromString(temp.toString())
 		ret.v9 = null == (temp = json["v9"]) ? false : ("true" === temp ? true : Boolean(temp))
 		ret.b9 = null == (temp = json["b9"]) ? null : ("true" === temp ? true : Boolean(temp))
 		ret.v10 = null == (temp = json["v10"]) ? 0 : (Number(temp).valueOf() || 0)
@@ -214,21 +214,21 @@ export class GetInfoResp implements h.Data {
 		ret.b11 = null == (temp = json["b11"]) ? null : Number(temp).valueOf()
 		ret.v12 = null == (temp = json["v12"]) ? "" : temp.toString()
 		ret.b12 = null == (temp = json["b12"]) ? null : temp.toString()
-		ret.v13 = null == (temp = json["v13"]) ? new Date(0): new Date(temp)
-		ret.b13 = null == (temp = json["b13"]) ? null : new Date(temp)
+		ret.v13 = null == (temp = json["v13"]) ? new Date(0): new Date(Number(temp).valueOf())
+		ret.b13 = null == (temp = json["b13"]) ? null : new Date(Number(temp).valueOf())
 		ret.v14 = null == (temp = json["v14"]) ? new d.Decimal(0) : new d.Decimal(temp) 
 		ret.b14 = null == (temp = json["b14"]) ? null : new d.Decimal(temp)
 		ret.v15 = null == (temp = json["v15"]) ? $3.Status.valueOf(0) : $3.Status.valueOf(Number(temp).valueOf())
 		ret.b15 = null == (temp = json["b15"]) ? null : $3.Status.valueOf(Number(temp).valueOf())
 		ret.v16 = null == (temp = json["v16"]) ? $4.GetInfoReq.fromJson({}) : $4.GetInfoReq.fromJson(temp)
 		ret.b16 = null == (temp = json["b16"]) ? null : $4.GetInfoReq.fromJson(temp)
-		ret.v17 = null == (temp = json["v17"]) ? [] : (h.isArray(temp) ? [] : (h.convertArray(temp, (item) => null == item ? $4.GetInfoReq.fromJson({}) : $4.GetInfoReq.fromJson(item))))
+		ret.v17 = null == (temp = json["v17"]) ? [] : (h.isArray(temp) ? [] : (h.convertArray(temp, (item) => null == item ? $4.GetInfoReq.fromJson({}) : $4.GetInfoReq.fromJson(item)))!)
 		ret.b17 = null == (temp = json["b17"]) ? null : (h.isArray(temp) ? null : (h.convertArray(temp, (item) => null == item ? $4.GetInfoReq.fromJson({}) : $4.GetInfoReq.fromJson(item))))
-		ret.v19 = null == (temp = json["v19"]) ? [] : (h.isArray(temp) ? [] : (h.convertArray(temp, (item) => null == item ? null : $4.GetInfoReq.fromJson(item))))
+		ret.v19 = null == (temp = json["v19"]) ? [] : (h.isArray(temp) ? [] : (h.convertArray(temp, (item) => null == item ? null : $4.GetInfoReq.fromJson(item)))!)
 		ret.b19 = null == (temp = json["b19"]) ? null : (h.isArray(temp) ? null : (h.convertArray(temp, (item) => null == item ? null : $4.GetInfoReq.fromJson(item))))
-		ret.v18 = null == (temp = json["v18"]) ? {} : (h.isRecord(temp) ? {} : (h.convertRecord(temp, (key, value) => new h.RecordEntry(null == key ? $3.Status.valueOf(0) : $3.Status.valueOf(Number(key).valueOf()),null == value ? $4.GetInfoReq.fromJson({}) : $4.GetInfoReq.fromJson(value)))))
+		ret.v18 = null == (temp = json["v18"]) ? {} : (h.isRecord(temp) ? {} : (h.convertRecord(temp, (key, value) => new h.RecordEntry(null == key ? 0 : (Number(key).valueOf() || 0),null == value ? $4.GetInfoReq.fromJson({}) : $4.GetInfoReq.fromJson(value))))!)
 		ret.b18 = null == (temp = json["b18"]) ? null : (h.isRecord(temp) ? null : (h.convertRecord(temp, (key, value) => new h.RecordEntry(null == key ? "" : key.toString(),null == value ? $4.GetInfoReq.fromJson({}) : $4.GetInfoReq.fromJson(value)))))
-		ret.v20 = null == (temp = json["v20"]) ? {} : (h.isRecord(temp) ? {} : (h.convertRecord(temp, (key, value) => new h.RecordEntry(null == key ? "" : key.toString(),null == value ? null : $4.GetInfoReq.fromJson(value)))))
+		ret.v20 = null == (temp = json["v20"]) ? {} : (h.isRecord(temp) ? {} : (h.convertRecord(temp, (key, value) => new h.RecordEntry(null == key ? "" : key.toString(),null == value ? null : $4.GetInfoReq.fromJson(value))))!)
 		ret.b20 = null == (temp = json["b20"]) ? null : (h.isRecord(temp) ? null : (h.convertRecord(temp, (key, value) => new h.RecordEntry(null == key ? "" : key.toString(),null == value ? null : $4.GetInfoReq.fromJson(value)))))
 		return ret
 	}
@@ -268,14 +268,14 @@ export class GetInfoResp implements h.Data {
 			"b15": this.b15?.value,
 			"v16": this.v16.toJson(),
 			"b16": this.b16?.toJson(),
-			"v17": this.v17.map((e) => e.toJson()),
-			"b17": this.b17?.map((e) => e.toJson()),
-			"v19": this.v19.map((e) => e?.toJson()),
-			"b19": this.b19?.map((e) => e?.toJson()),
-			"v18": this.v18.map((key,value) => MapEntry(key.value,value.value)),
-			"b18": this.b18?.map((key,value) => MapEntry(key,value),
-			"v20": this.v20.map((key,value) => MapEntry(key,value)),
-			"b20": this.b20?.map((key,value) => MapEntry(key,value),
+			"v17": h.convertArray(this.v17,(e) => e.toJson()),
+			"b17": h.convertArray(this.b17,(e) => e.toJson()),
+			"v19": h.convertArray(this.v19,(e) => e?.toJson()),
+			"b19": h.convertArray(this.b19,(e) => e?.toJson()),
+			"v18": h.convertRecord(this.v18, (key, value) => new h.RecordEntry(key,value.toJson())),
+			"b18": h.convertRecord(this.b18, (key, value) => new h.RecordEntry(key,value.toJson())),
+			"v20": h.convertRecord(this.v20, (key, value) => new h.RecordEntry(key,value?.toJson())),
+			"b20": h.convertRecord(this.b20, (key, value) => new h.RecordEntry(key,value?.toJson())),
 		};
 	}
 

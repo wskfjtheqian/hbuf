@@ -259,13 +259,13 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 		empty = t.IsEmpty()
 		if empty {
 			dst.Code("null == " + name + " ? null : (")
-			dst.Code("h.isArray(" + v + ") ? null : ")
+			dst.Code("!h.isArray(" + v + ") ? null : ")
 			dst.Code("(h.convertArray(" + v + ", (item) => ")
 			b.printFormMap(dst, "item", "item", t.VType, data, empty, false)
 			dst.Code(")))")
 		} else {
 			dst.Code("null == " + name + " ? [] : (")
-			dst.Code("h.isArray(" + v + ") ? [] : ")
+			dst.Code("!h.isArray(" + v + ") ? [] : ")
 			dst.Code("(h.convertArray(" + v + ", (item) => ")
 			b.printFormMap(dst, "item", "item", t.VType, data, empty, false)
 			dst.Code("))!)")

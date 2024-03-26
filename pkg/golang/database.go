@@ -81,6 +81,7 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 
 	if 0 == len(fDbs[0].Table) {
 		b.printScanData(dst, typ, dbs[0], wFields, key)
+		b.printNameData(dst, typ)
 	}
 
 	val := strings.ToLower(fDbs[0].List)
@@ -227,6 +228,14 @@ func (b *Builder) printScanData(dst *build.Writer, typ *ast.DataType, db *build.
 	dst.Code("func (val *" + name + ") DbScan() (string, []any) {\n")
 	dst.Code("\treturn `" + item.String() + "`,\n")
 	dst.Code("\t\t[]any{" + scan.String() + "}\n")
+	dst.Code("}\n")
+	dst.Code("\n")
+}
+
+func (b *Builder) printNameData(dst *build.Writer, typ *ast.DataType) {
+	name := build.StringToHumpName(typ.Name.Name)
+	dst.Code("func (val *" + name + ") DbName() string {\n")
+	dst.Code("\treturn `" + build.StringToUnderlineName(typ.Name.Name) + "`\n")
 	dst.Code("}\n")
 	dst.Code("\n")
 }

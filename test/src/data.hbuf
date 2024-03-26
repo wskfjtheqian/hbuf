@@ -16,7 +16,7 @@ data GetInfoReq {
     [db:]
     int64? user_id = 1
 
-    [db:]
+    [db:converter="json"]
     string? name = 0
 
     [db:]

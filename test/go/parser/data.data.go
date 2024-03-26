@@ -202,7 +202,7 @@ type GetInfoResp struct {
 
 	B19 []*GetInfoReq `json:"b19"`
 
-	V18 map[string]GetInfoReq `json:"v18"`
+	V18 map[Status]GetInfoReq `json:"v18"`
 
 	B18 map[string]GetInfoReq `json:"b18"`
 
@@ -555,11 +555,11 @@ func (g *GetInfoResp) SetB19(val []*GetInfoReq) {
 	g.B19 = val
 }
 
-func (g *GetInfoResp) GetV18() map[string]GetInfoReq {
+func (g *GetInfoResp) GetV18() map[Status]GetInfoReq {
 	return g.V18
 }
 
-func (g *GetInfoResp) SetV18(val map[string]GetInfoReq) {
+func (g *GetInfoResp) SetV18(val map[Status]GetInfoReq) {
 	g.V18 = val
 }
 

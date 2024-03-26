@@ -8,7 +8,7 @@ import (
 
 func (val *GetInfoReq) DbScan() (string, []any) {
 	return `user_id, name, age`,
-		[]any{&val.UserId, &val.Name, &val.Age}
+		[]any{&val.UserId, db.NewJson(&val.Name), &val.Age}
 }
 
 func (g InfoReq) DbGet(ctx context.Context) (*GetInfoReq, error) {
@@ -18,7 +18,7 @@ func (g InfoReq) DbGet(ctx context.Context) (*GetInfoReq, error) {
 	var val *GetInfoReq
 	_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {
 		val = &GetInfoReq{}
-		return false, rows.Scan(&val.UserId, &val.Name, &val.Age)
+		return false, rows.Scan(&val.UserId, db.NewJson(&val.Name), &val.Age)
 	})
 	if err != nil {
 		return nil, err

@@ -99,12 +99,12 @@ func Build(file *ast.File, fset *token.FileSet, param *build.Param) error {
 	}
 
 	//printLanguge(dst.ui)
-	//if 0 < dst.ui.GetCode().Len() {
-	//	err = writerFile(dst.ui, filepath.Join(dir, name+".ui.dart"))
-	//	if err != nil {
-	//		return err
-	//	}
-	//}
+	if 0 < dst.ui.GetCode().Len() {
+		err = writerFile(dst.ui, filepath.Join(dir, name+".ui.tsx"))
+		if err != nil {
+			return err
+		}
+	}
 	//if 0 < dst.verify.GetCode().Len() {
 	//	err = writerFile(dst.verify, filepath.Join(dir, name+".verify.dart"))
 	//	if err != nil {
@@ -205,14 +205,14 @@ func (b *Builder) printTypeSpec(dst *DartWriter, expr ast.Expr) {
 	switch expr.(type) {
 	case *ast.DataType:
 		b.printDataCode(dst.data, expr.(*ast.DataType))
-		//b.printFormCode(dst.ui, expr)
+		b.printFormCode(dst.ui, expr)
 		//b.printVerifyCode(dst.verify, expr.(*ast.DataType))
 	case *ast.ServerType:
 		b.printServerCode(dst.server, expr.(*ast.ServerType))
 
 	case *ast.EnumType:
 		b.printEnumCode(dst.enum, expr.(*ast.EnumType))
-		//b.printFormCode(dst.ui, expr)
+		b.printFormCode(dst.ui, expr)
 	}
 }
 

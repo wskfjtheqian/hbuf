@@ -31,8 +31,9 @@ func (w *Writer) Import(text string, s string) string {
 	return s
 }
 
-func (w *Writer) Code(text string) {
+func (w *Writer) Code(text string) *Writer {
 	_, _ = w.code.WriteString(text)
+	return w
 }
 
 func (w *Writer) String() string {

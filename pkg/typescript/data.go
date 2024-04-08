@@ -6,7 +6,7 @@ import (
 )
 
 func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
-	dst.Import("hbuf_ts", "h")
+	dst.Import("hbuf_ts", "* as h")
 
 	b.printData(dst, typ)
 }
@@ -37,7 +37,7 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) {
 	}
 
 	dst.Code("\tpublic static fromJson(json: Record<string, any>): " + build.StringToHumpName(typ.Name.Name) + "{\n")
-	dst.Code("\t\tlet ret = new " + build.StringToHumpName(typ.Name.Name) + "()\n")
+	dst.Code("\t\tconst ret = new " + build.StringToHumpName(typ.Name.Name) + "()\n")
 	dst.Code("\t\tlet temp:any\n")
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 		dst.Code("\t\tret." + build.StringToFirstLower(field.Name.Name) + " = ")
@@ -70,7 +70,7 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) {
 	dst.Code("\t}\n\n")
 
 	dst.Code("\tpublic static fromData(data: BinaryData): " + build.StringToHumpName(typ.Name.Name) + " {\n")
-	dst.Code("\t\tlet ret = new " + build.StringToHumpName(typ.Name.Name) + "()\n")
+	dst.Code("\t\tconst ret = new " + build.StringToHumpName(typ.Name.Name) + "()\n")
 	dst.Code("\t\treturn ret\n")
 	dst.Code("\t}\n\n")
 

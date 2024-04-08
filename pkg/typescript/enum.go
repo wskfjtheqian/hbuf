@@ -25,7 +25,7 @@ func (b *Builder) printEnum(dst *build.Writer, typ *ast.EnumType) {
 	dst.Code("\t}\n")
 
 	dst.Code("\tpublic static valueOf(value: number): " + enumName + " {\n")
-	dst.Code("\t	for (var i in " + enumName + ".values) {\n")
+	dst.Code("\t	for (const i in " + enumName + ".values) {\n")
 	dst.Code("\t		if (" + enumName + ".values[i].value == value) {\n")
 	dst.Code("\t			return " + enumName + ".values[i];\n")
 	dst.Code("\t		}\n")
@@ -34,7 +34,7 @@ func (b *Builder) printEnum(dst *build.Writer, typ *ast.EnumType) {
 	dst.Code("\t}\n\n")
 
 	dst.Code("\tpublic static nameOf(name: string): " + enumName + " {\n")
-	dst.Code("\t	for (var i in " + enumName + ".values) {\n")
+	dst.Code("\t	for (const i in " + enumName + ".values) {\n")
 	dst.Code("\t		if (" + enumName + ".values[i].name == name) {\n")
 	dst.Code("\t			return " + enumName + ".values[i];\n")
 	dst.Code("\t		}\n")

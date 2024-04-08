@@ -6,7 +6,7 @@ import (
 )
 
 func (b *Builder) printServerCode(dst *build.Writer, typ *ast.ServerType) {
-	dst.Import("hbuf_ts", "h")
+	dst.Import("hbuf_ts", "* as h")
 
 	b.printServer(dst, typ)
 	b.printServerImp(dst, typ)

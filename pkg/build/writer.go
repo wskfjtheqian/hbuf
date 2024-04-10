@@ -35,6 +35,12 @@ func (w *Writer) Code(text string) *Writer {
 	_, _ = w.code.WriteString(text)
 	return w
 }
+func (w *Writer) Tab(num int) *Writer {
+	for i := 0; i < num; i++ {
+		_, _ = w.code.WriteString("\t")
+	}
+	return w
+}
 
 func (w *Writer) String() string {
 	return w.code.String()

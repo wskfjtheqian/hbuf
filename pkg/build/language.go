@@ -39,7 +39,7 @@ func getLanguage(tags []*ast.Tag) map[string]string {
 	lang := make(map[string]string, 0)
 	if nil != val.KV {
 		for _, item := range val.KV {
-			lang[strings.ToLower(item.Name.Name)] = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
+			lang[StringToFirstLower(item.Name.Name)] = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 		}
 	}
 	return lang

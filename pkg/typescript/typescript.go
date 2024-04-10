@@ -98,7 +98,7 @@ func Build(file *ast.File, fset *token.FileSet, param *build.Param) error {
 		}
 	}
 
-	//printLanguge(dst.ui)
+	printLanguge(dst.ui)
 	if 0 < dst.ui.GetCode().Len() {
 		err = writerFile(dst.ui, filepath.Join(dir, name+".ui.tsx"))
 		if err != nil {

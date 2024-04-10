@@ -34,7 +34,7 @@ func (b *Builder) printEnumUi(dst *build.Writer, typ *ast.EnumType) {
 	enumName := build.StringToHumpName(typ.Name.Name)
 	lang := dst.GetLang(enumName)
 	for _, item := range typ.Items {
-		itemName := build.StringToAllUpper(item.Name.Name)
+		itemName := build.StringToHumpName(item.Name.Name)
 		lang.Add(itemName, item.Tags)
 	}
 }
@@ -62,8 +62,8 @@ func (b *Builder) getUI(tags []*ast.Tag) *ui {
 		return nil
 	}
 	form := ui{
-		width:      300,
-		height:     300,
+		width:      160,
+		height:     160,
 		maxLine:    1,
 		maxCount:   1,
 		extensions: []string{},
@@ -152,16 +152,15 @@ func (b *Builder) printDataUi(dst *build.Writer, typ *ast.DataType) {
 
 func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 	name := build.StringToHumpName(typ.Name.Name)
-	//lang := dst.GetLang(name)
+	lang := dst.GetLang(name)
 
 	dst.Code("export const " + name + "TableColumn = defineComponent({\n")
-	dst.Code("    name: '" + name + "TableColumn',\n")
-	dst.Code("    props: {},\n")
-	dst.Code("    setup(props) {\n")
-	dst.Code("        // setup函数中编写组件的逻辑\n")
-	dst.Code("        return () => (\n")
-	dst.Code("            <>\n")
-
+	dst.Code("\tname: '" + name + "TableColumn',\n")
+	dst.Code("\tprops: {hide:String},\n")
+	dst.Code("\tsetup(props) {\n")
+	dst.Code("\t\treturn (_ctx) => (\n")
+	dst.Code("\t\t\t<>\n")
+	langName := build.StringToFirstLower(name)
 	//i := 0
 	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 
@@ -178,15 +177,27 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 			//index = *table.index
 		}
 		//dst.Code("                <el-table-column prop="adminId" label="adminId" width="140"/>\n")
-		dst.Code("                <el-table-column prop=\"")
 		fieldName := build.StringToFirstLower(field.Name.Name)
-		dst.Code(fieldName)
-		dst.Code("\"")
-		dst.Code(" label=\"")
-		dst.Code(fieldName)
-		dst.Code("\"")
-		dst.Code("/>\n")
 
+		dst.Code("\t\t\t\t<el-table-column prop=\"").Code(fieldName).Code("\"")
+		dst.Code(" label={_ctx.$t(\"").Code(langName).Code("Lang.").Code(fieldName).Code("\")}")
+		dst.Code(" show-overflow-tooltip")
+		dst.Code(" min-width=\"").Code(strconv.FormatFloat(table.width, 'g', -1, 64)).Code("\"")
+		dst.Code(">\n")
+		if "image" == table.table {
+			dst.Code("                    {{\n")
+			dst.Code("                        default: (scope) => (<>\n")
+			dst.Code("                            <el-popover effect=\"light\" trigger=\"hover\" placement=\"top\" width=\"auto\">\n")
+			dst.Code("                                {{\n")
+			dst.Code("                                    default: () => <el-image style=\"width: 200px; height: 200px\" src={scope.row.").Code(fieldName).Code("}/>,\n")
+			dst.Code("                                    reference: () => <el-avatar shape=\"square\" size=\"60\" src={scope.row.").Code(fieldName).Code("}/>,\n")
+			dst.Code("                                }}\n")
+			dst.Code("                            </el-popover>\n")
+			dst.Code("                        </>)\n")
+			dst.Code("                    }}\n")
+		}
+		dst.Code("\t\t\t\t</el-table-column>\n")
+		lang.Add(fieldName, field.Tags)
 		//
 		//dst.Code("\"] = TablesColumn(\n")
 		//dst.Code("\t\t\t\tindex: " + strconv.Itoa(index) + ",\n")
@@ -280,9 +291,9 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 		return
 	}
 
-	dst.Code("            </>\n")
-	dst.Code("        );\n")
-	dst.Code("    }\n")
+	dst.Code("\t\t\t</>\n")
+	dst.Code("\t\t);\n")
+	dst.Code("\t}\n")
 	dst.Code("});\n\n")
 
 }
@@ -446,40 +457,69 @@ func (b *Builder) printFormString(dst *build.Writer, name string, expr ast.Expr,
 
 func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	name := build.StringToHumpName(typ.Name.Name)
-	//lang := dst.GetLang(name)
+	lang := dst.GetLang(name)
 
 	dst.Code("export const " + name + "FormItems = defineComponent({\n")
-	dst.Code("    name: '" + name + "FormItems',\n")
-	dst.Code("    props: {\n")
-	dst.Code("        model: ")
+	dst.Code("\tname: '" + name + "FormItems',\n")
+	dst.Code("\tprops: {\n")
+	dst.Code("\t\tsize: String,\n")
+	dst.Code("\t\tmodel: ")
 	b.printType(dst, typ.Name, false, false)
 	dst.Code("\n")
-	dst.Code("    },\n")
-	dst.Code("    setup(props) {\n")
-	dst.Code("        // setup函数中编写组件的逻辑\n")
-	dst.Code("        return () => (\n")
-	dst.Code("            <>\n")
-
+	dst.Code("\t},\n")
+	dst.Code("\tsetup(props) {\n")
+	dst.Code("\t\treturn (_ctx) => (\n")
+	dst.Code("\t\t\t<>\n")
+	langName := build.StringToFirstLower(name)
 	//i := 0
 	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 
-		table := b.getUI(field.Tags)
-		if nil == table || 0 == len(table.table) {
+		form := b.getUI(field.Tags)
+		if nil == form || 0 == len(form.form) {
 			return nil
 		}
 
 		//isArray := build.IsArray(field.Type)
-		//isNull := build.IsNil(field.Type)
+		isNull := build.IsNil(field.Type)
 		//i++
 		//index := i
-		if nil != table.index {
+		if nil != form.index {
 			//index = *table.index
 		}
 		fieldName := build.StringToFirstLower(field.Name.Name)
 
-		dst.Code("                <el-form-item prop=\"").Code(fieldName).Code("\"").Code(" label=\"").Code(fieldName).Code("\"").Code(">\n")
-		dst.Code("                    <el-input v-model={props.model.").Code(fieldName).Code("}/>\n")
-		dst.Code("                </el-form-item>\n")
+		dst.Code("\t\t\t\t<el-form-item prop=\"").Code(fieldName).Code("\"")
+		dst.Code(" label={_ctx.$t(\"").Code(langName).Code("Lang.").Code(fieldName).Code("\")}")
+		dst.Code(">\n")
+		if "date" == form.form {
+			dst.Code("\t\t\t\t\t<el-date-picker\n")
+			dst.Code("\t\t\t\t\t\tv-model={props.model!.").Code(fieldName).Code("}\n")
+			dst.Code("\t\t\t\t\t\ttype=\"daterange\"\n")
+			dst.Code("\t\t\t\t\t\tunlink-panels\n")
+			//dst.Code("\t\t\t\t\t:shortcuts=\"shortcuts\"\n")
+			dst.Code("\t\t\t\t\t\tsize={props.size}\n")
+			dst.Code("\t\t\t\t\t/>\n")
+			lang.Add(fieldName, field.Tags)
+		} else if "menu" == form.form {
+			dst.Code("\t\t\t\t\t<el-select v-model={props.model!.").Code(fieldName).Code("}\n")
+			dst.Code("\t\t\t\t\t\tplaceholder=\"Select\"\n")
+			dst.Code("\t\t\t\t\t\tstyle=\"width:180px\"\n")
+			dst.Code("\t\t\t\t\t\tsize={props.size}\n")
+			dst.Code("\t\t\t\t\t\t>\n")
+			b.printMenuItem(dst, field.Type, false)
+			dst.Code("\t\t\t\t\t</el-select>\n")
+			lang.Add(fieldName, field.Tags)
+		} else {
+			dst.Code("\t\t\t\t\t<el-input v-model={props.model!.").Code(fieldName).Code("}")
+			if isNull {
+				dst.Code(" clearable")
+			}
+			dst.Code(" size={props.size}")
+			dst.Code("/>\n")
+			lang.Add(fieldName, field.Tags)
+		}
+
+		dst.Code("\t\t\t\t</el-form-item>\n")
 
 		return nil
 	})
@@ -487,9 +527,9 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		return
 	}
 
-	dst.Code("            </>\n")
-	dst.Code("        );\n")
-	dst.Code("    }\n")
+	dst.Code("\t\t\t</>\n")
+	dst.Code("\t\t);\n")
+	dst.Code("\t}\n")
 	dst.Code("});\n\n")
 
 	//name := build.StringToHumpName(typ.Name.Name)
@@ -718,29 +758,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	//
 	//		fields.Code("\t\t\t" + fieldName + ".build(context),\n")
 	//		lang.Add(fieldName, field.Tags)
-	//	} else if "date" == form.form {
-	//		dst.Code("\tfinal DatetimeFormBuild " + fieldName + " =  DatetimeFormBuild();\n\n")
-	//		setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName)
-	//		b.printToString(setValue, field.Type, false, form.digit, form.format, "??\"\"")
-	//		setValue.Code(";\n")
-	//		if !form.onlyRead {
-	//			setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = ")
-	//			if form.toNull {
-	//				setValue.Code("\"\" == val ? null : ")
-	//			}
-	//			setValue.Code("val ;\n")
-	//		}
-	//		setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
-	//		setValue.Code("\t\t" + fieldName + ".widthSizes = sizes;\n")
-	//		setValue.Code("\t\t" + fieldName + ".padding = padding;\n")
-	//		if nil != verify {
-	//			b.getPackage(dst, typ.Name, "verify")
-	//			setValue.Code("\t\t" + fieldName + ".validator = (val) => verify" + name + "_" + build.StringToHumpName(fieldName) + "(context, val!);\n")
-	//		}
-	//		setValue.Code("\t\t" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n\n")
-	//
-	//		fields.Code("\t\t\t" + fieldName + ".build(context),\n")
-	//		lang.Add(fieldName, field.Tags)
+
 	//	} else if "switch" == form.form {
 	//		dst.Code("\tfinal SwitchFormBuild " + fieldName + " =  SwitchFormBuild();\n\n")
 	//		setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName)
@@ -790,12 +808,14 @@ func (b *Builder) printMenuItem(dst *build.Writer, expr ast.Expr, empty bool) {
 	switch expr.(type) {
 	case *ast.EnumType:
 		t := expr.(*ast.EnumType)
+		pkg := b.getPackage(dst, t.Name, "")
 		name := build.StringToHumpName(t.Name.Name)
-		dst.Code("\t\t\tfor (var item in " + name + ".values)\n")
-		dst.Code("\t\t\t\tDropdownMenuItem<" + name + ">(\n")
-		dst.Code("\t\t\t\t\tvalue: item,\n")
-		dst.Code("\t\t\t\t\tchild: Text(item.toText(context)),\n")
-		dst.Code("\t\t\t\t),\n")
+		dst.Code("\t\t\t\t\t\t{").Code(pkg).Code(".").Code(name).Code(".values.map((val) => {\n")
+		dst.Code("\t\t\t\t\t\t\treturn <el-option key={val.value}\n")
+		dst.Code("\t\t\t\t\t\t\t\tlabel={_ctx.$t(val.toString())}\n")
+		dst.Code("\t\t\t\t\t\t\t\tvalue={val}\n")
+		dst.Code("\t\t\t\t\t\t\t/>\n")
+		dst.Code("\t\t\t\t\t\t})}\n")
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {

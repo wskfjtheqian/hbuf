@@ -52,14 +52,14 @@ func (b *Builder) printEnum(dst *build.Writer, typ *ast.EnumType) {
 		dst.Code(");\n\n")
 	}
 	dst.Code("\n")
-	dst.Code("\tpublic static readonly values:" + enumName + "[] = [\n")
+	dst.Code("\tpublic static readonly values: " + enumName + "[] = [\n")
 	for _, item := range typ.Items {
 		dst.Code("\t\t" + enumName + "." + build.StringToAllUpper(item.Name.Name) + ",\n")
 	}
 	dst.Code("\t];\n\n")
 
-	dst.Code("\ttoString():string {\n")
-	dst.Code("\t\treturn this.name;\n")
+	dst.Code("\ttoString(): string {\n")
+	dst.Code("\t\treturn \"").Code(build.StringToFirstLower(enumName)).Code("Lang.\" + this.name\n")
 	dst.Code("\t}\n\n")
 
 	dst.Code("}\n")

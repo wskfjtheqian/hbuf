@@ -502,7 +502,9 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			lang.Add(fieldName, field.Tags)
 		} else if "menu" == form.form {
 			dst.Code("\t\t\t\t\t<el-select v-model={props.model!.").Code(fieldName).Code("}\n")
-			dst.Code("\t\t\t\t\t\tplaceholder=\"Select\"\n")
+			if isNull {
+				dst.Code("\t\t\t\t\t\tclearable\n")
+			}
 			dst.Code("\t\t\t\t\t\tstyle=\"width:180px\"\n")
 			dst.Code("\t\t\t\t\t\tsize={props.size}\n")
 			dst.Code("\t\t\t\t\t\t>\n")

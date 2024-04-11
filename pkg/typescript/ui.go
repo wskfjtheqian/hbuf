@@ -157,8 +157,8 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Code("export const " + name + "TableColumn = defineComponent({\n")
 	dst.Code("\tname: '" + name + "TableColumn',\n")
 	dst.Code("\tprops: {hide:String},\n")
-	dst.Code("\tsetup(props) {\n")
-	dst.Code("\t\treturn (_ctx) => (\n")
+	dst.Code("\tsetup(props:any) {\n")
+	dst.Code("\t\treturn (_ctx: Record<string, any>) => (\n")
 	dst.Code("\t\t\t<>\n")
 	langName := build.StringToFirstLower(name)
 	//i := 0
@@ -186,7 +186,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 		dst.Code(">\n")
 		if "image" == table.table {
 			dst.Code("                    {{\n")
-			dst.Code("                        default: (scope) => (<>\n")
+			dst.Code("                        default: (scope:any) => (<>\n")
 			dst.Code("                            <el-popover effect=\"light\" trigger=\"hover\" placement=\"top\" width=\"auto\">\n")
 			dst.Code("                                {{\n")
 			dst.Code("                                    default: () => <el-image style=\"width: 200px; height: 200px\" src={scope.row.").Code(fieldName).Code("}/>,\n")
@@ -467,8 +467,8 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	b.printType(dst, typ.Name, false, false)
 	dst.Code("\n")
 	dst.Code("\t},\n")
-	dst.Code("\tsetup(props) {\n")
-	dst.Code("\t\treturn (_ctx) => (\n")
+	dst.Code("\tsetup(props:any) {\n")
+	dst.Code("\t\treturn (_ctx: Record<string, any>) => (\n")
 	dst.Code("\t\t\t<>\n")
 	langName := build.StringToFirstLower(name)
 	//i := 0

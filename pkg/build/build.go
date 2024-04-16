@@ -541,6 +541,18 @@ func StringToAllUpper(val string) string {
 	return ret
 }
 
+func IsNumber(expr ast.Expr) bool {
+	if t, ok := expr.(*ast.VarType); ok {
+		if t, ok := t.TypeExpr.(*ast.Ident); ok {
+			switch BaseType(t.Name) {
+			case Int8, Uint8, Int16, Uint16, Int32, Float, Double:
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func IsNil(expr ast.Expr) bool {
 	switch expr.(type) {
 	case *ast.VarType:

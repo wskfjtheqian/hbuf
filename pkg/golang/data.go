@@ -28,7 +28,7 @@ func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
 		dst.Code("\t" + build.StringToHumpName(field.Name.Name) + " ")
 		b.printType(dst, field.Type, true)
 
-		dst.Code(" `json:\"" + build.StringToUnderlineName(field.Name.Name) + "\"`")
+		dst.Code(" `json:\"" + build.StringToUnderlineName(field.Name.Name) + ",omitempty\"`")
 		dst.Code("\n")
 	}
 	dst.Code("}\n\n")

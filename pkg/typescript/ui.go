@@ -186,21 +186,26 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 		dst.Code(" min-width=\"").Code(strconv.FormatFloat(table.width, 'g', -1, 64)).Code("\"")
 		dst.Code(">\n")
 		if "image" == table.table {
-			dst.Code("                    {{\n")
-			dst.Code("                        default: (scope:any) => (<>\n")
-			dst.Code("                            <el-popover effect=\"light\" trigger=\"hover\" placement=\"top\" width=\"auto\">\n")
-			dst.Code("                                {{\n")
-			dst.Code("                                    default: () => <el-image style=\"width: 200px; height: 200px\" src={scope.row.").Code(fieldName).Code("}/>,\n")
-			dst.Code("                                    reference: () => <el-avatar shape=\"square\" size=\"60\" src={scope.row.").Code(fieldName).Code("}/>,\n")
-			dst.Code("                                }}\n")
-			dst.Code("                            </el-popover>\n")
-			dst.Code("                        </>)\n")
-			dst.Code("                    }}\n")
+			dst.Code("\t\t\t\t\t{{\n")
+			dst.Code("\t\t\t\t\t\tdefault: (scope:any) => (<>\n")
+			dst.Code("\t\t\t\t\t\t\t<el-popover effect=\"light\" trigger=\"hover\" placement=\"top\" width=\"auto\">\n")
+			dst.Code("\t\t\t\t\t\t\t\t{{\n")
+			dst.Code("\t\t\t\t\t\t\t\t\tdefault: () => <el-image style=\"width: 200px; height: 200px\" src={scope.row.").Code(fieldName).Code("}/>,\n")
+			dst.Code("\t\t\t\t\t\t\t\t\treference: () => <el-avatar shape=\"square\" size=\"60\" src={scope.row.").Code(fieldName).Code("}/>,\n")
+			dst.Code("\t\t\t\t\t\t\t\t}}\n")
+			dst.Code("\t\t\t\t\t\t\t</el-popover>\n")
+			dst.Code("\t\t\t\t\t\t</>)\n")
+			dst.Code("\t\t\t\t\t}}\n")
+		} else if "switch" == table.table {
+			dst.Code("\t\t\t\t\t{{\n")
+			dst.Code("\t\t\t\t\t\tdefault: (scope:any) => (<el-switch v-model={scope.row!.").Code(fieldName).Code("} disabled />)\n")
+			dst.Code("\t\t\t\t\t}}\n")
 		} else if isEnum {
-			dst.Code("                    {{\n")
-			dst.Code("                        default: (scope:any) =>_ctx.$t(scope.row.").Code(fieldName).Code("?.toString()||\"\")\n")
-			dst.Code("                    }}\n")
+			dst.Code("\t\t\t\t\t{{\n")
+			dst.Code("\t\t\t\t\t\tdefault: (scope:any) =>_ctx.$t(scope.row.").Code(fieldName).Code("?.toString()||\"\")\n")
+			dst.Code("\t\t\t\t\t}}\n")
 		}
+
 		dst.Code("\t\t\t\t</el-table-column>\n")
 		lang.Add(fieldName, field.Tags)
 		//
@@ -484,8 +489,10 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			return nil
 		}
 
-		//isArray := build.IsArray(field.Type)
+		isArray := build.IsArray(field.Type)
 		isNull := build.IsNil(field.Type)
+		isNumber := build.IsNumber(field.Type)
+
 		//i++
 		//index := i
 		if nil != form.index {
@@ -502,40 +509,76 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Code("\t\t\t\t\t\ttype=\"daterange\"\n")
 			dst.Code("\t\t\t\t\t\tunlink-panels\n")
 			dst.Code("\t\t\t\t\t\tsize={props.size}\n")
-			if form.onlyRead {
-				dst.Code(" disabled  \n")
-			}
 			//dst.Code("\t\t\t\t\t:shortcuts=\"shortcuts\"\n")
 			dst.Code("\t\t\t\t\t\tsize={props.size}\n")
-			dst.Code("\t\t\t\t\t/>\n")
-			lang.Add(fieldName, field.Tags)
-		} else if "menu" == form.form {
-			dst.Code("\t\t\t\t\t<el-select v-model={props.model!.").Code(fieldName).Code("}\n")
 			if isNull {
 				dst.Code("\t\t\t\t\t\tclearable\n")
 			}
+			if form.onlyRead {
+				dst.Code(" disabled  \n")
+			}
+			dst.Code("\t\t\t\t\t/>\n")
+		} else if "menu" == form.form {
+			dst.Code("\t\t\t\t\t<el-select v-model={props.model!.").Code(fieldName).Code("}\n")
 			dst.Code("\t\t\t\t\t\tstyle=\"width:180px\"\n")
 			dst.Code("\t\t\t\t\t\tsize={props.size}\n")
+			if isNull {
+				dst.Code("\t\t\t\t\t\tclearable\n")
+			}
 			if form.onlyRead {
 				dst.Code(" disabled  \n")
 			}
 			dst.Code("\t\t\t\t\t\t>\n")
 			b.printMenuItem(dst, field.Type, false)
 			dst.Code("\t\t\t\t\t</el-select>\n")
-			lang.Add(fieldName, field.Tags)
-		} else {
-			dst.Code("\t\t\t\t\t<el-input v-model={props.model!.").Code(fieldName).Code("}")
-			if isNull {
-				dst.Code(" clearable")
-			}
-			dst.Code(" size={props.size}")
+		} else if "switch" == form.form {
+			dst.Code("\t\t\t\t\t<el-switch v-model={props.model!.").Code(fieldName).Code("}")
+
 			if form.onlyRead {
 				dst.Code(" disabled")
 			}
 			dst.Code("/>\n")
-			lang.Add(fieldName, field.Tags)
+		} else if isNumber {
+			dst.Code("\t\t\t\t\t<el-input-number\n")
+			dst.Code("\t\t\t\t\t\tv-model={props.model!.").Code(fieldName).Code("}\n")
+			dst.Code("\t\t\t\t\t\tsize={props.size}\n")
+			dst.Code("\t\t\t\t\t\tcontrols-position=\"right\"\n")
+			dst.Code("\t\t\t\t\t\tprecision=\"").Code(strconv.Itoa(form.digit)).Code("\"\n")
+			if isNull {
+				dst.Code("\t\t\t\t\t\tclearable\n")
+			}
+			if form.onlyRead {
+				dst.Code(" disabled\n")
+			}
+			dst.Code("\t\t\t\t\t/>\n")
+		} else if isArray {
+			dst.Code("\t\t\t\t\t<el-select\n")
+			dst.Code("\t\t\t\t\t\tv-model={props.model!.").Code(fieldName).Code("}\n")
+			dst.Code("\t\t\t\t\t\tmultiple\n")
+			dst.Code("\t\t\t\t\t\tfilterable\n")
+			dst.Code("\t\t\t\t\t\tallow-create\n")
+			dst.Code("\t\t\t\t\t\tdefault-first-option\n")
+			dst.Code("\t\t\t\t\t\treserve-keyword={false}\n")
+			if isNull {
+				dst.Code("\t\t\t\t\t\tclearable\n")
+			}
+			if form.onlyRead {
+				dst.Code(" disabled\n")
+			}
+			dst.Code("\t\t\t\t\t>\n")
+			dst.Code("\t\t\t\t\t</el-select>\n")
+		} else {
+			dst.Code("\t\t\t\t\t<el-input v-model={props.model!.").Code(fieldName).Code("}")
+			dst.Code(" size={props.size}")
+			if isNull {
+				dst.Code(" clearable")
+			}
+			if form.onlyRead {
+				dst.Code(" disabled")
+			}
+			dst.Code("/>\n")
 		}
-
+		lang.Add(fieldName, field.Tags)
 		dst.Code("\t\t\t\t</el-form-item>\n")
 
 		return nil
@@ -548,277 +591,6 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Code("\t\t);\n")
 	dst.Code("\t}\n")
 	dst.Code("});\n\n")
-
-	//name := build.StringToHumpName(typ.Name.Name)
-	//lang := dst.GetLang(name)
-	//dst.Code("class Form" + name + build.StringToHumpName(u.suffix) + "Build {\n")
-	//dst.Code("\tfinal " + name + " info;\n\n")
-	//dst.Code("\tfinal bool readOnly;\n\n")
-	//dst.Code("\tfinal Map<double, int> sizes;\n\n")
-	//dst.Code("\tfinal EdgeInsetsGeometry padding;\n\n")
-	//
-	//dst.Code("\tForm" + name + build.StringToHumpName(u.suffix) + "Build (\n")
-	//dst.Code("\t\tthis.info, {\n")
-	//dst.Code("\t\tthis.readOnly = false,\n")
-	//dst.Code("\t\tthis.sizes = const {},\n")
-	//dst.Code("\t\tthis.padding = const EdgeInsets.only(),\n")
-	//dst.Code("\t});\n\n")
-	//
-	//fields := build.NewWriter()
-	//setValue := build.NewWriter()
-	//err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
-	//	form := b.getUI(field.Tags)
-	//	fieldName := build.StringToFirstLower(field.Name.Name)
-	//	if nil == form {
-	//		return nil
-	//	}
-	//
-	//	onlyRead := "false"
-	//	if form.onlyRead {
-	//		onlyRead = "true"
-	//	}
-	//	isArray := build.IsArray(field.Type)
-	//	isNil := build.IsNil(field.Type)
-	//
-	//	verify, err := build.GetVerify(field.Tags, dst.File, b.GetDataType)
-	//	if err != nil {
-	//		return err
-	//	}
-	//	if "text" == form.form {
-	//		dst.Code("\tfinal TextFormBuild " + fieldName + " = TextFormBuild();\n\n")
-	//		if isArray {
-	//			setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName)
-	//			if isNil {
-	//				setValue.Code("?")
-	//			}
-	//			setValue.Code(".map((e) => e")
-	//			b.printToString(setValue, field.Type, false, form.digit, form.format, "??\"\"")
-	//			setValue.Code(").join(\",\");\n")
-	//			if !form.onlyRead {
-	//				setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = ")
-	//				setValue.Code("val?.split(\",\").map((e) =>e")
-	//				b.printFormString(setValue, "val", field.Type, false, form.digit, form.format)
-	//				setValue.Code(").toList()")
-	//				if !isNil {
-	//					setValue.Code(" ?? [] ")
-	//				}
-	//				setValue.Code(";\n")
-	//			}
-	//		} else {
-	//			setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName)
-	//			b.printToString(setValue, field.Type, false, form.digit, form.format, "??\"\"")
-	//			setValue.Code(";\n")
-	//			if !form.onlyRead {
-	//				setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = ")
-	//				if form.toNull {
-	//					setValue.Code("\"\" == val ? null : ")
-	//				}
-	//				b.printFormString(setValue, "val", field.Type, false, form.digit, form.format)
-	//				setValue.Code(";\n")
-	//			}
-	//		}
-	//
-	//		setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
-	//		setValue.Code("\t\t" + fieldName + ".widthSizes = sizes;\n")
-	//		setValue.Code("\t\t" + fieldName + ".maxLines = " + strconv.Itoa(form.maxLine) + ";\n")
-	//		setValue.Code("\t\t" + fieldName + ".padding = padding;\n")
-	//		if nil != verify {
-	//			b.getPackage(dst, typ.Name, "verify")
-	//			setValue.Code("\t\t" + fieldName + ".validator = (val) => verify" + name + "_" + build.StringToHumpName(fieldName) + "(context, val!);\n")
-	//		}
-	//		setValue.Code("\t\t" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n\n")
-	//
-	//		fields.Code("\t\t\t" + fieldName + ".build(context),\n")
-	//		lang.Add(fieldName, field.Tags)
-	//	} else if "click" == form.form {
-	//		dst.Code("\tfinal ClickFormBuild<")
-	//		b.printType(dst, field.Type, false)
-	//		dst.Code("> " + fieldName + " = ClickFormBuild();\n\n")
-	//
-	//		setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName + ";\n")
-	//		if !form.onlyRead {
-	//			setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = val")
-	//			if !build.IsNil(field.Type) {
-	//				setValue.Code("!")
-	//			}
-	//			setValue.Code(";\n")
-	//		}
-	//		setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
-	//		setValue.Code("\t\t" + fieldName + ".widthSizes = sizes;\n")
-	//		setValue.Code("\t\t" + fieldName + ".padding = padding;\n")
-	//		if nil != verify {
-	//			b.getPackage(dst, typ.Name, "verify")
-	//			setValue.Code("\t\t" + fieldName + ".validator = (val) => verify" + name + "_" + build.StringToHumpName(fieldName) + "(context, val!);\n")
-	//		}
-	//		setValue.Code("\t\t" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n\n")
-	//
-	//		fields.Code("\t\t\t" + fieldName + ".build(context),\n")
-	//		lang.Add(fieldName, field.Tags)
-	//	} else if "file" == form.form {
-	//		dst.Code("\tfinal FileFormBuild " + fieldName + " = FileFormBuild();\n\n")
-	//		setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName)
-	//		b.printToString(setValue, field.Type, false, form.digit, form.format, "??\"\"")
-	//		setValue.Code(";\n")
-	//		if !form.onlyRead {
-	//			setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = ")
-	//			if form.toNull {
-	//				setValue.Code("\"\" == val ? null : ")
-	//			}
-	//			b.printFormString(setValue, "val", field.Type, false, form.digit, form.format)
-	//			setValue.Code(";\n")
-	//		}
-	//		setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
-	//		setValue.Code("\t\t" + fieldName + ".widthSizes = sizes;\n")
-	//		setValue.Code("\t\t" + fieldName + ".padding = padding;\n")
-	//		if 0 < len(form.extensions) {
-	//			setValue.Code("\t\t" + fieldName + ".extensions = <String>[")
-	//			for i, extension := range form.extensions {
-	//				if 0 < i {
-	//					setValue.Code(", ")
-	//				}
-	//				setValue.Code("\"" + extension + "\"")
-	//			}
-	//			setValue.Code("];\n")
-	//		}
-	//		if nil != verify {
-	//			b.getPackage(dst, typ.Name, "verify")
-	//			setValue.Code("\t\t" + fieldName + ".validator = (val) => verify" + name + "_" + build.StringToHumpName(fieldName) + "(context, val!);\n")
-	//		}
-	//		setValue.Code("\t\t" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n\n")
-	//
-	//		fields.Code("\t\t\t" + fieldName + ".build(context),\n")
-	//		lang.Add(fieldName, field.Tags)
-	//	} else if "image" == form.form {
-	//		dst.Code("\tfinal ImageFormBuild " + fieldName + " =  ImageFormBuild();\n\n")
-	//
-	//		if isArray {
-	//			if build.IsNil(field.Type) {
-	//				setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName + "?.map((e) => ImageFormImage(e))?.toList() ?? [];\n")
-	//				if !form.onlyRead {
-	//					setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = val!.map((e) => e.url).toList();\n")
-	//				}
-	//			} else {
-	//				setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName + ".map((e) => ImageFormImage(e)).toList();\n")
-	//				if !form.onlyRead {
-	//					setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = val!.map((e) => e.url).toList();\n")
-	//				}
-	//			}
-	//		} else {
-	//			if build.IsNil(field.Type) {
-	//				setValue.Code("\t\t" + fieldName + ".initialValue = [if (info." + fieldName + "?.startsWith(\"http\") ?? false) ImageFormImage(info." + fieldName + "!)];\n")
-	//				if !form.onlyRead {
-	//					setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = ((val?.isEmpty ?? true) ? null : val!.first.url);\n")
-	//				}
-	//			} else {
-	//				setValue.Code("\t\t" + fieldName + ".initialValue = [ImageFormImage(info." + fieldName + ")];\n")
-	//				if !form.onlyRead {
-	//					setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = val!.first.url;\n")
-	//				}
-	//			}
-	//		}
-	//
-	//		setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
-	//		setValue.Code("\t\t" + fieldName + ".maxCount = " + strconv.Itoa(form.maxCount) + ";\n")
-	//		setValue.Code("\t\t" + fieldName + ".widthSizes = sizes;\n")
-	//		setValue.Code("\t\t" + fieldName + ".padding = padding;\n")
-	//		if form.clip {
-	//			setValue.Code("\t\t" + fieldName + ".clip = true;\n")
-	//		} else {
-	//			setValue.Code("\t\t" + fieldName + ".clip = false;\n")
-	//		}
-	//		setValue.Code("\t\t" + fieldName + ".outWidth = " + strconv.FormatFloat(form.width, 'G', -1, 64) + ";\n")
-	//		setValue.Code("\t\t" + fieldName + ".outHeight = " + strconv.FormatFloat(form.height, 'G', -1, 64) + ";\n")
-	//		if 0 < len(form.extensions) {
-	//			setValue.Code("\t\t" + fieldName + ".extensions = <String>[")
-	//			for i, extension := range form.extensions {
-	//				if 0 < i {
-	//					setValue.Code(", ")
-	//				}
-	//				setValue.Code("\"" + extension + "\"")
-	//			}
-	//			setValue.Code("];\n")
-	//		}
-	//		if nil != verify {
-	//			b.getPackage(dst, typ.Name, "verify")
-	//			setValue.Code("\t\t" + fieldName + ".validator = (val) => verify" + name + "_" + build.StringToHumpName(fieldName) + "(context, val!);\n")
-	//		}
-	//		setValue.Code("\t\t" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n\n")
-	//		fields.Code("\t\t\t" + fieldName + ".build(context),\n")
-	//		lang.Add(fieldName, field.Tags)
-	//
-	//	} else if "menu" == form.form {
-	//		dst.Code("\tfinal MenuFormBuild<")
-	//		b.printType(dst, field.Type, false)
-	//		dst.Code("> " + fieldName + " = MenuFormBuild();\n\n")
-	//		setValue.Code("\t\t" + fieldName + ".value = info." + fieldName + ";\n")
-	//		if !form.onlyRead {
-	//			setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = val")
-	//			if !build.IsNil(field.Type) {
-	//				setValue.Code("!")
-	//			}
-	//			setValue.Code(";\n")
-	//		}
-	//		setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
-	//		setValue.Code("\t\t" + fieldName + ".widthSizes = sizes;\n")
-	//		setValue.Code("\t\t" + fieldName + ".padding = padding;\n")
-	//		if form.toNull {
-	//			setValue.Code("\t\t" + fieldName + ".toNull = true;\n")
-	//		}
-	//		setValue.Code("\t\t" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n")
-	//		if nil != verify {
-	//			b.getPackage(dst, typ.Name, "verify")
-	//			setValue.Code("\t\t" + fieldName + ".validator = (val) => verify" + name + "_" + build.StringToHumpName(fieldName) + "(context, val?.toString());\n")
-	//		}
-	//		setValue.Code("\t\t" + fieldName + ".items = [\n")
-	//		b.printMenuItem(setValue, field.Type, false)
-	//		setValue.Code("\t\t];\n\n")
-	//
-	//		fields.Code("\t\t\t" + fieldName + ".build(context),\n")
-	//		lang.Add(fieldName, field.Tags)
-
-	//	} else if "switch" == form.form {
-	//		dst.Code("\tfinal SwitchFormBuild " + fieldName + " =  SwitchFormBuild();\n\n")
-	//		setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName)
-	//		//b.printToString(setValue, field.Type, false, form.digit, form.format, "??\"\"")
-	//		setValue.Code(";\n")
-	//		if !form.onlyRead {
-	//			setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = ")
-	//			if !build.IsNil(field.Type) {
-	//				setValue.Code("val ?? false ;\n")
-	//			} else {
-	//				setValue.Code("val ;\n")
-	//			}
-	//
-	//		}
-	//		setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
-	//		setValue.Code("\t\t" + fieldName + ".widthSizes = sizes;\n")
-	//		setValue.Code("\t\t" + fieldName + ".padding = padding;\n")
-	//		if nil != verify {
-	//			b.getPackage(dst, typ.Name, "verify")
-	//			setValue.Code("\t\t" + fieldName + ".validator = (val) => verify" + name + "_" + build.StringToHumpName(fieldName) + "(context, val!);\n")
-	//		}
-	//		setValue.Code("\t\t" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n\n")
-	//
-	//		fields.Code("\t\t\t" + fieldName + ".build(context),\n")
-	//		lang.Add(fieldName, field.Tags)
-	//	}
-	//
-	//	return nil
-	//})
-	//if err != nil {
-	//	return
-	//}
-	//
-	//dst.Code("\tList<Widget> build(BuildContext context, {Function(BuildContext context, Form" + name + build.StringToHumpName(u.suffix) + "Build ui)? builder}) {\n")
-	//dst.Code(setValue.String())
-	//dst.Code("\t\tbuilder?.call(context, this);\n")
-	//dst.Code("\t\treturn <Widget>[\n")
-	//dst.Code(fields.String())
-	//dst.Code("\t\t];\n")
-	//dst.Code("\t}\n")
-	//dst.Code("}\n\n")
-	//
-	//dst.ImportByWriter(setValue)
 }
 
 func (b *Builder) printMenuItem(dst *build.Writer, expr ast.Expr, empty bool) {

@@ -78,6 +78,17 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) {
 	dst.Code("\t\treturn new ArrayBuffer(0)\n")
 	dst.Code("\t}\n\n")
 
+	dst.Code("\tpublic clone(): ").Code(build.StringToHumpName(typ.Name.Name)).Code(" {\n")
+	dst.Code("\t\tconst ret = new ").Code(build.StringToHumpName(typ.Name.Name)).Code("()\n")
+	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
+		dst.Code("\t\tret.").Code(build.StringToFirstLower(field.Name.Name))
+		dst.Code(" = this.")
+		b.printCopy(dst, build.StringToFirstLower(field.Name.Name), field.Type, data, true)
+		dst.Code("\n")
+		return nil
+	})
+	dst.Code("\t\treturn ret\n")
+	dst.Code("\t}\n")
 	dst.Code("}\n\n")
 }
 
@@ -90,9 +101,9 @@ func (b *Builder) printCopy(dst *build.Writer, name string, expr ast.Expr, data 
 				dst.Code(name)
 			} else if ast.Data == t.Obj.Kind {
 				if empty {
-					dst.Code(name + "?.copy()")
+					dst.Code(name).Code("?.clone()")
 				} else {
-					dst.Code(name + ".copy()")
+					dst.Code(name).Code(".clone()")
 				}
 			} else {
 				dst.Code(name)
@@ -101,9 +112,15 @@ func (b *Builder) printCopy(dst *build.Writer, name string, expr ast.Expr, data 
 			switch build.BaseType(expr.(*ast.Ident).Name) {
 			case build.Decimal:
 				if empty {
-					dst.Code("null == " + name + " ? null : Decimal.fromJson(" + name + "!.toJson())")
+					dst.Code(name).Code("?.clone()")
 				} else {
-					dst.Code("Decimal.fromJson(" + name + ".toJson())")
+					dst.Code(name).Code(".clone()")
+				}
+			case build.Uint32, build.Int64, build.Uint64:
+				if empty {
+					dst.Code("null == ").Code(name).Code(" ? null : Long.fromValue(").Code(name).Code(")")
+				} else {
+					dst.Code("Long.fromValue(").Code(name).Code(")")
 				}
 			default:
 				dst.Code(name)
@@ -113,30 +130,35 @@ func (b *Builder) printCopy(dst *build.Writer, name string, expr ast.Expr, data 
 		t := expr.(*ast.ArrayType)
 		empty = t.IsEmpty()
 		if empty {
-			dst.Code(name + "?.map((temp) => ")
-			b.printCopy(dst, "temp", t.VType, data, empty)
-			dst.Code(")")
+			dst.Code("null == " + name + " ? null : ")
+			dst.Code("(h.convertArray(" + name + ", (item) => ")
+			b.printFormMap(dst, "item", "item", t.VType, data, empty, false)
+			dst.Code("))")
 		} else {
-			dst.Code(name + ".map((temp) => ")
-			b.printCopy(dst, "temp", t.VType, data, empty)
-			dst.Code(")")
+			dst.Code("null == " + name + " ? [] : ")
+			dst.Code("(h.convertArray(" + name + ", (item) => ")
+			b.printFormMap(dst, "item", "item", t.VType, data, empty, false)
+			dst.Code("))!")
 		}
 	case *ast.MapType:
 		t := expr.(*ast.MapType)
 		empty = t.IsEmpty()
 		if empty {
-			dst.Code(name + "?.map((key,value) => MapEntry(")
-			b.printCopy(dst, "key", t.Key, data, empty)
+			dst.Code("null == " + name + " ? null : ")
+			dst.Code("(h.convertRecord(" + name + ", (key, value) => new h.RecordEntry(")
+			b.printFormMap(dst, "key", "key", t.Key, data, empty, true)
 			dst.Code(",")
-			b.printCopy(dst, "value", t.Key, data, empty)
-			dst.Code(")")
+			b.printFormMap(dst, "value", "value", t.VType, data, empty, false)
+			dst.Code(")))")
 		} else {
-			dst.Code(name + ".map((key,value) => MapEntry(")
-			b.printCopy(dst, "key", t.Key, data, empty)
+			dst.Code("null == " + name + " ? {} : ")
+			dst.Code("(h.convertRecord(" + name + ", (key, value) => new h.RecordEntry(")
+			b.printFormMap(dst, "key", "key", t.Key, data, empty, true)
 			dst.Code(",")
-			b.printCopy(dst, "value", t.Key, data, empty)
-			dst.Code("))")
+			b.printFormMap(dst, "value", "value", t.VType, data, empty, false)
+			dst.Code(")))!")
 		}
+
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
 		b.printCopy(dst, name, t.Type(), data, t.Empty)

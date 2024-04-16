@@ -169,6 +169,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 			return nil
 		}
 
+		isEnum := build.IsEnum(field.Type)
 		//isArray := build.IsArray(field.Type)
 		//isNull := build.IsNil(field.Type)
 		//i++
@@ -194,6 +195,10 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Code("                                }}\n")
 			dst.Code("                            </el-popover>\n")
 			dst.Code("                        </>)\n")
+			dst.Code("                    }}\n")
+		} else if isEnum {
+			dst.Code("                    {{\n")
+			dst.Code("                        default: (scope:any) =>_ctx.$t(scope.row.").Code(fieldName).Code("?.toString()||\"\")\n")
 			dst.Code("                    }}\n")
 		}
 		dst.Code("\t\t\t\t</el-table-column>\n")
@@ -496,6 +501,10 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Code("\t\t\t\t\t\tv-model={props.model!.").Code(fieldName).Code("}\n")
 			dst.Code("\t\t\t\t\t\ttype=\"daterange\"\n")
 			dst.Code("\t\t\t\t\t\tunlink-panels\n")
+			dst.Code("\t\t\t\t\t\tsize={props.size}\n")
+			if form.onlyRead {
+				dst.Code(" disabled  \n")
+			}
 			//dst.Code("\t\t\t\t\t:shortcuts=\"shortcuts\"\n")
 			dst.Code("\t\t\t\t\t\tsize={props.size}\n")
 			dst.Code("\t\t\t\t\t/>\n")
@@ -507,6 +516,9 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Code("\t\t\t\t\t\tstyle=\"width:180px\"\n")
 			dst.Code("\t\t\t\t\t\tsize={props.size}\n")
+			if form.onlyRead {
+				dst.Code(" disabled  \n")
+			}
 			dst.Code("\t\t\t\t\t\t>\n")
 			b.printMenuItem(dst, field.Type, false)
 			dst.Code("\t\t\t\t\t</el-select>\n")
@@ -517,6 +529,9 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				dst.Code(" clearable")
 			}
 			dst.Code(" size={props.size}")
+			if form.onlyRead {
+				dst.Code(" disabled")
+			}
 			dst.Code("/>\n")
 			lang.Add(fieldName, field.Tags)
 		}

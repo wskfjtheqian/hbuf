@@ -545,7 +545,7 @@ func IsNumber(expr ast.Expr) bool {
 	if t, ok := expr.(*ast.VarType); ok {
 		if t, ok := t.TypeExpr.(*ast.Ident); ok {
 			switch BaseType(t.Name) {
-			case Int8, Uint8, Int16, Uint16, Int32, Float, Double:
+			case Int8, Uint8, Int16, Uint16, Int32, Uint32, Float, Double:
 				return true
 			}
 		}

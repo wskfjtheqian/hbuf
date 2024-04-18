@@ -151,14 +151,14 @@ func (b *Builder) printCopy(dst *build.Writer, self, name string, expr ast.Expr,
 		t := expr.(*ast.MapType)
 		empty = t.IsEmpty()
 		if empty {
-			dst.Code(name).Code(" == null ? null : ")
+			dst.Code(self).Code(name).Code(" == null ? null : ")
 			dst.Code("(h.convertRecord(").Code(self).Code(name).Code(", (key, value) => new h.RecordEntry(")
 			b.printCopy(dst, "key", "key", t.Key, data, empty)
 			dst.Code(",")
 			b.printCopy(dst, "", "value", t.VType, data, empty)
 			dst.Code(")))")
 		} else {
-			dst.Code(name).Code(" == null ? {} : ")
+			dst.Code(self).Code(name).Code(" == null ? {} : ")
 			dst.Code("(h.convertRecord(").Code(self).Code(name).Code(", (key, value) => new h.RecordEntry(")
 			b.printCopy(dst, "key", "key", t.Key, data, empty)
 			dst.Code(",")

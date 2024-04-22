@@ -169,7 +169,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 			return nil
 		}
 
-		isEnum := build.IsEnum(field.Type)
+		//isEnum := build.IsEnum(field.Type)
 		//isArray := build.IsArray(field.Type)
 		//isNull := build.IsNil(field.Type)
 		//i++
@@ -200,101 +200,15 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Code("\t\t\t\t\t{{\n")
 			dst.Code("\t\t\t\t\t\tdefault: (scope:any) => (<el-switch v-model={scope.row!.").Code(fieldName).Code("} disabled />)\n")
 			dst.Code("\t\t\t\t\t}}\n")
-		} else if isEnum {
+		} else {
 			dst.Code("\t\t\t\t\t{{\n")
-			dst.Code("\t\t\t\t\t\tdefault: (scope:any) =>_ctx.$t(scope.row.").Code(fieldName).Code("?.toString()||\"\")\n")
+			dst.Code("\t\t\t\t\t\tdefault: (scope:any) =>")
+			b.printToString(dst, "scope.row."+fieldName, field.Type, false, table.digit, table.format, " || \"\"")
+			dst.Code("\n")
 			dst.Code("\t\t\t\t\t}}\n")
 		}
-
 		dst.Code("\t\t\t\t</el-table-column>\n")
 		lang.Add(fieldName, field.Tags)
-		//
-		//dst.Code("\"] = TablesColumn(\n")
-		//dst.Code("\t\t\t\tindex: " + strconv.Itoa(index) + ",\n")
-		//dst.Code("\t\t\t\theaderBuilder: (context) {\n")
-		//dst.Code("\t\t\t\t\treturn TablesCell(child: Text(" + name + "Localizations.of(context)." + fieldName + "));\n")
-		//dst.Code("\t\t\t\t},\n")
-		//dst.Code("\t\t\t\tcellBuilder: (context, x, y, data) {\n")
-		//if "image" == table.table {
-		//	dst.Code("\t\t\t\t\treturn TablesCell(\n")
-		//	dst.Code("\t\t\t\t\t\tchild: ((data." + fieldName)
-		//	if isNull {
-		//		dst.Code("?")
-		//	}
-		//	dst.Code(".isEmpty ")
-		//	if isNull {
-		//		dst.Code("?? false")
-		//	}
-		//	dst.Code(") ? \"\" : data." + fieldName)
-		//	if isArray {
-		//		if isNull {
-		//			dst.Code("?")
-		//		}
-		//		dst.Code(".first")
-		//		dst.Code("??\"\"")
-		//	} else if isNull {
-		//		dst.Code("??\"\"")
-		//	}
-		//	dst.Code(").startsWith(\"http\")\n")
-		//	dst.Code("\t\t\t\t\t\t\t\t? Image.network(\n")
-		//	dst.Code("\t\t\t\t\t\t\t\t\t\tdata." + fieldName)
-		//	if isArray {
-		//		if isNull {
-		//			dst.Code("!")
-		//		}
-		//		dst.Code(".first")
-		//		dst.Code("!")
-		//	} else if isNull {
-		//		dst.Code("!")
-		//	}
-		//	dst.Code(",\n")
-		//	dst.Code("\t\t\t\t\t\t\t\t\t\tfit: BoxFit.contain,\n")
-		//	dst.Code("\t\t\t\t\t\t\t\t\t)\n")
-		//	dst.Code("\t\t\t\t\t\t\t\t: const SizedBox(),\n")
-		//	dst.Code("\t\t\t\t\t);\n")
-		//} else {
-		//	dst.Code("\t\t\t\treturn TablesCell(\n")
-		//	dst.Code("\t\t\t\t\tchild: Tooltip(\n")
-		//	dst.Code("\t\t\t\t\t\tmessage: data." + fieldName)
-		//	if isArray {
-		//		if isNull {
-		//			dst.Code("?")
-		//		}
-		//		dst.Code(".map((e) => e")
-		//		b.printToString(dst, field.Type, false, table.digit, table.format, "??\"\"")
-		//		dst.Code(").join(',')")
-		//		if isNull {
-		//			dst.Code(" ?? ''")
-		//		}
-		//	} else {
-		//		b.printToString(dst, field.Type, false, table.digit, table.format, "??\"\"")
-		//	}
-		//	dst.Code(",\n")
-		//	dst.Code("\t\t\t\t\t\tchild: Text(\n")
-		//	dst.Code("\t\t\t\t\t\t\tdata." + fieldName)
-		//	if isArray {
-		//		if isNull {
-		//			dst.Code("?")
-		//		}
-		//		dst.Code(".map((e) => e")
-		//		b.printToString(dst, field.Type, false, table.digit, table.format, "??\"\"")
-		//		dst.Code(").join(',')")
-		//		if isNull {
-		//			dst.Code(" ?? ''")
-		//		}
-		//	} else {
-		//		b.printToString(dst, field.Type, false, table.digit, table.format, "??\"\"")
-		//	}
-		//	dst.Code(",\n")
-		//	dst.Code("\t\t\t\t\t\t\tmaxLines: 1,\n")
-		//	dst.Code("\t\t\t\t\t\t\toverflow: TextOverflow.ellipsis,\n")
-		//	dst.Code("\t\t\t\t\t\t),\n")
-		//	dst.Code("\t\t\t\t\t),\n")
-		//	dst.Code("\t\t\t\t);\n")
-		//}
-		//dst.Code("\t\t\t\t},\n")
-		//dst.Code("\t\t\t);\n")
-		//lang.Add(fieldName, field.Tags)
 		return nil
 	})
 	if err != nil {
@@ -308,81 +222,65 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 
 }
 
-func (b *Builder) printToString(dst *build.Writer, expr ast.Expr, empty bool, digit int, format string, val string) {
+func (b *Builder) printToString(dst *build.Writer, name string, expr ast.Expr, empty bool, digit int, format string, val string) {
 	switch expr.(type) {
 	case *ast.EnumType:
 		if empty {
-			dst.Code("?")
+			dst.Code("null == ").Code(name).Code(" ? \"\" : ")
 		}
-		dst.Code(".toText(context)")
+		dst.Code("_ctx.$t(").Code(name).Code("!.toString()").Code(")")
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
 			b.getPackage(dst, expr, "")
-			b.printToString(dst, t.Obj.Decl.(*ast.TypeSpec).Type, empty, digit, format, val)
+			b.printToString(dst, name, t.Obj.Decl.(*ast.TypeSpec).Type, empty, digit, format, val)
 		} else {
 			switch build.BaseType(t.Name) {
 			case build.Int8, build.Int16, build.Int32, build.Int64, build.Uint8, build.Uint16, build.Uint32, build.Uint64:
 				if empty {
-					dst.Code("?")
+					dst.Code("null == ").Code(name).Code(" ? \"\" : ")
 				}
-				dst.Code(".toString()")
+				dst.Code(name).Code("!.toString()")
 			case build.Float, build.Double:
 				if empty {
-					dst.Code("?")
+					dst.Code("null == ").Code(name).Code(" ? \"\" : ")
 				}
-				dst.Code(".toStringAsFixed(" + strconv.Itoa(digit) + ")")
+				dst.Code(name).Code("!.toFixed(" + strconv.Itoa(digit) + ")")
 			case build.Bool:
 				if empty {
-					dst.Code("?")
+					dst.Code("null == ").Code(name).Code(" ? \"\" : ")
 				}
-				dst.Code(".toString()")
+				dst.Code(name).Code("!.toString()")
 			case build.Date:
 				if empty {
-					dst.Code("?")
+					dst.Code("null == ").Code(name).Code(" ? \"\" : ")
 				}
-				dst.Import("package:hbuf_flutter/hbuf_flutter.dart", "")
+				dst.Import("hbuf_ts", "* as h")
 				if 0 == len(format) {
 					format = "yyyy/MM/dd HH:mm:ss"
 				}
-				dst.Code(".format(\"" + format + "\")")
+				dst.Code("h.formatDate(").Code(name).Code(",\"").Code(format).Code("\")")
 			case build.Decimal:
 				if empty {
-					dst.Code("?")
+					dst.Code("null == ").Code(name).Code(" ? \"\" : ")
 				}
-				dst.Code(".toStringAsFixed(" + strconv.Itoa(digit) + ")")
+				dst.Code(name).Code("!.toFixed(" + strconv.Itoa(digit) + ")")
+			default:
+				dst.Code(name)
 			}
 		}
 	case *ast.ArrayType:
-		//ar := expr.(*ast.ArrayType)
-		//dst.Code("List<")
-		//printType(dst, ar.VType, false)
-		//dst.Code(">")
-		//if ar.Empty && !notEmpty {
-		//	dst.Code("?")
-		//}
+		dst.Code("\"\"+").Code(name)
 	case *ast.MapType:
-		//ma := expr.(*ast.MapType)
-		//dst.Code("Map<")
-		//printType(dst, ma.Key, false)
-		//dst.Code(", ")
-		//printType(dst, ma.VType, false)
-		//dst.Code(">")
-		//if ma.Empty && !notEmpty {
-		//	dst.Code("?")
-		//}
+		dst.Code("\"\"+").Code(name)
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
-		b.printToString(dst, t.Type(), t.Empty, digit, format, val)
+		b.printToString(dst, name, t.Type(), t.Empty, digit, format, val)
 		if t.Empty {
 			dst.Code(val)
 		}
 	default:
-		if empty {
-			dst.Code("?.toString()")
-		} else {
-			dst.Code(".toString()")
-		}
+		dst.Code("\"\"+").Code(name)
 	}
 }
 

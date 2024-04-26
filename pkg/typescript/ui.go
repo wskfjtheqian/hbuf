@@ -375,7 +375,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	b.printType(dst, typ.Name, false, false)
 	dst.Code("\n")
 	dst.Code("\t},\n")
-	dst.Code("\tsetup(props:any) {\n")
+	dst.Code("\tsetup(props: Record<string, any>) {\n")
 	dst.Code("\t\treturn (_ctx: Record<string, any>) => (\n")
 	dst.Code("\t\t\t<>\n")
 	langName := build.StringToFirstLower(name)
@@ -407,8 +407,6 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Code("\t\t\t\t\t\ttype=\"daterange\"\n")
 			dst.Code("\t\t\t\t\t\tunlink-panels\n")
 			dst.Code("\t\t\t\t\t\tsize={props.size}\n")
-			//dst.Code("\t\t\t\t\t:shortcuts=\"shortcuts\"\n")
-			dst.Code("\t\t\t\t\t\tsize={props.size}\n")
 			if isNull {
 				dst.Code("\t\t\t\t\t\tclearable\n")
 			}
@@ -424,7 +422,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				dst.Code("\t\t\t\t\t\tclearable\n")
 			}
 			if form.onlyRead {
-				dst.Code(" disabled  \n")
+				dst.Code("\t\t\t\t\t\tdisabled  \n")
 			}
 			dst.Code("\t\t\t\t\t\t>\n")
 			b.printMenuItem(dst, field.Type, false)

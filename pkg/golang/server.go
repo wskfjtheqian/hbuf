@@ -184,7 +184,7 @@ func (b *Builder) printClient(dst *build.Writer, typ *ast.ServerType) {
 	}
 }
 
-type Tag map[string]string
+type Tag map[string][]string
 
 func (b *Builder) getTag(tags []*ast.Tag) *Tag {
 	val, ok := build.GetTag(tags, "tag")
@@ -194,7 +194,11 @@ func (b *Builder) getTag(tags []*ast.Tag) *Tag {
 	au := make(Tag, 0)
 	if nil != val.KV {
 		for _, item := range val.KV {
-			au[item.Name.Name] = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
+			list := make([]string, 0)
+			for _, value := range item.Values {
+				list = append(list, value.Value[1:len(value.Value)-1])
+			}
+			au[item.Name.Name] = list
 		}
 	}
 	return &au
@@ -252,7 +256,14 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 			keys := build.GetKeysByMap(*au)
 			sort.Strings(keys)
 			for _, key := range keys {
-				dst.Code("\t\t\t\t\trpc.SetTag(ctx, \"" + key + "\", \"" + (*au)[key] + "\")\n")
+				values := (*au)[key]
+				if len(values) > 0 {
+					dst.Tab(5).Code("rpc.SetTag(ctx, \"").Code(key)
+					for _, val := range values {
+						dst.Code("\", \"").Code(val)
+					}
+					dst.Code("\")\n")
+				}
 			}
 		}
 		dst.Code("\t\t\t\t},\n")

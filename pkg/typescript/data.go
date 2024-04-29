@@ -315,7 +315,7 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 		empty = t.IsEmpty()
 		if empty {
 			dst.Code("null == " + name + " ? null : (")
-			dst.Code("h.isRecord(" + v + ") ? null : ")
+			dst.Code("!h.isRecord(" + v + ") ? null : ")
 			dst.Code("(h.convertRecord(" + v + ", (key, value) => new h.RecordEntry(")
 			b.printFormMap(dst, "key", "key", t.Key, data, empty, true)
 			dst.Code(",")
@@ -323,7 +323,7 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 			dst.Code("))))")
 		} else {
 			dst.Code("null == " + name + " ? {} : (")
-			dst.Code("h.isRecord(" + v + ") ? {} : ")
+			dst.Code("!h.isRecord(" + v + ") ? {} : ")
 			dst.Code("(h.convertRecord(" + v + ", (key, value) => new h.RecordEntry(")
 			b.printFormMap(dst, "key", "key", t.Key, data, empty, true)
 			dst.Code(",")

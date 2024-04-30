@@ -105,12 +105,12 @@ func Build(file *ast.File, fset *token.FileSet, param *build.Param) error {
 			return err
 		}
 	}
-	//if 0 < dst.verify.GetCode().Len() {
-	//	err = writerFile(dst.verify, filepath.Join(dir, name+".verify.dart"))
-	//	if err != nil {
-	//		return err
-	//	}
-	//}
+	if 0 < dst.verify.GetCode().Len() {
+		err = writerFile(dst.verify, filepath.Join(dir, name+".verify.ts"))
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -206,7 +206,7 @@ func (b *Builder) printTypeSpec(dst *DartWriter, expr ast.Expr) {
 	case *ast.DataType:
 		b.printDataCode(dst.data, expr.(*ast.DataType))
 		b.printFormCode(dst.ui, expr)
-		//b.printVerifyCode(dst.verify, expr.(*ast.DataType))
+		b.printVerifyCode(dst.verify, expr.(*ast.DataType))
 	case *ast.ServerType:
 		b.printServerCode(dst.server, expr.(*ast.ServerType))
 

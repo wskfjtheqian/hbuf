@@ -325,7 +325,7 @@ func (b *Builder) printFormString(dst *build.Writer, name string, expr ast.Expr,
 					dst.Code("DateTime.tryParse(" + name + "!) ?? DateTime.now()")
 				}
 			case build.Decimal:
-				dst.Import("package:decimal/decimal.dart", "")
+				dst.Import("decimal.js", "* as d")
 				if empty {
 					dst.Code(name + "==null ? null : Decimal.fromJson(" + name + ")")
 				} else {
@@ -376,6 +376,8 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Code("\n")
 	dst.Code("\t},\n")
 	dst.Code("\tsetup(props: Record<string, any>) {\n")
+	dst.Import("element-plus", "{useLocale}")
+	dst.Tab(2).Code("const locale = useLocale()\n")
 	dst.Code("\t\treturn (_ctx: Record<string, any>) => (\n")
 	dst.Code("\t\t\t<>\n")
 	langName := build.StringToFirstLower(name)
@@ -390,7 +392,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		isArray := build.IsArray(field.Type)
 		isNull := build.IsNil(field.Type)
 		isNumber := build.IsNumber(field.Type)
-
+		_, verify := build.GetTag(field.Tags, "verify")
 		//i++
 		//index := i
 		if nil != form.index {
@@ -400,6 +402,10 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 
 		dst.Code("\t\t\t\t<el-form-item prop=\"").Code(fieldName).Code("\"")
 		dst.Code(" label={_ctx.$t(\"").Code(langName).Code("Lang.").Code(fieldName).Code("\")}")
+		if verify {
+			pName := b.getPackage(dst, typ.Name, "verify")
+			dst.Code(" rules={[{validator: ").Code(pName).Code(".verify").Code(name).Code("_").Code(build.StringToHumpName(field.Name.Name)).Code("(locale), trigger: 'blur'}]}")
+		}
 		dst.Code(">\n")
 		if "date" == form.form {
 			dst.Code("\t\t\t\t\t<el-date-picker\n")
@@ -463,6 +469,18 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Code("\t\t\t\t\t>\n")
 			dst.Code("\t\t\t\t\t</el-select>\n")
+		} else if "pass" == form.form {
+			dst.Code("\t\t\t\t\t<el-input v-model={props.model!.").Code(fieldName).Code("}")
+			dst.Code(" size={props.size}")
+			dst.Code(" type=\"password\"")
+			if isNull {
+				dst.Code(" clearable")
+			}
+			if form.onlyRead {
+				dst.Code(" disabled")
+			}
+			dst.Code("/>\n")
+
 		} else {
 			dst.Code("\t\t\t\t\t<el-input v-model={props.model!.").Code(fieldName).Code("}")
 			dst.Code(" size={props.size}")

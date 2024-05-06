@@ -259,7 +259,7 @@ func (b *Builder) printToString(dst *build.Writer, name string, expr ast.Expr, e
 				if 0 == len(format) {
 					format = "yyyy/MM/dd HH:mm:ss"
 				}
-				dst.Code("h.formatDate(").Code(name).Code(",\"").Code(format).Code("\")")
+				dst.Code("_ctx.$fd(").Code(name).Code(",\"").Code(format).Code("\")")
 			case build.Decimal:
 				if empty {
 					dst.Code("null == ").Code(name).Code(" ? \"\" : ")
@@ -298,24 +298,20 @@ func (b *Builder) printFormString(dst *build.Writer, name string, expr ast.Expr,
 			switch build.BaseType(t.Name) {
 			case build.Int8, build.Int16, build.Int32, build.Uint8, build.Uint16, build.Uint32:
 				if empty {
-					dst.Code(name + "==null ? null : num.tryParse(" + name + ")?.toInt()")
-				} else {
-					dst.Code("num.tryParse(" + name + "!)!.toInt()")
+					dst.Code(name + " == null ? null : ")
 				}
-
+				dst.Code("(Math.floor(Number.parseInt(" + name + "!)) || ").Code(name).Code(")")
 			case build.Uint64, build.Int64:
-				dst.Import("package:fixnum/fixnum.dart", "")
+				dst.Import("long", "Long")
 				if empty {
-					dst.Code(name + "==null ? null : Int64.parseInt(" + name + ")")
-				} else {
-					dst.Code("Int64.parseInt(" + name + "!)")
+					dst.Code(name + "==null ? null : ")
 				}
+				dst.Code("Long.fromValue(" + name + "!)")
 			case build.Float, build.Double:
 				if empty {
-					dst.Code(name + "==null ? null : num.tryParse(" + name + ")?.toDouble()")
-				} else {
-					dst.Code("num.tryParse(" + name + "!)!.toDouble()")
+					dst.Code(name + " == null ? null : ")
 				}
+				dst.Code("(Number.parseFloat(" + name + "!) || ").Code(name).Code(")")
 			case build.Bool:
 				dst.Code("\"true\" == " + name)
 			case build.Date:
@@ -327,10 +323,9 @@ func (b *Builder) printFormString(dst *build.Writer, name string, expr ast.Expr,
 			case build.Decimal:
 				dst.Import("decimal.js", "* as d")
 				if empty {
-					dst.Code(name + "==null ? null : Decimal.fromJson(" + name + ")")
-				} else {
-					dst.Code("Decimal.fromJson(" + name + "!)")
+					dst.Code(name + " == null ? null : ")
 				}
+				dst.Code("function () {try {return new d.Decimal(").Code(name).Code("!)} catch (e) {return ").Code(name).Code("}}()")
 			default:
 				if empty {
 					dst.Code(name)
@@ -340,6 +335,7 @@ func (b *Builder) printFormString(dst *build.Writer, name string, expr ast.Expr,
 			}
 		}
 	case *ast.ArrayType:
+		dst.Code(name)
 		//ar := expr.(*ast.ArrayType)
 		//dst.Code("List<")
 		//printType(dst, ar.VType, false)
@@ -348,6 +344,7 @@ func (b *Builder) printFormString(dst *build.Writer, name string, expr ast.Expr,
 		//	dst.Code("?")
 		//}
 	case *ast.MapType:
+		dst.Code(name)
 		//ma := expr.(*ast.MapType)
 		//dst.Code("Map<")
 		//printType(dst, ma.Key, false)
@@ -391,7 +388,6 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 
 		isArray := build.IsArray(field.Type)
 		isNull := build.IsNil(field.Type)
-		isNumber := build.IsNumber(field.Type)
 		_, verify := build.GetTag(field.Tags, "verify")
 		//i++
 		//index := i
@@ -440,19 +436,31 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				dst.Code(" disabled")
 			}
 			dst.Code("/>\n")
-		} else if isNumber {
-			dst.Code("\t\t\t\t\t<el-input-number\n")
-			dst.Code("\t\t\t\t\t\tv-model={props.model!.").Code(fieldName).Code("}\n")
-			dst.Code("\t\t\t\t\t\tsize={props.size}\n")
-			dst.Code("\t\t\t\t\t\tcontrols-position=\"right\"\n")
-			dst.Code("\t\t\t\t\t\tprecision=\"").Code(strconv.Itoa(form.digit)).Code("\"\n")
+			//} else if isNumber {
+			//	dst.Code("\t\t\t\t\t<el-input-number\n")
+			//	dst.Code("\t\t\t\t\t\tv-model={props.model!.").Code(fieldName).Code("}\n")
+			//	dst.Code("\t\t\t\t\t\tsize={props.size}\n")
+			//	dst.Code("\t\t\t\t\t\tcontrols-position=\"right\"\n")
+			//	dst.Code("\t\t\t\t\t\tprecision=\"").Code(strconv.Itoa(form.digit)).Code("\"\n")
+			//	if isNull {
+			//		dst.Code("\t\t\t\t\t\tclearable\n")
+			//	}
+			//	if form.onlyRead {
+			//		dst.Code(" disabled\n")
+			//	}
+			//	dst.Code("\t\t\t\t\t/>\n")
+		} else if "pass" == form.form {
+			dst.Code("\t\t\t\t\t<el-input v-model={props.model!.").Code(fieldName).Code("}")
+			dst.Code(" size={props.size}")
+			dst.Code(" type=\"password\"")
+			dst.Code(" show-password")
 			if isNull {
-				dst.Code("\t\t\t\t\t\tclearable\n")
+				dst.Code(" clearable")
 			}
 			if form.onlyRead {
-				dst.Code(" disabled\n")
+				dst.Code(" disabled")
 			}
-			dst.Code("\t\t\t\t\t/>\n")
+			dst.Code("/>\n")
 		} else if isArray {
 			dst.Code("\t\t\t\t\t<el-select\n")
 			dst.Code("\t\t\t\t\t\tv-model={props.model!.").Code(fieldName).Code("}\n")
@@ -469,31 +477,24 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Code("\t\t\t\t\t>\n")
 			dst.Code("\t\t\t\t\t</el-select>\n")
-		} else if "pass" == form.form {
-			dst.Code("\t\t\t\t\t<el-input v-model={props.model!.").Code(fieldName).Code("}")
-			dst.Code(" size={props.size}")
-			dst.Code(" type=\"password\"")
-			if isNull {
-				dst.Code(" clearable")
-			}
-			if form.onlyRead {
-				dst.Code(" disabled")
-			}
-			dst.Code("/>\n")
-
 		} else {
-			dst.Code("\t\t\t\t\t<el-input v-model={props.model!.").Code(fieldName).Code("}")
-			dst.Code(" size={props.size}")
+			dst.Tab(5).Code("<el-input ")
+			dst.Code("modelValue={props.model!.").Code(fieldName).Code("}\n")
+			dst.Tab(7).Code("onUpdate:modelValue={$event=> props.model!.").Code(fieldName).Code(" = ")
+			b.printFormString(dst, "$event", field.Type, false, form.digit, form.format)
+			dst.Code("}\n")
+			dst.Tab(7).Code("size={props.size}\n")
 			if isNull {
-				dst.Code(" clearable")
+				dst.Tab(7).Code("clearable\n")
 			}
 			if form.onlyRead {
-				dst.Code(" disabled")
+				dst.Tab(7).Code("disabled\n")
 			}
-			dst.Code("/>\n")
+			dst.Tab(7).Code("precision=\"").Code(strconv.Itoa(form.digit)).Code("\"\n")
+			dst.Tab(5).Code("/>\n")
 		}
 		lang.Add(fieldName, field.Tags)
-		dst.Code("\t\t\t\t</el-form-item>\n")
+		dst.Tab(4).Code("</el-form-item>\n")
 
 		return nil
 	})

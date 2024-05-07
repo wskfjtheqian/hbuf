@@ -36,9 +36,9 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 		if nil == verify {
 			return nil
 		}
-
 		dst.Import("element-plus", "type {LocaleContext}")
 		dst.Code("export const verify").Code(dName).Code("_").Code(fName).Code(" = (locale: LocaleContext) => (rule: any, value: any, callback: any): any => {\n")
+		dst.Tab(1).Code("value = '' + value\n")
 		isNull := build.IsNil(field.Type)
 		for i, val := range verify.GetFormat() {
 			f := build.GetFormat(val.Item.Tags)
@@ -47,15 +47,13 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 			}
 			pName := b.getPackage(dst, val.Enum.Name, "enum")
 			if isNull && 0 == i {
+				dst.Tab(1).Code("if (value == '' || value == 'null' || value == 'undefined') {\n")
 				if !f.Null {
-					dst.Tab(1).Code("if ((value?.length ?? 0) == 0) {\n")
 					b.printVerifyError(dst, pName, val)
-					dst.Tab(1).Code("}\n")
 				} else {
-					dst.Tab(1).Code("if ((value?.length ?? 0) == 0) {\n")
 					dst.Tab(2).Code("return callback();\n")
-					dst.Tab(1).Code("}\n")
 				}
+				dst.Tab(1).Code("}\n")
 			}
 			if build.IsEnum(field.Type) {
 				//dst.Code("\tif 0 < len(i.Get" + fName + "().ToName()) {\n")
@@ -175,7 +173,7 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 				}
 			}
 		}
-		dst.Tab(1).Code("callback();\n")
+		dst.Tab(1).Code("return callback();\n")
 		dst.Code("}\n\n")
 		return nil
 	})

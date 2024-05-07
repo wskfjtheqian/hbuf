@@ -12,13 +12,6 @@ import (
 
 type BaseType string
 
-func (t BaseType) DefaultValue() string {
-	if val, ok := _types[t]; ok {
-		return val
-	}
-	return ""
-}
-
 const (
 	Int8    BaseType = "int8"
 	Int16   BaseType = "int16"
@@ -44,21 +37,21 @@ const (
 type void struct {
 }
 
-var _types = map[BaseType]string{
-	Int8:    "int8(0)",
-	Int16:   "int16(0)",
-	Int32:   "int32(0)",
-	Int64:   "hbuf.Int64(0)",
-	Uint8:   "uint8(0)",
-	Uint16:  "uint16(0)",
-	Uint32:  "uint32(0)",
-	Uint64:  "hbuf.Uint64(0)",
-	Bool:    "false",
-	Float:   "float32(0)",
-	Double:  "float64(0)",
-	String:  "\"\"",
-	Date:    "hbuf.Time{}",
-	Decimal: "decimal.Zero",
+var _types = map[BaseType]struct{}{
+	Int8:    struct{}{},
+	Int16:   struct{}{},
+	Int32:   struct{}{},
+	Int64:   struct{}{},
+	Uint8:   struct{}{},
+	Uint16:  struct{}{},
+	Uint32:  struct{}{},
+	Uint64:  struct{}{},
+	Bool:    struct{}{},
+	Float:   struct{}{},
+	Double:  struct{}{},
+	String:  struct{}{},
+	Date:    struct{}{},
+	Decimal: struct{}{},
 }
 
 var _keys = map[BaseType]void{

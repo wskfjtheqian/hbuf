@@ -8,7 +8,7 @@ import (
 
 // GetInfoReq 12
 type GetInfoReq struct {
-	UserId *hbuf.Int64 `json:"user_id"`
+	UserId *int64 `json:"user_id"`
 
 	Name *string `json:"name"`
 
@@ -23,14 +23,14 @@ func (g *GetInfoReq) FormData(data []byte) error {
 	return json.Unmarshal(data, g)
 }
 
-func (g *GetInfoReq) GetUserId() hbuf.Int64 {
+func (g *GetInfoReq) GetUserId() int64 {
 	if nil == g.UserId {
-		return hbuf.Int64(0)
+		return int64(0)
 	}
 	return *g.UserId
 }
 
-func (g *GetInfoReq) SetUserId(val hbuf.Int64) {
+func (g *GetInfoReq) SetUserId(val int64) {
 	g.UserId = &val
 }
 
@@ -57,7 +57,7 @@ func (g *GetInfoReq) SetAge(val int32) {
 }
 
 type InfoReq struct {
-	UserId *hbuf.Int64 `json:"user_id"`
+	UserId *int64 `json:"user_id"`
 }
 
 func (g *InfoReq) ToData() ([]byte, error) {
@@ -68,19 +68,19 @@ func (g *InfoReq) FormData(data []byte) error {
 	return json.Unmarshal(data, g)
 }
 
-func (g *InfoReq) GetUserId() hbuf.Int64 {
+func (g *InfoReq) GetUserId() int64 {
 	if nil == g.UserId {
-		return hbuf.Int64(0)
+		return int64(0)
 	}
 	return *g.UserId
 }
 
-func (g *InfoReq) SetUserId(val hbuf.Int64) {
+func (g *InfoReq) SetUserId(val int64) {
 	g.UserId = &val
 }
 
 type InfoSet struct {
-	UserId *hbuf.Int64 `json:"user_id"`
+	UserId *int64 `json:"user_id"`
 
 	Name *string `json:"name"`
 
@@ -95,14 +95,14 @@ func (g *InfoSet) FormData(data []byte) error {
 	return json.Unmarshal(data, g)
 }
 
-func (g *InfoSet) GetUserId() hbuf.Int64 {
+func (g *InfoSet) GetUserId() int64 {
 	if nil == g.UserId {
-		return hbuf.Int64(0)
+		return int64(0)
 	}
 	return *g.UserId
 }
 
-func (g *InfoSet) SetUserId(val hbuf.Int64) {
+func (g *InfoSet) SetUserId(val int64) {
 	g.UserId = &val
 }
 
@@ -142,9 +142,9 @@ type GetInfoResp struct {
 
 	B3 *int32 `json:"b3"`
 
-	V4 hbuf.Int64 `json:"v4"`
+	V4 int64 `json:"v4"`
 
-	B4 *hbuf.Int64 `json:"b4"`
+	B4 *int64 `json:"b4"`
 
 	V5 uint8 `json:"v5"`
 
@@ -158,9 +158,9 @@ type GetInfoResp struct {
 
 	B7 *uint32 `json:"b7"`
 
-	V8 hbuf.Uint64 `json:"v8"`
+	V8 uint64 `json:"v8"`
 
-	B8 *hbuf.Uint64 `json:"b8"`
+	B8 *uint64 `json:"b8"`
 
 	V9 bool `json:"v9"`
 
@@ -276,22 +276,22 @@ func (g *GetInfoResp) SetB3(val int32) {
 	g.B3 = &val
 }
 
-func (g *GetInfoResp) GetV4() hbuf.Int64 {
+func (g *GetInfoResp) GetV4() int64 {
 	return g.V4
 }
 
-func (g *GetInfoResp) SetV4(val hbuf.Int64) {
+func (g *GetInfoResp) SetV4(val int64) {
 	g.V4 = val
 }
 
-func (g *GetInfoResp) GetB4() hbuf.Int64 {
+func (g *GetInfoResp) GetB4() int64 {
 	if nil == g.B4 {
-		return hbuf.Int64(0)
+		return int64(0)
 	}
 	return *g.B4
 }
 
-func (g *GetInfoResp) SetB4(val hbuf.Int64) {
+func (g *GetInfoResp) SetB4(val int64) {
 	g.B4 = &val
 }
 
@@ -352,22 +352,22 @@ func (g *GetInfoResp) SetB7(val uint32) {
 	g.B7 = &val
 }
 
-func (g *GetInfoResp) GetV8() hbuf.Uint64 {
+func (g *GetInfoResp) GetV8() uint64 {
 	return g.V8
 }
 
-func (g *GetInfoResp) SetV8(val hbuf.Uint64) {
+func (g *GetInfoResp) SetV8(val uint64) {
 	g.V8 = val
 }
 
-func (g *GetInfoResp) GetB8() hbuf.Uint64 {
+func (g *GetInfoResp) GetB8() uint64 {
 	if nil == g.B8 {
-		return hbuf.Uint64(0)
+		return uint64(0)
 	}
 	return *g.B8
 }
 
-func (g *GetInfoResp) SetB8(val hbuf.Uint64) {
+func (g *GetInfoResp) SetB8(val uint64) {
 	g.B8 = &val
 }
 

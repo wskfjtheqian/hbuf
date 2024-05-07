@@ -16,6 +16,22 @@ var _types = map[build.BaseType]string{
 	build.Uint16: "uint16", build.Uint32: "uint32", build.Uint64: "hbuf.Uint64", build.Bool: "bool", build.Float: "float32",
 	build.Double: "float64", build.String: "string", build.Date: "hbuf.Time", build.Decimal: "decimal.Decimal",
 }
+var _typesDefaultValue = map[build.BaseType]string{
+	build.Int8:    "int8(0)",
+	build.Int16:   "int16(0)",
+	build.Int32:   "int32(0)",
+	build.Int64:   "hbuf.Int64(0)",
+	build.Uint8:   "uint8(0)",
+	build.Uint16:  "uint16(0)",
+	build.Uint32:  "uint32(0)",
+	build.Uint64:  "hbuf.Uint64(0)",
+	build.Bool:    "false",
+	build.Float:   "float32(0)",
+	build.Double:  "float64(0)",
+	build.String:  "\"\"",
+	build.Date:    "hbuf.Time{}",
+	build.Decimal: "decimal.Zero",
+}
 
 type GoWriter struct {
 	data     *build.Writer

@@ -298,20 +298,20 @@ func (b *Builder) printFormString(dst *build.Writer, name string, expr ast.Expr,
 			switch build.BaseType(t.Name) {
 			case build.Int8, build.Int16, build.Int32, build.Uint8, build.Uint16, build.Uint32:
 				if empty {
-					dst.Code(name + " == null ? null : ")
+					dst.Code("(").Code(name).Code(" == null || ").Code(name).Code(".length == 0)").Code(" ? null : ")
 				}
-				dst.Code("(Math.floor(Number.parseInt(" + name + "!)) || ").Code(name).Code(")")
+				dst.Code("(/^[0-9-]+$/.test(").Code(name).Code(") ? Number.parseInt(" + name + ") :").Code(name).Code(")")
 			case build.Uint64, build.Int64:
 				dst.Import("long", "Long")
 				if empty {
-					dst.Code(name + "==null ? null : ")
+					dst.Code("(").Code(name).Code(" == null || ").Code(name).Code(".length == 0)").Code(" ? null : ")
 				}
-				dst.Code("Long.fromValue(" + name + "!)")
+				dst.Code("(/^[0-9-]+$/.test(").Code(name).Code(") ? Long.fromValue(" + name + ") :").Code(name).Code(")")
 			case build.Float, build.Double:
 				if empty {
-					dst.Code(name + " == null ? null : ")
+					dst.Code("(").Code(name).Code(" == null || ").Code(name).Code(".length == 0)").Code(" ? null : ")
 				}
-				dst.Code("(Number.parseFloat(" + name + "!) || ").Code(name).Code(")")
+				dst.Code("(/([-+]?\\d+)(\\.\\d+)?/.test(").Code(name).Code(") ? Number.parseFloat(" + name + ") :").Code(name).Code(")")
 			case build.Bool:
 				dst.Code("\"true\" == " + name)
 			case build.Date:
@@ -479,7 +479,10 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Code("\t\t\t\t\t</el-select>\n")
 		} else {
 			dst.Tab(5).Code("<el-input ")
-			dst.Code("modelValue={props.model!.").Code(fieldName).Code("}\n")
+			dst.Code("modelValue={")
+			b.printToString(dst, "props.model!."+fieldName, field.Type, false, form.digit, form.format, " ?? \"\"")
+			dst.Code("}\n")
+
 			dst.Tab(7).Code("onUpdate:modelValue={$event=> props.model!.").Code(fieldName).Code(" = ")
 			b.printFormString(dst, "$event", field.Type, false, form.digit, form.format)
 			dst.Code("}\n")

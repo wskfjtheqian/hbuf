@@ -95,7 +95,11 @@ func (b *Builder) printDefault(dst *build.Writer, expr ast.Expr) {
 			} else if build.Decimal == t {
 				dst.Import("github.com/shopspring/decimal", "")
 			}
-			dst.Code(t.DefaultValue())
+			if val, ok := _typesDefaultValue[t]; ok {
+				dst.Code(val)
+			} else {
+				dst.Code("")
+			}
 		}
 	case *ast.ArrayType:
 		ar := expr.(*ast.ArrayType)

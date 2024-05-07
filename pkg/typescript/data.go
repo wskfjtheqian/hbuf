@@ -194,7 +194,7 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 					if empty {
 						dst.Code("null == " + name + " ? null : Number(" + v + ").valueOf()")
 					} else {
-						dst.Code("null == " + name + " ? 0 : (Number(" + v + ").valueOf() || 0)")
+						dst.Code("null == " + name + " ? 0 : (Number(" + v + ").valueOf() ?? 0)")
 					}
 				} else {
 					if empty {
@@ -218,7 +218,7 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 				if empty {
 					dst.Code("null == " + name + " ? null : Number(" + v + ").valueOf()")
 				} else {
-					dst.Code("null == " + name + " ? 0 : (Number(" + v + ").valueOf() || 0)")
+					dst.Code("null == " + name + " ? 0 : (Number(" + v + ").valueOf() ?? 0)")
 				}
 			case build.Int64, build.Uint64:
 				if isRecordKey {
@@ -239,7 +239,7 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 				if empty {
 					dst.Code("null == " + name + " ? null : Number(" + v + ").valueOf()")
 				} else {
-					dst.Code("null == " + name + " ? 0 : (Number(" + v + ").valueOf() || 0)")
+					dst.Code("null == " + name + " ? 0 : (Number(" + v + ").valueOf() ?? 0)")
 				}
 			case build.String:
 				if empty {
@@ -252,7 +252,7 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 					if empty {
 						dst.Code("null == " + name + " ? null : Number(" + v + ").valueOf()")
 					} else {
-						dst.Code("null == " + name + " ? 0 : (Number(" + v + ").valueOf() || 0)")
+						dst.Code("null == " + name + " ? 0 : (Number(" + v + ").valueOf() ?? 0)")
 					}
 				} else {
 					if empty {

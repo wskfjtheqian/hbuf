@@ -39,7 +39,6 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 
 		dst.Import("element-plus", "type {LocaleContext}")
 		dst.Code("export const verify").Code(dName).Code("_").Code(fName).Code(" = (locale: LocaleContext) => (rule: any, value: any, callback: any): any => {\n")
-		dst.Tab(1).Code("value = '' + value\n")
 		isNull := build.IsNil(field.Type)
 		for i, val := range verify.GetFormat() {
 			f := build.GetFormat(val.Item.Tags)
@@ -54,7 +53,7 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 					dst.Tab(1).Code("}\n")
 				} else {
 					dst.Tab(1).Code("if ((value?.length ?? 0) == 0) {\n")
-					dst.Tab(2).Code("return null;\n")
+					dst.Tab(2).Code("return callback();\n")
 					dst.Tab(1).Code("}\n")
 				}
 			}

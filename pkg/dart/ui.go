@@ -44,7 +44,6 @@ type ui struct {
 	suffix     string
 	onlyRead   bool
 	form       string
-	toNull     bool
 	table      string
 	format     string
 	digit      int
@@ -123,8 +122,6 @@ func (b *Builder) getUI(tags []*ast.Tag) *ui {
 				form.maxCount = int(atoi)
 			} else if "clip" == item.Name.Name {
 				form.clip = "true" == item.Values[0].Value[1:len(item.Values[0].Value)-1]
-			} else if "toNull" == item.Name.Name {
-				form.toNull = "true" == item.Values[0].Value[1:len(item.Values[0].Value)-1]
 
 			} else if "extensions" == item.Name.Name {
 				for _, value := range item.Values {
@@ -542,9 +539,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				setValue.Code(";\n")
 				if !form.onlyRead {
 					setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = ")
-					if form.toNull {
-						setValue.Code("\"\" == val ? null : ")
-					}
+					setValue.Code("\"\" == val ? null : ")
 					b.printFormString(setValue, "val", field.Type, false, form.digit, form.format)
 					setValue.Code(";\n")
 				}
@@ -593,9 +588,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			setValue.Code(";\n")
 			if !form.onlyRead {
 				setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = ")
-				if form.toNull {
-					setValue.Code("\"\" == val ? null : ")
-				}
+				setValue.Code("\"\" == val ? null : ")
 				b.printFormString(setValue, "val", field.Type, false, form.digit, form.format)
 				setValue.Code(";\n")
 			}
@@ -693,9 +686,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
 			setValue.Code("\t\t" + fieldName + ".widthSizes = sizes;\n")
 			setValue.Code("\t\t" + fieldName + ".padding = padding;\n")
-			if form.toNull {
-				setValue.Code("\t\t" + fieldName + ".toNull = true;\n")
-			}
+			setValue.Code("\t\t" + fieldName + ".toNull = true;\n")
 			setValue.Code("\t\t" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n")
 			if nil != verify {
 				b.getPackage(dst, typ.Name, "verify")
@@ -714,9 +705,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			setValue.Code(";\n")
 			if !form.onlyRead {
 				setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = ")
-				if form.toNull {
-					setValue.Code("\"\" == val ? null : ")
-				}
+				setValue.Code("\"\" == val ? null : ")
 				setValue.Code("val ;\n")
 			}
 			setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")

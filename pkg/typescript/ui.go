@@ -328,10 +328,9 @@ func (b *Builder) printFormString(dst *build.Writer, name string, expr ast.Expr,
 				dst.Code("function () {try {return new d.Decimal(").Code(name).Code("!)} catch (e) {return ").Code(name).Code("}}()")
 			default:
 				if empty {
-					dst.Code(name)
-				} else {
-					dst.Code(name + "!")
+					dst.Code("(").Code(name).Code(" == null || ").Code(name).Code(".length == 0)").Code(" ? null : ")
 				}
+				dst.Code(name)
 			}
 		}
 	case *ast.ArrayType:

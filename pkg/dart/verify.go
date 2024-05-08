@@ -70,23 +70,23 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 				t := build.GetBaseType(field.Type)
 				switch t {
 				case build.Int8:
-					b.verifyNum(dst, val, f, "-?[1-9]\\\\d*", field.Type, "–128", "127")
+					b.verifyNum(dst, val, f, "-?[0-9]\\\\d*", field.Type, "–128", "127")
 				case build.Int16:
-					b.verifyNum(dst, val, f, "-?[1-9]\\\\d*", field.Type, "-32768", "32767")
+					b.verifyNum(dst, val, f, "-?[0-9]\\\\d*", field.Type, "-32768", "32767")
 				case build.Int32:
-					b.verifyNum(dst, val, f, "-?[1-9]\\\\d*", field.Type, "-2147483648", "2147483647")
+					b.verifyNum(dst, val, f, "-?[0-9]\\\\d*", field.Type, "-2147483648", "2147483647")
 				case build.Uint8:
-					b.verifyNum(dst, val, f, "[1-9]\\\\d*", field.Type, "0", "255")
+					b.verifyNum(dst, val, f, "[0-9]\\\\d*", field.Type, "0", "255")
 				case build.Uint16:
-					b.verifyNum(dst, val, f, "[1-9]\\\\d*", field.Type, "0", "65535")
+					b.verifyNum(dst, val, f, "[0-9]\\\\d*", field.Type, "0", "65535")
 				case build.Uint32:
-					b.verifyNum(dst, val, f, "[1-9]\\\\d*", field.Type, "0", "4294967295")
+					b.verifyNum(dst, val, f, "[0-9]\\\\d*", field.Type, "0", "4294967295")
 				case build.Float, build.Double:
-					b.verifyNum(dst, val, f, "-?[1-9]\\\\d*.\\\\d*|0.\\\\d*[1-9]\\\\d*", field.Type, "", "")
+					b.verifyNum(dst, val, f, "-?[0-9]\\\\d*.\\\\d*|0.\\\\d*[0-9]\\\\d*", field.Type, "", "")
 				case build.Int64:
-					b.verifyNum(dst, val, f, "[1-9]\\\\d*", field.Type, "-9223372036854775808", "9223372036854775808")
+					b.verifyNum(dst, val, f, "[0-9]\\\\d*", field.Type, "-9223372036854775808", "9223372036854775808")
 				case build.Uint64:
-					b.verifyNum(dst, val, f, "[1-9]\\\\d*", field.Type, "0", "18446744073709551615615")
+					b.verifyNum(dst, val, f, "[0-9]\\\\d*", field.Type, "0", "18446744073709551615615")
 				case build.Date:
 					dst.Code("\tDateTime? val = DateTime.tryParse(text!);\n")
 					dst.Code("\tif (null == val) {\n")
@@ -122,7 +122,7 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 						dst.Code("\t}\n")
 					}
 					if i == len(verify.GetFormat())-1 {
-						dst.Code("\tif (!RegExp(\"-?[1-9]\\\\d*.\\\\d*|0.\\\\d*[1-9]\\\\d*\").hasMatch(text")
+						dst.Code("\tif (!RegExp(\"-?[0-9]\\\\d*.\\\\d*|0.\\\\d*[0-9]\\\\d*\").hasMatch(text")
 						if build.IsNil(field.Type) {
 							dst.Code("!")
 						}

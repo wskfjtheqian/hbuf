@@ -296,24 +296,38 @@ func (b *Builder) printFormString(dst *build.Writer, name string, expr ast.Expr,
 			b.printFormString(dst, name, t.Obj.Decl.(*ast.TypeSpec).Type, empty, digit, format)
 		} else {
 			switch build.BaseType(t.Name) {
-			case build.Int8, build.Int16, build.Int32, build.Uint8, build.Uint16, build.Uint32:
+			case build.Int8, build.Int16, build.Int32:
 				if empty {
 					dst.Code("(").Code(name).Code(" == null || ").Code(name).Code(".length == 0)").Code(" ? null : ")
 				}
-				dst.Code("(/^[0-9-]+$/.test(").Code(name).Code(") ? Number.parseInt(" + name + ") :").Code(name).Code(")")
-			case build.Uint64, build.Int64:
+				dst.Code("(/^[-+]?[0-9]+$/.test(").Code(name).Code(") ? Number.parseInt(" + name + ") :").Code(name).Code(")")
+			case build.Uint8, build.Uint16, build.Uint32:
+				if empty {
+					dst.Code("(").Code(name).Code(" == null || ").Code(name).Code(".length == 0)").Code(" ? null : ")
+				}
+				dst.Code("(/^[+]?[0-9]+$/.test(").Code(name).Code(") ? Number.parseInt(" + name + ") :").Code(name).Code(")")
+			case build.Int64:
 				dst.Import("long", "Long")
 				if empty {
 					dst.Code("(").Code(name).Code(" == null || ").Code(name).Code(".length == 0)").Code(" ? null : ")
 				}
-				dst.Code("(/^[0-9-]+$/.test(").Code(name).Code(") ? Long.fromValue(" + name + ") :").Code(name).Code(")")
+				dst.Code("(/^[-+]?[0-9]+$/.test(").Code(name).Code(") ? Long.fromValue(" + name + ") :").Code(name).Code(")")
+			case build.Uint64:
+				dst.Import("long", "Long")
+				if empty {
+					dst.Code("(").Code(name).Code(" == null || ").Code(name).Code(".length == 0)").Code(" ? null : ")
+				}
+				dst.Code("(/^[+]?[0-9]+$/.test(").Code(name).Code(") ? Long.fromValue(" + name + ") :").Code(name).Code(")")
 			case build.Float, build.Double:
 				if empty {
 					dst.Code("(").Code(name).Code(" == null || ").Code(name).Code(".length == 0)").Code(" ? null : ")
 				}
 				dst.Code("(/([-+]?\\d+)(\\.\\d+)?/.test(").Code(name).Code(") ? Number.parseFloat(" + name + ") :").Code(name).Code(")")
 			case build.Bool:
-				dst.Code("\"true\" == " + name)
+				if empty {
+					dst.Code("(").Code(name).Code(" == null || ").Code(name).Code(".length == 0)").Code(" ? null : ")
+				}
+				dst.Code("(\"true\" == ").Code(name).Code(")")
 			case build.Date:
 				if empty {
 					dst.Code(name + "==null ? null : DateTime.tryParse(" + name + ")")
@@ -449,17 +463,25 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			//	}
 			//	dst.Code("\t\t\t\t\t/>\n")
 		} else if "pass" == form.form {
-			dst.Code("\t\t\t\t\t<el-input v-model={props.model!.").Code(fieldName).Code("}")
-			dst.Code(" size={props.size}")
+			dst.Tab(5).Code("<el-input ")
+			dst.Code("modelValue={")
+			b.printToString(dst, "props.model!."+fieldName, field.Type, false, form.digit, form.format, " ?? \"\"")
+			dst.Code("}\n")
+
+			dst.Tab(7).Code("onUpdate:modelValue={($event: string) => props.model!.").Code(fieldName).Code(" = ")
+			b.printFormString(dst, "$event", field.Type, false, form.digit, form.format)
+			dst.Code("}\n")
+			dst.Tab(7).Code("size={props.size}\n")
 			dst.Code(" type=\"password\"")
 			dst.Code(" show-password")
 			if isNull {
-				dst.Code(" clearable")
+				dst.Tab(7).Code("clearable\n")
 			}
 			if form.onlyRead {
-				dst.Code(" disabled")
+				dst.Tab(7).Code("disabled\n")
 			}
-			dst.Code("/>\n")
+			dst.Tab(7).Code("precision=\"").Code(strconv.Itoa(form.digit)).Code("\"\n")
+			dst.Tab(5).Code("/>\n")
 		} else if isArray {
 			dst.Code("\t\t\t\t\t<el-select\n")
 			dst.Code("\t\t\t\t\t\tv-model={props.model!.").Code(fieldName).Code("}\n")
@@ -482,7 +504,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			b.printToString(dst, "props.model!."+fieldName, field.Type, false, form.digit, form.format, " ?? \"\"")
 			dst.Code("}\n")
 
-			dst.Tab(7).Code("onUpdate:modelValue={$event=> props.model!.").Code(fieldName).Code(" = ")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: string) => props.model!.").Code(fieldName).Code(" = ")
 			b.printFormString(dst, "$event", field.Type, false, form.digit, form.format)
 			dst.Code("}\n")
 			dst.Tab(7).Code("size={props.size}\n")

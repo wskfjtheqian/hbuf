@@ -228,7 +228,7 @@ func (b *Builder) printToString(dst *build.Writer, name string, expr ast.Expr, e
 		if empty {
 			dst.Code("null == ").Code(name).Code(" ? \"\" : ")
 		}
-		dst.Code("_ctx.$t(").Code(name).Code("!.toString()").Code(")")
+		dst.Code("_ctx.$t(").Code(name).Code("?.toString()").Code(")")
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
@@ -288,7 +288,11 @@ func (b *Builder) printFormString(dst *build.Writer, name string, expr ast.Expr,
 	switch expr.(type) {
 	case *ast.EnumType:
 		t := expr.(*ast.EnumType)
-		dst.Code(t.Name.Name + ".nameOf(" + name + "!)")
+		if empty {
+			dst.Code("(").Code(name).Code(" == null || ").Code(name).Code(".length == 0)").Code(" ? null : ")
+		}
+		p := b.getPackage(dst, t.Name, "")
+		dst.Code("(").Code(p).Code(".").Code(t.Name.Name).Code(".nameOf(").Code(name).Code("))")
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
@@ -330,16 +334,15 @@ func (b *Builder) printFormString(dst *build.Writer, name string, expr ast.Expr,
 				dst.Code("(\"true\" == ").Code(name).Code(")")
 			case build.Date:
 				if empty {
-					dst.Code(name + "==null ? null : DateTime.tryParse(" + name + ")")
-				} else {
-					dst.Code("DateTime.tryParse(" + name + "!) ?? DateTime.now()")
+					dst.Code("(").Code(name).Code(" == null || ").Code(name).Code(".length == 0)").Code(" ? null : ")
 				}
+				dst.Code("Date.parse(" + name + ") ?? ").Code(name)
 			case build.Decimal:
 				dst.Import("decimal.js", "* as d")
 				if empty {
 					dst.Code(name + " == null ? null : ")
 				}
-				dst.Code("function () {try {return new d.Decimal(").Code(name).Code("!)} catch (e) {return ").Code(name).Code("}}()")
+				dst.Code("function () {try {return new d.Decimal(").Code(name).Code(")} catch (e) {return ").Code(name).Code("}}()")
 			default:
 				if empty {
 					dst.Code("(").Code(name).Code(" == null || ").Code(name).Code(".length == 0)").Code(" ? null : ")
@@ -443,7 +446,11 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			b.printMenuItem(dst, field.Type, false)
 			dst.Code("\t\t\t\t\t</el-select>\n")
 		} else if "switch" == form.form {
-			dst.Code("\t\t\t\t\t<el-switch v-model={props.model!.").Code(fieldName).Code("}")
+			dst.Code("\t\t\t\t\t<el-switch modelValue={props.model!.").Code(fieldName).Code(" ??= false")
+			dst.Code("}\n")
+
+			dst.Tab(7).Code("onUpdate:modelValue={($event: string) => props.model!.").Code(fieldName).Code(" = $event")
+			dst.Code("}\n")
 
 			if form.onlyRead {
 				dst.Code(" disabled")
@@ -472,8 +479,8 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			b.printFormString(dst, "$event", field.Type, false, form.digit, form.format)
 			dst.Code("}\n")
 			dst.Tab(7).Code("size={props.size}\n")
-			dst.Code(" type=\"password\"")
-			dst.Code(" show-password")
+			dst.Tab(7).Code("type=\"password\"\n")
+			dst.Tab(7).Code("show-password\n")
 			if isNull {
 				dst.Tab(7).Code("clearable\n")
 			}
@@ -501,7 +508,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		} else {
 			dst.Tab(5).Code("<el-input ")
 			dst.Code("modelValue={")
-			b.printToString(dst, "props.model!."+fieldName, field.Type, false, form.digit, form.format, " ?? \"\"")
+			b.printToString(dst, "props.model!."+fieldName, field.Type, false, form.digit, form.format, "")
 			dst.Code("}\n")
 
 			dst.Tab(7).Code("onUpdate:modelValue={($event: string) => props.model!.").Code(fieldName).Code(" = ")

@@ -437,13 +437,13 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				if "datetime" == form.form {
 					dst.Code("h.convertArray($event, (e) => _ctx.$timeToUtc(e))")
 				} else if "month" == form.form {
-					dst.Code("h.convertArray([$event![0], new Date($event![1].getFullYear(), $event[1]!.getMonth() + 1, 0, 23, 59, 59, 999)], (e) => _ctx.$timeToUtc(e))")
+					dst.Code("h.convertArray([($event! as Date[])[0] as Date, new Date((($event! as Date[])[1] as Date).getFullYear(), (($event! as Date[])[1] as Date).getMonth() + 1, 0, 23, 59, 59, 999)], (e) => _ctx.$timeToUtc(e))")
 				} else if "dates" == form.form {
 					dst.Code("h.convertArray($event, (e) => _ctx.$timeToUtc(e))")
 				} else if "year" == form.form {
 					dst.Code("h.convertArray($event, (e) => _ctx.$timeToUtc(e))")
 				} else {
-					dst.Code("h.convertArray([$event![0], new Date($event![1]?.setHours(23,59,59,999))], (e) => _ctx.$timeToUtc(e))")
+					dst.Code("h.convertArray([($event! as Date[])[0] as Date, new Date((($event! as Date[])[1] as Date).setHours(23,59,59,999))], (e) => _ctx.$timeToUtc(e))")
 				}
 			} else {
 				if "datetime" == form.form {

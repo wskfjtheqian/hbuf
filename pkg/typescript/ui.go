@@ -53,6 +53,7 @@ type ui struct {
 	maxLine    int
 	extensions []string
 	clip       bool
+	unlink     bool
 	maxCount   int
 }
 
@@ -124,7 +125,8 @@ func (b *Builder) getUI(tags []*ast.Tag) *ui {
 				form.clip = "true" == item.Values[0].Value[1:len(item.Values[0].Value)-1]
 			} else if "toNull" == item.Name.Name {
 				form.toNull = "true" == item.Values[0].Value[1:len(item.Values[0].Value)-1]
-
+			} else if "unlink" == item.Name.Name {
+				form.unlink = "true" == item.Values[0].Value[1:len(item.Values[0].Value)-1]
 			} else if "extensions" == item.Name.Name {
 				for _, value := range item.Values {
 					form.extensions = append(form.extensions, value.Value[1:len(value.Value)-1])
@@ -412,39 +414,104 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		}
 		fieldName := build.StringToFirstLower(field.Name.Name)
 
-		dst.Code("\t\t\t\t<el-form-item prop=\"").Code(fieldName).Code("\"")
+		dst.Tab(4).Code("<el-form-item prop=\"").Code(fieldName).Code("\"")
 		dst.Code(" label={_ctx.$t(\"").Code(langName).Code("Lang.").Code(fieldName).Code("\")}")
 		if verify {
 			pName := b.getPackage(dst, typ.Name, "verify")
 			dst.Code(" rules={[{validator: ").Code(pName).Code(".verify").Code(name).Code("_").Code(build.StringToHumpName(field.Name.Name)).Code("(locale), trigger: 'blur'}]}")
 		}
 		dst.Code(">\n")
-		if "date" == form.form {
-			dst.Code("\t\t\t\t\t<el-date-picker\n")
-			dst.Code("\t\t\t\t\t\tv-model={props.model!.").Code(fieldName).Code("}\n")
-			dst.Code("\t\t\t\t\t\ttype=\"daterange\"\n")
-			dst.Code("\t\t\t\t\t\tunlink-panels\n")
-			dst.Code("\t\t\t\t\t\tsize={props.size}\n")
+		if "datetime" == form.form || "date" == form.form || "dates" == form.form || "year" == form.form || "month" == form.form {
+			dst.Tab(5).Code("<el-date-picker\n")
+			dst.Tab(6).Code("modelValue={")
+			if isArray {
+				dst.Import("hbuf_ts", "* as h")
+				dst.Code(" h.convertArray(props.model!.").Code(fieldName).Code(", (e) => _ctx.$timeToLocal(e))")
+			} else {
+				dst.Code("_ctx.$timeToLocal(props.model!.").Code(fieldName).Code(")")
+			}
+			dst.Code("}\n")
+			dst.Tab(6).Code("onUpdate:modelValue={($event: (number | string | Date) | (number | string | Date)[] | null) => props.model!.").Code(fieldName).Code(" = ")
+			if isArray {
+				dst.Import("hbuf_ts", "* as h")
+				if "datetime" == form.form {
+					dst.Code("h.convertArray($event, (e) => _ctx.$timeToLocal(e))")
+				} else if "month" == form.form {
+					dst.Code("h.convertArray([$event![0], new Date($event![1].getFullYear(), $event[1]!.getMonth() + 1, 0, 23, 59, 59, 999)], (e) => _ctx.$timeToLocal(e))")
+				} else if "dates" == form.form {
+					dst.Code("h.convertArray($event, (e) => _ctx.$timeToLocal(e))")
+				} else if "year" == form.form {
+					dst.Code("h.convertArray($event, (e) => _ctx.$timeToLocal(e))")
+				} else {
+					dst.Code("h.convertArray([$event![0], new Date($event![1]?.setHours(23,59,59,999))], (e) => _ctx.$timeToLocal(e))")
+				}
+			} else {
+				if "datetime" == form.form {
+					dst.Code("_ctx.$timeToUtc($event)")
+				} else if "month" == form.form {
+					dst.Code("_ctx.$timeToUtc($event)")
+				} else if "dates" == form.form {
+					dst.Code("($event?.length ?? 0 == 0) ? null :_ctx.$timeToUtc($event[0])")
+				} else if "year" == form.form {
+					dst.Code("_ctx.$timeToUtc($event)")
+				} else {
+					dst.Code("_ctx.$timeToUtc($event)")
+				}
+			}
+			dst.Code("}\n")
+			dst.Tab(6).Code("type=\"")
+			if isArray {
+				if "datetime" == form.form {
+					dst.Code("datetimerange")
+				} else if "month" == form.form {
+					dst.Code("monthrange")
+				} else if "dates" == form.form {
+					dst.Code("dates")
+				} else if "year" == form.form {
+					dst.Code("years")
+				} else {
+					dst.Code("daterange")
+				}
+			} else {
+				if "datetime" == form.form {
+					dst.Code("datetime")
+				} else if "month" == form.form {
+					dst.Code("month")
+				} else if "dates" == form.form {
+					dst.Code("dates")
+				} else if "year" == form.form {
+					dst.Code("year")
+				} else {
+					dst.Code("date")
+				}
+			}
+			dst.Code("\"\n")
+			if form.unlink {
+				dst.Tab(6).Code("unlink-panels\n")
+			}
+			dst.Tab(6).Code("shortcuts={_ctx.$datePackerShortcuts(_ctx.$t)}\n")
+			dst.Tab(6).Code("size={props.size}\n")
 			if isNull {
-				dst.Code("\t\t\t\t\t\tclearable\n")
+				dst.Tab(6).Code("clearable\n")
 			}
 			if form.onlyRead {
 				dst.Code(" disabled  \n")
 			}
-			dst.Code("\t\t\t\t\t/>\n")
+			dst.Tab(5).Code("/>\n")
 		} else if "menu" == form.form {
-			dst.Code("\t\t\t\t\t<el-select v-model={props.model!.").Code(fieldName).Code("}\n")
-			dst.Code("\t\t\t\t\t\tstyle=\"width:180px\"\n")
-			dst.Code("\t\t\t\t\t\tsize={props.size}\n")
+			dst.Tab(5).Code("<el-select\n")
+			dst.Tab(6).Code("v-model={props.model!.").Code(fieldName).Code("}\n")
+			dst.Tab(6).Code("style=\"width:180px\"\n")
+			dst.Tab(6).Code("size={props.size}\n")
 			if isNull {
-				dst.Code("\t\t\t\t\t\tclearable\n")
+				dst.Tab(6).Code("clearable\n")
 			}
 			if form.onlyRead {
-				dst.Code("\t\t\t\t\t\tdisabled  \n")
+				dst.Tab(6).Code("disabled  \n")
 			}
-			dst.Code("\t\t\t\t\t\t>\n")
+			dst.Tab(6).Code(">\n")
 			b.printMenuItem(dst, field.Type, false)
-			dst.Code("\t\t\t\t\t</el-select>\n")
+			dst.Tab(5).Code("</el-select>\n")
 		} else if "switch" == form.form {
 			dst.Code("\t\t\t\t\t<el-switch modelValue={props.model!.").Code(fieldName).Code(" ??= false")
 			dst.Code("}\n")
@@ -470,58 +537,58 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			//	}
 			//	dst.Code("\t\t\t\t\t/>\n")
 		} else if "pass" == form.form {
-			dst.Tab(5).Code("<el-input ")
+			dst.Tab(5).Code("<el-input\n")
 			dst.Code("modelValue={")
 			b.printToString(dst, "props.model!."+fieldName, field.Type, false, form.digit, form.format, " ?? \"\"")
 			dst.Code("}\n")
 
-			dst.Tab(7).Code("onUpdate:modelValue={($event: string) => props.model!.").Code(fieldName).Code(" = ")
+			dst.Tab(6).Code("onUpdate:modelValue={($event: string) => props.model!.").Code(fieldName).Code(" = ")
 			b.printFormString(dst, "$event", field.Type, false, form.digit, form.format)
 			dst.Code("}\n")
-			dst.Tab(7).Code("size={props.size}\n")
-			dst.Tab(7).Code("type=\"password\"\n")
-			dst.Tab(7).Code("show-password\n")
+			dst.Tab(6).Code("size={props.size}\n")
+			dst.Tab(6).Code("type=\"password\"\n")
+			dst.Tab(6).Code("show-password\n")
 			if isNull {
-				dst.Tab(7).Code("clearable\n")
+				dst.Tab(6).Code("clearable\n")
 			}
 			if form.onlyRead {
-				dst.Tab(7).Code("disabled\n")
+				dst.Tab(6).Code("disabled\n")
 			}
-			dst.Tab(7).Code("precision=\"").Code(strconv.Itoa(form.digit)).Code("\"\n")
+			dst.Tab(6).Code("precision=\"").Code(strconv.Itoa(form.digit)).Code("\"\n")
 			dst.Tab(5).Code("/>\n")
 		} else if isArray {
-			dst.Code("\t\t\t\t\t<el-select\n")
-			dst.Code("\t\t\t\t\t\tv-model={props.model!.").Code(fieldName).Code("}\n")
-			dst.Code("\t\t\t\t\t\tmultiple\n")
-			dst.Code("\t\t\t\t\t\tfilterable\n")
-			dst.Code("\t\t\t\t\t\tallow-create\n")
-			dst.Code("\t\t\t\t\t\tdefault-first-option\n")
-			dst.Code("\t\t\t\t\t\treserve-keyword={false}\n")
+			dst.Tab(5).Code("<el-select\n")
+			dst.Tab(6).Code("v-model={props.model!.").Code(fieldName).Code("}\n")
+			dst.Tab(6).Code("multiple\n")
+			dst.Tab(6).Code("filterable\n")
+			dst.Tab(6).Code("allow-create\n")
+			dst.Tab(6).Code("default-first-option\n")
+			dst.Tab(6).Code("reserve-keyword={false}\n")
 			if isNull {
-				dst.Code("\t\t\t\t\t\tclearable\n")
+				dst.Tab(6).Code("clearable\n")
 			}
 			if form.onlyRead {
-				dst.Code(" disabled\n")
+				dst.Tab(6).Code(" disabled\n")
 			}
-			dst.Code("\t\t\t\t\t>\n")
-			dst.Code("\t\t\t\t\t</el-select>\n")
+			dst.Tab(6).Code(">\n")
+			dst.Tab(5).Code("</el-select>\n")
 		} else {
-			dst.Tab(5).Code("<el-input ")
-			dst.Code("modelValue={")
+			dst.Tab(5).Code("<el-input\n")
+			dst.Tab(6).Code("modelValue={")
 			b.printToString(dst, "props.model!."+fieldName, field.Type, false, form.digit, form.format, "")
 			dst.Code("}\n")
 
-			dst.Tab(7).Code("onUpdate:modelValue={($event: string) => props.model!.").Code(fieldName).Code(" = ")
+			dst.Tab(6).Code("onUpdate:modelValue={($event: string) => props.model!.").Code(fieldName).Code(" = ")
 			b.printFormString(dst, "$event", field.Type, false, form.digit, form.format)
 			dst.Code("}\n")
-			dst.Tab(7).Code("size={props.size}\n")
+			dst.Tab(6).Code("size={props.size}\n")
 			if isNull {
-				dst.Tab(7).Code("clearable\n")
+				dst.Tab(6).Code("clearable\n")
 			}
 			if form.onlyRead {
-				dst.Tab(7).Code("disabled\n")
+				dst.Tab(6).Code("disabled\n")
 			}
-			dst.Tab(7).Code("precision=\"").Code(strconv.Itoa(form.digit)).Code("\"\n")
+			dst.Tab(6).Code("precision=\"").Code(strconv.Itoa(form.digit)).Code("\"\n")
 			dst.Tab(5).Code("/>\n")
 		}
 		lang.Add(fieldName, field.Tags)

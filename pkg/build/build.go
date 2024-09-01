@@ -633,3 +633,12 @@ func GetKeysByMap[F string, E any](maps map[F]E) []F {
 	}
 	return keys
 }
+
+func StringFillRight(text string, fill byte, length int) string {
+	ret := strings.Builder{}
+	ret.WriteString(text)
+	for i := 0; i < length-len(text); i++ {
+		ret.WriteByte(fill)
+	}
+	return ret.String()
+}

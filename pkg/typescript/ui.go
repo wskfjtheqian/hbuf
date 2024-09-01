@@ -432,6 +432,9 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Code("}\n")
 			dst.Tab(6).Code("onUpdate:modelValue={($event: (number | string | Date) | (number | string | Date)[] | null) => props.model!.").Code(fieldName).Code(" = ")
+			if isNull {
+				dst.Code("(!$event) ? null : ")
+			}
 			if isArray {
 				dst.Import("hbuf_ts", "* as h")
 				if "datetime" == form.form {
@@ -491,8 +494,11 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(6).Code("shortcuts={_ctx.$datePackerShortcuts(_ctx.$t)}\n")
 			dst.Tab(6).Code("size={props.size}\n")
+			dst.Tab(6).Code("clearable=")
 			if isNull {
-				dst.Tab(6).Code("clearable\n")
+				dst.Code("{true}\n")
+			} else {
+				dst.Code("{false}\n")
 			}
 			if form.onlyRead {
 				dst.Code(" disabled  \n")

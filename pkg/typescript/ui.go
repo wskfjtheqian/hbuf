@@ -192,7 +192,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Code("\t\t\t\t\t\tdefault: (scope:any) => (<>\n")
 			dst.Code("\t\t\t\t\t\t\t<el-popover effect=\"light\" trigger=\"hover\" placement=\"top\" width=\"auto\">\n")
 			dst.Code("\t\t\t\t\t\t\t\t{{\n")
-			dst.Code("\t\t\t\t\t\t\t\t\tdefault: () => <el-image style=\"width: 200px; height: 200px\" src={scope.row.").Code(fieldName).Code("}/>,\n")
+			dst.Code("\t\t\t\t\t\t\t\t\tdefault: () => <el-image style={\"width: 200px; height: 200px\"} src={scope.row.").Code(fieldName).Code("}/>,\n")
 			dst.Code("\t\t\t\t\t\t\t\t\treference: () => <el-avatar shape=\"square\" size=\"60\" src={scope.row.").Code(fieldName).Code("}/>,\n")
 			dst.Code("\t\t\t\t\t\t\t\t}}\n")
 			dst.Code("\t\t\t\t\t\t\t</el-popover>\n")
@@ -507,7 +507,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		} else if "menu" == form.form {
 			dst.Tab(5).Code("<el-select\n")
 			dst.Tab(6).Code("v-model={props.model!.").Code(fieldName).Code("}\n")
-			dst.Tab(6).Code("style=\"width:180px\"\n")
+			dst.Tab(6).Code("style={\"width:180px\"}\n")
 			dst.Tab(6).Code("size={props.size}\n")
 			if isNull {
 				dst.Tab(6).Code("clearable\n")
@@ -544,7 +544,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			//	dst.Code("\t\t\t\t\t/>\n")
 		} else if "pass" == form.form {
 			dst.Tab(5).Code("<el-input\n")
-			dst.Code("modelValue={")
+			dst.Tab(6).Code("modelValue={")
 			b.printToString(dst, "props.model!."+fieldName, field.Type, false, form.digit, form.format, " ?? \"\"")
 			dst.Code("}\n")
 
@@ -560,7 +560,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			if form.onlyRead {
 				dst.Tab(6).Code("disabled\n")
 			}
-			dst.Tab(6).Code("precision=\"").Code(strconv.Itoa(form.digit)).Code("\"\n")
+			dst.Tab(6).Code("precision={").Code(strconv.Itoa(form.digit)).Code("}\n")
 			dst.Tab(5).Code("/>\n")
 		} else if isArray {
 			dst.Tab(5).Code("<el-select\n")
@@ -594,7 +594,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			if form.onlyRead {
 				dst.Tab(6).Code("disabled\n")
 			}
-			dst.Tab(6).Code("precision=\"").Code(strconv.Itoa(form.digit)).Code("\"\n")
+			dst.Tab(6).Code("precision={").Code(strconv.Itoa(form.digit)).Code("}\n")
 			dst.Tab(5).Code("/>\n")
 		}
 		lang.Add(fieldName, field.Tags)

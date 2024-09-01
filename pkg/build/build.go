@@ -642,3 +642,20 @@ func StringFillRight(text string, fill byte, length int) string {
 	}
 	return ret.String()
 }
+
+type MapKeyType interface {
+	int | uint | int8 | uint8 | int16 | uint16 | int32 | uint32 | int64 | uint64 | float32 | float64 | string | bool |
+		*int | *uint | *int8 | *uint8 | *int16 | *uint16 | *int32 | *uint32 | *int64 | *uint64 | *float32 | *float64 | *string | *bool |
+		chan int | chan uint | chan int8 | chan uint8 | chan int16 | chan uint16 | chan int32 | chan uint32 | chan int64 | chan uint64 | chan float32 | chan float64 | chan string | chan bool |
+		chan *int | chan *uint | chan *int8 | chan *uint8 | chan *int16 | chan *uint16 | chan *int32 | chan *uint32 | chan *int64 | chan *uint64 | chan *float32 | chan *float64 | chan *string | chan *bool
+}
+
+func GetMapKeys[K MapKeyType, E any](maps map[K]E) []K {
+	list := make([]K, len(maps))
+	i := 0
+	for k, _ := range maps {
+		list[i] = k
+		i++
+	}
+	return list
+}

@@ -64,7 +64,7 @@ func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
 		dst.Code(build.StringFillRight(field.name, ' ', nameLen+1))
 		dst.Code(build.StringFillRight(field.typ, ' ', typLen+1))
 		dst.Code(build.StringFillRight(field.tag, ' ', tagLen+1))
-		dst.Code("//").Code(strings.ReplaceAll(field.comment, "\n", " ")).Code("\n")
+		dst.Code("//").Code(strings.Trim(strings.ReplaceAll(field.comment, "\n", " "), " ")).Code("\n")
 	}
 	dst.Code("}\n\n")
 

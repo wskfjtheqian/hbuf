@@ -26,13 +26,13 @@ echo "开始打包 hbuf window版本..........."
 go build -o ./bin/hbuf.exe ./pkg/compile/main.go
 echo "打包 hbuf window版本 成功"
 
-copy ./bin/hbuf.exe /Users/dev/5.client-web/hbuf.exe
-copy ./bin/hbuf.darwin /Users/dev/5.client-web/hbuf.darwin
-copy ./bin/hbuf.linux /Users/dev/5.client-web/hbuf.linux
+cp ./bin/hbuf.exe /Users/dev/5.client-web/hbuf.exe
+cp ./bin/hbuf.darwin /Users/dev/5.client-web/hbuf.darwin
+cp ./bin/hbuf.linux /Users/dev/5.client-web/hbuf.linux
 
-copy ./bin/hbuf.exe /Users/dev/7.hanber/server/hbuf.exe
-copy ./bin/hbuf.darwin /Users/dev/7.hanber/server/hbuf.darwin
-copy ./bin/hbuf.linux /Users/dev/7.hanber/server/hbuf.linux
+cp ./bin/hbuf.exe /Users/dev/7.hanber/server/hbuf.exe
+cp ./bin/hbuf.darwin /Users/dev/7.hanber/server/hbuf.darwin
+cp ./bin/hbuf.linux /Users/dev/7.hanber/server/hbuf.linux
 
 
 

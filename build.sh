@@ -17,7 +17,7 @@ echo "开始打包 hbuf darwin..........."
 go build -o ./bin/hbuf.darwin ./pkg/compile/main.go
 chmod 777 ./bin/hbuf.darwin
 echo "打包 hbuf darwin版本 成功"
-cp ./bin/hbuf.darwin  /Users/heqian/dev/7.hanber/hbuf.darwin
+cp ./bin/hbuf.darwin  /Users/dev/7.hanber/hbuf.darwin
 
 export CGO_ENABdeLED=0
 export GOOS=windows
@@ -25,6 +25,15 @@ export GOOS=windows
 echo "开始打包 hbuf window版本..........."
 go build -o ./bin/hbuf.exe ./pkg/compile/main.go
 echo "打包 hbuf window版本 成功"
+
+copy ./bin/hbuf.exe /Users/dev/5.client-web/hbuf.exe
+copy ./bin/hbuf.darwin /Users/dev/5.client-web/hbuf.darwin
+copy ./bin/hbuf.linux /Users/dev/5.client-web/hbuf.linux
+
+copy ./bin/hbuf.exe /Users/dev/7.hanber/server/hbuf.exe
+copy ./bin/hbuf.darwin /Users/dev/7.hanber/server/hbuf.darwin
+copy ./bin/hbuf.linux /Users/dev/7.hanber/server/hbuf.linux
+
 
 
 chmod 777 ./bin/*

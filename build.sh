@@ -34,7 +34,9 @@ cp ./bin/hbuf.exe /Users/dev/7.hanber/server/hbuf.exe
 cp ./bin/hbuf.darwin /Users/dev/7.hanber/server/hbuf.darwin
 cp ./bin/hbuf.linux /Users/dev/7.hanber/server/hbuf.linux
 
-
+cp ./bin/hbuf.exe /Users/dev/10.account/server/hbuf.exe
+cp ./bin/hbuf.darwin /Users/dev/10.account/server/hbuf.darwin
+cp ./bin/hbuf.linux /Users/dev/10.account/server/hbuf.linux
 
 chmod 777 ./bin/*
 

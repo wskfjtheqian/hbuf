@@ -344,7 +344,7 @@ func (b *Builder) printFormString(dst *build.Writer, name string, expr ast.Expr,
 				if empty {
 					dst.Code(name + " == null ? null : ")
 				}
-				dst.Code("function () {try {return new d.Decimal(").Code(name).Code(")} catch (e) {return ").Code(name).Code("}}()")
+				dst.Code("function () {try {return new d.Decimal(").Code(name).Code(")} catch (e) {return null}}()")
 			default:
 				if empty {
 					dst.Code("(").Code(name).Code(" == null || ").Code(name).Code(".length == 0)").Code(" ? null : ")

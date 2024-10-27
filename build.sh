@@ -38,5 +38,9 @@ cp ./bin/hbuf.exe /Users/dev/10.account/hbuf.exe
 cp ./bin/hbuf.darwin /Users/dev/10.account/hbuf.darwin
 cp ./bin/hbuf.linux /Users/dev/10.account/hbuf.linux
 
+cp ./bin/hbuf.exe /Users/dev/8.p_game/hbuf.exe
+cp ./bin/hbuf.darwin /Users/dev/8.p_game/hbuf.darwin
+cp ./bin/hbuf.linux /Users/dev/8.p_game/hbuf.linux
+
 chmod 777 ./bin/*
 

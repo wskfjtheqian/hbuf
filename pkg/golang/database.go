@@ -453,7 +453,7 @@ func (b *Builder) printListData(dst *build.Writer, typ *ast.DataType, key string
 	dst.Code("func (g " + fName + ") DbList(ctx context.Context) ([]" + dName + ", error) {\n")
 	dst.Tab(1).Code("tableName := db.GET(ctx).Table(\"").Code(db.Name).Code("\")\n")
 	dst.Code("\ts := db.NewSql()\n")
-	dst.Code("\ts.T(\"SELECT " + item.String() + " FROM \").T(tableName).T(\" WHERE del_time IS  NULL\")\n")
+	dst.Code("\ts.T(\"SELECT " + item.String() + " FROM \").T(tableName).T(\" WHERE del_time = 0\")\n")
 	dst.Code(w.GetCode().String())
 
 	dst.Code("\tret := make([]" + dName + ", 0)\n")
@@ -515,7 +515,7 @@ func (b *Builder) printMapData(dst *build.Writer, key string, typ *ast.DataType,
 	dst.Code("func (g " + fName + ") DbMap(ctx context.Context) (map[" + kType.String() + "]" + dName + ", error) {\n")
 	dst.Tab(1).Code("tableName := db.GET(ctx).Table(\"").Code(db.Name).Code("\")\n")
 	dst.Code("\ts := db.NewSql()\n")
-	dst.Code("\ts.T(\"SELECT " + item.String() + " FROM \").T(tableName).T(\" WHERE del_time IS  NULL\")\n")
+	dst.Code("\ts.T(\"SELECT " + item.String() + " FROM \").T(tableName).T(\" WHERE del_time = 0\")\n")
 	dst.Code(w.GetCode().String())
 
 	dst.Code("\tret := make(map[" + kType.String() + "]" + dName + ")\n")
@@ -565,7 +565,7 @@ func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build
 	dst.Code("func (g " + fName + ") DbCount(ctx context.Context) (int64, error) {\n")
 	dst.Tab(1).Code("tableName := db.GET(ctx).Table(\"").Code(db.Name).Code("\")\n")
 	dst.Code("\ts := db.NewSql()\n")
-	dst.Code("\ts.T(\"SELECT COUNT(1) FROM \").T(tableName).T(\" WHERE del_time IS  NULL\")\n")
+	dst.Code("\ts.T(\"SELECT COUNT(1) FROM \").T(tableName).T(\" WHERE del_time = 0\")\n")
 	dst.Code(w.GetCode().String())
 
 	dst.Code("\tvar count int64\n")
@@ -617,7 +617,8 @@ func (b *Builder) printDeleteData(dst *build.Writer, db *build.DB, wFields []*bu
 	}
 
 	dst.Code("\ts := db.NewSql()\n")
-	dst.Code("\ts.T(\"UPDATE \").T(tableName).T(\" SET del_time = NOW() WHERE 1 = 1\")\n")
+	dst.Import("time", "")
+	dst.Code("\ts.T(\"UPDATE \").T(tableName).T(\" SET del_time = \").V(time.Now().UnixMilli()).T(\" WHERE del_time = 0\")\n")
 	dst.Code(w.GetCode().String())
 
 	dst.Code("\treturn s.Exec(ctx)\n")
@@ -834,7 +835,7 @@ func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, key string,
 	dst.Code("func (g " + fName + ") DbGet(ctx context.Context) (*" + dName + ", error) {\n")
 	dst.Tab(1).Code("tableName := db.GET(ctx).Table(\"").Code(db.Name).Code("\")\n")
 	dst.Code("\ts := db.NewSql()\n")
-	dst.Code("\ts.T(\"SELECT " + item.String() + " FROM \").T(tableName).T(\" WHERE del_time IS NULL\")\n")
+	dst.Code("\ts.T(\"SELECT " + item.String() + " FROM \").T(tableName).T(\" WHERE del_time = 0\")\n")
 	dst.Code(w.GetCode().String())
 	dst.Code("\ts.T(\" LIMIT 1\")\n")
 	dst.Code("\tvar val *" + dName + "\n")

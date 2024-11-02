@@ -74,16 +74,18 @@ type Builder struct {
 	build    *build.Builder
 	pkg      *ast.Package
 	packages string
+	fSet     *token.FileSet
 }
 
-func Build(file *ast.File, fset *token.FileSet, param *build.Param) error {
+func Build(file *ast.File, fSet *token.FileSet, param *build.Param) error {
 	b := Builder{
+		fSet:  fSet,
 		build: param.GetBuilder(),
 		pkg:   param.GetPkg(),
 	}
 	b.packages = param.GetPack()
 	dst := NewGoWriter()
-	err := b.Node(dst, fset, file)
+	err := b.Node(dst, fSet, file)
 	if err != nil {
 		return err
 	}
@@ -199,24 +201,34 @@ func (b *Builder) Node(dst *GoWriter, fset *token.FileSet, node interface{}) err
 		switch s.(type) {
 		case *ast.ImportSpec:
 		case *ast.TypeSpec:
-			b.printTypeSpec(dst, (s.(*ast.TypeSpec)).Type)
+			err := b.printTypeSpec(dst, (s.(*ast.TypeSpec)).Type)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
 }
 
-func (b *Builder) printTypeSpec(dst *GoWriter, expr ast.Expr) {
+func (b *Builder) printTypeSpec(dst *GoWriter, expr ast.Expr) error {
 	switch expr.(type) {
 	case *ast.DataType:
 		b.printDataCode(dst.data, expr.(*ast.DataType))
-		_ = b.printDatabaseCode(dst.database, expr.(*ast.DataType))
-		_ = b.printVerifyCode(dst.verify, expr.(*ast.DataType))
+		err := b.printDatabaseCode(dst.database, expr.(*ast.DataType))
+		if err != nil {
+			return err
+		}
+		err = b.printVerifyCode(dst.verify, expr.(*ast.DataType))
+		if err != nil {
+			return err
+		}
 	case *ast.ServerType:
 		b.printServerCode(dst.server, expr.(*ast.ServerType))
 
 	case *ast.EnumType:
 		printEnumCode(dst.enum, expr.(*ast.EnumType))
 	}
+	return nil
 }
 
 func (b *Builder) printType(dst *build.Writer, expr ast.Expr, b2 bool) {

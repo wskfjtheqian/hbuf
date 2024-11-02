@@ -54,15 +54,17 @@ func NewGoWriter() *DartWriter {
 type Builder struct {
 	lang map[string]struct{}
 	pkg  *ast.Package
+	fSet *token.FileSet
 }
 
-func Build(file *ast.File, fset *token.FileSet, param *build.Param) error {
+func Build(file *ast.File, fSet *token.FileSet, param *build.Param) error {
 	b := Builder{
+		fSet: fSet,
 		lang: map[string]struct{}{},
 		pkg:  param.GetPkg(),
 	}
 	dst := NewGoWriter()
-	err := b.Node(dst, fset, file)
+	err := b.Node(dst, fSet, file)
 	if err != nil {
 		return err
 	}

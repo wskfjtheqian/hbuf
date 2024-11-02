@@ -237,7 +237,7 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 		return nil
 	})
 	if err != nil {
-		return err
+		return build.ErrorToFileError(err, b.fSet)
 	}
 	return nil
 }

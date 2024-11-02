@@ -33,40 +33,30 @@ func GetVerify(tags []*ast.Tag, file *ast.File, getType func(file *ast.File, nam
 			for _, i := range item.Values {
 				format := i.Value[1 : len(i.Value)-1]
 				if 0 == len(format) {
-					//TODO 错误处理
-					return nil, nil
+					return nil, NewError(i.Pos()+1, "Not set format")
 				}
 				temp := strings.Split(format, ".")
 				if 0 == len(temp) {
-					//TODO 错误处理
-					return nil, nil
+					return nil, NewError(i.Pos()+1, "Not find enum field:"+format)
 				}
 
 				object := getType(file, temp[0])
 				if nil == object {
-					//TODO 错误处理
-					return nil, nil
-				}
-				switch object.Decl.(type) {
-				case *ast.TypeSpec:
-					break
-				default:
-					//TODO 错误处理
-					return nil, nil
+					return nil, NewError(i.Pos()+1, "Not find enum object: "+format)
 				}
 
-				switch object.Decl.(*ast.TypeSpec).Type.(type) {
-				case *ast.EnumType:
-					break
-				default:
-					//TODO 错误处理
-					return nil, nil
+				if _, ok := object.Decl.(*ast.TypeSpec); !ok {
+					return nil, NewError(i.Pos()+1, "Not a valid enumeration type: "+format)
 				}
+
+				if _, ok := object.Decl.(*ast.TypeSpec).Type.(*ast.EnumType); !ok {
+					return nil, NewError(i.Pos()+1, "Not a valid enumeration type: "+format)
+				}
+
 				em := object.Decl.(*ast.TypeSpec).Type.(*ast.EnumType)
 				ei := getEnumItem(em, temp[1])
 				if nil == ei {
-					//TODO 错误处理
-					return nil, nil
+					return nil, NewError(i.Pos()+1, "Not a valid enumeration field: "+format)
 				}
 				v.format = append(v.format, &VerifyEnum{
 					Enum: em,

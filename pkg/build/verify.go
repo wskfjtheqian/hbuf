@@ -42,6 +42,7 @@ func GetVerify(tags []*ast.Tag, file *ast.File, getType func(file *ast.File, nam
 
 				object := getType(file, temp[0])
 				if nil == object {
+					getType(file, temp[0])
 					return nil, NewError(i.Pos()+1, "Not find enum object: "+format)
 				}
 

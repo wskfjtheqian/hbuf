@@ -429,12 +429,12 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(7).Code("modelValue={")
 			if isArray {
 				dst.Import("hbuf_ts", "* as h")
-				dst.Code(" h.convertArray(props.model!.").Code(fieldName).Code(", (e) => _ctx.$timeToLocal(e))")
+				dst.Code(" h.convertArray(_ctx.model!.").Code(fieldName).Code(", (e) => _ctx.$timeToLocal(e))")
 			} else {
-				dst.Code("_ctx.$timeToLocal(props.model!.").Code(fieldName).Code(")")
+				dst.Code("_ctx.$timeToLocal(_ctx.model!.").Code(fieldName).Code(")")
 			}
 			dst.Code("}\n")
-			dst.Tab(7).Code("onUpdate:modelValue={($event: (number | string | Date) | (number | string | Date)[] | null) => props.model!.").Code(fieldName).Code(" = ")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: (number | string | Date) | (number | string | Date)[] | null) => _ctx.model!.").Code(fieldName).Code(" = ")
 			if isNull {
 				dst.Code("(!$event) ? null : ")
 			}
@@ -509,7 +509,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(6).Code("/>\n")
 		} else if "menu" == form.form {
 			dst.Tab(6).Code("<el-select\n")
-			dst.Tab(7).Code("v-model={props.model!.").Code(fieldName).Code("}\n")
+			dst.Tab(7).Code("v-model={_ctx.model!.").Code(fieldName).Code("}\n")
 			dst.Tab(7).Code("style={\"width:180px\"}\n")
 			dst.Tab(7).Code("size={props.size}\n")
 			if isNull {
@@ -522,10 +522,10 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			b.printMenuItem(dst, field.Type, false)
 			dst.Tab(6).Code("</el-select>\n")
 		} else if "switch" == form.form {
-			dst.Code("\t\t\t\t\t<el-switch modelValue={props.model!.").Code(fieldName).Code(" ??= false")
+			dst.Code("\t\t\t\t\t<el-switch modelValue={_ctx.model!.").Code(fieldName).Code(" ??= false")
 			dst.Code("}\n")
 
-			dst.Tab(8).Code("onUpdate:modelValue={($event: string) => props.model!.").Code(fieldName).Code(" = $event")
+			dst.Tab(8).Code("onUpdate:modelValue={($event: string) => _ctx.model!.").Code(fieldName).Code(" = $event")
 			dst.Code("}\n")
 
 			if form.onlyRead {
@@ -534,7 +534,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Code("/>\n")
 			//} else if isNumber {
 			//	dst.Code("\t\t\t\t\t<el-input-number\n")
-			//	dst.Code("\t\t\t\t\t\tv-model={props.model!.").Code(fieldName).Code("}\n")
+			//	dst.Code("\t\t\t\t\t\tv-model={_ctx.model!.").Code(fieldName).Code("}\n")
 			//	dst.Code("\t\t\t\t\t\tsize={props.size}\n")
 			//	dst.Code("\t\t\t\t\t\tcontrols-position=\"right\"\n")
 			//	dst.Code("\t\t\t\t\t\tprecision=\"").Code(strconv.Itoa(form.digit)).Code("\"\n")
@@ -548,10 +548,10 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		} else if "pass" == form.form {
 			dst.Tab(6).Code("<el-input\n")
 			dst.Tab(7).Code("modelValue={")
-			b.printToString(dst, "props.model!."+fieldName, field.Type, false, form.digit, form.format, " ?? \"\"")
+			b.printToString(dst, "_ctx.model!."+fieldName, field.Type, false, form.digit, form.format, " ?? \"\"")
 			dst.Code("}\n")
 
-			dst.Tab(7).Code("onUpdate:modelValue={($event: string) => props.model!.").Code(fieldName).Code(" = ")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: string) => _ctx.model!.").Code(fieldName).Code(" = ")
 			b.printFormString(dst, "$event", field.Type, false, form.digit, form.format)
 			dst.Code("}\n")
 			dst.Tab(7).Code("size={props.size}\n")
@@ -567,7 +567,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(6).Code("/>\n")
 		} else if isArray {
 			dst.Tab(6).Code("<el-select\n")
-			dst.Tab(7).Code("v-model={props.model!.").Code(fieldName).Code("}\n")
+			dst.Tab(7).Code("v-model={_ctx.model!.").Code(fieldName).Code("}\n")
 			dst.Tab(7).Code("multiple\n")
 			dst.Tab(7).Code("filterable\n")
 			dst.Tab(7).Code("allow-create\n")
@@ -584,10 +584,10 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		} else {
 			dst.Tab(6).Code("<el-input\n")
 			dst.Tab(7).Code("modelValue={")
-			b.printToString(dst, "props.model!."+fieldName, field.Type, false, form.digit, form.format, "")
+			b.printToString(dst, "_ctx.model!."+fieldName, field.Type, false, form.digit, form.format, "")
 			dst.Code("}\n")
 
-			dst.Tab(7).Code("onUpdate:modelValue={($event: string) => props.model!.").Code(fieldName).Code(" = ")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: string) => _ctx.model!.").Code(fieldName).Code(" = ")
 			b.printFormString(dst, "$event", field.Type, false, form.digit, form.format)
 			dst.Code("}\n")
 			dst.Tab(7).Code("size={props.size}\n")

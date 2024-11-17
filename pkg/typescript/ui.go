@@ -158,10 +158,13 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 
 	dst.Code("export const " + name + "TableColumn = defineComponent({\n")
 	dst.Code("\tname: '" + name + "TableColumn',\n")
-	dst.Code("\tprops: {hide:String},\n")
+	dst.Code("\tprops: {\n")
+	dst.Code("\t\tposition: Array<String>,\n")
+	dst.Code("\t\thide:String,\n")
+	dst.Code("\t},\n")
 	dst.Code("\tsetup(props:any) {\n")
-	dst.Code("\t\treturn (_ctx: Record<string, any>) => (\n")
-	dst.Code("\t\t\t<>\n")
+	dst.Code("\t\treturn (_ctx: Record<string, any>) => {\n")
+	dst.Code("\t\t\tconst maps: Record<string, any> = {\n")
 	langName := build.StringToFirstLower(name)
 	//i := 0
 	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
@@ -181,7 +184,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 		}
 		//dst.Code("                <el-table-column prop="adminId" label="adminId" width="140"/>\n")
 		fieldName := build.StringToFirstLower(field.Name.Name)
-		dst.Tab(4).Code("{_ctx.$slots.").Code(fieldName).Code(" ? _ctx.$slots.").Code(fieldName).Code("() : (\n")
+		dst.Tab(4).Code("\"").Code(fieldName).Code("\": () =>(\n")
 
 		dst.Code("\t\t\t\t\t<el-table-column prop=\"").Code(fieldName).Code("\"")
 		dst.Code(" label={_ctx.$t(\"").Code(langName).Code("Lang.").Code(fieldName).Code("\")}")
@@ -211,7 +214,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Code("\t\t\t\t\t\t}}\n")
 		}
 		dst.Code("\t\t\t\t\t</el-table-column>\n")
-		dst.Tab(4).Code(")}\n")
+		dst.Tab(4).Code("),\n")
 		lang.Add(fieldName, field.Tags)
 		return nil
 	})
@@ -219,8 +222,24 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 		return
 	}
 
-	dst.Code("\t\t\t</>\n")
-	dst.Code("\t\t);\n")
+	dst.Tab(3).Code("}\n")
+	dst.Tab(3).Code("for (const key in _ctx.$slots) {\n")
+	dst.Code("                maps[key] = _ctx.$slots[key]\n")
+	dst.Code("            }\n")
+	dst.Code("            const list: string[] = []\n")
+	dst.Code("            for (const i in _ctx.position) {\n")
+	dst.Code("                const key = _ctx.position[i]\n")
+	dst.Code("                if (!list.includes(key) && maps[key]) {\n")
+	dst.Code("                    list.push(key)\n")
+	dst.Code("                }\n")
+	dst.Code("            }\n")
+	dst.Code("            for (const key in maps) {\n")
+	dst.Code("                if (!list.includes(key) && maps[key]) {\n")
+	dst.Code("                    list.push(key)\n")
+	dst.Code("                }\n")
+	dst.Code("            }\n")
+	dst.Code("            return list.map((it) => maps[it]())\n")
+	dst.Code("\t\t};\n")
 	dst.Code("\t}\n")
 	dst.Code("});\n\n")
 
@@ -388,6 +407,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Code("\tname: '" + name + "FormItems',\n")
 	dst.Code("\tprops: {\n")
 	dst.Code("\t\tsize: String,\n")
+	dst.Code("\t\tposition: Array<String>,\n")
 	dst.Code("\t\tmodel: ")
 	b.printType(dst, typ.Name, false, false)
 	dst.Code("\n")
@@ -395,8 +415,8 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Code("\tsetup(props: Record<string, any>) {\n")
 	dst.Import("element-plus", "{useLocale}")
 	dst.Tab(2).Code("const locale = useLocale()\n")
-	dst.Code("\t\treturn (_ctx: Record<string, any>) => (\n")
-	dst.Code("\t\t\t<>\n")
+	dst.Code("\t\treturn (_ctx: Record<string, any>) => {\n")
+	dst.Code("\t\t\tconst maps: Record<string, any> = {\n")
 	langName := build.StringToFirstLower(name)
 	//i := 0
 	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
@@ -415,8 +435,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			//index = *table.index
 		}
 		fieldName := build.StringToFirstLower(field.Name.Name)
-
-		dst.Tab(4).Code("{_ctx.$slots.").Code(fieldName).Code(" ? _ctx.$slots.").Code(fieldName).Code("() : (\n")
+		dst.Tab(4).Code("\"").Code(fieldName).Code("\": () =>(\n")
 		dst.Tab(5).Code("<el-form-item prop=\"").Code(fieldName).Code("\"")
 		dst.Code(" label={_ctx.$t(\"").Code(langName).Code("Lang.").Code(fieldName).Code("\")}")
 		if verify {
@@ -602,15 +621,31 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		}
 		lang.Add(fieldName, field.Tags)
 		dst.Tab(5).Code("</el-form-item>\n")
-		dst.Tab(4).Code(")}\n")
+		dst.Tab(4).Code("),\n")
 		return nil
 	})
 	if err != nil {
 		return
 	}
 
-	dst.Code("\t\t\t</>\n")
-	dst.Code("\t\t);\n")
+	dst.Tab(3).Code("}\n")
+	dst.Tab(3).Code("for (const key in _ctx.$slots) {\n")
+	dst.Code("                maps[key] = _ctx.$slots[key]\n")
+	dst.Code("            }\n")
+	dst.Code("            const list: string[] = []\n")
+	dst.Code("            for (const i in _ctx.position) {\n")
+	dst.Code("                const key = _ctx.position[i]\n")
+	dst.Code("                if (!list.includes(key) && maps[key]) {\n")
+	dst.Code("                    list.push(key)\n")
+	dst.Code("                }\n")
+	dst.Code("            }\n")
+	dst.Code("            for (const key in maps) {\n")
+	dst.Code("                if (!list.includes(key) && maps[key]) {\n")
+	dst.Code("                    list.push(key)\n")
+	dst.Code("                }\n")
+	dst.Code("            }\n")
+	dst.Code("            return list.map((it) => maps[it]())\n")
+	dst.Code("\t\t};\n")
 	dst.Code("\t}\n")
 	dst.Code("});\n\n")
 }

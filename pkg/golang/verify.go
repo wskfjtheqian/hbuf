@@ -53,6 +53,8 @@ func (b *Builder) GetDataType(file *ast.File, name string) *ast.Object {
 						return obj
 					case *ast.EnumType:
 						return obj
+					case *ast.ServerType:
+						return obj
 					}
 				}
 			}

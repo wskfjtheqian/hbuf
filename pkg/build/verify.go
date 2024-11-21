@@ -42,7 +42,6 @@ func GetVerify(tags []*ast.Tag, file *ast.File, getType func(file *ast.File, nam
 
 				object := getType(file, temp[0])
 				if nil == object {
-					getType(file, temp[0])
 					return nil, NewError(i.Pos()+1, "Not find enum object: "+format)
 				}
 
@@ -50,11 +49,11 @@ func GetVerify(tags []*ast.Tag, file *ast.File, getType func(file *ast.File, nam
 					return nil, NewError(i.Pos()+1, "Not a valid enumeration type: "+format)
 				}
 
-				if _, ok := object.Decl.(*ast.TypeSpec).Type.(*ast.EnumType); !ok {
+				em, ok := object.Decl.(*ast.TypeSpec).Type.(*ast.EnumType)
+				if !ok {
 					return nil, NewError(i.Pos()+1, "Not a valid enumeration type: "+format)
 				}
 
-				em := object.Decl.(*ast.TypeSpec).Type.(*ast.EnumType)
 				ei := getEnumItem(em, temp[1])
 				if nil == ei {
 					return nil, NewError(i.Pos()+1, "Not a valid enumeration field: "+format)

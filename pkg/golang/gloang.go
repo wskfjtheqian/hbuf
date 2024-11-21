@@ -223,7 +223,10 @@ func (b *Builder) printTypeSpec(dst *GoWriter, expr ast.Expr) error {
 			return err
 		}
 	case *ast.ServerType:
-		b.printServerCode(dst.server, expr.(*ast.ServerType))
+		err := b.printServerCode(dst.server, expr.(*ast.ServerType))
+		if err != nil {
+			return err
+		}
 
 	case *ast.EnumType:
 		printEnumCode(dst.enum, expr.(*ast.EnumType))

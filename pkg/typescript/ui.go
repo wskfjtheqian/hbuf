@@ -3,8 +3,15 @@ package ts
 import (
 	"hbuf/pkg/ast"
 	"hbuf/pkg/build"
+	"sort"
 	"strconv"
 )
+
+type FieldIndex struct {
+	field *ast.Field
+	index int
+	tag   *ui
+}
 
 // 创建表单代码
 func (b *Builder) printFormCode(dst *build.Writer, expr ast.Expr) {
@@ -166,23 +173,38 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Code("\t\treturn (_ctx: Record<string, any>) => {\n")
 	dst.Code("\t\t\tconst maps: Record<string, any> = {\n")
 	langName := build.StringToFirstLower(name)
-	//i := 0
-	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 
-		table := b.getUI(field.Tags)
-		if nil == table || 0 == len(table.table) {
+	fields := make([]FieldIndex, 0)
+	i := 0
+	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
+		tag := b.getUI(field.Tags)
+		if nil == tag || 0 == len(tag.table) {
 			return nil
 		}
-
-		//isEnum := build.IsEnum(field.Type)
-		//isArray := build.IsArray(field.Type)
-		//isNull := build.IsNil(field.Type)
-		//i++
-		//index := i
-		if nil != table.index {
-			//index = *table.index
+		i++
+		index := i
+		if nil != tag.index {
+			index = *tag.index
 		}
-		//dst.Code("                <el-table-column prop="adminId" label="adminId" width="140"/>\n")
+		fields = append(fields, FieldIndex{
+			field: field,
+			index: index,
+			tag:   tag,
+		})
+		return nil
+	})
+	if err != nil {
+		return
+	}
+
+	sort.Slice(fields, func(i, j int) bool {
+		return fields[i].index < fields[j].index
+	})
+
+	for _, item := range fields {
+		field := item.field
+		table := item.tag
+
 		fieldName := build.StringToFirstLower(field.Name.Name)
 		dst.Tab(4).Code("\"").Code(fieldName).Code("\": () =>(\n")
 
@@ -216,10 +238,6 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 		dst.Code("\t\t\t\t\t</el-table-column>\n")
 		dst.Tab(4).Code("),\n")
 		lang.Add(fieldName, field.Tags)
-		return nil
-	})
-	if err != nil {
-		return
 	}
 
 	dst.Tab(3).Code("}\n")
@@ -418,22 +436,38 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Code("\t\treturn (_ctx: Record<string, any>) => {\n")
 	dst.Code("\t\t\tconst maps: Record<string, any> = {\n")
 	langName := build.StringToFirstLower(name)
-	//i := 0
-	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 
-		form := b.getUI(field.Tags)
-		if nil == form || 0 == len(form.form) {
+	fields := make([]FieldIndex, 0)
+	i := 0
+	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
+		tag := b.getUI(field.Tags)
+		if nil == tag || 0 == len(tag.form) {
 			return nil
 		}
+		i++
+		index := i
+		if nil != tag.index {
+			index = *tag.index
+		}
+		fields = append(fields, FieldIndex{
+			field: field,
+			index: index,
+			tag:   tag,
+		})
+		return nil
+	})
+	if err != nil {
+		return
+	}
+
+	for _, item := range fields {
+		field := item.field
+		form := item.tag
 
 		isArray := build.IsArray(field.Type)
 		isNull := build.IsNil(field.Type)
 		_, verify := build.GetTag(field.Tags, "verify")
-		//i++
-		//index := i
-		if nil != form.index {
-			//index = *table.index
-		}
+
 		fieldName := build.StringToFirstLower(field.Name.Name)
 		dst.Tab(4).Code("\"").Code(fieldName).Code("\": () =>(\n")
 		dst.Tab(5).Code("<el-form-item prop=\"").Code(fieldName).Code("\"")
@@ -622,10 +656,6 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		lang.Add(fieldName, field.Tags)
 		dst.Tab(5).Code("</el-form-item>\n")
 		dst.Tab(4).Code("),\n")
-		return nil
-	})
-	if err != nil {
-		return
 	}
 
 	dst.Tab(3).Code("}\n")

@@ -3,6 +3,7 @@ mkdir "./bin"
 
 SET GOARCH=amd64
 SET GOOS=linux
+SET CGO_ENABdeLED=0
 
 echo "开始打包 hbuf linux..........."
 go build -o ./bin/hbuf.linux ./pkg/compile/main.go

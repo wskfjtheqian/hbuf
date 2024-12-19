@@ -391,8 +391,8 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Code("\n")
 	dst.Code("\t},\n")
 	dst.Code("\tsetup(props: Record<string, any>) {\n")
-	dst.Import("element-plus", "{useLocale}")
-	dst.Tab(2).Code("const locale = useLocale()\n")
+	dst.Import("element-plus", "* as el")
+	dst.Tab(2).Code("const locale = el.useLocale()\n")
 	dst.Code("\t\treturn (_ctx: Record<string, any>) => (\n")
 	dst.Code("\t\t\t<>\n")
 	langName := build.StringToFirstLower(name)
@@ -523,19 +523,6 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				dst.Code(" disabled")
 			}
 			dst.Code("/>\n")
-			//} else if isNumber {
-			//	dst.Code("\t\t\t\t\t<el-input-number\n")
-			//	dst.Code("\t\t\t\t\t\tv-model={props.model!.").Code(fieldName).Code("}\n")
-			//	dst.Code("\t\t\t\t\t\tsize={props.size}\n")
-			//	dst.Code("\t\t\t\t\t\tcontrols-position=\"right\"\n")
-			//	dst.Code("\t\t\t\t\t\tprecision=\"").Code(strconv.Itoa(form.digit)).Code("\"\n")
-			//	if isNull {
-			//		dst.Code("\t\t\t\t\t\tclearable\n")
-			//	}
-			//	if form.onlyRead {
-			//		dst.Code(" disabled\n")
-			//	}
-			//	dst.Code("\t\t\t\t\t/>\n")
 		} else if "pass" == form.form {
 			dst.Tab(5).Code("<el-input\n")
 			dst.Code("modelValue={")
@@ -556,6 +543,56 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(6).Code("precision=\"").Code(strconv.Itoa(form.digit)).Code("\"\n")
 			dst.Tab(5).Code("/>\n")
+		} else if "image" == form.form {
+			dst.Import("element-plus", "* as el")
+			dst.Import("element-plus/es/utils", "* as eu")
+			dst.Import("@element-plus/icons-vue", "* as ei")
+			dst.Tab(5).Code("<el-upload\n")
+			dst.Tab(6).Code("className=\"uploader-image\"\n")
+			dst.Tab(6).Code("http-request={_ctx.$updateFile}\n")
+			dst.Tab(6).Code("show-file-list={false}\n")
+			if form.clip {
+				dst.Tab(6).Code("before-upload={(rawFile: el.UploadRawFile): eu.Awaitable<void | undefined | null | boolean | File | Blob> => {\n")
+				dst.Tab(6).Code("	return _ctx.$clipImage(rawFile, ").Code(strconv.FormatFloat(form.width, 'g', -1, 32)).Code(",").Code(strconv.FormatFloat(form.height, 'g', -1, 32)).Code(" )\n")
+				dst.Tab(6).Code("}}\n")
+			}
+			dst.Tab(6).Code("on-success={(response: any, file: el.UploadFile, files: el.UploadFiles): void => {\n")
+			dst.Tab(6).Code("	props.model!.").Code(fieldName).Code(" = response\n")
+			dst.Tab(6).Code("}}\n")
+			dst.Tab(5).Code(">\n")
+			dst.Tab(6).Code("<img v-if={props.model!.").Code(fieldName).Code("} src={props.model!.").Code(fieldName).Code("} class=\"avatar\"/>\n")
+			dst.Tab(6).Code("<el-icon v-else className=\"uploader-image-icon\"><ei.Plus/></el-icon>\n")
+			dst.Tab(5).Code("</el-upload>\n")
+		} else if "file" == form.form {
+			dst.Tab(5).Code("<el-input\n")
+			dst.Tab(6).Code("modelValue={")
+			b.printToString(dst, "props.model!."+fieldName, field.Type, false, form.digit, form.format, "")
+			dst.Code("}\n")
+
+			dst.Tab(6).Code("onUpdate:modelValue={($event: string) => props.model!.").Code(fieldName).Code(" = ")
+			b.printFormString(dst, "$event", field.Type, false, form.digit, form.format)
+			dst.Code("}\n")
+			dst.Tab(6).Code("size={props.size}\n")
+			if isNull {
+				dst.Tab(6).Code("clearable\n")
+			}
+			if form.onlyRead {
+				dst.Tab(6).Code("disabled\n")
+			}
+			dst.Tab(6).Code("precision=\"").Code(strconv.Itoa(form.digit)).Code("\"\n")
+			dst.Import("@element-plus/icons-vue", "* as ei")
+			dst.Tab(5).Code(">\n")
+			dst.Tab(6).Code("{{\n")
+			dst.Tab(7).Code("append: () => <el-button icon=\"ei.Search\" onclick={()=>_ctx.$selectFile(\"\",")
+			if isArray {
+				dst.Code("true")
+			} else {
+				dst.Code("false")
+			}
+			dst.Code(",[])}/>\n")
+			dst.Tab(6).Code("}}\n")
+			dst.Tab(5).Code("</el-input>\n")
+
 		} else if isArray {
 			dst.Tab(5).Code("<el-select\n")
 			dst.Tab(6).Code("v-model={props.model!.").Code(fieldName).Code("}\n")

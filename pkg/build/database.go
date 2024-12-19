@@ -30,6 +30,7 @@ type DB struct {
 	Order     string
 	Converter string
 	Group     string
+	Fake      bool
 }
 
 type DBField struct {
@@ -52,6 +53,7 @@ func GetDB(n string, tag []*ast.Tag) []*DB {
 
 			db := DB{
 				index: int(index),
+				Fake:  true,
 			}
 			if nil != val.KV {
 				for _, item := range val.KV {
@@ -101,6 +103,8 @@ func GetDB(n string, tag []*ast.Tag) []*DB {
 						db.Force = "true" == strings.ToLower(item.Values[0].Value[1:len(item.Values[0].Value)-1])
 					} else if "rm" == item.Name.Name {
 						db.Remove = "true" == strings.ToLower(item.Values[0].Value[1:len(item.Values[0].Value)-1])
+					} else if "fake" == item.Name.Name {
+						db.Fake = "true" == strings.ToLower(item.Values[0].Value[1:len(item.Values[0].Value)-1])
 					}
 				}
 			}

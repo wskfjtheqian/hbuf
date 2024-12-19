@@ -22,15 +22,9 @@ echo "开始打包 hbuf window版本..........."
 go build -o ./bin/hbuf.exe ./pkg/compile/main.go
 echo "打包 hbuf window版本 成功"s
 
-copy E:\develop\hbuf\hbuf\bin\hbuf.exe E:\develop\client-web\hbuf.exe
-copy E:\develop\hbuf\hbuf\bin\hbuf.darwin E:\develop\client-web\hbuf.darwin
-copy E:\develop\hbuf\hbuf\bin\hbuf.linux E:\develop\client-web\hbuf.linux
-
-copy E:\develop\hbuf\hbuf\bin\hbuf.exe E:\develop\hanber\hbuf.exe
-copy E:\develop\hbuf\hbuf\bin\hbuf.darwin E:\develop\hanber\hbuf.darwin
-copy E:\develop\hbuf\hbuf\bin\hbuf.linux E:\develop\hanber\hbuf.linux
-
-
+copy D:\dev\3.hbuf\hbuf\bin\hbuf.exe D:\dev\p_game\hbuf.exe
+copy D:\dev\3.hbuf\hbuf\bin\hbuf.darwin D:\dev\p_game\hbuf.darwin
+copy D:\dev\3.hbuf\hbuf\bin\hbuf.linux D:\dev\p_game\hbuf.linux
 
 
 

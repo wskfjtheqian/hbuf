@@ -15,10 +15,16 @@ func printLanguge(dst *build.Writer) {
 		}
 
 		dst.Tab(0).Code("export const ").Code(build.StringToFirstLower(langsKey)).Code("Lang = {\n")
-		for key, _ := range l.Key {
+		keys := build.GetMapKeys(l.Key)
+		sort.Strings(keys)
+
+		for _, key := range keys {
 			dst.Tab(1).Code(build.StringToFirstLower(key)).Code(": {\n")
-			for name, lang := range l.Lang {
-				dst.Tab(2).Code(name).Code(": ").Code("\"").Code(lang[key]).Code("\",\n")
+
+			names := build.GetMapKeys(l.Lang)
+			sort.Strings(names)
+			for _, name := range names {
+				dst.Tab(2).Code(name).Code(": ").Code("\"").Code(l.Lang[name][key]).Code("\",\n")
 			}
 			dst.Tab(1).Code("},\n")
 		}

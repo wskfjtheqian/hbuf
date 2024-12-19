@@ -3,7 +3,15 @@ package golang
 import (
 	"hbuf/pkg/ast"
 	"hbuf/pkg/build"
+	"strings"
 )
+
+type dataField struct {
+	name    string
+	typ     string
+	tag     string
+	comment string
+}
 
 func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
 	dst.Import("encoding/json", "")
@@ -13,23 +21,50 @@ func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
 	}
 	dst.Code("type " + name + " struct")
 	dst.Code(" {\n")
+
+	length := 0
+	nameLen := 0
+	typLen := 0
+	tagLen := 0
+	fields := make([]dataField, len(typ.Fields.List))
+	for i, field := range typ.Fields.List {
+		temp := build.NewWriter()
+		temp.Packages = dst.Packages
+		b.printType(temp, field.Type, true)
+		dst.AddImports(temp.GetImports())
+
+		fields[i] = dataField{
+			name: build.StringToHumpName(field.Name.Name),
+			typ:  temp.String(),
+			tag:  "`json:\"" + build.StringToUnderlineName(field.Name.Name) + ",omitempty\"`",
+		}
+
+		if nil != field.Doc && 0 < len(field.Doc.Text()) {
+			fields[i].comment = field.Doc.Text()
+		}
+
+		length = len(fields[i].name)
+		if length > nameLen {
+			nameLen = length
+		}
+		length = len(fields[i].typ)
+		if length > typLen {
+			typLen = length
+		}
+		length = len(fields[i].tag)
+		if length > tagLen {
+			tagLen = length
+		}
+	}
+
 	isFast := true
 	b.printDataExtend(dst, typ.Extends, &isFast)
-
-	for _, field := range typ.Fields.List {
-		if !isFast {
-			dst.Code("\n")
-		}
-		isFast = false
-		if nil != field.Doc && 0 < len(field.Doc.Text()) {
-			dst.Code("\t//" + field.Doc.Text())
-		}
-
-		dst.Code("\t" + build.StringToHumpName(field.Name.Name) + " ")
-		b.printType(dst, field.Type, true)
-
-		dst.Code(" `json:\"" + build.StringToUnderlineName(field.Name.Name) + ",omitempty\"`")
-		dst.Code("\n")
+	for _, field := range fields {
+		dst.Code("\t")
+		dst.Code(build.StringFillRight(field.name, ' ', nameLen+1))
+		dst.Code(build.StringFillRight(field.typ, ' ', typLen+1))
+		dst.Code(build.StringFillRight(field.tag, ' ', tagLen+1))
+		dst.Code("//").Code(strings.Trim(strings.ReplaceAll(field.comment, "\n", " "), " ")).Code("\n")
 	}
 	dst.Code("}\n\n")
 

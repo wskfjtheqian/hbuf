@@ -330,3 +330,10 @@ func (b *Builder) converter(field *build.DBField, name string) string {
 	}
 	return "&" + name + "." + fName
 }
+
+func (b *Builder) GetTableName(db *build.DB) string {
+	if len(db.Schema) > 0 {
+		return db.Schema + "." + db.Name
+	}
+	return db.Name
+}

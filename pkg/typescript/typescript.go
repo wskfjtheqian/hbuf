@@ -28,6 +28,7 @@ type DartWriter struct {
 	enum   *build.Writer
 	server *build.Writer
 	ui     *build.Writer
+	lang   *build.Writer
 	verify *build.Writer
 	path   string
 }
@@ -38,6 +39,7 @@ func (g *DartWriter) SetPath(s *ast.File) {
 	g.enum.File = s
 	g.server.File = s
 	g.ui.File = s
+	g.lang.File = s
 	g.verify.File = s
 }
 
@@ -47,6 +49,7 @@ func NewGoWriter() *DartWriter {
 		enum:   build.NewWriter(),
 		server: build.NewWriter(),
 		ui:     build.NewWriter(),
+		lang:   build.NewWriter(),
 		verify: build.NewWriter(),
 	}
 }
@@ -97,8 +100,14 @@ func Build(file *ast.File, fset *token.FileSet, param *build.Param) error {
 			return err
 		}
 	}
+	printLanguge(dst.ui.GetLangs(), dst.lang)
+	if 0 < dst.lang.GetCode().Len() {
+		err = writerFile(dst.lang, filepath.Join(dir, name+".lang.ts"))
+		if err != nil {
+			return err
+		}
+	}
 
-	printLanguge(dst.ui)
 	if 0 < dst.ui.GetCode().Len() {
 		err = writerFile(dst.ui, filepath.Join(dir, name+".ui.tsx"))
 		if err != nil {

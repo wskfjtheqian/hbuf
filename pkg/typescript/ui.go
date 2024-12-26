@@ -158,10 +158,13 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 
 	dst.Code("export const " + name + "TableColumn = defineComponent({\n")
 	dst.Code("\tname: '" + name + "TableColumn',\n")
-	dst.Code("\tprops: {hide:String},\n")
+	dst.Code("\tprops: {\n")
+	dst.Code("\t\tposition: Array<String>,\n")
+	dst.Code("\t\thide:String,\n")
+	dst.Code("\t},\n")
 	dst.Code("\tsetup(props:any) {\n")
-	dst.Code("\t\treturn (_ctx: Record<string, any>) => (\n")
-	dst.Code("\t\t\t<>\n")
+	dst.Code("\t\treturn (_ctx: Record<string, any>) => {\n")
+	dst.Code("\t\t\tconst maps: Record<string, any> = {\n")
 	langName := build.StringToFirstLower(name)
 	//i := 0
 	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
@@ -181,35 +184,37 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 		}
 		//dst.Code("                <el-table-column prop="adminId" label="adminId" width="140"/>\n")
 		fieldName := build.StringToFirstLower(field.Name.Name)
+		dst.Tab(4).Code("\"").Code(fieldName).Code("\": () =>(\n")
 
-		dst.Code("\t\t\t\t<el-table-column prop=\"").Code(fieldName).Code("\"")
+		dst.Code("\t\t\t\t\t<el-table-column prop=\"").Code(fieldName).Code("\"")
 		dst.Code(" label={_ctx.$t(\"").Code(langName).Code("Lang.").Code(fieldName).Code("\")}")
 		dst.Code(" show-overflow-tooltip")
 		dst.Code(" min-width=\"").Code(strconv.FormatFloat(table.width, 'g', -1, 64)).Code("\"")
 		dst.Code(">\n")
 		if "image" == table.table {
-			dst.Code("\t\t\t\t\t{{\n")
-			dst.Code("\t\t\t\t\t\tdefault: (scope:any) => (<>\n")
-			dst.Code("\t\t\t\t\t\t\t<el-popover effect=\"light\" trigger=\"hover\" placement=\"top\" width=\"auto\">\n")
-			dst.Code("\t\t\t\t\t\t\t\t{{\n")
-			dst.Code("\t\t\t\t\t\t\t\t\tdefault: () => <el-image style={\"width: 200px; height: 200px\"} src={scope.row.").Code(fieldName).Code("}/>,\n")
-			dst.Code("\t\t\t\t\t\t\t\t\treference: () => <el-avatar shape=\"square\" size=\"60\" src={scope.row.").Code(fieldName).Code("}/>,\n")
-			dst.Code("\t\t\t\t\t\t\t\t}}\n")
-			dst.Code("\t\t\t\t\t\t\t</el-popover>\n")
-			dst.Code("\t\t\t\t\t\t</>)\n")
-			dst.Code("\t\t\t\t\t}}\n")
+			dst.Code("\t\t\t\t\t\t{{\n")
+			dst.Code("\t\t\t\t\t\t\tdefault: (scope:any) => (<>\n")
+			dst.Code("\t\t\t\t\t\t\t\t<el-popover effect=\"light\" trigger=\"hover\" placement=\"top\" width=\"auto\">\n")
+			dst.Code("\t\t\t\t\t\t\t\t\t\t{{\n")
+			dst.Code("\t\t\t\t\t\t\t\t\t\t\tdefault: () => <el-image style={\"width: 200px; height: 200px\"} src={scope.row.").Code(fieldName).Code("}/>,\n")
+			dst.Code("\t\t\t\t\t\t\t\t\t\t\treference: () => <el-avatar shape=\"square\" size=\"60\" src={scope.row.").Code(fieldName).Code("}/>,\n")
+			dst.Code("\t\t\t\t\t\t\t\t\t\t}}\n")
+			dst.Code("\t\t\t\t\t\t\t\t</el-popover>\n")
+			dst.Code("\t\t\t\t\t\t\t</>)\n")
+			dst.Code("\t\t\t\t\t\t}}\n")
 		} else if "switch" == table.table {
-			dst.Code("\t\t\t\t\t{{\n")
-			dst.Code("\t\t\t\t\t\tdefault: (scope:any) => (<el-switch v-model={scope.row!.").Code(fieldName).Code("} disabled />)\n")
-			dst.Code("\t\t\t\t\t}}\n")
+			dst.Code("\t\t\t\t\t\t{{\n")
+			dst.Code("\t\t\t\t\t\t\tdefault: (scope:any) => (<el-switch v-model={scope.row!.").Code(fieldName).Code("} disabled />)\n")
+			dst.Code("\t\t\t\t\t\t}}\n")
 		} else {
-			dst.Code("\t\t\t\t\t{{\n")
-			dst.Code("\t\t\t\t\t\tdefault: (scope:any) =>")
+			dst.Code("\t\t\t\t\t\t{{\n")
+			dst.Code("\t\t\t\t\t\t\tdefault: (scope:any) =>")
 			b.printToString(dst, "scope.row."+fieldName, field.Type, false, table.digit, table.format, " || \"\"")
 			dst.Code("\n")
-			dst.Code("\t\t\t\t\t}}\n")
+			dst.Code("\t\t\t\t\t\t}}\n")
 		}
-		dst.Code("\t\t\t\t</el-table-column>\n")
+		dst.Code("\t\t\t\t\t</el-table-column>\n")
+		dst.Tab(4).Code("),\n")
 		lang.Add(fieldName, field.Tags)
 		return nil
 	})
@@ -217,8 +222,24 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 		return
 	}
 
-	dst.Code("\t\t\t</>\n")
-	dst.Code("\t\t);\n")
+	dst.Tab(3).Code("}\n")
+	dst.Tab(3).Code("for (const key in _ctx.$slots) {\n")
+	dst.Code("                maps[key] = _ctx.$slots[key]\n")
+	dst.Code("            }\n")
+	dst.Code("            const list: string[] = []\n")
+	dst.Code("            for (const i in _ctx.position) {\n")
+	dst.Code("                const key = _ctx.position[i]\n")
+	dst.Code("                if (!list.includes(key) && maps[key]) {\n")
+	dst.Code("                    list.push(key)\n")
+	dst.Code("                }\n")
+	dst.Code("            }\n")
+	dst.Code("            for (const key in maps) {\n")
+	dst.Code("                if (!list.includes(key) && maps[key]) {\n")
+	dst.Code("                    list.push(key)\n")
+	dst.Code("                }\n")
+	dst.Code("            }\n")
+	dst.Code("            return list.map((it) => maps[it]())\n")
+	dst.Code("\t\t};\n")
 	dst.Code("\t}\n")
 	dst.Code("});\n\n")
 
@@ -386,15 +407,16 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Code("\tname: '" + name + "FormItems',\n")
 	dst.Code("\tprops: {\n")
 	dst.Code("\t\tsize: String,\n")
+	dst.Code("\t\tposition: Array<String>,\n")
 	dst.Code("\t\tmodel: ")
 	b.printType(dst, typ.Name, false, false)
 	dst.Code("\n")
 	dst.Code("\t},\n")
 	dst.Code("\tsetup(props: Record<string, any>) {\n")
-	dst.Import("element-plus", "* as el")
-	dst.Tab(2).Code("const locale = el.useLocale()\n")
-	dst.Code("\t\treturn (_ctx: Record<string, any>) => (\n")
-	dst.Code("\t\t\t<>\n")
+	dst.Import("element-plus", "{useLocale}")
+	dst.Tab(2).Code("const locale = useLocale()\n")
+	dst.Code("\t\treturn (_ctx: Record<string, any>) => {\n")
+	dst.Code("\t\t\tconst maps: Record<string, any> = {\n")
 	langName := build.StringToFirstLower(name)
 	//i := 0
 	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
@@ -413,8 +435,8 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			//index = *table.index
 		}
 		fieldName := build.StringToFirstLower(field.Name.Name)
-
-		dst.Tab(4).Code("<el-form-item prop=\"").Code(fieldName).Code("\"")
+		dst.Tab(4).Code("\"").Code(fieldName).Code("\": () =>(\n")
+		dst.Tab(5).Code("<el-form-item prop=\"").Code(fieldName).Code("\"")
 		dst.Code(" label={_ctx.$t(\"").Code(langName).Code("Lang.").Code(fieldName).Code("\")}")
 		if verify {
 			pName := b.getPackage(dst, typ.Name, "verify")
@@ -422,16 +444,16 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		}
 		dst.Code(">\n")
 		if "datetime" == form.form || "date" == form.form || "dates" == form.form || "year" == form.form || "month" == form.form {
-			dst.Tab(5).Code("<el-date-picker\n")
-			dst.Tab(6).Code("modelValue={")
+			dst.Tab(6).Code("<el-date-picker\n")
+			dst.Tab(7).Code("modelValue={")
 			if isArray {
 				dst.Import("hbuf_ts", "* as h")
-				dst.Code(" h.convertArray(props.model!.").Code(fieldName).Code(", (e) => _ctx.$timeToLocal(e))")
+				dst.Code(" h.convertArray(_ctx.model!.").Code(fieldName).Code(", (e) => _ctx.$timeToLocal(e))")
 			} else {
-				dst.Code("_ctx.$timeToLocal(props.model!.").Code(fieldName).Code(")")
+				dst.Code("_ctx.$timeToLocal(_ctx.model!.").Code(fieldName).Code(")")
 			}
 			dst.Code("}\n")
-			dst.Tab(6).Code("onUpdate:modelValue={($event: (number | string | Date) | (number | string | Date)[] | null) => props.model!.").Code(fieldName).Code(" = ")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: (number | string | Date) | (number | string | Date)[] | null) => _ctx.model!.").Code(fieldName).Code(" = ")
 			if isNull {
 				dst.Code("(!$event) ? null : ")
 			}
@@ -462,7 +484,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				}
 			}
 			dst.Code("}\n")
-			dst.Tab(6).Code("type=\"")
+			dst.Tab(7).Code("type=\"")
 			if isArray {
 				if "datetime" == form.form {
 					dst.Code("datetimerange")
@@ -490,11 +512,11 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Code("\"\n")
 			if form.unlink {
-				dst.Tab(6).Code("unlink-panels\n")
+				dst.Tab(7).Code("unlink-panels\n")
 			}
-			dst.Tab(6).Code("shortcuts={_ctx.$datePackerShortcuts(_ctx.$t)}\n")
-			dst.Tab(6).Code("size={props.size}\n")
-			dst.Tab(6).Code("clearable=")
+			dst.Tab(7).Code("shortcuts={_ctx.$datePackerShortcuts(_ctx.$t)}\n")
+			dst.Tab(7).Code("size={props.size}\n")
+			dst.Tab(7).Code("clearable=")
 			if isNull {
 				dst.Code("{true}\n")
 			} else {
@@ -503,148 +525,127 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			if form.onlyRead {
 				dst.Code(" disabled  \n")
 			}
-			dst.Tab(5).Code("/>\n")
+			dst.Tab(6).Code("/>\n")
 		} else if "menu" == form.form {
-			dst.Tab(5).Code("<el-select\n")
-			dst.Tab(6).Code("v-model={props.model!.").Code(fieldName).Code("}\n")
-			dst.Tab(6).Code("style={\"width:180px\"}\n")
-			dst.Tab(6).Code("size={props.size}\n")
+			dst.Tab(6).Code("<el-select\n")
+			dst.Tab(7).Code("v-model={_ctx.model!.").Code(fieldName).Code("}\n")
+			dst.Tab(7).Code("style={\"width:180px\"}\n")
+			dst.Tab(7).Code("size={props.size}\n")
 			if isNull {
-				dst.Tab(6).Code("clearable\n")
+				dst.Tab(7).Code("clearable\n")
 			}
 			if form.onlyRead {
-				dst.Tab(6).Code("disabled  \n")
+				dst.Tab(7).Code("disabled  \n")
 			}
-			dst.Tab(6).Code(">\n")
+			dst.Tab(7).Code(">\n")
 			b.printMenuItem(dst, field.Type, false)
-			dst.Tab(5).Code("</el-select>\n")
+			dst.Tab(6).Code("</el-select>\n")
 		} else if "switch" == form.form {
-			dst.Code("\t\t\t\t\t<el-switch modelValue={props.model!.").Code(fieldName).Code(" ??= false")
+			dst.Code("\t\t\t\t\t<el-switch modelValue={_ctx.model!.").Code(fieldName).Code(" ??= false")
 			dst.Code("}\n")
 
-			dst.Tab(7).Code("onUpdate:modelValue={($event: string) => props.model!.").Code(fieldName).Code(" = $event")
+			dst.Tab(8).Code("onUpdate:modelValue={($event: string) => _ctx.model!.").Code(fieldName).Code(" = $event")
 			dst.Code("}\n")
 
 			if form.onlyRead {
 				dst.Code(" disabled")
 			}
 			dst.Code("/>\n")
+			//} else if isNumber {
+			//	dst.Code("\t\t\t\t\t<el-input-number\n")
+			//	dst.Code("\t\t\t\t\t\tv-model={_ctx.model!.").Code(fieldName).Code("}\n")
+			//	dst.Code("\t\t\t\t\t\tsize={props.size}\n")
+			//	dst.Code("\t\t\t\t\t\tcontrols-position=\"right\"\n")
+			//	dst.Code("\t\t\t\t\t\tprecision=\"").Code(strconv.Itoa(form.digit)).Code("\"\n")
+			//	if isNull {
+			//		dst.Code("\t\t\t\t\t\tclearable\n")
+			//	}
+			//	if form.onlyRead {
+			//		dst.Code(" disabled\n")
+			//	}
+			//	dst.Code("\t\t\t\t\t/>\n")
 		} else if "pass" == form.form {
-			dst.Tab(5).Code("<el-input\n")
-			dst.Tab(6).Code("modelValue={")
-			b.printToString(dst, "props.model!."+fieldName, field.Type, false, form.digit, form.format, " ?? \"\"")
+			dst.Tab(6).Code("<el-input\n")
+			dst.Tab(7).Code("modelValue={")
+			b.printToString(dst, "_ctx.model!."+fieldName, field.Type, false, form.digit, form.format, " ?? \"\"")
 			dst.Code("}\n")
 
-			dst.Tab(6).Code("onUpdate:modelValue={($event: string) => props.model!.").Code(fieldName).Code(" = ")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: string) => _ctx.model!.").Code(fieldName).Code(" = ")
 			b.printFormString(dst, "$event", field.Type, false, form.digit, form.format)
 			dst.Code("}\n")
-			dst.Tab(6).Code("size={props.size}\n")
-			dst.Tab(6).Code("type=\"password\"\n")
-			dst.Tab(6).Code("show-password\n")
+			dst.Tab(7).Code("size={props.size}\n")
+			dst.Tab(7).Code("type=\"password\"\n")
+			dst.Tab(7).Code("show-password\n")
 			if isNull {
-				dst.Tab(6).Code("clearable\n")
+				dst.Tab(7).Code("clearable\n")
 			}
 			if form.onlyRead {
-				dst.Tab(6).Code("disabled\n")
+				dst.Tab(7).Code("disabled\n")
 			}
-			dst.Tab(6).Code("precision={").Code(strconv.Itoa(form.digit)).Code("}\n")
-			dst.Tab(5).Code("/>\n")
-		} else if "image" == form.form {
-			dst.Import("element-plus", "* as el")
-			dst.Import("element-plus/es/utils", "* as eu")
-			dst.Import("@element-plus/icons-vue", "* as ei")
-			dst.Tab(5).Code("<el-upload\n")
-			dst.Tab(6).Code("className=\"uploader-image\"\n")
-			dst.Tab(6).Code("http-request={_ctx.$updateFile}\n")
-			dst.Tab(6).Code("show-file-list={false}\n")
-			if form.clip {
-				dst.Tab(6).Code("before-upload={(rawFile: el.UploadRawFile): eu.Awaitable<void | undefined | null | boolean | File | Blob> => {\n")
-				dst.Tab(6).Code("	return _ctx.$clipImage(rawFile, ").Code(strconv.FormatFloat(form.width, 'g', -1, 32)).Code(",").Code(strconv.FormatFloat(form.height, 'g', -1, 32)).Code(" )\n")
-				dst.Tab(6).Code("}}\n")
-			}
-			dst.Tab(6).Code("on-success={(response: any, file: el.UploadFile, files: el.UploadFiles): void => {\n")
-			dst.Tab(6).Code("	props.model!.").Code(fieldName).Code(" = response\n")
-			dst.Tab(6).Code("}}\n")
-			dst.Tab(5).Code(">\n")
-			dst.Tab(6).Code("<img v-if={props.model!.").Code(fieldName).Code("} src={props.model!.").Code(fieldName).Code("} class=\"avatar\"/>\n")
-			dst.Tab(6).Code("<el-icon v-else className=\"uploader-image-icon\"><ei.Plus/></el-icon>\n")
-			dst.Tab(5).Code("</el-upload>\n")
-		} else if "file" == form.form {
-			dst.Tab(5).Code("<el-input\n")
-			dst.Tab(6).Code("modelValue={")
-			b.printToString(dst, "props.model!."+fieldName, field.Type, false, form.digit, form.format, "")
-			dst.Code("}\n")
-
-			dst.Tab(6).Code("onUpdate:modelValue={($event: string) => props.model!.").Code(fieldName).Code(" = ")
-			b.printFormString(dst, "$event", field.Type, false, form.digit, form.format)
-			dst.Code("}\n")
-			dst.Tab(6).Code("size={props.size}\n")
-			if isNull {
-				dst.Tab(6).Code("clearable\n")
-			}
-			if form.onlyRead {
-				dst.Tab(6).Code("disabled\n")
-			}
-			dst.Tab(6).Code("precision=\"").Code(strconv.Itoa(form.digit)).Code("\"\n")
-			dst.Import("@element-plus/icons-vue", "* as ei")
-			dst.Tab(5).Code(">\n")
-			dst.Tab(6).Code("{{\n")
-			dst.Tab(7).Code("append: () => <el-button icon=\"ei.Search\" onclick={()=>_ctx.$selectFile(\"\",")
-			if isArray {
-				dst.Code("true")
-			} else {
-				dst.Code("false")
-			}
-			dst.Code(",[])}/>\n")
-			dst.Tab(6).Code("}}\n")
-			dst.Tab(5).Code("</el-input>\n")
-
+			dst.Tab(7).Code("precision={").Code(strconv.Itoa(form.digit)).Code("}\n")
+			dst.Tab(6).Code("/>\n")
 		} else if isArray {
-			dst.Tab(5).Code("<el-select\n")
-			dst.Tab(6).Code("v-model={props.model!.").Code(fieldName).Code("}\n")
-			dst.Tab(6).Code("multiple\n")
-			dst.Tab(6).Code("filterable\n")
-			dst.Tab(6).Code("allow-create\n")
-			dst.Tab(6).Code("default-first-option\n")
-			dst.Tab(6).Code("reserve-keyword={false}\n")
+			dst.Tab(6).Code("<el-select\n")
+			dst.Tab(7).Code("v-model={_ctx.model!.").Code(fieldName).Code("}\n")
+			dst.Tab(7).Code("multiple\n")
+			dst.Tab(7).Code("filterable\n")
+			dst.Tab(7).Code("allow-create\n")
+			dst.Tab(7).Code("default-first-option\n")
+			dst.Tab(7).Code("reserve-keyword={false}\n")
 			if isNull {
-				dst.Tab(6).Code("clearable\n")
+				dst.Tab(7).Code("clearable\n")
 			}
 			if form.onlyRead {
-				dst.Tab(6).Code(" disabled\n")
+				dst.Tab(7).Code(" disabled\n")
 			}
-			dst.Tab(6).Code(">\n")
-			dst.Tab(5).Code("</el-select>\n")
+			dst.Tab(7).Code(">\n")
+			dst.Tab(6).Code("</el-select>\n")
 		} else {
-			dst.Tab(5).Code("<el-input\n")
-			dst.Tab(6).Code("modelValue={")
-			b.printToString(dst, "props.model!."+fieldName, field.Type, false, form.digit, form.format, "")
+			dst.Tab(6).Code("<el-input\n")
+			dst.Tab(7).Code("modelValue={")
+			b.printToString(dst, "_ctx.model!."+fieldName, field.Type, false, form.digit, form.format, "")
 			dst.Code("}\n")
 
-			dst.Tab(6).Code("onUpdate:modelValue={($event: string) => props.model!.").Code(fieldName).Code(" = ")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: string) => _ctx.model!.").Code(fieldName).Code(" = ")
 			b.printFormString(dst, "$event", field.Type, false, form.digit, form.format)
 			dst.Code("}\n")
-			dst.Tab(6).Code("size={props.size}\n")
+			dst.Tab(7).Code("size={props.size}\n")
 			if isNull {
-				dst.Tab(6).Code("clearable\n")
+				dst.Tab(7).Code("clearable\n")
 			}
 			if form.onlyRead {
-				dst.Tab(6).Code("disabled\n")
+				dst.Tab(7).Code("disabled\n")
 			}
-			dst.Tab(6).Code("precision={").Code(strconv.Itoa(form.digit)).Code("}\n")
-			dst.Tab(5).Code("/>\n")
+			dst.Tab(7).Code("precision={").Code(strconv.Itoa(form.digit)).Code("}\n")
+			dst.Tab(6).Code("/>\n")
 		}
 		lang.Add(fieldName, field.Tags)
-		dst.Tab(4).Code("</el-form-item>\n")
-
+		dst.Tab(5).Code("</el-form-item>\n")
+		dst.Tab(4).Code("),\n")
 		return nil
 	})
 	if err != nil {
 		return
 	}
 
-	dst.Code("\t\t\t</>\n")
-	dst.Code("\t\t);\n")
+	dst.Tab(3).Code("}\n")
+	dst.Tab(3).Code("for (const key in _ctx.$slots) {\n")
+	dst.Code("                maps[key] = _ctx.$slots[key]\n")
+	dst.Code("            }\n")
+	dst.Code("            const list: string[] = []\n")
+	dst.Code("            for (const i in _ctx.position) {\n")
+	dst.Code("                const key = _ctx.position[i]\n")
+	dst.Code("                if (!list.includes(key) && maps[key]) {\n")
+	dst.Code("                    list.push(key)\n")
+	dst.Code("                }\n")
+	dst.Code("            }\n")
+	dst.Code("            for (const key in maps) {\n")
+	dst.Code("                if (!list.includes(key) && maps[key]) {\n")
+	dst.Code("                    list.push(key)\n")
+	dst.Code("                }\n")
+	dst.Code("            }\n")
+	dst.Code("            return list.map((it) => maps[it]())\n")
+	dst.Code("\t\t};\n")
 	dst.Code("\t}\n")
 	dst.Code("});\n\n")
 }

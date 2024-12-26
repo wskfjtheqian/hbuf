@@ -166,7 +166,7 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 						dst.Code("\t}\n")
 					}
 					if len(f.Reg) > 0 {
-						dst.Code("\tif (!new RegExp(\"").Code(f.Reg).Code("\").test(value!)) {\n")
+						dst.Code("\tif (!new RegExp(\"" + f.Reg + "\").test(value!)) {\n")
 						b.printVerifyError(dst, pName, val)
 						dst.Code("\t}\n")
 					}

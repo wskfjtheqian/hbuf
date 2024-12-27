@@ -139,7 +139,7 @@ func (b *Builder) printBinding(dst *build.Writer, method *ast.FuncType, bind *bu
 	dst.Code(")\n")
 
 	dst.Code("\tif err != nil {\n")
-	dst.Code("\t\treturn nil, erro.Wrap(err)\n")
+	dst.Code("\t\treturn nil, err\n")
 	dst.Code("\t}\n")
 
 	dst.Code("\treturn ")

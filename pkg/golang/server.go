@@ -6,7 +6,7 @@ import (
 	"sort"
 )
 
-func (b *Builder) printServerCode(dst *build.Writer, typ *ast.ServerType) {
+func (b *Builder) printServerCode(dst *build.Writer, typ *ast.ServerType) error {
 	dst.Import("context", "")
 
 	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/rpc", "")
@@ -14,8 +14,12 @@ func (b *Builder) printServerCode(dst *build.Writer, typ *ast.ServerType) {
 	b.printServer(dst, typ)
 	b.printClient(dst, typ)
 	b.printServerRouter(dst, typ)
-	b.printServerDefault(dst, typ)
+	err := b.printServerDefault(dst, typ)
+	if err != nil {
+		return err
+	}
 	b.printGetServerRouter(dst, typ)
+	return nil
 }
 
 func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
@@ -56,7 +60,7 @@ func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
 	dst.Code("}\n\n")
 }
 
-func (b *Builder) printServerDefault(dst *build.Writer, typ *ast.ServerType) {
+func (b *Builder) printServerDefault(dst *build.Writer, typ *ast.ServerType) error {
 	serverName := build.StringToHumpName(typ.Name.Name)
 	if nil != typ.Doc && 0 < len(typ.Doc.Text()) {
 		dst.Code("// " + build.StringToHumpName(serverName) + " " + typ.Doc.Text())
@@ -74,9 +78,8 @@ func (b *Builder) printServerDefault(dst *build.Writer, typ *ast.ServerType) {
 		if nil != method.Doc && 0 < len(method.Doc.Text()) {
 			dst.Code("// " + build.StringToHumpName(method.Name.Name) + " " + method.Doc.Text())
 		}
-		isMethod := method.Result.Type().(*ast.Ident).Name == "void"
+		isSub := method.Result.Type().(*ast.Ident).Name == "void"
 
-		dst.Import("errors", "")
 		dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/erro", "")
 
 		dst.Code("func (s *Default" + serverName + ") ")
@@ -85,17 +88,70 @@ func (b *Builder) printServerDefault(dst *build.Writer, typ *ast.ServerType) {
 		dst.Code(build.StringToFirstLower(method.ParamName.Name))
 		dst.Code(" *")
 		b.printType(dst, method.Param, true)
-		if isMethod {
+		if isSub {
 			dst.Code(") error {\n")
-			dst.Code("\treturn erro.Wrap(errors.New(\"not find server " + build.StringToUnderlineName(typ.Name.Name) + "\"))\n")
 		} else {
 			dst.Code(") (*")
 			b.printType(dst, method.Result.Type(), true)
 			dst.Code(", error) {\n")
-			dst.Code("\treturn nil, erro.Wrap(errors.New(\"not find server " + build.StringToUnderlineName(typ.Name.Name) + "\"))\n")
+		}
+
+		bind, err := build.GetBinding(method.Tags, dst.File, b.GetDataType)
+		if nil != err {
+			return err
+		}
+		if bind == nil {
+			if isSub {
+				dst.Code("\treturn ")
+			} else {
+				dst.Code("\treturn nil,")
+			}
+
+			dst.Code(" erro.NewError(\"not find server " + build.StringToUnderlineName(typ.Name.Name) + "\")\n")
+		} else {
+			b.printBinding(dst, method, bind, isSub)
 		}
 		dst.Code("}\n\n")
 	}
+	return nil
+}
+
+func (b *Builder) printBinding(dst *build.Writer, method *ast.FuncType, bind *build.Binding, isSub bool) error {
+	verify, err := build.GetVerify(method.Param.Type().(*ast.Ident).Obj.Decl.(*ast.TypeSpec).Type.(*ast.DataType).Tags, dst.File, b.GetDataType)
+	if err != nil {
+		return err
+	}
+	if nil != verify {
+		dst.Code("\tif err := req.Verify(ctx); err != nil {\n")
+		dst.Code("\t\treturn nil, erro.Wrap(err)\n")
+		dst.Code("\t}\n")
+	}
+	pack := b.getPackage(dst, bind.Server.Name)
+	if !isSub {
+		dst.Code("\treps, err := ")
+	} else {
+		dst.Code("\terr := ")
+	}
+	dst.Code(pack)
+	dst.Code("Get").Code(bind.Server.Name.Name).Code("(ctx).").Code(bind.Method.Name.Name).Code("(ctx, &")
+	dst.Code("req.")
+	b.printType(dst, bind.Method.Param.Type(), true)
+	dst.Code(")\n")
+
+	dst.Code("\tif err != nil {\n")
+	dst.Code("\t\treturn nil, err\n")
+	dst.Code("\t}\n")
+
+	dst.Code("\treturn ")
+	if !isSub {
+		dst.Code("&")
+		b.printType(dst, method.Result.Type(), true)
+		dst.Code("{")
+		b.printType(dst, bind.Method.Result.Type(), true)
+		dst.Code(": *reps}, ")
+	}
+	dst.Code("nil\n")
+	return nil
 }
 
 func (b *Builder) printClient(dst *build.Writer, typ *ast.ServerType) {

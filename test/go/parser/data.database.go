@@ -13,7 +13,7 @@ func (val *GetInfoReq) DbScan() (string, []any) {
 
 func (g InfoReq) DbGet(ctx context.Context) (*GetInfoReq, error) {
 	s := db.NewSql()
-	s.T("SELECT user_id, name, age FROM get_info_req WHERE del_time IS NULL")
+	s.T("SELECT user_id, name, age FROM get_info_req WHERE delete_time IS NULL")
 	s.T(" LIMIT 1")
 	var val *GetInfoReq
 	_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {

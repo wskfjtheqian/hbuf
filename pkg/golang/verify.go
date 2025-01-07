@@ -53,6 +53,8 @@ func (b *Builder) GetDataType(file *ast.File, name string) *ast.Object {
 						return obj
 					case *ast.EnumType:
 						return obj
+					case *ast.ServerType:
+						return obj
 					}
 				}
 			}
@@ -237,7 +239,7 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 		return nil
 	})
 	if err != nil {
-		return err
+		return build.ErrorToFileError(err, b.fSet)
 	}
 	return nil
 }

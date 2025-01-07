@@ -28,6 +28,7 @@ type DartWriter struct {
 	enum   *build.Writer
 	server *build.Writer
 	ui     *build.Writer
+	lang   *build.Writer
 	verify *build.Writer
 	path   string
 }
@@ -38,6 +39,7 @@ func (g *DartWriter) SetPath(s *ast.File) {
 	g.enum.File = s
 	g.server.File = s
 	g.ui.File = s
+	g.lang.File = s
 	g.verify.File = s
 }
 
@@ -47,6 +49,7 @@ func NewGoWriter() *DartWriter {
 		enum:   build.NewWriter(),
 		server: build.NewWriter(),
 		ui:     build.NewWriter(),
+		lang:   build.NewWriter(),
 		verify: build.NewWriter(),
 	}
 }
@@ -54,15 +57,17 @@ func NewGoWriter() *DartWriter {
 type Builder struct {
 	lang map[string]struct{}
 	pkg  *ast.Package
+	fSet *token.FileSet
 }
 
-func Build(file *ast.File, fset *token.FileSet, param *build.Param) error {
+func Build(file *ast.File, fSet *token.FileSet, param *build.Param) error {
 	b := Builder{
+		fSet: fSet,
 		lang: map[string]struct{}{},
 		pkg:  param.GetPkg(),
 	}
 	dst := NewGoWriter()
-	err := b.Node(dst, fset, file)
+	err := b.Node(dst, fSet, file)
 	if err != nil {
 		return err
 	}
@@ -97,8 +102,14 @@ func Build(file *ast.File, fset *token.FileSet, param *build.Param) error {
 			return err
 		}
 	}
+	printLanguge(dst.ui.GetLangs(), dst.lang)
+	if 0 < dst.lang.GetCode().Len() {
+		err = writerFile(dst.lang, filepath.Join(dir, name+".lang.ts"))
+		if err != nil {
+			return err
+		}
+	}
 
-	printLanguge(dst.ui)
 	if 0 < dst.ui.GetCode().Len() {
 		err = writerFile(dst.ui, filepath.Join(dir, name+".ui.tsx"))
 		if err != nil {
@@ -195,18 +206,24 @@ func (b *Builder) Node(dst *DartWriter, fset *token.FileSet, node interface{}) e
 		switch s.(type) {
 		case *ast.ImportSpec:
 		case *ast.TypeSpec:
-			b.printTypeSpec(dst, (s.(*ast.TypeSpec)).Type)
+			err := b.printTypeSpec(dst, (s.(*ast.TypeSpec)).Type)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
 }
 
-func (b *Builder) printTypeSpec(dst *DartWriter, expr ast.Expr) {
+func (b *Builder) printTypeSpec(dst *DartWriter, expr ast.Expr) error {
 	switch expr.(type) {
 	case *ast.DataType:
 		b.printDataCode(dst.data, expr.(*ast.DataType))
 		b.printFormCode(dst.ui, expr)
-		b.printVerifyCode(dst.verify, expr.(*ast.DataType))
+		err := b.printVerifyCode(dst.verify, expr.(*ast.DataType))
+		if err != nil {
+			return err
+		}
 	case *ast.ServerType:
 		b.printServerCode(dst.server, expr.(*ast.ServerType))
 
@@ -214,6 +231,7 @@ func (b *Builder) printTypeSpec(dst *DartWriter, expr ast.Expr) {
 		b.printEnumCode(dst.enum, expr.(*ast.EnumType))
 		b.printFormCode(dst.ui, expr)
 	}
+	return nil
 }
 
 func (b *Builder) printType(dst *build.Writer, expr ast.Expr, notEmpty bool, isRecordKey bool) {

@@ -25,6 +25,7 @@ func gitVersion() string {
 	return version
 }
 
+// 编译程序
 func build(t *testing.T, out string, env ...string) error {
 	version := gitVersion()
 
@@ -42,6 +43,28 @@ func build(t *testing.T, out string, env ...string) error {
 		return err
 	}
 	return nil
+}
+
+// 复制文件
+func copyFile(t *testing.T, src, dst string) {
+	t.Log("Copying file from " + src + " to " + dst)
+	srcFile, err := os.Open(src)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	defer srcFile.Close()
+	dstFile, err := os.Create(dst)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	defer dstFile.Close()
+	_, err = dstFile.ReadFrom(srcFile)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 }
 
 // 编译测试
@@ -64,5 +87,10 @@ func TestBuild(t *testing.T) {
 			t.Error(err)
 		}
 	})
+	t.Run("Copy config file", func(t *testing.T) {
+		copyFile(t, "./bin/hbuf.exe", "/Users/dev/8.p_game/hbuf.exe")
+		copyFile(t, "./bin/hbuf.darwin", "/Users/dev/8.p_game/hbuf.darwin")
+		copyFile(t, "./bin/hbuf.linux", "/Users/dev/8.p_game/hbuf.linux")
 
+	})
 }

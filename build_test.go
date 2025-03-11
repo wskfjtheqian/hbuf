@@ -76,7 +76,7 @@ func TestBuild(t *testing.T) {
 		}
 	})
 	t.Run("Build macos", func(t *testing.T) {
-		err := build(t, "./bin/hbuf.macos", "GOOS=darwin", "GOARCH=amd64")
+		err := build(t, "./bin/hbuf.darwin", "GOOS=darwin", "GOARCH=amd64")
 		if err != nil {
 			t.Error(err)
 		}
@@ -88,9 +88,9 @@ func TestBuild(t *testing.T) {
 		}
 	})
 	t.Run("Copy config file", func(t *testing.T) {
-		copyFile(t, "./bin/hbuf.exe", "/Users/dev/8.p_game/hbuf.exe")
-		copyFile(t, "./bin/hbuf.darwin", "/Users/dev/8.p_game/hbuf.darwin")
-		copyFile(t, "./bin/hbuf.linux", "/Users/dev/8.p_game/hbuf.linux")
+		copyFile(t, "./bin/hbuf.exe", "E:\\develop\\hanber\\hbuf.exe")
+		copyFile(t, "./bin/hbuf.darwin", "E:\\develop\\hanber\\hbuf.darwin")
+		copyFile(t, "./bin/hbuf.linux", "E:\\develop\\hanber\\hbuf.linux")
 
 	})
 }

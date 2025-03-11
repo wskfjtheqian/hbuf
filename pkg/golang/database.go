@@ -618,7 +618,7 @@ func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build
 func (b *Builder) printDeleteData(dst *build.Writer, db *build.DB, wFields []*build.DBField, fType *ast.DataType, isCache bool) {
 	fName := build.StringToHumpName(fType.Name.Name)
 
-	w := b.getParamWhere(dst, wFields, false, false, false)
+	w := b.getParamWhere(dst, wFields, true, false, false)
 	dst.AddImports(w.GetImports())
 
 	dst.Code("func (g " + fName + ") DbDel(ctx context.Context) (int64, int64, error) {\n")
@@ -646,7 +646,7 @@ func (b *Builder) printDeleteData(dst *build.Writer, db *build.DB, wFields []*bu
 func (b *Builder) printRemoveData(dst *build.Writer, db *build.DB, wFields []*build.DBField, fType *ast.DataType, isCache bool) {
 	fName := build.StringToHumpName(fType.Name.Name)
 
-	w := b.getParamWhere(dst, wFields, false, false, false)
+	w := b.getParamWhere(dst, wFields, true, false, false)
 	dst.AddImports(w.GetImports())
 
 	dst.Code("func (g " + fName + ") DbRemove(ctx context.Context) (int64, int64, error) {\n")

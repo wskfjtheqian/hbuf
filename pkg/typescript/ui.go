@@ -538,7 +538,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				dst.Tab(7).Code("disabled  \n")
 			}
 			dst.Tab(7).Code(">\n")
-			b.printMenuItem(dst, field.Type, false)
+			b.printMenuItem(dst, field.Type, false, "el-option")
 			dst.Tab(6).Code("</el-select>\n")
 		} else if "switch" == form.form {
 			dst.Code("\t\t\t\t\t<el-switch modelValue={_ctx.model!.").Code(fieldName).Code(" ??= false")
@@ -551,19 +551,30 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				dst.Code(" disabled")
 			}
 			dst.Code("/>\n")
-			//} else if isNumber {
-			//	dst.Code("\t\t\t\t\t<el-input-number\n")
-			//	dst.Code("\t\t\t\t\t\tv-model={_ctx.model!.").Code(fieldName).Code("}\n")
-			//	dst.Code("\t\t\t\t\t\tsize={props.size}\n")
-			//	dst.Code("\t\t\t\t\t\tcontrols-position=\"right\"\n")
-			//	dst.Code("\t\t\t\t\t\tprecision=\"").Code(strconv.Itoa(form.digit)).Code("\"\n")
-			//	if isNull {
-			//		dst.Code("\t\t\t\t\t\tclearable\n")
-			//	}
-			//	if form.onlyRead {
-			//		dst.Code(" disabled\n")
-			//	}
-			//	dst.Code("\t\t\t\t\t/>\n")
+		} else if "radio" == form.form {
+			dst.Tab(6).Code("<el-radio-group v-model={_ctx.model!.").Code(fieldName).Code("}\n")
+			dst.Tab(7).Code("size={props.size}\n")
+			if isNull {
+				dst.Tab(7).Code("clearable\n")
+			}
+			if form.onlyRead {
+				dst.Tab(7).Code("disabled\n")
+			}
+			dst.Tab(7).Code(">\n")
+			b.printMenuItem(dst, field.Type, false, "el-radio")
+			dst.Tab(6).Code("</el-radio-group>\n")
+		} else if "radioButton" == form.form {
+			dst.Tab(6).Code("<el-radio-group v-model={_ctx.model!.").Code(fieldName).Code("}\n")
+			dst.Tab(7).Code("size={props.size}\n")
+			if isNull {
+				dst.Tab(7).Code("clearable\n")
+			}
+			if form.onlyRead {
+				dst.Tab(7).Code("disabled\n")
+			}
+			dst.Tab(7).Code(">\n")
+			b.printMenuItem(dst, field.Type, false, "el-radio-button")
+			dst.Tab(6).Code("</el-radio-group>\n")
 		} else if "pass" == form.form {
 			dst.Tab(6).Code("<el-input\n")
 			dst.Tab(7).Code("modelValue={")
@@ -650,14 +661,14 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Code("});\n\n")
 }
 
-func (b *Builder) printMenuItem(dst *build.Writer, expr ast.Expr, empty bool) {
+func (b *Builder) printMenuItem(dst *build.Writer, expr ast.Expr, empty bool, option string) {
 	switch expr.(type) {
 	case *ast.EnumType:
 		t := expr.(*ast.EnumType)
 		pkg := b.getPackage(dst, t.Name, "")
 		name := build.StringToHumpName(t.Name.Name)
 		dst.Code("\t\t\t\t\t\t{").Code(pkg).Code(".").Code(name).Code(".values.map((val) => {\n")
-		dst.Code("\t\t\t\t\t\t\treturn <el-option key={val.value}\n")
+		dst.Code("\t\t\t\t\t\t\treturn <" + option + " key={val.value}\n")
 		dst.Code("\t\t\t\t\t\t\t\tlabel={_ctx.$t(val.toString())}\n")
 		dst.Code("\t\t\t\t\t\t\t\tvalue={val}\n")
 		dst.Code("\t\t\t\t\t\t\t/>\n")
@@ -666,7 +677,7 @@ func (b *Builder) printMenuItem(dst *build.Writer, expr ast.Expr, empty bool) {
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
 			b.getPackage(dst, expr, "")
-			b.printMenuItem(dst, t.Obj.Decl.(*ast.TypeSpec).Type, empty)
+			b.printMenuItem(dst, t.Obj.Decl.(*ast.TypeSpec).Type, empty, option)
 		}
 	case *ast.ArrayType:
 		//ar := expr.(*ast.ArrayType)
@@ -688,6 +699,6 @@ func (b *Builder) printMenuItem(dst *build.Writer, expr ast.Expr, empty bool) {
 		//}
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
-		b.printMenuItem(dst, t.Type(), t.Empty)
+		b.printMenuItem(dst, t.Type(), t.Empty, option)
 	}
 }

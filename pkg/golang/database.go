@@ -249,7 +249,11 @@ func (b *Builder) getItemAndValue(fields []*build.DBField, key string) (strings.
 		get := ""
 		if 0 < len(field.Dbs[0].Get) {
 			get = strings.ReplaceAll(field.Dbs[0].Get, "?", build.StringToUnderlineName(field.Dbs[0].Name))
-		} else if "self" == key && 0 == len(field.Dbs[0].Where) {
+		} else if "self" == key && 0 == len(field.Dbs[0].Where) &&
+			0 == len(field.Dbs[0].Limit) &&
+			0 == len(field.Dbs[0].Group) &&
+			0 == len(field.Dbs[0].Offset) &&
+			0 == len(field.Dbs[0].Order) {
 			get = build.StringToUnderlineName(field.Dbs[0].Name)
 		} else {
 			continue
@@ -279,7 +283,11 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 		for i, item := range text {
 			if 1 == len(text) || !build.IsArray(field.Field.Type) {
 				if build.IsNil(field.Field.Type) {
-					where.Code("\tif nil != g." + fieldName + " {\n")
+					if build.IsArray(field.Field.Type) {
+						where.Code("\tif 0 < len(g." + fieldName + ") {\n")
+					} else {
+						where.Code("\tif nil != g." + fieldName + " {\n")
+					}
 					_ = b.printParam(where, item, field, fields, "", "\t\ts")
 					where.Code("\t}\n")
 				} else {
@@ -315,6 +323,7 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 				} else {
 					where.Code("\ts.T(\", \")")
 				}
+
 				_ = b.printParam(where, group, field, fields, "", "")
 				if build.IsNil(field.Field.Type) {
 					where.Code("\t}\n")

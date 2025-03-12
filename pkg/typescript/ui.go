@@ -160,7 +160,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Code("\tname: '" + name + "TableColumn',\n")
 	dst.Code("\tprops: {\n")
 	dst.Code("\t\tposition: Array<String>,\n")
-	dst.Code("\t\thide:String,\n")
+	dst.Code("\t\thide: Array<String>,\n")
 	dst.Code("\t},\n")
 	dst.Code("\tsetup(props:any) {\n")
 	dst.Code("\t\treturn (_ctx: Record<string, any>) => {\n")
@@ -234,7 +234,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Code("                }\n")
 	dst.Code("            }\n")
 	dst.Code("            for (const key in maps) {\n")
-	dst.Code("                if (!list.includes(key) && maps[key]) {\n")
+	dst.Code("                if (!list.includes(key) && maps[key] && !_ctx.hide?.includes(key)) {\n")
 	dst.Code("                    list.push(key)\n")
 	dst.Code("                }\n")
 	dst.Code("            }\n")
@@ -408,6 +408,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Code("\tprops: {\n")
 	dst.Code("\t\tsize: String,\n")
 	dst.Code("\t\tposition: Array<String>,\n")
+	dst.Code("\t\thide: Array<String>,\n")
 	dst.Code("\t\tmodel: ")
 	b.printType(dst, typ.Name, false, false)
 	dst.Code("\n")
@@ -554,9 +555,6 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		} else if "radio" == form.form {
 			dst.Tab(6).Code("<el-radio-group v-model={_ctx.model!.").Code(fieldName).Code("}\n")
 			dst.Tab(7).Code("size={props.size}\n")
-			if isNull {
-				dst.Tab(7).Code("clearable\n")
-			}
 			if form.onlyRead {
 				dst.Tab(7).Code("disabled\n")
 			}
@@ -566,9 +564,6 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		} else if "radioButton" == form.form {
 			dst.Tab(6).Code("<el-radio-group v-model={_ctx.model!.").Code(fieldName).Code("}\n")
 			dst.Tab(7).Code("size={props.size}\n")
-			if isNull {
-				dst.Tab(7).Code("clearable\n")
-			}
 			if form.onlyRead {
 				dst.Tab(7).Code("disabled\n")
 			}
@@ -587,6 +582,9 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(7).Code("size={props.size}\n")
 			dst.Tab(7).Code("type=\"password\"\n")
 			dst.Tab(7).Code("show-password\n")
+			if isNull {
+				dst.Tab(7).Code("clearable\n")
+			}
 			if isNull {
 				dst.Tab(7).Code("clearable\n")
 			}
@@ -651,7 +649,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Code("                }\n")
 	dst.Code("            }\n")
 	dst.Code("            for (const key in maps) {\n")
-	dst.Code("                if (!list.includes(key) && maps[key]) {\n")
+	dst.Code("                if (!list.includes(key) && maps[key] && !_ctx.hide?.includes(key)) {\n")
 	dst.Code("                    list.push(key)\n")
 	dst.Code("                }\n")
 	dst.Code("            }\n")

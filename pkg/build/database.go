@@ -8,30 +8,31 @@ import (
 )
 
 type DB struct {
-	index     int
-	Name      string
-	Schema    string
-	Key       bool
-	Force     bool
-	typ       string
-	Insert    string
-	Inserts   string
-	Update    string
-	Set       string
-	Del       bool
-	Get       string
-	List      string
-	Map       string
-	Count     bool
-	Table     string
-	Remove    bool
-	Where     []string
-	Offset    string
-	Limit     string
-	Order     string
-	Converter string
-	Group     string
-	Fake      bool
+	index        int
+	Name         string
+	Schema       string
+	Key          bool
+	Force        bool
+	typ          string
+	Insert       string
+	Inserts      string
+	Update       string
+	Set          string
+	Del          bool
+	Get          string
+	List         string
+	Map          string
+	Count        bool
+	Table        string
+	Remove       bool
+	Where        []string
+	Offset       string
+	Limit        string
+	Order        string
+	Converter    string
+	Group        string
+	Fake         bool
+	DefaultWhere bool
 }
 
 type DBField struct {

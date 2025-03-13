@@ -187,6 +187,7 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 		}
 		if typ == fType {
 			key.Dbs[0].Where = []string{"AND id = ?"}
+			key.Dbs[0].DefaultWhere = true
 			w = []*build.DBField{key}
 		}
 		b.printGetData(dst, typ, val, dbs[0], w, f, fType, c)
@@ -249,16 +250,17 @@ func (b *Builder) getItemAndValue(fields []*build.DBField, key string) (strings.
 		get := ""
 		if 0 < len(field.Dbs[0].Get) {
 			get = strings.ReplaceAll(field.Dbs[0].Get, "?", build.StringToUnderlineName(field.Dbs[0].Name))
-		} else if "self" == key && 0 == len(field.Dbs[0].Where) &&
-			0 == len(field.Dbs[0].Limit) &&
-			0 == len(field.Dbs[0].Group) &&
-			0 == len(field.Dbs[0].Offset) &&
-			0 == len(field.Dbs[0].Order) {
+		} else if "self" == key && (field.Dbs[0].DefaultWhere ||
+			0 == len(field.Dbs[0].Where) &&
+				0 == len(field.Dbs[0].Limit) &&
+				0 == len(field.Dbs[0].Group) &&
+				0 == len(field.Dbs[0].Offset) &&
+				0 == len(field.Dbs[0].Order)) {
 			get = build.StringToUnderlineName(field.Dbs[0].Name)
 		} else {
 			continue
 		}
-		build.StringToUnderlineName(field.Dbs[0].Name)
+
 		if !isFist {
 			item.WriteString(", ")
 			scan.WriteString(", ")

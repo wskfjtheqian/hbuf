@@ -644,9 +644,9 @@ func (b *Builder) printDeleteData(dst *build.Writer, db *build.DB, wFields []*bu
 
 	dst.Code("\ts := db.NewSql()\n")
 	if db.Fake {
-		dst.Code("\ts.T(\"UPDATE \").T(tableName).T(\" SET delete_time = NOW() WHERE 1 = 1\")\n")
+		dst.Code("\ts.T(\"UPDATE \").T(tableName).T(\" SET delete_time = NOW() WHERE\").Del(\"AND\")\n")
 	} else {
-		dst.Code("\ts.T(\"DELETE FROM \").T(tableName).T(\" WHERE 1 = 1\")\n")
+		dst.Code("\ts.T(\"DELETE FROM \").T(tableName).T(\" WHERE\").Del(\"AND\")\n")
 	}
 	dst.Code(w.GetCode().String())
 
@@ -671,7 +671,7 @@ func (b *Builder) printRemoveData(dst *build.Writer, db *build.DB, wFields []*bu
 	}
 
 	dst.Code("\ts := db.NewSql()\n")
-	dst.Code("\ts.T(\"DELETE FROM \").T(tableName).T(\" WHERE 1 = 1\")\n")
+	dst.Code("\ts.T(\"DELETE FROM \").T(tableName).T(\" WHERE\").Del(\"AND\")\n")
 	dst.Code(w.GetCode().String())
 
 	dst.Code("\treturn s.Exec(ctx)\n")
@@ -775,7 +775,7 @@ func (b *Builder) printUpdateData(dst *build.Writer, typ *ast.DataType, key stri
 	dst.AddImports(set.GetImports())
 	dst.Code(set.String())
 
-	dst.Code("\ts.T(\"WHERE 1 = 1 \")\n")
+	dst.Code("\ts.T(\"WHERE\").Del(\"AND\")\n")
 	dst.Code(w.String())
 	dst.Code("\n")
 
@@ -807,7 +807,7 @@ func (b *Builder) printSetData(dst *build.Writer, typ *ast.DataType, key string,
 	dst.AddImports(set.GetImports())
 	dst.Code(set.String())
 
-	dst.Code("\ts.T(\"WHERE 1 = 1 \")\n")
+	dst.Code("\ts.T(\"WHERE\").Del(\"AND\")\n")
 	dst.Code(w.String())
 	dst.Code("\n")
 

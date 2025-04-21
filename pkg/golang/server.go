@@ -80,8 +80,6 @@ func (b *Builder) printServerDefault(dst *build.Writer, typ *ast.ServerType) err
 		}
 		isSub := method.Result.Type().(*ast.Ident).Name == "void"
 
-		dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/erro", "")
-
 		dst.Code("func (s *Default" + serverName + ") ")
 		dst.Code(build.StringToHumpName(method.Name.Name))
 		dst.Code("(ctx context.Context, ")
@@ -107,6 +105,7 @@ func (b *Builder) printServerDefault(dst *build.Writer, typ *ast.ServerType) err
 				dst.Code("\treturn nil,")
 			}
 
+			dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/erro", "")
 			dst.Code(" erro.NewError(\"not find server " + build.StringToUnderlineName(typ.Name.Name) + "\")\n")
 		} else {
 			b.printBinding(dst, method, bind, isSub)

@@ -164,6 +164,6 @@ func TestBuildAll(t *testing.T) {
 		}
 
 		buildZip(t, bin, "./bin/"+config.GOOS+"_"+config.GOARCH+"_"+version+".zip")
-		defer os.Remove(bin)
+		os.Remove(bin)
 	}
 }

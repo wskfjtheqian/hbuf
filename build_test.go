@@ -1,8 +1,11 @@
 package hbuf
 
 import (
+	"archive/zip"
+	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 )
 
@@ -67,6 +70,40 @@ func copyFile(t *testing.T, src, dst string) {
 	}
 }
 
+// 使用GO代码打包ZIP文件
+func buildZip(t *testing.T, src, dst string) {
+	zipFile, err := os.Create(dst)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	defer zipFile.Close()
+
+	w := zip.NewWriter(zipFile)
+	defer w.Close()
+
+	srcFile, err := os.Open(src)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	defer srcFile.Close()
+	f, err := w.Create(filepath.Base(src))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	_, err = io.Copy(f, srcFile)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	t.Log("Building zip file from " + src + " to " + dst)
+
+}
+
 // 编译测试
 func TestBuild(t *testing.T) {
 	t.Run("Build linux", func(t *testing.T) {
@@ -93,4 +130,40 @@ func TestBuild(t *testing.T) {
 		copyFile(t, "./bin/hbuf.linux", "E:\\develop\\hanber\\hbuf.linux")
 
 	})
+}
+
+type BuildConfig struct {
+	GOOS   string
+	GOARCH string
+	Ext    string
+}
+
+func TestBuildAll(t *testing.T) {
+
+	list := []BuildConfig{
+		{"linux", "amd64", ""},
+		{"windows", "amd64", ".exe"},
+		{"darwin", "amd64", ""},
+		{"linux", "386", ""},
+		{"windows", "386", ".exe"},
+		{"linux", "arm64", ""},
+		{"windows", "arm64", ".exe"},
+		{"darwin", "arm64", ""},
+		{"linux", "arm", ""},
+		{"windows", "arm", ".exe"},
+	}
+
+	version := gitVersion()
+	for _, config := range list {
+		t.Log("Building server for " + config.GOOS + "/" + config.GOARCH)
+
+		bin := "./bin/hbuf" + config.Ext
+		err := build(t, bin, "GOOS="+config.GOOS, "GOARCH="+config.GOARCH, "CGO_ENABLED=0")
+		if err != nil {
+			t.Error(err)
+		}
+
+		buildZip(t, bin, "./bin/"+config.GOOS+"_"+config.GOARCH+"_"+version+".zip")
+		defer os.Remove(bin)
+	}
 }

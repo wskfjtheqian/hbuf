@@ -13,7 +13,157 @@ type dataField struct {
 	comment string
 }
 
-func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
+func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) error {
+	err := b.printDataDescriptor(dst, typ)
+	if err != nil {
+		return err
+	}
+
+	err = b.printDataStruct(dst, typ)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (b *Builder) printDataDescriptor(dst *build.Writer, typ *ast.DataType) error {
+	name := build.StringToHumpName(typ.Name.Name)
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "")
+
+	dst.Code("var ").Code(name).Code("Fields = map[uint16]hbuf.Descriptor{\n")
+	for _, field := range typ.Fields.List {
+		dst.Tab(1).Code(field.Id.Value).Code(":")
+		b.printDescriptor(dst, field.Type, true, name, build.StringToHumpName(field.Name.Name))
+		dst.Code(",\n")
+	}
+	dst.Code("}\n\n")
+
+	return nil
+}
+
+func (b *Builder) printDescriptor(dst *build.Writer, expr ast.Expr, b2 bool, structName string, fieldName string) {
+	switch expr.(type) {
+	case *ast.Ident:
+		t := expr.(*ast.Ident)
+		if nil != t.Obj {
+			pack := b.getPackage(dst, expr)
+			dst.Code(pack + (expr.(*ast.Ident)).Name)
+		} else {
+			switch build.BaseType((expr.(*ast.Ident)).Name) {
+			case build.Int8:
+				dst.Code("hbuf.NewInt64Descriptor(func(d any) int64 {\n")
+				dst.Tab(2).Code("return int64(d.(*").Code(structName).Code(").").Code(fieldName).Code(")\n")
+				dst.Tab(1).Code("}, func(d any, v int64) {\n")
+				dst.Tab(2).Code("d.(*").Code(structName).Code(").").Code(fieldName).Code(" = int8(v)\n")
+				dst.Tab(1).Code("})")
+			case build.Int16:
+				dst.Code("hbuf.NewInt16Descriptor(func(d any) int16 {\n")
+				dst.Tab(2).Code("return d.(*").Code(structName).Code(").").Code(fieldName).Code("\n")
+				dst.Tab(1).Code("}, func(d any, v int16) {\n")
+				dst.Tab(2).Code("d.(*").Code(structName).Code(").").Code(fieldName).Code(" = v\n")
+				dst.Tab(1).Code("})")
+			case build.Int32:
+				dst.Code("hbuf.NewInt32Descriptor(func(d any) int32 {\n")
+				dst.Tab(2).Code("return d.(*").Code(structName).Code(").").Code(fieldName).Code("\n")
+				dst.Tab(1).Code("}, func(d any, v int32) {\n")
+				dst.Tab(2).Code("d.(*").Code(structName).Code(").").Code(fieldName).Code(" = v\n")
+				dst.Tab(1).Code("})")
+			case build.Int64:
+				dst.Code("hbuf.NewInt64Descriptor(func(d any) hbuf.Int64 {\n")
+				dst.Tab(2).Code("return d.(*").Code(structName).Code(").").Code(fieldName).Code("\n")
+				dst.Tab(1).Code("}, func(d any, v hbuf.Int64) {\n")
+				dst.Tab(2).Code("d.(*").Code(structName).Code(").").Code(fieldName).Code(" = v\n")
+				dst.Tab(1).Code("})")
+			case build.Uint8:
+				dst.Code("hbuf.NewUint8Descriptor(func(d any) uint8 {\n")
+				dst.Tab(2).Code("return d.(*").Code(structName).Code(").").Code(fieldName).Code("\n")
+				dst.Tab(1).Code("}, func(d any, v uint8) {\n")
+				dst.Tab(2).Code("d.(*").Code(structName).Code(").").Code(fieldName).Code(" = v\n")
+				dst.Tab(1).Code("})")
+			case build.Uint16:
+				dst.Code("hbuf.NewUint16Descriptor(func(d any) uint16 {\n")
+				dst.Tab(2).Code("return d.(*").Code(structName).Code(").").Code(fieldName).Code("\n")
+				dst.Tab(1).Code("}, func(d any, v uint16) {\n")
+				dst.Tab(2).Code("d.(*").Code(structName).Code(").").Code(fieldName).Code(" = v\n")
+				dst.Tab(1).Code("})")
+			case build.Uint32:
+				dst.Code("hbuf.NewUint32Descriptor(func(d any) uint32 {\n")
+				dst.Tab(2).Code("return d.(*").Code(structName).Code(").").Code(fieldName).Code("\n")
+				dst.Tab(1).Code("}, func(d any, v uint32) {\n")
+				dst.Tab(2).Code("d.(*").Code(structName).Code(").").Code(fieldName).Code(" = v\n")
+				dst.Tab(1).Code("})")
+			case build.Uint64:
+				dst.Code("hbuf.NewUint64Descriptor(func(d any) hbuf.Uint64 {\n")
+				dst.Tab(2).Code("return d.(*").Code(structName).Code(").").Code(fieldName).Code("\n")
+				dst.Tab(1).Code("}, func(d any, v hbuf.Uint64) {\n")
+				dst.Tab(2).Code("d.(*").Code(structName).Code(").").Code(fieldName).Code(" = v\n")
+				dst.Tab(1).Code("})")
+			case build.Float:
+				dst.Code("hbuf.NewFloatDescriptor(func(d any) float32 {\n")
+				dst.Tab(2).Code("return d.(*").Code(structName).Code(").").Code(fieldName).Code("\n")
+				dst.Tab(1).Code("}, func(d any, v float32) {\n")
+				dst.Tab(2).Code("d.(*").Code(structName).Code(").").Code(fieldName).Code(" = v\n")
+				dst.Tab(1).Code("})")
+			case build.Double:
+				dst.Code("hbuf.NewDoubleDescriptor(func(d any) float64 {\n")
+				dst.Tab(2).Code("return d.(*").Code(structName).Code(").").Code(fieldName).Code("\n")
+				dst.Tab(1).Code("}, func(d any, v float64) {\n")
+				dst.Tab(2).Code("d.(*").Code(structName).Code(").").Code(fieldName).Code(" = v\n")
+				dst.Tab(1).Code("})")
+			case build.Bool:
+				dst.Code("hbuf.NewBoolDescriptor(func(d any) bool {\n")
+				dst.Tab(2).Code("return d.(*").Code(structName).Code(").").Code(fieldName).Code("\n")
+				dst.Tab(1).Code("}, func(d any, v bool) {\n")
+				dst.Tab(2).Code("d.(*").Code(structName).Code(").").Code(fieldName).Code(" = v\n")
+				dst.Tab(1).Code("})")
+			case build.String:
+				dst.Code("hbuf.NewStringDescriptor(func(d any) string {\n")
+				dst.Tab(2).Code("return d.(*").Code(structName).Code(").").Code(fieldName).Code("\n")
+				dst.Tab(1).Code("}, func(d any, v string) {\n")
+				dst.Tab(2).Code("d.(*").Code(structName).Code(").").Code(fieldName).Code(" = v\n")
+				dst.Tab(1).Code("})")
+			case build.Decimal:
+				dst.Code("hbuf.NewDecimalDescriptor(func(d any) decimal.Decimal {\n")
+				dst.Tab(2).Code("return d.(*").Code(structName).Code(").").Code(fieldName).Code("\n")
+				dst.Tab(1).Code("}, func(d any, v decimal.Decimal) {\n")
+				dst.Tab(2).Code("d.(*").Code(structName).Code(").").Code(fieldName).Code(" = v\n")
+				dst.Tab(1).Code("})")
+			case build.Date:
+				dst.Code("hbuf.NewTimeDescriptor(func(d any) hbuf.Time {\n")
+				dst.Tab(2).Code("return d.(*").Code(structName).Code(").").Code(fieldName).Code("\n")
+				dst.Tab(1).Code("}, func(d any, v hbuf.Time) {\n")
+				dst.Tab(2).Code("d.(*").Code(structName).Code(").").Code(fieldName).Code(" = v\n")
+				dst.Tab(1).Code("})")
+			}
+		}
+	case *ast.ArrayType:
+		//dst.Code("hbuf.NewListDescriptor(func(d any) any {\n")
+		//dst.Tab(2).Code("return d.(*").Code(structName).Code(").").Code(fieldName).Code("\n")
+		//dst.Tab(1).Code("}, func(d any, v any) {\n")
+		//dst.Tab(2).Code("d.(*").Code(structName).Code(").").Code(fieldName).Code(" = v\n")
+		//dst.Tab(1).Code("}), ")
+		//b.printDescriptor(dst, expr.(*ast.ArrayType).VType, true, structName, fieldName)
+
+		//ar := expr.(*ast.ArrayType)
+		//dst.Code("[]")
+		//b.printDescriptor(dst, ar.VType, true)
+	case *ast.MapType:
+		//ma := expr.(*ast.MapType)
+		//dst.Code("map[")
+		//b.printDescriptor(dst, ma.Key, true)
+		//dst.Code("]")
+		//b.printDescriptor(dst, ma.VType, true)
+	case *ast.VarType:
+		t := expr.(*ast.VarType)
+		//if b2 && t.Empty {
+		//	dst.Code("*")
+		//}
+		b.printDescriptor(dst, t.Type(), true, structName, fieldName)
+	}
+}
+
+func (b *Builder) printDataStruct(dst *build.Writer, typ *ast.DataType) error {
 	dst.Import("encoding/json", "")
 	name := build.StringToHumpName(typ.Name.Name)
 	if nil != typ.Doc && 0 < len(typ.Doc.Text()) {
@@ -36,7 +186,7 @@ func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
 		fields[i] = dataField{
 			name: build.StringToHumpName(field.Name.Name),
 			typ:  temp.String(),
-			tag:  "`json:\"" + build.StringToUnderlineName(field.Name.Name) + ",omitempty\"`",
+			tag:  "`json:\"" + build.StringToUnderlineName(field.Name.Name) + ",omitempty\" hbuf:\"" + field.Id.Value + "\"` ",
 		}
 
 		if nil != field.Doc && 0 < len(field.Doc.Text()) {
@@ -109,6 +259,7 @@ func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
 		}
 		dst.Code("}\n\n")
 	}
+	return nil
 }
 
 func (b *Builder) printDefault(dst *build.Writer, expr ast.Expr) {
@@ -166,4 +317,5 @@ func (b *Builder) printDataExtend(dst *build.Writer, extends []*ast.Extends, isF
 		dst.Code(build.StringToHumpName(v.Name.Name))
 		dst.Code("\n")
 	}
+
 }

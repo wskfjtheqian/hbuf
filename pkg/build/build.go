@@ -38,20 +38,20 @@ type void struct {
 }
 
 var _types = map[BaseType]struct{}{
-	Int8:    struct{}{},
-	Int16:   struct{}{},
-	Int32:   struct{}{},
-	Int64:   struct{}{},
-	Uint8:   struct{}{},
-	Uint16:  struct{}{},
-	Uint32:  struct{}{},
-	Uint64:  struct{}{},
-	Bool:    struct{}{},
-	Float:   struct{}{},
-	Double:  struct{}{},
-	String:  struct{}{},
-	Date:    struct{}{},
-	Decimal: struct{}{},
+	Int8:    {},
+	Int16:   {},
+	Int32:   {},
+	Int64:   {},
+	Uint8:   {},
+	Uint16:  {},
+	Uint32:  {},
+	Uint64:  {},
+	Bool:    {},
+	Float:   {},
+	Double:  {},
+	String:  {},
+	Date:    {},
+	Decimal: {},
 }
 
 var _keys = map[BaseType]void{

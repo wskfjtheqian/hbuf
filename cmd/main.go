@@ -11,6 +11,8 @@ import (
 	"log"
 )
 
+var version = "0.0.1"
+
 func main() {
 	build.AddBuildType("dart", dart.Build)
 	build.AddBuildType("go", golang.Build)
@@ -21,7 +23,14 @@ func main() {
 	var in = flag.String("i", "", "input dir")
 	var typ = flag.String("t", "", "out type")
 	var pack = flag.String("p", "", "package path")
+	var showVersion = flag.Bool("v", false, "show version")
+
 	flag.Parse()
+
+	if *showVersion {
+		log.Println("Version:", version)
+		return
+	}
 
 	if nil == out || 0 == len(*out) {
 		log.Fatalln("Output directory not found")

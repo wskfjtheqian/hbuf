@@ -3,7 +3,6 @@ package parser
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"github.com/wskfjtheqian/hbuf_golang/pkg/erro"
 	"github.com/wskfjtheqian/hbuf_golang/pkg/hbuf"
 	"github.com/wskfjtheqian/hbuf_golang/pkg/manage"
@@ -108,7 +107,7 @@ func (s *DefaultUserServer) Init(ctx context.Context) {
 
 // GetInfo 12
 func (s *DefaultUserServer) GetInfo(ctx context.Context, req *GetInfoReq) (*GetInfoResp, error) {
-	return nil, erro.Wrap(errors.New("not find server user_server"))
+	return nil, erro.NewError("not find server user_server")
 }
 
 var NotFoundUserServer = &DefaultUserServer{}

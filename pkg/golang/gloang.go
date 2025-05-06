@@ -39,6 +39,7 @@ type GoWriter struct {
 	server   *build.Writer
 	database *build.Writer
 	verify   *build.Writer
+	encoder  *build.Writer
 
 	packages string
 }
@@ -50,6 +51,7 @@ func (w *GoWriter) SetPackages(s string) {
 	w.database.Packages = s
 	w.verify.Packages = s
 	w.packages = s
+	w.encoder.Packages = s
 }
 
 func (w *GoWriter) SetPath(file *ast.File) {
@@ -58,6 +60,7 @@ func (w *GoWriter) SetPath(file *ast.File) {
 	w.server.File = file
 	w.database.File = file
 	w.verify.File = file
+	w.encoder.File = file
 }
 
 func NewGoWriter() *GoWriter {
@@ -67,6 +70,7 @@ func NewGoWriter() *GoWriter {
 		server:   build.NewWriter(),
 		database: build.NewWriter(),
 		verify:   build.NewWriter(),
+		encoder:  build.NewWriter(),
 	}
 }
 
@@ -131,6 +135,12 @@ func Build(file *ast.File, fSet *token.FileSet, param *build.Param) error {
 	}
 	if 0 < dst.verify.GetCode().Len() {
 		err = b.writerFile(dst.verify, dst.verify.Packages, filepath.Join(dir, name+".verify.go"), 0)
+		if err != nil {
+			return err
+		}
+	}
+	if 0 < dst.encoder.GetCode().Len() {
+		err = b.writerFile(dst.encoder, dst.encoder.Packages, filepath.Join(dir, name+".encoder.go"), 0)
 		if err != nil {
 			return err
 		}
@@ -213,15 +223,21 @@ func (b *Builder) Node(dst *GoWriter, fset *token.FileSet, node interface{}) err
 func (b *Builder) printTypeSpec(dst *GoWriter, expr ast.Expr) error {
 	switch expr.(type) {
 	case *ast.DataType:
-		b.printDataCode(dst.data, expr.(*ast.DataType))
-		err := b.printDatabaseCode(dst.database, expr.(*ast.DataType))
+		err := b.printDataCode(dst.data, expr.(*ast.DataType))
 		if err != nil {
 			return err
 		}
+
+		err = b.printDatabaseCode(dst.database, expr.(*ast.DataType))
+		if err != nil {
+			return err
+		}
+
 		err = b.printVerifyCode(dst.verify, expr.(*ast.DataType))
 		if err != nil {
 			return err
 		}
+
 	case *ast.ServerType:
 		err := b.printServerCode(dst.server, expr.(*ast.ServerType))
 		if err != nil {

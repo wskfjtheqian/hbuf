@@ -11,9 +11,14 @@ func (val *GetInfoReq) DbScan() (string, []any) {
 		[]any{&val.UserId, db.NewJson(&val.Name), &val.Age}
 }
 
+func (val *GetInfoReq) DbName() string {
+	return `get_info_req`
+}
+
 func (g InfoReq) DbGet(ctx context.Context) (*GetInfoReq, error) {
+	tableName := db.GET(ctx).Table("get_info_req")
 	s := db.NewSql()
-	s.T("SELECT user_id, name, age FROM get_info_req WHERE del_time IS NULL")
+	s.T("SELECT user_id, name, age FROM ").T(tableName).T(" WHERE del_time = 0")
 	s.T(" LIMIT 1")
 	var val *GetInfoReq
 	_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {
@@ -27,8 +32,9 @@ func (g InfoReq) DbGet(ctx context.Context) (*GetInfoReq, error) {
 }
 
 func (g InfoSet) DbSet(ctx context.Context) (int64, int64, error) {
+	tableName := db.GET(ctx).Table("get_info_req")
 	s := db.NewSql()
-	s.T("UPDATE get_info_req SET ").Del(",")
+	s.T("UPDATE ").T(tableName).T(" SET ").Del(",")
 	s.T(",").T("name = if(user_id > ").T(*g.UserId).T(",\"asdsa\", ").V(&g.Name).T(")")
 	s.T(",").T("age = ").V(&g.Age)
 	s.T("WHERE 1 = 1 ")

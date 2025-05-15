@@ -25,6 +25,7 @@ const (
 	Float   BaseType = "float"
 	Double  BaseType = "double"
 	Decimal BaseType = "decimal"
+	Bytes   BaseType = "bytes"
 	String  BaseType = "string"
 	Date    BaseType = "date"
 	Enum    BaseType = "enum"
@@ -49,13 +50,14 @@ var _types = map[BaseType]struct{}{
 	Bool:    {},
 	Float:   {},
 	Double:  {},
+	Bytes:   {},
 	String:  {},
 	Date:    {},
 	Decimal: {},
 }
 
 var _keys = map[BaseType]void{
-	Int8: {}, Int16: {}, Int32: {}, Int64: {}, Uint8: {}, Uint16: {}, Uint32: {}, Uint64: {}, Bool: {}, Float: {}, Double: {}, String: {}, Data: {}, Server: {}, Enum: {}, Import: {}, Package: {}, Date: {}, Decimal: {},
+	Int8: {}, Int16: {}, Int32: {}, Int64: {}, Uint8: {}, Uint16: {}, Uint32: {}, Uint64: {}, Bool: {}, Float: {}, Double: {}, Bytes: {}, String: {}, Data: {}, Server: {}, Enum: {}, Import: {}, Package: {}, Date: {}, Decimal: {},
 }
 
 type Function = func(file *ast.File, fset *token.FileSet, param *Param) error
@@ -361,6 +363,7 @@ func enumField(typ *ast.DataType, fields map[string]struct{}, call func(field *a
 	}
 	return nil
 }
+
 func EnumField(typ *ast.DataType, call func(field *ast.Field, data *ast.DataType) error) error {
 	fields := map[string]struct{}{}
 	return enumField(typ, fields, call)

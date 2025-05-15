@@ -226,8 +226,8 @@ func (b *Builder) printScanData(dst *build.Writer, typ *ast.DataType, db *build.
 	name := build.StringToHumpName(typ.Name.Name)
 	item, scan, _ := b.getItemAndValue(fields, "self")
 	dst.Code("func (val *" + name + ") DbScan() (string, []any) {\n")
-	dst.Code("\treturn `" + item.String() + "`,\n")
-	dst.Code("\t\t[]any{" + scan.String() + "}\n")
+	dst.Tab(1).Code("return `" + item.String() + "`,\n")
+	dst.Tab(2).Code("[]any{" + scan.String() + "}\n")
 	dst.Code("}\n")
 	dst.Code("\n")
 }
@@ -235,7 +235,7 @@ func (b *Builder) printScanData(dst *build.Writer, typ *ast.DataType, db *build.
 func (b *Builder) printNameData(dst *build.Writer, typ *ast.DataType) {
 	name := build.StringToHumpName(typ.Name.Name)
 	dst.Code("func (val *" + name + ") DbName() string {\n")
-	dst.Code("\treturn `" + build.StringToUnderlineName(typ.Name.Name) + "`\n")
+	dst.Tab(1).Code("return `" + build.StringToUnderlineName(typ.Name.Name) + "`\n")
 	dst.Code("}\n")
 	dst.Code("\n")
 }
@@ -452,44 +452,44 @@ func (b *Builder) printListData(dst *build.Writer, typ *ast.DataType, key string
 	item, scan, _ := b.getItemAndValue(fields, key)
 	dst.Code("func (g " + fName + ") DbList(ctx context.Context) ([]" + dName + ", error) {\n")
 	dst.Tab(1).Code("tableName := db.GET(ctx).Table(\"").Code(db.Name).Code("\")\n")
-	dst.Code("\ts := db.NewSql()\n")
-	dst.Code("\ts.T(\"SELECT " + item.String() + " FROM \").T(tableName).T(\" WHERE del_time = 0\")\n")
+	dst.Tab(1).Code("s := db.NewSql()\n")
+	dst.Tab(1).Code("s.T(\"SELECT " + item.String() + " FROM \").T(tableName).T(\" WHERE del_time = 0\")\n")
 	dst.Code(w.GetCode().String())
 
-	dst.Code("\tret := make([]" + dName + ", 0)\n")
+	dst.Tab(1).Code("ret := make([]" + dName + ", 0)\n")
 	if nil != c {
 		dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/cache", "")
-		dst.Code("\tlist, key, _ := cache.DbGet(ctx, \"\", tableName, s, &ret)\n")
-		dst.Code("\tif list != nil {\n")
-		dst.Code("\t\treturn *list, nil\n")
-		dst.Code("\t}\n")
+		dst.Tab(1).Code("list, key, _ := cache.DbGet(ctx, \"\", tableName, s, &ret)\n")
+		dst.Tab(1).Code("if list != nil {\n")
+		dst.Tab(2).Code("return *list, nil\n")
+		dst.Tab(1).Code("}\n")
 	}
 	dst.Import("database/sql", "")
-	dst.Code("\t_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
-	dst.Code("\t\tvar val " + dName + "\n")
-	dst.Code("\t\terr := rows.Scan(" + scan.String() + ")\n")
-	dst.Code("\t\tif err == nil {\n")
-	dst.Code("\t\t\tret = append(ret, val)\n")
-	dst.Code("\t\t}\n")
-	dst.Code("\t\treturn true, err\n")
-	dst.Code("\t})\n")
-	dst.Code("\tif err != nil {\n")
-	dst.Code("\t\treturn nil, err\n")
-	dst.Code("\t}\n")
+	dst.Tab(1).Code("_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
+	dst.Tab(2).Code("var val " + dName + "\n")
+	dst.Tab(2).Code("err := rows.Scan(" + scan.String() + ")\n")
+	dst.Tab(2).Code("if err == nil {\n")
+	dst.Tab(3).Code("ret = append(ret, val)\n")
+	dst.Tab(2).Code("}\n")
+	dst.Tab(2).Code("return true, err\n")
+	dst.Tab(1).Code("})\n")
+	dst.Tab(1).Code("if err != nil {\n")
+	dst.Tab(2).Code("return nil, err\n")
+	dst.Tab(1).Code("}\n")
 
 	if nil != c {
 		dst.Import("math/rand", "")
 		dst.Import("time", "")
-		dst.Code("\t_, _ = cache.DbSet(ctx, key, tableName, s, &ret, ")
+		dst.Tab(1).Code("_, _ = cache.DbSet(ctx, key, tableName, s, &ret, ")
 		if 0 < c.min {
 			dst.Code("time.Duration(rand.Intn(" + strconv.Itoa(c.max) + "-" + strconv.Itoa(c.min) + ")+" + strconv.Itoa(c.min) + ")*time.Second")
 		} else {
 			dst.Code("0")
 		}
 		dst.Code(")\n")
-		dst.Code("\tdefer cache.DbUnlock(ctx, tableName)\n")
+		dst.Tab(1).Code("defer cache.DbUnlock(ctx, tableName)\n")
 	}
-	dst.Code("\treturn ret, nil\n")
+	dst.Tab(1).Code("return ret, nil\n")
 	dst.Code("}\n")
 	dst.Code("\n")
 }
@@ -514,44 +514,44 @@ func (b *Builder) printMapData(dst *build.Writer, key string, typ *ast.DataType,
 	item, scan, _ := b.getItemAndValue(fields, key)
 	dst.Code("func (g " + fName + ") DbMap(ctx context.Context) (map[" + kType.String() + "]" + dName + ", error) {\n")
 	dst.Tab(1).Code("tableName := db.GET(ctx).Table(\"").Code(db.Name).Code("\")\n")
-	dst.Code("\ts := db.NewSql()\n")
-	dst.Code("\ts.T(\"SELECT " + item.String() + " FROM \").T(tableName).T(\" WHERE del_time = 0\")\n")
+	dst.Tab(1).Code("s := db.NewSql()\n")
+	dst.Tab(1).Code("s.T(\"SELECT " + item.String() + " FROM \").T(tableName).T(\" WHERE del_time = 0\")\n")
 	dst.Code(w.GetCode().String())
 
-	dst.Code("\tret := make(map[" + kType.String() + "]" + dName + ")\n")
+	dst.Tab(1).Code("ret := make(map[" + kType.String() + "]" + dName + ")\n")
 	if nil != c {
 		dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/cache", "")
-		dst.Code("\tlist, key, _ := cache.DbGet(ctx, \"\", tableName, s, &ret)\n")
-		dst.Code("\tif list != nil {\n")
-		dst.Code("\t\treturn *list, nil\n")
-		dst.Code("\t}\n")
+		dst.Tab(1).Code("list, key, _ := cache.DbGet(ctx, \"\", tableName, s, &ret)\n")
+		dst.Tab(1).Code("if list != nil {\n")
+		dst.Tab(2).Code("return *list, nil\n")
+		dst.Tab(1).Code("}\n")
 	}
 	dst.Import("database/sql", "")
-	dst.Code("\t_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
-	dst.Code("\t\tvar val " + dName + "\n")
-	dst.Code("\t\terr := rows.Scan(" + scan.String() + ")\n")
-	dst.Code("\t\tif err == nil {\n")
-	dst.Code("\t\t\tret[val.Get" + build.StringToHumpName(KName.String()) + "()] = val\n")
-	dst.Code("\t\t}\n")
-	dst.Code("\t\treturn true, err\n")
-	dst.Code("\t})\n")
-	dst.Code("\tif err != nil {\n")
-	dst.Code("\t\treturn nil, err\n")
-	dst.Code("\t}\n")
+	dst.Tab(1).Code("_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
+	dst.Tab(2).Code("var val " + dName + "\n")
+	dst.Tab(2).Code("err := rows.Scan(" + scan.String() + ")\n")
+	dst.Tab(2).Code("if err == nil {\n")
+	dst.Tab(3).Code("ret[val.Get" + build.StringToHumpName(KName.String()) + "()] = val\n")
+	dst.Tab(2).Code("}\n")
+	dst.Tab(2).Code("return true, err\n")
+	dst.Tab(1).Code("})\n")
+	dst.Tab(1).Code("if err != nil {\n")
+	dst.Tab(2).Code("return nil, err\n")
+	dst.Tab(1).Code("}\n")
 
 	if nil != c {
 		dst.Import("math/rand", "")
 		dst.Import("time", "")
-		dst.Code("\t_, _ = cache.DbSet(ctx, key, tableName, s, &ret, ")
+		dst.Tab(1).Code("_, _ = cache.DbSet(ctx, key, tableName, s, &ret, ")
 		if 0 < c.min {
 			dst.Code("time.Duration(rand.Intn(" + strconv.Itoa(c.max) + "-" + strconv.Itoa(c.min) + ")+" + strconv.Itoa(c.min) + ")*time.Second")
 		} else {
 			dst.Code("0")
 		}
 		dst.Code(")\n")
-		dst.Code("\tdefer cache.DbUnlock(ctx, tableName)\n")
+		dst.Tab(1).Code("defer cache.DbUnlock(ctx, tableName)\n")
 	}
-	dst.Code("\treturn ret, nil\n")
+	dst.Tab(1).Code("return ret, nil\n")
 	dst.Code("}\n")
 	dst.Code("\n")
 }
@@ -564,38 +564,38 @@ func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build
 
 	dst.Code("func (g " + fName + ") DbCount(ctx context.Context) (int64, error) {\n")
 	dst.Tab(1).Code("tableName := db.GET(ctx).Table(\"").Code(db.Name).Code("\")\n")
-	dst.Code("\ts := db.NewSql()\n")
-	dst.Code("\ts.T(\"SELECT COUNT(1) FROM \").T(tableName).T(\" WHERE del_time = 0\")\n")
+	dst.Tab(1).Code("s := db.NewSql()\n")
+	dst.Tab(1).Code("s.T(\"SELECT COUNT(1) FROM \").T(tableName).T(\" WHERE del_time = 0\")\n")
 	dst.Code(w.GetCode().String())
 
-	dst.Code("\tvar count int64\n")
+	dst.Tab(1).Code("var count int64\n")
 	if nil != c {
-		dst.Code("\tc, key, _ := cache.DbGet(ctx, \"\", tableName, s, &count)\n")
-		dst.Code("\tif c != nil {\n")
-		dst.Code("\t\treturn *c, nil\n")
-		dst.Code("\t}\n")
+		dst.Tab(1).Code("c, key, _ := cache.DbGet(ctx, \"\", tableName, s, &count)\n")
+		dst.Tab(1).Code("if c != nil {\n")
+		dst.Tab(2).Code("return *c, nil\n")
+		dst.Tab(1).Code("}\n")
 	}
 	dst.Import("database/sql", "")
-	dst.Code("\t_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
-	dst.Code("\t\treturn false, rows.Scan(&count)\n")
-	dst.Code("\t})\n")
-	dst.Code("\tif err != nil {\n")
-	dst.Code("\t\treturn 0, err\n")
-	dst.Code("\t}\n")
+	dst.Tab(1).Code("_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
+	dst.Tab(2).Code("return false, rows.Scan(&count)\n")
+	dst.Tab(1).Code("})\n")
+	dst.Tab(1).Code("if err != nil {\n")
+	dst.Tab(2).Code("return 0, err\n")
+	dst.Tab(1).Code("}\n")
 
 	if nil != c {
 		dst.Import("math/rand", "")
 		dst.Import("time", "")
-		dst.Code("\t_, _ = cache.DbSet(ctx, key, tableName, s, &count, ")
+		dst.Tab(1).Code("_, _ = cache.DbSet(ctx, key, tableName, s, &count, ")
 		if 0 < c.min {
 			dst.Code("time.Duration(rand.Intn(" + strconv.Itoa(c.max) + "-" + strconv.Itoa(c.min) + ")+" + strconv.Itoa(c.min) + ")*time.Second")
 		} else {
 			dst.Code("0")
 		}
 		dst.Code(")\n")
-		dst.Code("\tdefer cache.DbUnlock(ctx, tableName)\n")
+		dst.Tab(1).Code("defer cache.DbUnlock(ctx, tableName)\n")
 	}
-	dst.Code("\treturn count, nil\n")
+	dst.Tab(1).Code("return count, nil\n")
 	dst.Code("}\n")
 	dst.Code("\n")
 }
@@ -609,19 +609,19 @@ func (b *Builder) printDeleteData(dst *build.Writer, db *build.DB, wFields []*bu
 	dst.Code("func (g " + fName + ") DbDel(ctx context.Context) (int64, int64, error) {\n")
 	dst.Tab(1).Code("tableName := db.GET(ctx).Table(\"").Code(db.Name).Code("\")\n")
 	if isCache {
-		dst.Code("\terr := cache.DbDel(ctx, tableName)\n")
-		dst.Code("\tif err != nil {\n")
-		dst.Code("\t\treturn 0, 0, err\n")
-		dst.Code("\t}\n")
-		dst.Code("\tdefer cache.DbUnlock(ctx, tableName)\n")
+		dst.Tab(1).Code("err := cache.DbDel(ctx, tableName)\n")
+		dst.Tab(1).Code("if err != nil {\n")
+		dst.Tab(2).Code("return 0, 0, err\n")
+		dst.Tab(1).Code("}\n")
+		dst.Tab(1).Code("defer cache.DbUnlock(ctx, tableName)\n")
 	}
 
-	dst.Code("\ts := db.NewSql()\n")
+	dst.Tab(1).Code("s := db.NewSql()\n")
 	dst.Import("time", "")
-	dst.Code("\ts.T(\"UPDATE \").T(tableName).T(\" SET del_time = \").V(time.Now().UnixMilli()).T(\" WHERE del_time = 0\")\n")
+	dst.Tab(1).Code("s.T(\"UPDATE \").T(tableName).T(\" SET del_time = \").V(time.Now().UnixMilli()).T(\" WHERE del_time = 0\")\n")
 	dst.Code(w.GetCode().String())
 
-	dst.Code("\treturn s.Exec(ctx)\n")
+	dst.Tab(1).Code("return s.Exec(ctx)\n")
 	dst.Code("}\n\n")
 }
 
@@ -634,18 +634,18 @@ func (b *Builder) printRemoveData(dst *build.Writer, db *build.DB, wFields []*bu
 	dst.Code("func (g " + fName + ") DbRemove(ctx context.Context) (int64, int64, error) {\n")
 	dst.Tab(1).Code("tableName := db.GET(ctx).Table(\"").Code(db.Name).Code("\")\n")
 	if isCache {
-		dst.Code("\terr := cache.DbDel(ctx, tableName)\n")
-		dst.Code("\tif err != nil {\n")
-		dst.Code("\t\treturn 0, 0, err\n")
-		dst.Code("\t}\n")
-		dst.Code("\tdefer cache.DbUnlock(ctx, tableName)\n")
+		dst.Tab(1).Code("err := cache.DbDel(ctx, tableName)\n")
+		dst.Tab(1).Code("if err != nil {\n")
+		dst.Tab(2).Code("return 0, 0, err\n")
+		dst.Tab(1).Code("}\n")
+		dst.Tab(1).Code("defer cache.DbUnlock(ctx, tableName)\n")
 	}
 
-	dst.Code("\ts := db.NewSql()\n")
-	dst.Code("\ts.T(\"DELETE FROM \").T(tableName).T(\" WHERE 1 = 1\")\n")
+	dst.Tab(1).Code("s := db.NewSql()\n")
+	dst.Tab(1).Code("s.T(\"DELETE FROM \").T(tableName).T(\" WHERE 1 = 1\")\n")
 	dst.Code(w.GetCode().String())
 
-	dst.Code("\treturn s.Exec(ctx)\n")
+	dst.Tab(1).Code("return s.Exec(ctx)\n")
 	dst.Code("}\n\n")
 }
 
@@ -660,20 +660,20 @@ func (b *Builder) printInsertData(dst *build.Writer, typ *ast.DataType, val stri
 	dst.Code("func (g " + fName + ") DbInsert(ctx context.Context) (int64, int64, error) {\n")
 	dst.Tab(1).Code("tableName := db.GET(ctx).Table(\"").Code(db.Name).Code("\")\n")
 	if nil != c {
-		dst.Code("\terr := cache.DbDel(ctx, tableName)\n")
-		dst.Code("\tif err != nil {\n")
-		dst.Code("\t\treturn 0, 0, err\n")
-		dst.Code("\t}\n")
-		dst.Code("\tdefer cache.DbUnlock(ctx, tableName)\n")
+		dst.Tab(1).Code("err := cache.DbDel(ctx, tableName)\n")
+		dst.Tab(1).Code("if err != nil {\n")
+		dst.Tab(2).Code("return 0, 0, err\n")
+		dst.Tab(1).Code("}\n")
+		dst.Tab(1).Code("defer cache.DbUnlock(ctx, tableName)\n")
 	}
-	dst.Code("\ts := db.NewSql()\n")
-	dst.Code("\ts.T(\"INSERT INTO \").T(tableName).T(\" SET \").Del(\",\")\n")
+	dst.Tab(1).Code("s := db.NewSql()\n")
+	dst.Tab(1).Code("s.T(\"INSERT INTO \").T(tableName).T(\" SET \").Del(\",\")\n")
 
 	set := b.printSet(fields, val, false)
 	dst.AddImports(set.GetImports())
 	dst.Code(set.String())
 
-	dst.Code("\treturn s.Exec(ctx)\n")
+	dst.Tab(1).Code("return s.Exec(ctx)\n")
 	dst.Code("}\n\n")
 }
 
@@ -681,18 +681,18 @@ func (b *Builder) printInsertListData(dst *build.Writer, typ *ast.DataType, db *
 	name := build.StringToHumpName(typ.Name.Name)
 	dst.Code("func (g " + name + ") DbInsertList(ctx context.Context, val []*" + name + ") (int64, int64, error) {\n")
 	dst.Tab(1).Code("tableName := db.GET(ctx).Table(\"").Code(db.Name).Code("\")\n")
-	dst.Code("\tif nil == val || 0 == len(val) {\n")
-	dst.Code("\t\treturn 0, 0, nil\n")
-	dst.Code("\t}\n")
+	dst.Tab(1).Code("if nil == val || 0 == len(val) {\n")
+	dst.Tab(2).Code("return 0, 0, nil\n")
+	dst.Tab(1).Code("}\n")
 	if isCache {
-		dst.Code("\terr := cache.DbDel(ctx, tableName)\n")
-		dst.Code("\tif err != nil {\n")
-		dst.Code("\t\treturn 0, 0, err\n")
-		dst.Code("\t}\n")
-		dst.Code("\tdefer cache.DbUnlock(ctx, tableName)\n")
+		dst.Tab(1).Code("err := cache.DbDel(ctx, tableName)\n")
+		dst.Tab(1).Code("if err != nil {\n")
+		dst.Tab(2).Code("return 0, 0, err\n")
+		dst.Tab(1).Code("}\n")
+		dst.Tab(1).Code("defer cache.DbUnlock(ctx, tableName)\n")
 	}
-	dst.Code("\ts := db.NewSql()\n")
-	dst.Code("\ts.T(\"INSERT INTO \").T(tableName).T(\" (")
+	dst.Tab(1).Code("s := db.NewSql()\n")
+	dst.Tab(1).Code("s.T(\"INSERT INTO \").T(tableName).T(\" (")
 	isFist := true
 	for _, field := range fields {
 		if !isFist {
@@ -702,11 +702,11 @@ func (b *Builder) printInsertListData(dst *build.Writer, typ *ast.DataType, db *
 		dst.Code(field.Dbs[0].Name)
 	}
 	dst.Code(") VALUES\")\n")
-	dst.Code("\tfor i, val := range val {\n")
-	dst.Code("\t\tif 0 != i {\n")
-	dst.Code("\t\t\ts.T(\",\")\n")
-	dst.Code("\t\t}\n")
-	dst.Code("\t\ts.T(\"(\").L(\",\", ")
+	dst.Tab(1).Code("for i, val := range val {\n")
+	dst.Tab(2).Code("if 0 != i {\n")
+	dst.Tab(3).Code("s.T(\",\")\n")
+	dst.Tab(2).Code("}\n")
+	dst.Tab(2).Code("s.T(\"(\").L(\",\", ")
 	isFist = true
 	for _, field := range fields {
 		if !isFist {
@@ -716,9 +716,9 @@ func (b *Builder) printInsertListData(dst *build.Writer, typ *ast.DataType, db *
 		dst.Code(b.converter(field, "val"))
 	}
 	dst.Code(").T(\")\")\n")
-	dst.Code("\t}\n")
+	dst.Tab(1).Code("}\n")
 
-	dst.Code("\treturn s.Exec(ctx)\n")
+	dst.Tab(1).Code("return s.Exec(ctx)\n")
 	dst.Code("}\n\n")
 }
 
@@ -733,24 +733,24 @@ func (b *Builder) printUpdateData(dst *build.Writer, typ *ast.DataType, key stri
 	dst.Code("func (g " + fName + ") DbUpdate(ctx context.Context) (int64, int64, error) {\n")
 	dst.Tab(1).Code("tableName := db.GET(ctx).Table(\"").Code(db.Name).Code("\")\n")
 	if nil != c {
-		dst.Code("\terr := cache.DbDel(ctx, tableName)\n")
-		dst.Code("\tif err != nil {\n")
-		dst.Code("\t\treturn 0, 0, err\n")
-		dst.Code("\t}\n")
-		dst.Code("\tdefer cache.DbUnlock(ctx, tableName)\n")
+		dst.Tab(1).Code("err := cache.DbDel(ctx, tableName)\n")
+		dst.Tab(1).Code("if err != nil {\n")
+		dst.Tab(2).Code("return 0, 0, err\n")
+		dst.Tab(1).Code("}\n")
+		dst.Tab(1).Code("defer cache.DbUnlock(ctx, tableName)\n")
 	}
-	dst.Code("\ts := db.NewSql()\n")
-	dst.Code("\ts.T(\"UPDATE \").T(tableName).T(\" SET \").Del(\",\")\n")
+	dst.Tab(1).Code("s := db.NewSql()\n")
+	dst.Tab(1).Code("s.T(\"UPDATE \").T(tableName).T(\" SET \").Del(\",\")\n")
 
 	set := b.printSet(fields, key, true)
 	dst.AddImports(set.GetImports())
 	dst.Code(set.String())
 
-	dst.Code("\ts.T(\"WHERE 1 = 1 \")\n")
+	dst.Tab(1).Code("s.T(\"WHERE 1 = 1 \")\n")
 	dst.Code(w.String())
 	dst.Code("\n")
 
-	dst.Code("\treturn s.Exec(ctx)\n")
+	dst.Tab(1).Code("return s.Exec(ctx)\n")
 	dst.Code("}\n\n")
 }
 
@@ -765,24 +765,24 @@ func (b *Builder) printSetData(dst *build.Writer, typ *ast.DataType, key string,
 	dst.Code("func (g " + fName + ") DbSet(ctx context.Context) (int64, int64, error) {\n")
 	dst.Tab(1).Code("tableName := db.GET(ctx).Table(\"").Code(db.Name).Code("\")\n")
 	if nil != c {
-		dst.Code("\terr := cache.DbDel(ctx, tableName)\n")
-		dst.Code("\tif err != nil {\n")
-		dst.Code("\t\treturn 0, 0, err\n")
-		dst.Code("\t}\n")
-		dst.Code("\tdefer cache.DbUnlock(ctx, tableName)\n")
+		dst.Tab(1).Code("err := cache.DbDel(ctx, tableName)\n")
+		dst.Tab(1).Code("if err != nil {\n")
+		dst.Tab(2).Code("return 0, 0, err\n")
+		dst.Tab(1).Code("}\n")
+		dst.Tab(1).Code("defer cache.DbUnlock(ctx, tableName)\n")
 	}
-	dst.Code("\ts := db.NewSql()\n")
-	dst.Code("\ts.T(\"UPDATE \").T(tableName).T(\" SET \").Del(\",\")\n")
+	dst.Tab(1).Code("s := db.NewSql()\n")
+	dst.Tab(1).Code("s.T(\"UPDATE \").T(tableName).T(\" SET \").Del(\",\")\n")
 
 	set := b.printSet(fields, key, false)
 	dst.AddImports(set.GetImports())
 	dst.Code(set.String())
 
-	dst.Code("\ts.T(\"WHERE 1 = 1 \")\n")
+	dst.Tab(1).Code("s.T(\"WHERE 1 = 1 \")\n")
 	dst.Code(w.String())
 	dst.Code("\n")
 
-	dst.Code("\treturn s.Exec(ctx)\n")
+	dst.Tab(1).Code("return s.Exec(ctx)\n")
 	dst.Code("}\n\n")
 }
 
@@ -799,17 +799,17 @@ func (b *Builder) printSet(fields []*build.DBField, key string, isNil bool) *bui
 		}
 		if isNil && build.IsNil(field.Field.Type) && !field.Dbs[0].Force {
 			name := build.StringToHumpName(field.Field.Name.Name)
-			dst.Code("\tif nil != g.")
+			dst.Tab(1).Code("if nil != g.")
 			dst.Code(name)
 			dst.Code(" {\n")
-			dst.Code("\t")
+			dst.Tab(1).Code("")
 		}
 
-		dst.Code("\ts.T(\",\")")
+		dst.Tab(1).Code("s.T(\",\")")
 		_ = b.printParam(dst, set, field, fields, "", "")
 
 		if isNil && build.IsNil(field.Field.Type) && !field.Dbs[0].Force {
-			dst.Code("\t}\n")
+			dst.Tab(1).Code("}\n")
 		}
 	}
 	return dst
@@ -834,40 +834,40 @@ func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, key string,
 
 	dst.Code("func (g " + fName + ") DbGet(ctx context.Context) (*" + dName + ", error) {\n")
 	dst.Tab(1).Code("tableName := db.GET(ctx).Table(\"").Code(db.Name).Code("\")\n")
-	dst.Code("\ts := db.NewSql()\n")
-	dst.Code("\ts.T(\"SELECT " + item.String() + " FROM \").T(tableName).T(\" WHERE del_time = 0\")\n")
+	dst.Tab(1).Code("s := db.NewSql()\n")
+	dst.Tab(1).Code("s.T(\"SELECT " + item.String() + " FROM \").T(tableName).T(\" WHERE del_time = 0\")\n")
 	dst.Code(w.GetCode().String())
-	dst.Code("\ts.T(\" LIMIT 1\")\n")
-	dst.Code("\tvar val *" + dName + "\n")
+	dst.Tab(1).Code("s.T(\" LIMIT 1\")\n")
+	dst.Tab(1).Code("var val *" + dName + "\n")
 
 	if nil != c {
 		dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/cache", "")
-		dst.Code("\tcv, key, _ := cache.DbGet(ctx, \"\", tableName, s, &val)\n")
-		dst.Code("\tif cv != nil {\n")
-		dst.Code("\t\treturn *cv, nil\n")
-		dst.Code("\t}\n")
+		dst.Tab(1).Code("cv, key, _ := cache.DbGet(ctx, \"\", tableName, s, &val)\n")
+		dst.Tab(1).Code("if cv != nil {\n")
+		dst.Tab(2).Code("return *cv, nil\n")
+		dst.Tab(1).Code("}\n")
 	}
 	dst.Import("database/sql", "")
-	dst.Code("\t_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
-	dst.Code("\t\tval = &" + dName + "{}\n")
-	dst.Code("\t\treturn false, rows.Scan(" + scan.String() + ")\n")
-	dst.Code("\t})\n")
-	dst.Code("\tif err != nil {\n")
-	dst.Code("\t\treturn nil, err\n")
-	dst.Code("\t}\n")
+	dst.Tab(1).Code("_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
+	dst.Tab(2).Code("val = &" + dName + "{}\n")
+	dst.Tab(2).Code("return false, rows.Scan(" + scan.String() + ")\n")
+	dst.Tab(1).Code("})\n")
+	dst.Tab(1).Code("if err != nil {\n")
+	dst.Tab(2).Code("return nil, err\n")
+	dst.Tab(1).Code("}\n")
 	if nil != c {
 		dst.Import("math/rand", "")
 		dst.Import("time", "")
-		dst.Code("\t_, _ = cache.DbSet(ctx, key, tableName, s, &val, ")
+		dst.Tab(1).Code("_, _ = cache.DbSet(ctx, key, tableName, s, &val, ")
 		if 0 < c.min {
 			dst.Code("time.Duration(rand.Intn(" + strconv.Itoa(c.max) + "-" + strconv.Itoa(c.min) + ")+" + strconv.Itoa(c.min) + ")*time.Second")
 		} else {
 			dst.Code("0")
 		}
 		dst.Code(")\n")
-		dst.Code("\tdefer cache.DbUnlock(ctx, tableName)\n")
+		dst.Tab(1).Code("defer cache.DbUnlock(ctx, tableName)\n")
 	}
-	dst.Code("\treturn val, nil\n")
+	dst.Tab(1).Code("return val, nil\n")
 	dst.Code("}\n\n")
 
 }

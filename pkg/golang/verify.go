@@ -90,28 +90,28 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 			if build.IsNil(field.Type) && 0 == i {
 				dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/rpc", "")
 				if !f.Null {
-					dst.Code("\tif nil == i." + fName)
+					dst.Tab(1).Code("if nil == i." + fName)
 					if build.GetBaseType(field.Type) == build.String {
 						dst.Code(" || len(i.Get" + fName + "()) == 0")
 					}
 					dst.Code(" {\n")
-					dst.Code("\t\treturn &rpc.Result{Code: int(" + pack + "), Msg: " + pack + ".ToName()}\n")
-					dst.Code("\t}\n")
+					dst.Tab(2).Code("return &rpc.Result{Code: int(" + pack + "), Msg: " + pack + ".ToName()}\n")
+					dst.Tab(1).Code("}\n")
 				} else {
-					dst.Code("\tif nil == i." + fName)
+					dst.Tab(1).Code("if nil == i." + fName)
 					if build.GetBaseType(field.Type) == build.String {
 						dst.Code(" || len(i.Get" + fName + "()) == 0")
 					}
 					dst.Code(" {\n")
-					dst.Code("\t\treturn nil\n")
-					dst.Code("\t}\n")
+					dst.Tab(2).Code("return nil\n")
+					dst.Tab(1).Code("}\n")
 				}
 			}
 			if build.IsEnum(field.Type) {
 				dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/rpc", "")
-				dst.Code("\tif 0 == len(i.Get" + fName + "().ToName()) {\n")
-				dst.Code("\t\treturn &rpc.Result{Code: int(" + pack + "), Msg: " + pack + ".ToName()}\n")
-				dst.Code("\t}\n")
+				dst.Tab(1).Code("if 0 == len(i.Get" + fName + "().ToName()) {\n")
+				dst.Tab(2).Code("return &rpc.Result{Code: int(" + pack + "), Msg: " + pack + ".ToName()}\n")
+				dst.Tab(1).Code("}\n")
 			} else if build.IsMap(field.Type) {
 
 			} else if build.IsArray(field.Type) {
@@ -122,7 +122,7 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 				case build.Int8, build.Int16, build.Int32, build.Uint8, build.Uint16, build.Uint32, build.Float, build.Double:
 					if 0 < len(f.Min) || 0 < len(f.Max) {
 						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/rpc", "")
-						dst.Code("\tif ")
+						dst.Tab(1).Code("if ")
 						if 0 < len(f.Min) {
 							dst.Code(f.Min + " > i.Get" + fName + "() ")
 						}
@@ -133,13 +133,13 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 							dst.Code(f.Max + " < i.Get" + fName + "() ")
 						}
 						dst.Code("{\n")
-						dst.Code("\t\treturn &rpc.Result{Code: int(" + pack + "), Msg: " + pack + ".ToName()}\n")
-						dst.Code("\t}\n")
+						dst.Tab(2).Code("return &rpc.Result{Code: int(" + pack + "), Msg: " + pack + ".ToName()}\n")
+						dst.Tab(1).Code("}\n")
 					}
 				case build.Uint64, build.Int64:
 					if 0 < len(f.Min) || 0 < len(f.Max) {
 						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/rpc", "")
-						dst.Code("\tif ")
+						dst.Tab(1).Code("if ")
 						if 0 < len(f.Min) {
 							dst.Code(f.Min + " > i.Get" + fName + "().Val ")
 						}
@@ -150,13 +150,13 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 							dst.Code(f.Max + " < i.Get" + fName + "().Val ")
 						}
 						dst.Code("{\n")
-						dst.Code("\t\treturn &rpc.Result{Code: int(" + pack + "), Msg: " + pack + ".ToName()}\n")
-						dst.Code("\t}\n")
+						dst.Tab(2).Code("return &rpc.Result{Code: int(" + pack + "), Msg: " + pack + ".ToName()}\n")
+						dst.Tab(1).Code("}\n")
 					}
 				case build.Date:
 					if 0 < len(f.Min) || 0 < len(f.Max) {
 						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/rpc", "")
-						dst.Code("\tif ")
+						dst.Tab(1).Code("if ")
 						if 0 < len(f.Min) {
 							parse, err := time.Parse("2006-01-02T15:04:05Z", f.Min)
 							if err != nil {
@@ -175,13 +175,13 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 							dst.Code(strconv.FormatInt(parse.UnixMilli(), 10) + " < i.Get" + fName + "().UnixMilli() ")
 						}
 						dst.Code("{ //" + f.Min + "--" + f.Max + "\n")
-						dst.Code("\t\treturn &rpc.Result{Code: int(" + pack + "), Msg: " + pack + ".ToName()}\n")
-						dst.Code("\t}\n")
+						dst.Tab(2).Code("return &rpc.Result{Code: int(" + pack + "), Msg: " + pack + ".ToName()}\n")
+						dst.Tab(1).Code("}\n")
 					}
 				case build.Decimal:
 					if 0 < len(f.Min) || 0 < len(f.Max) {
 						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/rpc", "")
-						dst.Code("\tif ")
+						dst.Tab(1).Code("if ")
 						if 0 < len(f.Min) {
 							dst.Code("decimal.NewFromFloat(" + f.Min + ").GreaterThan(i.Get" + fName + "()) ")
 						}
@@ -192,14 +192,14 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 							dst.Code("decimal.NewFromFloat(" + f.Min + ").LessThan(i.Get" + fName + "()) ")
 						}
 						dst.Code("{\n")
-						dst.Code("\t\treturn &rpc.Result{Code: int(" + pack + "), Msg: " + pack + ".ToName()}\n")
-						dst.Code("\t}\n")
+						dst.Tab(2).Code("return &rpc.Result{Code: int(" + pack + "), Msg: " + pack + ".ToName()}\n")
+						dst.Tab(1).Code("}\n")
 					}
 				case build.String:
 					dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/rpc", "")
 					pack := b.getPackage(dst, val.Enum.Name) + build.StringToHumpName(val.Enum.Name.Name) + build.StringToHumpName(val.Item.Name.Name)
 					if 0 < len(f.Min) || 0 < len(f.Max) {
-						dst.Code("\tif ")
+						dst.Tab(1).Code("if ")
 						if 0 < len(f.Min) {
 							dst.Import("unicode/utf8", "")
 							dst.Code(f.Min + " > utf8.RuneCountInString(i.Get" + fName + "()) ")
@@ -212,29 +212,29 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 							dst.Code(f.Max + " < utf8.RuneCountInString(i.Get" + fName + "()) ")
 						}
 						dst.Code("{\n")
-						dst.Code("\t\treturn &rpc.Result{Code: int(" + pack + "), Msg: " + pack + ".ToName()}\n")
-						dst.Code("\t}\n")
+						dst.Tab(2).Code("return &rpc.Result{Code: int(" + pack + "), Msg: " + pack + ".ToName()}\n")
+						dst.Tab(1).Code("}\n")
 					}
 					if 0 < len(f.Reg) {
-						dst.Code("\tmatch, err ")
+						dst.Tab(1).Code("match, err ")
 						if first {
 							dst.Code(":")
 						}
 						dst.Import("regexp", "")
 						dst.Code("= regexp.MatchString(\"" + f.Reg + "\", i.Get" + fName + "())\n")
-						dst.Code("\tif err != nil {\n")
-						dst.Code("\t\treturn err\n")
-						dst.Code("\t}\n")
-						dst.Code("\tif !match {\n")
-						dst.Code("\t\treturn &rpc.Result{Code: int(" + pack + "), Msg: " + pack + ".ToName()}\n")
-						dst.Code("\t}\n")
+						dst.Tab(1).Code("if err != nil {\n")
+						dst.Tab(2).Code("return err\n")
+						dst.Tab(1).Code("}\n")
+						dst.Tab(1).Code("if !match {\n")
+						dst.Tab(2).Code("return &rpc.Result{Code: int(" + pack + "), Msg: " + pack + ".ToName()}\n")
+						dst.Tab(1).Code("}\n")
 						first = false
 					}
 				}
 			}
 		}
 
-		dst.Code("\treturn nil\n")
+		dst.Tab(1).Code("return nil\n")
 		dst.Code("}\n\n")
 		return nil
 	})
@@ -256,20 +256,20 @@ func (b *Builder) printVerifyDataCode(dst *build.Writer, data *ast.DataType) err
 		_, ok := build.GetTag(field.Tags, "verify")
 		if ok {
 			if isErr {
-				dst.Code("\tvar err error\n")
+				dst.Tab(1).Code("var err error\n")
 				isErr = false
 			}
-			dst.Code("\terr = i.Verify" + fName + "(ctx)\n")
-			dst.Code("\tif err != nil {\n")
-			dst.Code("\t\treturn err\n")
-			dst.Code("\t}\n")
+			dst.Tab(1).Code("err = i.Verify" + fName + "(ctx)\n")
+			dst.Tab(1).Code("if err != nil {\n")
+			dst.Tab(2).Code("return err\n")
+			dst.Tab(1).Code("}\n")
 		}
 		return nil
 	})
 	if err != nil {
 		return err
 	}
-	dst.Code("\treturn nil\n")
+	dst.Tab(1).Code("return nil\n")
 	dst.Code("}\n\n")
 	return nil
 }

@@ -28,126 +28,91 @@ func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) error {
 }
 
 func (b *Builder) printDataDescriptor(dst *build.Writer, typ *ast.DataType) error {
-	name := build.StringToHumpName(typ.Name.Name)
+	name := build.StringToFirstLower(typ.Name.Name)
 	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "")
+	dst.Import("reflect", "")
 
-	dst.Code("var ").Code(name).Code("Fields = map[uint16]hbuf.Descriptor{\n")
+	dst.Code("var ").Code(name).Code(" ").Code(build.StringToHumpName(typ.Name.Name)).Code("\n")
+	dst.Code("var ").Code(name).Code("Descriptor = hbuf.NewDataDescriptor(0, false, reflect.TypeOf(&").Code(name).Code("), map[uint16]hbuf.Descriptor{\n")
 	for _, field := range typ.Fields.List {
 		dst.Tab(1).Code(field.Id.Value).Code(":")
 		b.printDescriptor(dst, field.Type, true, name, build.StringToHumpName(field.Name.Name))
 		dst.Code(",\n")
 	}
-	dst.Code("}\n\n")
+	dst.Code("})\n\n")
 
 	return nil
 }
-
-func (b *Builder) printDescriptor(dst *build.Writer, expr ast.Expr, b2 bool, structName string, fieldName string) {
+func (b *Builder) getDescriptorType(dst *build.Writer, expr ast.Expr) string {
 	switch expr.(type) {
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
 			pack := b.getPackage(dst, expr)
-			dst.Code(pack + (expr.(*ast.Ident)).Name)
+			return "*" + pack + build.StringToHumpName((expr.(*ast.Ident)).Name)
+		} else {
+			return _types[build.BaseType((expr.(*ast.Ident)).Name)]
+		}
+	case *ast.VarType:
+		t := expr.(*ast.VarType)
+		return b.getDescriptorType(dst, t.Type())
+	}
+	return ""
+}
+
+func (b *Builder) printDescriptor(dst *build.Writer, expr ast.Expr, isNull bool, structName string, fieldName string) {
+	isPrt := "false"
+	if isNull {
+		isPrt = "true"
+	}
+
+	offsetof := "0"
+	if structName != "" && fieldName != "" {
+		offsetof = "unsafe.Offsetof(" + structName + "." + fieldName + ")"
+	}
+	switch expr.(type) {
+	case *ast.Ident:
+		t := expr.(*ast.Ident)
+		if nil != t.Obj {
+			pack := b.getPackage(dst, expr)
+			dst.Code("hbuf.CloneDataDescriptor(&").Code(pack + build.StringToHumpName((expr.(*ast.Ident)).Name)).Code("{}, ").Code(offsetof).Code(", ").Code(isPrt).Code(")")
 		} else {
 			switch build.BaseType((expr.(*ast.Ident)).Name) {
 			case build.Int8:
-				dst.Code("hbuf.NewInt64Descriptor(func(d any) int64 {\n")
-				dst.Tab(2).Code("return int64(d.(*").Code(structName).Code(").").Code(fieldName).Code(")\n")
-				dst.Tab(1).Code("}, func(d any, v int64) {\n")
-				dst.Tab(2).Code("d.(*").Code(structName).Code(").").Code(fieldName).Code(" = int8(v)\n")
-				dst.Tab(1).Code("})")
+				dst.Code("hbuf.NewInt8Descriptor(").Code(offsetof).Code(", ").Code(isPrt).Code(")")
 			case build.Int16:
-				dst.Code("hbuf.NewInt16Descriptor(func(d any) int16 {\n")
-				dst.Tab(2).Code("return d.(*").Code(structName).Code(").").Code(fieldName).Code("\n")
-				dst.Tab(1).Code("}, func(d any, v int16) {\n")
-				dst.Tab(2).Code("d.(*").Code(structName).Code(").").Code(fieldName).Code(" = v\n")
-				dst.Tab(1).Code("})")
+				dst.Code("hbuf.NewInt16Descriptor(").Code(offsetof).Code(", ").Code(isPrt).Code(")")
 			case build.Int32:
-				dst.Code("hbuf.NewInt32Descriptor(func(d any) int32 {\n")
-				dst.Tab(2).Code("return d.(*").Code(structName).Code(").").Code(fieldName).Code("\n")
-				dst.Tab(1).Code("}, func(d any, v int32) {\n")
-				dst.Tab(2).Code("d.(*").Code(structName).Code(").").Code(fieldName).Code(" = v\n")
-				dst.Tab(1).Code("})")
+				dst.Code("hbuf.NewInt32Descriptor(").Code(offsetof).Code(", ").Code(isPrt).Code(")")
 			case build.Int64:
-				dst.Code("hbuf.NewInt64Descriptor(func(d any) hbuf.Int64 {\n")
-				dst.Tab(2).Code("return d.(*").Code(structName).Code(").").Code(fieldName).Code("\n")
-				dst.Tab(1).Code("}, func(d any, v hbuf.Int64) {\n")
-				dst.Tab(2).Code("d.(*").Code(structName).Code(").").Code(fieldName).Code(" = v\n")
-				dst.Tab(1).Code("})")
+				dst.Code("hbuf.NewInt64Descriptor(").Code(offsetof).Code(", ").Code(isPrt).Code(")")
 			case build.Uint8:
-				dst.Code("hbuf.NewUint8Descriptor(func(d any) uint8 {\n")
-				dst.Tab(2).Code("return d.(*").Code(structName).Code(").").Code(fieldName).Code("\n")
-				dst.Tab(1).Code("}, func(d any, v uint8) {\n")
-				dst.Tab(2).Code("d.(*").Code(structName).Code(").").Code(fieldName).Code(" = v\n")
-				dst.Tab(1).Code("})")
+				dst.Code("hbuf.NewUint8Descriptor(").Code(offsetof).Code(", ").Code(isPrt).Code(")")
 			case build.Uint16:
-				dst.Code("hbuf.NewUint16Descriptor(func(d any) uint16 {\n")
-				dst.Tab(2).Code("return d.(*").Code(structName).Code(").").Code(fieldName).Code("\n")
-				dst.Tab(1).Code("}, func(d any, v uint16) {\n")
-				dst.Tab(2).Code("d.(*").Code(structName).Code(").").Code(fieldName).Code(" = v\n")
-				dst.Tab(1).Code("})")
+				dst.Code("hbuf.NewUint16Descriptor(").Code(offsetof).Code(", ").Code(isPrt).Code(")")
 			case build.Uint32:
-				dst.Code("hbuf.NewUint32Descriptor(func(d any) uint32 {\n")
-				dst.Tab(2).Code("return d.(*").Code(structName).Code(").").Code(fieldName).Code("\n")
-				dst.Tab(1).Code("}, func(d any, v uint32) {\n")
-				dst.Tab(2).Code("d.(*").Code(structName).Code(").").Code(fieldName).Code(" = v\n")
-				dst.Tab(1).Code("})")
+				dst.Code("hbuf.NewUint32Descriptor(").Code(offsetof).Code(", ").Code(isPrt).Code(")")
 			case build.Uint64:
-				dst.Code("hbuf.NewUint64Descriptor(func(d any) hbuf.Uint64 {\n")
-				dst.Tab(2).Code("return d.(*").Code(structName).Code(").").Code(fieldName).Code("\n")
-				dst.Tab(1).Code("}, func(d any, v hbuf.Uint64) {\n")
-				dst.Tab(2).Code("d.(*").Code(structName).Code(").").Code(fieldName).Code(" = v\n")
-				dst.Tab(1).Code("})")
+				dst.Code("hbuf.NewUint64Descriptor(").Code(offsetof).Code(", ").Code(isPrt).Code(")")
 			case build.Float:
-				dst.Code("hbuf.NewFloatDescriptor(func(d any) float32 {\n")
-				dst.Tab(2).Code("return d.(*").Code(structName).Code(").").Code(fieldName).Code("\n")
-				dst.Tab(1).Code("}, func(d any, v float32) {\n")
-				dst.Tab(2).Code("d.(*").Code(structName).Code(").").Code(fieldName).Code(" = v\n")
-				dst.Tab(1).Code("})")
+				dst.Code("hbuf.NewFloatDescriptor(").Code(offsetof).Code(", ").Code(isPrt).Code(")")
 			case build.Double:
-				dst.Code("hbuf.NewDoubleDescriptor(func(d any) float64 {\n")
-				dst.Tab(2).Code("return d.(*").Code(structName).Code(").").Code(fieldName).Code("\n")
-				dst.Tab(1).Code("}, func(d any, v float64) {\n")
-				dst.Tab(2).Code("d.(*").Code(structName).Code(").").Code(fieldName).Code(" = v\n")
-				dst.Tab(1).Code("})")
+				dst.Code("hbuf.NewDoubleDescriptor(").Code(offsetof).Code(", ").Code(isPrt).Code(")")
 			case build.Bool:
-				dst.Code("hbuf.NewBoolDescriptor(func(d any) bool {\n")
-				dst.Tab(2).Code("return d.(*").Code(structName).Code(").").Code(fieldName).Code("\n")
-				dst.Tab(1).Code("}, func(d any, v bool) {\n")
-				dst.Tab(2).Code("d.(*").Code(structName).Code(").").Code(fieldName).Code(" = v\n")
-				dst.Tab(1).Code("})")
+				dst.Code("hbuf.NewBoolDescriptor(").Code(offsetof).Code(", ").Code(isPrt).Code(")")
 			case build.String:
-				dst.Code("hbuf.NewStringDescriptor(func(d any) string {\n")
-				dst.Tab(2).Code("return d.(*").Code(structName).Code(").").Code(fieldName).Code("\n")
-				dst.Tab(1).Code("}, func(d any, v string) {\n")
-				dst.Tab(2).Code("d.(*").Code(structName).Code(").").Code(fieldName).Code(" = v\n")
-				dst.Tab(1).Code("})")
+				dst.Code("hbuf.NewStringDescriptor(").Code(offsetof).Code(", ").Code(isPrt).Code(")")
 			case build.Decimal:
-				dst.Code("hbuf.NewDecimalDescriptor(func(d any) decimal.Decimal {\n")
-				dst.Tab(2).Code("return d.(*").Code(structName).Code(").").Code(fieldName).Code("\n")
-				dst.Tab(1).Code("}, func(d any, v decimal.Decimal) {\n")
-				dst.Tab(2).Code("d.(*").Code(structName).Code(").").Code(fieldName).Code(" = v\n")
-				dst.Tab(1).Code("})")
+				dst.Code("hbuf.NewDecimalDescriptor(").Code(offsetof).Code(", ").Code(isPrt).Code(")")
 			case build.Date:
-				dst.Code("hbuf.NewTimeDescriptor(func(d any) hbuf.Time {\n")
-				dst.Tab(2).Code("return d.(*").Code(structName).Code(").").Code(fieldName).Code("\n")
-				dst.Tab(1).Code("}, func(d any, v hbuf.Time) {\n")
-				dst.Tab(2).Code("d.(*").Code(structName).Code(").").Code(fieldName).Code(" = v\n")
-				dst.Tab(1).Code("})")
+				dst.Code("hbuf.NewTimeDescriptor(").Code(offsetof).Code(", ").Code(isPrt).Code(")")
 			}
 		}
 	case *ast.ArrayType:
-		//dst.Code("hbuf.NewListDescriptor(func(d any) any {\n")
-		//dst.Tab(2).Code("return d.(*").Code(structName).Code(").").Code(fieldName).Code("\n")
-		//dst.Tab(1).Code("}, func(d any, v any) {\n")
-		//dst.Tab(2).Code("d.(*").Code(structName).Code(").").Code(fieldName).Code(" = v\n")
-		//dst.Tab(1).Code("}), ")
-		//b.printDescriptor(dst, expr.(*ast.ArrayType).VType, true, structName, fieldName)
+		dst.Code("hbuf.NewListDescriptor[").Code(b.getDescriptorType(dst, expr.(*ast.ArrayType).VType)).Code("](").Code(offsetof).Code(", ")
+		b.printDescriptor(dst, expr.(*ast.ArrayType).VType, true, "", "")
+		dst.Code(")")
 
-		//ar := expr.(*ast.ArrayType)
-		//dst.Code("[]")
-		//b.printDescriptor(dst, ar.VType, true)
 	case *ast.MapType:
 		//ma := expr.(*ast.MapType)
 		//dst.Code("map[")
@@ -156,10 +121,7 @@ func (b *Builder) printDescriptor(dst *build.Writer, expr ast.Expr, b2 bool, str
 		//b.printDescriptor(dst, ma.VType, true)
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
-		//if b2 && t.Empty {
-		//	dst.Code("*")
-		//}
-		b.printDescriptor(dst, t.Type(), true, structName, fieldName)
+		b.printDescriptor(dst, t.Type(), isNull && t.Empty, structName, fieldName)
 	}
 }
 
@@ -218,12 +180,8 @@ func (b *Builder) printDataStruct(dst *build.Writer, typ *ast.DataType) error {
 	}
 	dst.Code("}\n\n")
 
-	dst.Code("func (g *" + build.StringToHumpName(typ.Name.Name) + ") ToData() ([]byte, error) {\n")
-	dst.Tab(1).Code("return json.Marshal(g)\n")
-	dst.Code("}\n\n")
-
-	dst.Code("func (g *" + build.StringToHumpName(typ.Name.Name) + ") FormData(data []byte) error {\n")
-	dst.Tab(1).Code("return json.Unmarshal(data, g)\n")
+	dst.Code("func (g *" + build.StringToHumpName(typ.Name.Name) + ") Descriptors() hbuf.Descriptor  {\n")
+	dst.Tab(1).Code("return ").Code(build.StringToFirstLower(typ.Name.Name)).Code("Descriptor\n")
 	dst.Code("}\n\n")
 
 	for _, field := range typ.Fields.List {

@@ -3,6 +3,7 @@ package golang
 import (
 	"hbuf/pkg/ast"
 	"hbuf/pkg/build"
+	"strconv"
 	"strings"
 )
 
@@ -34,8 +35,17 @@ func (b *Builder) printDataDescriptor(dst *build.Writer, typ *ast.DataType) erro
 
 	dst.Code("var ").Code(name).Code(" ").Code(build.StringToHumpName(typ.Name.Name)).Code("\n")
 	dst.Code("var ").Code(name).Code("Descriptor = hbuf.NewDataDescriptor(0, false, reflect.TypeOf(&").Code(name).Code("), map[uint16]hbuf.Descriptor{\n")
+
+	id := 0
 	for _, field := range typ.Fields.List {
-		dst.Tab(1).Code(field.Id.Value).Code(":")
+		v, _ := strconv.Atoi(field.Id.Value)
+		if id < v {
+			id = v
+		}
+	}
+	length := len(strconv.Itoa(id)) + 1
+	for _, field := range typ.Fields.List {
+		dst.Tab(1).Code(field.Id.Value).Code(":").Code(strings.Repeat(" ", length-len(field.Id.Value)))
 		b.printDescriptor(dst, field.Type, true, name, build.StringToHumpName(field.Name.Name))
 		dst.Code(",\n")
 	}

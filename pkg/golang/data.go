@@ -32,6 +32,7 @@ func (b *Builder) printDataDescriptor(dst *build.Writer, typ *ast.DataType) erro
 	name := build.StringToFirstLower(typ.Name.Name)
 	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "")
 	dst.Import("reflect", "")
+	dst.Import("unsafe", "")
 
 	dst.Code("var ").Code(name).Code(" ").Code(build.StringToHumpName(typ.Name.Name)).Code("\n")
 	dst.Code("var ").Code(name).Code("Descriptor = hbuf.NewDataDescriptor(0, false, reflect.TypeOf(&").Code(name).Code("), map[uint16]hbuf.Descriptor{\n")
@@ -136,7 +137,6 @@ func (b *Builder) printDescriptor(dst *build.Writer, expr ast.Expr, isNull bool,
 }
 
 func (b *Builder) printDataStruct(dst *build.Writer, typ *ast.DataType) error {
-	dst.Import("encoding/json", "")
 	name := build.StringToHumpName(typ.Name.Name)
 	if nil != typ.Doc && 0 < len(typ.Doc.Text()) {
 		dst.Code("// " + name + " " + typ.Doc.Text())

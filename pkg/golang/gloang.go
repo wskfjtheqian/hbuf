@@ -14,7 +14,7 @@ import (
 var _types = map[build.BaseType]string{
 	build.Int8: "int8", build.Int16: "int16", build.Int32: "int32", build.Int64: "hbuf.Int64", build.Uint8: "uint8",
 	build.Uint16: "uint16", build.Uint32: "uint32", build.Uint64: "hbuf.Uint64", build.Bool: "bool", build.Float: "float32",
-	build.Double: "float64", build.String: "string", build.Date: "hbuf.Time", build.Decimal: "decimal.Decimal",
+	build.Double: "float64", build.String: "string", build.Date: "hbuf.Time", build.Decimal: "decimal.Decimal", build.Bytes: "[]byte",
 }
 var _typesDefaultValue = map[build.BaseType]string{
 	build.Int8:    "int8(0)",
@@ -31,6 +31,7 @@ var _typesDefaultValue = map[build.BaseType]string{
 	build.String:  "\"\"",
 	build.Date:    "hbuf.Time{}",
 	build.Decimal: "decimal.Zero",
+	build.Bytes:   "nil",
 }
 
 type GoWriter struct {

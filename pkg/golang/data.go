@@ -47,26 +47,30 @@ func (b *Builder) printDataDescriptor(dst *build.Writer, typ *ast.DataType) erro
 	length := len(strconv.Itoa(id)) + 1
 	for _, field := range typ.Fields.List {
 		dst.Tab(1).Code(field.Id.Value).Code(":").Code(strings.Repeat(" ", length-len(field.Id.Value)))
-		b.printDescriptor(dst, field.Type, true, name, build.StringToHumpName(field.Name.Name))
+		b.printDescriptor(dst, field.Type, false, name, build.StringToHumpName(field.Name.Name))
 		dst.Code(",\n")
 	}
 	dst.Code("})\n\n")
 
 	return nil
 }
-func (b *Builder) getDescriptorType(dst *build.Writer, expr ast.Expr) string {
+func (b *Builder) getDescriptorType(dst *build.Writer, expr ast.Expr, isNull bool) string {
+	isPrt := ""
+	if isNull {
+		isPrt = "*"
+	}
 	switch expr.(type) {
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
 			pack := b.getPackage(dst, expr)
-			return "*" + pack + build.StringToHumpName((expr.(*ast.Ident)).Name)
+			return isPrt + pack + build.StringToHumpName((expr.(*ast.Ident)).Name)
 		} else {
-			return _types[build.BaseType((expr.(*ast.Ident)).Name)]
+			return isPrt + _types[build.BaseType((expr.(*ast.Ident)).Name)]
 		}
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
-		return b.getDescriptorType(dst, t.Type())
+		return b.getDescriptorType(dst, t.Type(), t.Empty)
 	}
 	return ""
 }
@@ -117,22 +121,26 @@ func (b *Builder) printDescriptor(dst *build.Writer, expr ast.Expr, isNull bool,
 				dst.Code("hbuf.NewDecimalDescriptor(").Code(offsetof).Code(", ").Code(isPrt).Code(")")
 			case build.Date:
 				dst.Code("hbuf.NewTimeDescriptor(").Code(offsetof).Code(", ").Code(isPrt).Code(")")
+			case build.Bytes:
+				dst.Code("hbuf.NewBytesDescriptor(").Code(offsetof).Code(", ").Code(isPrt).Code(")")
 			}
 		}
 	case *ast.ArrayType:
-		dst.Code("hbuf.NewListDescriptor[").Code(b.getDescriptorType(dst, expr.(*ast.ArrayType).VType)).Code("](").Code(offsetof).Code(", ")
-		b.printDescriptor(dst, expr.(*ast.ArrayType).VType, true, "", "")
-		dst.Code(")")
+		dst.Code("hbuf.NewListDescriptor[").Code(b.getDescriptorType(dst, expr.(*ast.ArrayType).VType, false)).Code("](").Code(offsetof).Code(", ")
+		b.printDescriptor(dst, expr.(*ast.ArrayType).VType, false, "", "")
+		dst.Code(",").Code(isPrt).Code(")")
 
 	case *ast.MapType:
-		//ma := expr.(*ast.MapType)
-		//dst.Code("map[")
-		//b.printDescriptor(dst, ma.Key, true)
-		//dst.Code("]")
-		//b.printDescriptor(dst, ma.VType, true)
+		ma := expr.(*ast.MapType)
+
+		dst.Code("hbuf.NewMapDescriptor[").Code(b.getDescriptorType(dst, ma.Key, false)).Code(",").Code(b.getDescriptorType(dst, ma.VType, false)).Code("](").Code(offsetof).Code(", ")
+		b.printDescriptor(dst, ma.Key, false, "", "")
+		dst.Code(", ")
+		b.printDescriptor(dst, ma.VType, false, "", "")
+		dst.Code(",").Code(isPrt).Code(")")
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
-		b.printDescriptor(dst, t.Type(), isNull && t.Empty, structName, fieldName)
+		b.printDescriptor(dst, t.Type(), isNull || t.Empty, structName, fieldName)
 	}
 }
 

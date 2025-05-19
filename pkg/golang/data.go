@@ -29,6 +29,7 @@ func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) error {
 }
 
 func (b *Builder) printDataDescriptor(dst *build.Writer, typ *ast.DataType) error {
+
 	name := build.StringToFirstLower(typ.Name.Name)
 	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "")
 	dst.Import("reflect", "")
@@ -38,13 +39,28 @@ func (b *Builder) printDataDescriptor(dst *build.Writer, typ *ast.DataType) erro
 	dst.Code("var ").Code(name).Code("Descriptor = hbuf.NewDataDescriptor(0, false, reflect.TypeOf(&").Code(name).Code("), map[uint16]hbuf.Descriptor{\n")
 
 	id := 0
+	for _, extend := range typ.Extends {
+		v, _ := strconv.Atoi(extend.Id.Value)
+		if id < v {
+			id = v
+		}
+	}
+	length := len(strconv.Itoa(id)) + 1
+	for _, extend := range typ.Extends {
+		dst.Tab(1).Code(extend.Id.Value).Code(":").Code(strings.Repeat(" ", length-len(extend.Id.Value)))
+		b.printDescriptor(dst, extend.Name, false, name, build.StringToHumpName(extend.Name.Name))
+		dst.Code(",\n")
+	}
+	dst.Code("}, map[uint16]hbuf.Descriptor{\n")
+
+	id = 0
 	for _, field := range typ.Fields.List {
 		v, _ := strconv.Atoi(field.Id.Value)
 		if id < v {
 			id = v
 		}
 	}
-	length := len(strconv.Itoa(id)) + 1
+	length = len(strconv.Itoa(id)) + 1
 	for _, field := range typ.Fields.List {
 		dst.Tab(1).Code(field.Id.Value).Code(":").Code(strings.Repeat(" ", length-len(field.Id.Value)))
 		b.printDescriptor(dst, field.Type, false, name, build.StringToHumpName(field.Name.Name))
@@ -282,16 +298,22 @@ func (b *Builder) printDefault(dst *build.Writer, expr ast.Expr) {
 }
 
 func (b *Builder) printDataExtend(dst *build.Writer, extends []*ast.Extends, isFast *bool) {
-	for _, v := range extends {
-		if !*isFast {
-			dst.Code("\n")
+	length := 0
+	for _, extend := range extends {
+		if length < len(extend.Name.Name) {
+			length = len(extend.Name.Name)
 		}
+	}
+
+	for _, v := range extends {
 		*isFast = false
 		dst.Tab(1).Code("")
 		pack := b.getPackage(dst, v.Name)
 		dst.Code(pack)
-		dst.Code(build.StringToHumpName(v.Name.Name))
+		dst.Code(build.StringToHumpName(v.Name.Name)).Code(strings.Repeat(" ", length-len(v.Name.Name)))
+		dst.Code(" `hbuf:\"").Code(v.Id.Value).Code("\"`\n")
+	}
+	if len(extends) > 0 {
 		dst.Code("\n")
 	}
-
 }

@@ -106,7 +106,11 @@ func (b *Builder) printDescriptor(dst *build.Writer, expr ast.Expr, isNull bool,
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
 			pack := b.getPackage(dst, expr)
-			dst.Code("hbuf.CloneDataDescriptor(&").Code(pack + build.StringToHumpName((expr.(*ast.Ident)).Name)).Code("{}, ").Code(offsetof).Code(", ").Code(isPrt).Code(")")
+			if ast.Enum == t.Obj.Kind {
+				dst.Code("hbuf.NewInt32Descriptor(").Code(offsetof).Code(", ").Code(isPrt).Code(")")
+			} else {
+				dst.Code("hbuf.CloneDataDescriptor(&").Code(pack + build.StringToHumpName((expr.(*ast.Ident)).Name)).Code("{}, ").Code(offsetof).Code(", ").Code(isPrt).Code(")")
+			}
 		} else {
 			switch build.BaseType((expr.(*ast.Ident)).Name) {
 			case build.Int8:

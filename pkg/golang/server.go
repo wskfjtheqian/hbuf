@@ -3,14 +3,12 @@ package golang
 import (
 	"hbuf/pkg/ast"
 	"hbuf/pkg/build"
-	"sort"
 )
 
 func (b *Builder) printServerCode(dst *build.Writer, typ *ast.ServerType) error {
 	dst.Import("context", "")
 
 	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/rpc", "")
-	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/manage", "")
 	b.printServer(dst, typ)
 	b.printClient(dst, typ)
 	b.printServerRouter(dst, typ)
@@ -157,21 +155,13 @@ func (b *Builder) printBinding(dst *build.Writer, method *ast.FuncType, bind *bu
 func (b *Builder) printClient(dst *build.Writer, typ *ast.ServerType) {
 	serverName := build.StringToHumpName(typ.Name.Name)
 	dst.Code("type " + serverName + "Client struct {\n")
-	dst.Tab(1).Code("client rpc.Client\n")
+	dst.Tab(1).Code("client *rpc.Client\n")
 	dst.Code("}\n\n")
 
 	dst.Code("func (p *" + serverName + "Client) Init(ctx context.Context) {\n")
 	dst.Code("}\n\n")
 
-	dst.Code("func (p *" + serverName + "Client) GetName() string {\n")
-	dst.Tab(1).Code("return \"" + build.StringToUnderlineName(typ.Name.Name) + "\"\n")
-	dst.Code("}\n\n")
-
-	dst.Code("func (p *" + serverName + "Client) GetId() uint32 {\n")
-	dst.Tab(1).Code("return 1\n")
-	dst.Code("}\n\n")
-
-	dst.Code("func New" + serverName + "Client(client rpc.Client) *" + serverName + "Client {\n")
+	dst.Code("func New" + serverName + "Client(client *rpc.Client) " + serverName + " {\n")
 	dst.Tab(1).Code("return &" + serverName + "Client{\n")
 	dst.Tab(2).Code("client: client,\n")
 	dst.Tab(1).Code("}\n")
@@ -199,40 +189,16 @@ func (b *Builder) printClient(dst *build.Writer, typ *ast.ServerType) {
 			b.printType(dst, method.Result.Type(), true)
 			dst.Code(", error) {\n")
 		}
-		dst.Import("encoding/json", "")
-		if isMethod {
-			dst.Tab(1).Code("_")
-		} else {
-			dst.Tab(1).Code("ret")
-		}
-		dst.Code(", err := r.client.Invoke(ctx, req, \"" + name + "/" + build.StringToUnderlineName(typ.Name.Name) + "/" + build.StringToUnderlineName(method.Name.Name) + "\", &rpc.ClientInvoke{\n")
-		if !isMethod {
-			dst.Tab(2).Code("ToData: func(buf []byte) (hbuf.Data, error) {\n")
-			dst.Tab(3).Code("var req ")
-			b.printType(dst, method.Result.Type(), true)
-			dst.Code("\n")
-			dst.Tab(3).Code("return &req, json.Unmarshal(buf, &req)\n")
-			dst.Tab(2).Code("},\n")
-		}
-		dst.Tab(2).Code("FormData: func(data hbuf.Data) ([]byte, error) {\n")
-		dst.Tab(3).Code("return json.Marshal(&data)\n")
-		dst.Tab(2).Code("},\n")
-		dst.Tab(1).Code("}, 1, &rpc.ClientInvoke{})\n")
-		if isMethod {
-			dst.Tab(1).Code("if err != nil {\n")
-			dst.Tab(2).Code("return err\n")
-			dst.Tab(1).Code("}\n")
-			dst.Tab(1).Code("return nil\n")
-		} else {
-			dst.Tab(1).Code("if err != nil {\n")
-			dst.Tab(2).Code("return nil, err\n")
-			dst.Tab(1).Code("}\n")
-			dst.Tab(1).Code("return ret.(*")
-			b.printType(dst, method.Result.Type(), true)
-			dst.Code("), nil\n")
-		}
-		dst.Code("}\n")
-		dst.Code("\n")
+		dst.Tab(1).Code("response, err := rpc.ClientCall[*")
+		b.printType(dst, method.Param, true)
+		dst.Code(", *")
+		b.printType(dst, method.Result.Type(), true)
+		dst.Code("](ctx, r.client, 0, \"").Code(name).Code("\", \"").Code(build.StringToUnderlineName(method.Name.Name)).Code("\", req)\n")
+		dst.Tab(1).Code("if err != nil {\n")
+		dst.Tab(2).Code("return nil, err\n")
+		dst.Tab(1).Code("}\n")
+		dst.Tab(1).Code("return response, nil\n")
+		dst.Code("}\n\n")
 		return nil
 	})
 	if err != nil {
@@ -262,95 +228,40 @@ func (b *Builder) getTag(tags []*ast.Tag) *Tag {
 
 func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 	serverName := build.StringToHumpName(typ.Name.Name)
-	dst.Code("type " + serverName + "Router struct {\n")
-	dst.Tab(1).Code("server " + serverName + "\n")
-	dst.Tab(1).Code("names  map[string]*rpc.ServerInvoke\n")
-	dst.Code("}\n\n")
-
-	dst.Code("func (p *" + serverName + "Router) GetName() string {\n")
-	dst.Tab(1).Code("return \"" + build.StringToUnderlineName(typ.Name.Name) + "\"\n")
-	dst.Code("}\n\n")
-
-	dst.Code("func (p *" + serverName + "Router) GetId() uint32 {\n")
-	dst.Tab(1).Code("return 1\n")
-	dst.Code("}\n\n")
-
-	dst.Code("func (p *" + serverName + "Router) GetServer() rpc.Init {\n")
-	dst.Tab(1).Code("return p.server\n")
-	dst.Code("}\n\n")
-
-	dst.Code("func (p *" + serverName + "Router) GetInvoke() map[string]*rpc.ServerInvoke {\n")
-	dst.Tab(1).Code("return p.names\n")
-	dst.Code("}\n\n")
-
-	dst.Code("func New" + serverName + "Router(server " + serverName + ") *" + serverName + "Router {\n")
-	dst.Tab(1).Code("return &" + serverName + "Router{\n")
-	dst.Tab(2).Code("server: server,\n")
-	dst.Tab(2).Code("names: map[string]*rpc.ServerInvoke{\n")
+	dst.Tab(0).Code("func Register").Code(serverName).Code("(r rpc.ServerRegister, server ").Code(serverName).Code(") {\n")
+	dst.Tab(1).Code("r.Register(0, \"").Code(build.StringToUnderlineName(typ.Name.Name)).Code("\",\n")
 	err := build.EnumMethod(typ, func(method *ast.FuncType, server *ast.ServerType) error {
-		dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "")
 
-		isMethod := method.Result.Type().(*ast.Ident).Name == "void"
-
-		dst.Tab(3).Code("\"" + build.StringToUnderlineName(typ.Name.Name) + "/" + build.StringToUnderlineName(method.Name.Name) + "\": {\n")
-		dst.Tab(4).Code("ToData: func(buf []byte) (hbuf.Data, error) {\n")
-		dst.Tab(5).Code("var req ")
+		dst.Tab(2).Code("&rpc.MethodImpl[*")
 		b.printType(dst, method.Param, true)
-		dst.Code("\n")
-		dst.Import("encoding/json", "")
-		dst.Tab(5).Code("return &req, json.Unmarshal(buf, &req)\n")
-		dst.Tab(4).Code("},\n")
-		if !isMethod {
-			dst.Tab(4).Code("FormData: func(data hbuf.Data) ([]byte, error) {\n")
-			dst.Tab(5).Code("return json.Marshal(&data)\n")
-			dst.Tab(4).Code("},\n")
-		}
-		dst.Tab(4).Code("SetInfo: func(ctx context.Context) {\n")
-
-		au := b.getTag(method.Tags)
-		if nil != au {
-			keys := build.GetKeysByMap(*au)
-			sort.Strings(keys)
-			for _, key := range keys {
-				values := (*au)[key]
-				if len(values) > 0 {
-					dst.Tab(5).Code("rpc.SetTag(ctx, \"").Code(key)
-					for _, val := range values {
-						dst.Code("\", \"").Code(val)
-					}
-					dst.Code("\")\n")
-				}
-			}
-		}
-		dst.Tab(4).Code("},\n")
-		dst.Tab(4).Code("Invoke: func(ctx context.Context, data hbuf.Data) (hbuf.Data, error) {\n")
-		dst.Tab(5).Code("return ")
-		if isMethod {
-			dst.Code("nil, ")
-		}
-		dst.Code("server." + build.StringToHumpName(method.Name.Name) + "(ctx, data.(*")
+		dst.Code(", *")
+		b.printType(dst, method.Result.Type(), true)
+		dst.Code("]{\n")
+		dst.Tab(3).Code("Name: \"").Code(build.StringToUnderlineName(method.Name.Name)).Code("\",\n")
+		dst.Tab(3).Code("Handler: func(ctx context.Context, req hbuf.Data) (hbuf.Data, error) {\n")
+		dst.Tab(4).Code("return server.").Code(build.StringToHumpName(method.Name.Name)).Code("(ctx, req.(*")
 		b.printType(dst, method.Param, true)
 		dst.Code("))\n")
-		dst.Tab(4).Code("},\n")
 		dst.Tab(3).Code("},\n")
+		dst.Tab(2).Code("},\n")
+
 		return nil
 	})
 	if err != nil {
 		return
 	}
-	dst.Tab(2).Code("},\n")
-	dst.Tab(1).Code("}\n")
+	dst.Tab(1).Code(")\n")
 	dst.Code("}\n\n")
 }
 
 func (b *Builder) printGetServerRouter(dst *build.Writer, typ *ast.ServerType) {
-	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/manage", "")
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/service", "")
 	serverName := build.StringToHumpName(typ.Name.Name)
 
 	dst.Code("var NotFound" + serverName + " = &Default" + serverName + "{}\n\n")
 
 	dst.Code("func Get" + serverName + "(ctx context.Context) " + serverName + " {\n")
-	dst.Tab(1).Code("router := manage.GET(ctx).Get(&" + serverName + "Router{})\n")
+	dst.Tab(1).Code("router := service.GetClient(ctx, \"").Code(build.StringToUnderlineName(serverName)).Code("\")\n")
 	dst.Tab(1).Code("if nil == router {\n")
 	dst.Tab(2).Code("return NotFound" + serverName + "\n")
 	dst.Tab(1).Code("}\n")

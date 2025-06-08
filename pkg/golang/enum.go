@@ -12,7 +12,7 @@ func printEnumCode(dst *build.Writer, typ *ast.EnumType) {
 		dst.Code("// " + name + " " + typ.Doc.Text())
 	}
 	maxLen := 0
-	dst.Code("type " + name + " int\n\n")
+	dst.Code("type " + name + " int32\n\n")
 	for _, item := range typ.Items {
 		itemName := build.StringToHumpName(item.Name.Name)
 		l := len(itemName)

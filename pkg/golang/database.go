@@ -48,7 +48,7 @@ func getCache(name string, tags []*ast.Tag) *cache {
 
 func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error {
 	dst.Import("context", "")
-	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/db", "")
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/sql", "db")
 
 	dbs, wFields, key, err := b.getDBField(typ)
 	if 0 == len(dbs) || nil != err {
@@ -451,8 +451,8 @@ func (b *Builder) printListData(dst *build.Writer, typ *ast.DataType, key string
 
 	item, scan, _ := b.getItemAndValue(fields, key)
 	dst.Code("func (g " + fName + ") DbList(ctx context.Context) ([]" + dName + ", error) {\n")
-	dst.Tab(1).Code("tableName := db.GET(ctx).Table(\"").Code(db.Name).Code("\")\n")
-	dst.Tab(1).Code("s := db.NewSql()\n")
+	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
+	dst.Tab(1).Code("s := db.NewBuilder()\n")
 	dst.Tab(1).Code("s.T(\"SELECT " + item.String() + " FROM \").T(tableName).T(\" WHERE del_time = 0\")\n")
 	dst.Code(w.GetCode().String())
 
@@ -513,8 +513,8 @@ func (b *Builder) printMapData(dst *build.Writer, key string, typ *ast.DataType,
 
 	item, scan, _ := b.getItemAndValue(fields, key)
 	dst.Code("func (g " + fName + ") DbMap(ctx context.Context) (map[" + kType.String() + "]" + dName + ", error) {\n")
-	dst.Tab(1).Code("tableName := db.GET(ctx).Table(\"").Code(db.Name).Code("\")\n")
-	dst.Tab(1).Code("s := db.NewSql()\n")
+	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
+	dst.Tab(1).Code("s := db.NewBuilder()\n")
 	dst.Tab(1).Code("s.T(\"SELECT " + item.String() + " FROM \").T(tableName).T(\" WHERE del_time = 0\")\n")
 	dst.Code(w.GetCode().String())
 
@@ -563,8 +563,8 @@ func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build
 	dst.AddImports(w.GetImports())
 
 	dst.Code("func (g " + fName + ") DbCount(ctx context.Context) (int64, error) {\n")
-	dst.Tab(1).Code("tableName := db.GET(ctx).Table(\"").Code(db.Name).Code("\")\n")
-	dst.Tab(1).Code("s := db.NewSql()\n")
+	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
+	dst.Tab(1).Code("s := db.NewBuilder()\n")
 	dst.Tab(1).Code("s.T(\"SELECT COUNT(1) FROM \").T(tableName).T(\" WHERE del_time = 0\")\n")
 	dst.Code(w.GetCode().String())
 
@@ -607,7 +607,7 @@ func (b *Builder) printDeleteData(dst *build.Writer, db *build.DB, wFields []*bu
 	dst.AddImports(w.GetImports())
 
 	dst.Code("func (g " + fName + ") DbDel(ctx context.Context) (int64, int64, error) {\n")
-	dst.Tab(1).Code("tableName := db.GET(ctx).Table(\"").Code(db.Name).Code("\")\n")
+	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
 	if isCache {
 		dst.Tab(1).Code("err := cache.DbDel(ctx, tableName)\n")
 		dst.Tab(1).Code("if err != nil {\n")
@@ -616,7 +616,7 @@ func (b *Builder) printDeleteData(dst *build.Writer, db *build.DB, wFields []*bu
 		dst.Tab(1).Code("defer cache.DbUnlock(ctx, tableName)\n")
 	}
 
-	dst.Tab(1).Code("s := db.NewSql()\n")
+	dst.Tab(1).Code("s := db.NewBuilder()\n")
 	dst.Import("time", "")
 	dst.Tab(1).Code("s.T(\"UPDATE \").T(tableName).T(\" SET del_time = \").V(time.Now().UnixMilli()).T(\" WHERE del_time = 0\")\n")
 	dst.Code(w.GetCode().String())
@@ -632,7 +632,7 @@ func (b *Builder) printRemoveData(dst *build.Writer, db *build.DB, wFields []*bu
 	dst.AddImports(w.GetImports())
 
 	dst.Code("func (g " + fName + ") DbRemove(ctx context.Context) (int64, int64, error) {\n")
-	dst.Tab(1).Code("tableName := db.GET(ctx).Table(\"").Code(db.Name).Code("\")\n")
+	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
 	if isCache {
 		dst.Tab(1).Code("err := cache.DbDel(ctx, tableName)\n")
 		dst.Tab(1).Code("if err != nil {\n")
@@ -641,7 +641,7 @@ func (b *Builder) printRemoveData(dst *build.Writer, db *build.DB, wFields []*bu
 		dst.Tab(1).Code("defer cache.DbUnlock(ctx, tableName)\n")
 	}
 
-	dst.Tab(1).Code("s := db.NewSql()\n")
+	dst.Tab(1).Code("s := db.NewBuilder()\n")
 	dst.Tab(1).Code("s.T(\"DELETE FROM \").T(tableName).T(\" WHERE 1 = 1\")\n")
 	dst.Code(w.GetCode().String())
 
@@ -658,7 +658,7 @@ func (b *Builder) printInsertData(dst *build.Writer, typ *ast.DataType, val stri
 	dst.AddImports(w.GetImports())
 
 	dst.Code("func (g " + fName + ") DbInsert(ctx context.Context) (int64, int64, error) {\n")
-	dst.Tab(1).Code("tableName := db.GET(ctx).Table(\"").Code(db.Name).Code("\")\n")
+	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
 	if nil != c {
 		dst.Tab(1).Code("err := cache.DbDel(ctx, tableName)\n")
 		dst.Tab(1).Code("if err != nil {\n")
@@ -666,7 +666,7 @@ func (b *Builder) printInsertData(dst *build.Writer, typ *ast.DataType, val stri
 		dst.Tab(1).Code("}\n")
 		dst.Tab(1).Code("defer cache.DbUnlock(ctx, tableName)\n")
 	}
-	dst.Tab(1).Code("s := db.NewSql()\n")
+	dst.Tab(1).Code("s := db.NewBuilder()\n")
 	dst.Tab(1).Code("s.T(\"INSERT INTO \").T(tableName).T(\" SET \").Del(\",\")\n")
 
 	set := b.printSet(fields, val, false)
@@ -680,7 +680,7 @@ func (b *Builder) printInsertData(dst *build.Writer, typ *ast.DataType, val stri
 func (b *Builder) printInsertListData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField, isCache bool) {
 	name := build.StringToHumpName(typ.Name.Name)
 	dst.Code("func (g " + name + ") DbInsertList(ctx context.Context, val []*" + name + ") (int64, int64, error) {\n")
-	dst.Tab(1).Code("tableName := db.GET(ctx).Table(\"").Code(db.Name).Code("\")\n")
+	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
 	dst.Tab(1).Code("if nil == val || 0 == len(val) {\n")
 	dst.Tab(2).Code("return 0, 0, nil\n")
 	dst.Tab(1).Code("}\n")
@@ -691,7 +691,7 @@ func (b *Builder) printInsertListData(dst *build.Writer, typ *ast.DataType, db *
 		dst.Tab(1).Code("}\n")
 		dst.Tab(1).Code("defer cache.DbUnlock(ctx, tableName)\n")
 	}
-	dst.Tab(1).Code("s := db.NewSql()\n")
+	dst.Tab(1).Code("s := db.NewBuilder()\n")
 	dst.Tab(1).Code("s.T(\"INSERT INTO \").T(tableName).T(\" (")
 	isFist := true
 	for _, field := range fields {
@@ -731,7 +731,7 @@ func (b *Builder) printUpdateData(dst *build.Writer, typ *ast.DataType, key stri
 	dst.AddImports(w.GetImports())
 
 	dst.Code("func (g " + fName + ") DbUpdate(ctx context.Context) (int64, int64, error) {\n")
-	dst.Tab(1).Code("tableName := db.GET(ctx).Table(\"").Code(db.Name).Code("\")\n")
+	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
 	if nil != c {
 		dst.Tab(1).Code("err := cache.DbDel(ctx, tableName)\n")
 		dst.Tab(1).Code("if err != nil {\n")
@@ -739,7 +739,7 @@ func (b *Builder) printUpdateData(dst *build.Writer, typ *ast.DataType, key stri
 		dst.Tab(1).Code("}\n")
 		dst.Tab(1).Code("defer cache.DbUnlock(ctx, tableName)\n")
 	}
-	dst.Tab(1).Code("s := db.NewSql()\n")
+	dst.Tab(1).Code("s := db.NewBuilder()\n")
 	dst.Tab(1).Code("s.T(\"UPDATE \").T(tableName).T(\" SET \").Del(\",\")\n")
 
 	set := b.printSet(fields, key, true)
@@ -763,7 +763,7 @@ func (b *Builder) printSetData(dst *build.Writer, typ *ast.DataType, key string,
 	dst.AddImports(w.GetImports())
 
 	dst.Code("func (g " + fName + ") DbSet(ctx context.Context) (int64, int64, error) {\n")
-	dst.Tab(1).Code("tableName := db.GET(ctx).Table(\"").Code(db.Name).Code("\")\n")
+	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
 	if nil != c {
 		dst.Tab(1).Code("err := cache.DbDel(ctx, tableName)\n")
 		dst.Tab(1).Code("if err != nil {\n")
@@ -771,7 +771,7 @@ func (b *Builder) printSetData(dst *build.Writer, typ *ast.DataType, key string,
 		dst.Tab(1).Code("}\n")
 		dst.Tab(1).Code("defer cache.DbUnlock(ctx, tableName)\n")
 	}
-	dst.Tab(1).Code("s := db.NewSql()\n")
+	dst.Tab(1).Code("s := db.NewBuilder()\n")
 	dst.Tab(1).Code("s.T(\"UPDATE \").T(tableName).T(\" SET \").Del(\",\")\n")
 
 	set := b.printSet(fields, key, false)
@@ -833,8 +833,8 @@ func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, key string,
 	item, scan, _ := b.getItemAndValue(fields, key)
 
 	dst.Code("func (g " + fName + ") DbGet(ctx context.Context) (*" + dName + ", error) {\n")
-	dst.Tab(1).Code("tableName := db.GET(ctx).Table(\"").Code(db.Name).Code("\")\n")
-	dst.Tab(1).Code("s := db.NewSql()\n")
+	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
+	dst.Tab(1).Code("s := db.NewBuilder()\n")
 	dst.Tab(1).Code("s.T(\"SELECT " + item.String() + " FROM \").T(tableName).T(\" WHERE del_time = 0\")\n")
 	dst.Code(w.GetCode().String())
 	dst.Tab(1).Code("s.T(\" LIMIT 1\")\n")

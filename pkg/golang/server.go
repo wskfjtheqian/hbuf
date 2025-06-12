@@ -190,8 +190,6 @@ func (b *Builder) printClient(dst *build.Writer, typ *ast.ServerType) {
 			dst.Code(", error) {\n")
 		}
 		dst.Tab(1).Code("response, err := rpc.ClientCall[*")
-		b.printType(dst, method.Param, true)
-		dst.Code(", *")
 		b.printType(dst, method.Result.Type(), true)
 		dst.Code("](ctx, r.client, 0, \"").Code(name).Code("\", \"").Code(build.StringToUnderlineName(method.Name.Name)).Code("\", req)\n")
 		dst.Tab(1).Code("if err != nil {\n")
@@ -232,16 +230,17 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 	dst.Tab(1).Code("r.Register(0, \"").Code(build.StringToUnderlineName(typ.Name.Name)).Code("\",\n")
 	err := build.EnumMethod(typ, func(method *ast.FuncType, server *ast.ServerType) error {
 
-		dst.Tab(2).Code("&rpc.MethodImpl[*")
-		b.printType(dst, method.Param, true)
-		dst.Code(", *")
-		b.printType(dst, method.Result.Type(), true)
-		dst.Code("]{\n")
+		dst.Tab(2).Code("&rpc.Method{\n")
 		dst.Tab(3).Code("Name: \"").Code(build.StringToUnderlineName(method.Name.Name)).Code("\",\n")
 		dst.Tab(3).Code("Handler: func(ctx context.Context, req hbuf.Data) (hbuf.Data, error) {\n")
 		dst.Tab(4).Code("return server.").Code(build.StringToHumpName(method.Name.Name)).Code("(ctx, req.(*")
 		b.printType(dst, method.Param, true)
 		dst.Code("))\n")
+		dst.Tab(3).Code("},\n")
+		dst.Tab(3).Code("Decode: func(decoder func(v hbuf.Data) (hbuf.Data, error)) (hbuf.Data, error) {\n")
+		dst.Tab(4).Code("return decoder(&")
+		b.printType(dst, method.Param, true)
+		dst.Tab(4).Code("{})\n")
 		dst.Tab(3).Code("},\n")
 		dst.Tab(2).Code("},\n")
 

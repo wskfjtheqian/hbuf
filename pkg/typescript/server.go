@@ -139,7 +139,7 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 	dst.Code("\t\tthis.server = server\n")
 	dst.Code("\t\tthis.invoke = {\n")
 	err := build.EnumMethod(typ, func(method *ast.FuncType, server *ast.ServerType) error {
-		dst.Code("\t\t\t\"" + build.StringToUnderlineName(server.Name.Name) + "/" + build.StringToUnderlineName(method.Name.Name) + "\": {\n")
+		dst.Code("\t\t\t\"" + build.StringToUnderlineName(method.Name.Name) + "\": {\n")
 		dst.Code("\t\t\t\tformData(data: BinaryData | Record<string, any>): h.Data {\n")
 		dst.Code("\t\t\t\t\treturn ")
 		b.printType(dst, method.Param.Type(), false, false)

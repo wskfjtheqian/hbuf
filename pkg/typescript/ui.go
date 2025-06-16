@@ -3,15 +3,8 @@ package ts
 import (
 	"hbuf/pkg/ast"
 	"hbuf/pkg/build"
-	"sort"
 	"strconv"
 )
-
-type FieldIndex struct {
-	field *ast.Field
-	index int
-	tag   *ui
-}
 
 // 创建表单代码
 func (b *Builder) printFormCode(dst *build.Writer, expr ast.Expr) {
@@ -167,44 +160,29 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Code("\tname: '" + name + "TableColumn',\n")
 	dst.Code("\tprops: {\n")
 	dst.Code("\t\tposition: Array<String>,\n")
-	dst.Code("\t\thide:String,\n")
+	dst.Code("\t\thide: Array<String>,\n")
 	dst.Code("\t},\n")
 	dst.Code("\tsetup(props:any) {\n")
 	dst.Code("\t\treturn (_ctx: Record<string, any>) => {\n")
 	dst.Code("\t\t\tconst maps: Record<string, any> = {\n")
 	langName := build.StringToFirstLower(name)
-
-	fields := make([]FieldIndex, 0)
-	i := 0
+	//i := 0
 	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
-		tag := b.getUI(field.Tags)
-		if nil == tag || 0 == len(tag.table) {
+
+		table := b.getUI(field.Tags)
+		if nil == table || 0 == len(table.table) {
 			return nil
 		}
-		i++
-		index := i
-		if nil != tag.index {
-			index = *tag.index
+
+		//isEnum := build.IsEnum(field.Type)
+		//isArray := build.IsArray(field.Type)
+		//isNull := build.IsNil(field.Type)
+		//i++
+		//index := i
+		if nil != table.index {
+			//index = *table.index
 		}
-		fields = append(fields, FieldIndex{
-			field: field,
-			index: index,
-			tag:   tag,
-		})
-		return nil
-	})
-	if err != nil {
-		return
-	}
-
-	sort.Slice(fields, func(i, j int) bool {
-		return fields[i].index < fields[j].index
-	})
-
-	for _, item := range fields {
-		field := item.field
-		table := item.tag
-
+		//dst.Code("                <el-table-column prop="adminId" label="adminId" width="140"/>\n")
 		fieldName := build.StringToFirstLower(field.Name.Name)
 		dst.Tab(4).Code("\"").Code(fieldName).Code("\": () =>(\n")
 
@@ -238,6 +216,10 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 		dst.Code("\t\t\t\t\t</el-table-column>\n")
 		dst.Tab(4).Code("),\n")
 		lang.Add(fieldName, field.Tags)
+		return nil
+	})
+	if err != nil {
+		return
 	}
 
 	dst.Tab(3).Code("}\n")
@@ -252,7 +234,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Code("                }\n")
 	dst.Code("            }\n")
 	dst.Code("            for (const key in maps) {\n")
-	dst.Code("                if (!list.includes(key) && maps[key]) {\n")
+	dst.Code("                if (!list.includes(key) && maps[key] && !_ctx.hide?.includes(key)) {\n")
 	dst.Code("                    list.push(key)\n")
 	dst.Code("                }\n")
 	dst.Code("            }\n")
@@ -426,6 +408,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Code("\tprops: {\n")
 	dst.Code("\t\tsize: String,\n")
 	dst.Code("\t\tposition: Array<String>,\n")
+	dst.Code("\t\thide: Array<String>,\n")
 	dst.Code("\t\tmodel: ")
 	b.printType(dst, typ.Name, false, false)
 	dst.Code("\n")
@@ -436,38 +419,22 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Code("\t\treturn (_ctx: Record<string, any>) => {\n")
 	dst.Code("\t\t\tconst maps: Record<string, any> = {\n")
 	langName := build.StringToFirstLower(name)
-
-	fields := make([]FieldIndex, 0)
-	i := 0
+	//i := 0
 	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
-		tag := b.getUI(field.Tags)
-		if nil == tag || 0 == len(tag.form) {
+
+		form := b.getUI(field.Tags)
+		if nil == form || 0 == len(form.form) {
 			return nil
 		}
-		i++
-		index := i
-		if nil != tag.index {
-			index = *tag.index
-		}
-		fields = append(fields, FieldIndex{
-			field: field,
-			index: index,
-			tag:   tag,
-		})
-		return nil
-	})
-	if err != nil {
-		return
-	}
-
-	for _, item := range fields {
-		field := item.field
-		form := item.tag
 
 		isArray := build.IsArray(field.Type)
 		isNull := build.IsNil(field.Type)
 		_, verify := build.GetTag(field.Tags, "verify")
-
+		//i++
+		//index := i
+		if nil != form.index {
+			//index = *table.index
+		}
 		fieldName := build.StringToFirstLower(field.Name.Name)
 		dst.Tab(4).Code("\"").Code(fieldName).Code("\": () =>(\n")
 		dst.Tab(5).Code("<el-form-item prop=\"").Code(fieldName).Code("\"")
@@ -572,7 +539,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				dst.Tab(7).Code("disabled  \n")
 			}
 			dst.Tab(7).Code(">\n")
-			b.printMenuItem(dst, field.Type, false)
+			b.printMenuItem(dst, field.Type, false, "el-option")
 			dst.Tab(6).Code("</el-select>\n")
 		} else if "switch" == form.form {
 			dst.Code("\t\t\t\t\t<el-switch modelValue={_ctx.model!.").Code(fieldName).Code(" ??= false")
@@ -585,19 +552,24 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				dst.Code(" disabled")
 			}
 			dst.Code("/>\n")
-			//} else if isNumber {
-			//	dst.Code("\t\t\t\t\t<el-input-number\n")
-			//	dst.Code("\t\t\t\t\t\tv-model={_ctx.model!.").Code(fieldName).Code("}\n")
-			//	dst.Code("\t\t\t\t\t\tsize={props.size}\n")
-			//	dst.Code("\t\t\t\t\t\tcontrols-position=\"right\"\n")
-			//	dst.Code("\t\t\t\t\t\tprecision=\"").Code(strconv.Itoa(form.digit)).Code("\"\n")
-			//	if isNull {
-			//		dst.Code("\t\t\t\t\t\tclearable\n")
-			//	}
-			//	if form.onlyRead {
-			//		dst.Code(" disabled\n")
-			//	}
-			//	dst.Code("\t\t\t\t\t/>\n")
+		} else if "radio" == form.form {
+			dst.Tab(6).Code("<el-radio-group v-model={_ctx.model!.").Code(fieldName).Code("}\n")
+			dst.Tab(7).Code("size={props.size}\n")
+			if form.onlyRead {
+				dst.Tab(7).Code("disabled\n")
+			}
+			dst.Tab(7).Code(">\n")
+			b.printMenuItem(dst, field.Type, false, "el-radio")
+			dst.Tab(6).Code("</el-radio-group>\n")
+		} else if "radioButton" == form.form {
+			dst.Tab(6).Code("<el-radio-group v-model={_ctx.model!.").Code(fieldName).Code("}\n")
+			dst.Tab(7).Code("size={props.size}\n")
+			if form.onlyRead {
+				dst.Tab(7).Code("disabled\n")
+			}
+			dst.Tab(7).Code(">\n")
+			b.printMenuItem(dst, field.Type, false, "el-radio-button")
+			dst.Tab(6).Code("</el-radio-group>\n")
 		} else if "pass" == form.form {
 			dst.Tab(6).Code("<el-input\n")
 			dst.Tab(7).Code("modelValue={")
@@ -610,6 +582,9 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(7).Code("size={props.size}\n")
 			dst.Tab(7).Code("type=\"password\"\n")
 			dst.Tab(7).Code("show-password\n")
+			if isNull {
+				dst.Tab(7).Code("clearable\n")
+			}
 			if isNull {
 				dst.Tab(7).Code("clearable\n")
 			}
@@ -656,6 +631,10 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		lang.Add(fieldName, field.Tags)
 		dst.Tab(5).Code("</el-form-item>\n")
 		dst.Tab(4).Code("),\n")
+		return nil
+	})
+	if err != nil {
+		return
 	}
 
 	dst.Tab(3).Code("}\n")
@@ -670,7 +649,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Code("                }\n")
 	dst.Code("            }\n")
 	dst.Code("            for (const key in maps) {\n")
-	dst.Code("                if (!list.includes(key) && maps[key]) {\n")
+	dst.Code("                if (!list.includes(key) && maps[key] && !_ctx.hide?.includes(key)) {\n")
 	dst.Code("                    list.push(key)\n")
 	dst.Code("                }\n")
 	dst.Code("            }\n")
@@ -680,14 +659,14 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Code("});\n\n")
 }
 
-func (b *Builder) printMenuItem(dst *build.Writer, expr ast.Expr, empty bool) {
+func (b *Builder) printMenuItem(dst *build.Writer, expr ast.Expr, empty bool, option string) {
 	switch expr.(type) {
 	case *ast.EnumType:
 		t := expr.(*ast.EnumType)
 		pkg := b.getPackage(dst, t.Name, "")
 		name := build.StringToHumpName(t.Name.Name)
 		dst.Code("\t\t\t\t\t\t{").Code(pkg).Code(".").Code(name).Code(".values.map((val) => {\n")
-		dst.Code("\t\t\t\t\t\t\treturn <el-option key={val.value}\n")
+		dst.Code("\t\t\t\t\t\t\treturn <" + option + " key={val.value}\n")
 		dst.Code("\t\t\t\t\t\t\t\tlabel={_ctx.$t(val.toString())}\n")
 		dst.Code("\t\t\t\t\t\t\t\tvalue={val}\n")
 		dst.Code("\t\t\t\t\t\t\t/>\n")
@@ -696,7 +675,7 @@ func (b *Builder) printMenuItem(dst *build.Writer, expr ast.Expr, empty bool) {
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
 			b.getPackage(dst, expr, "")
-			b.printMenuItem(dst, t.Obj.Decl.(*ast.TypeSpec).Type, empty)
+			b.printMenuItem(dst, t.Obj.Decl.(*ast.TypeSpec).Type, empty, option)
 		}
 	case *ast.ArrayType:
 		//ar := expr.(*ast.ArrayType)
@@ -718,6 +697,6 @@ func (b *Builder) printMenuItem(dst *build.Writer, expr ast.Expr, empty bool) {
 		//}
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
-		b.printMenuItem(dst, t.Type(), t.Empty)
+		b.printMenuItem(dst, t.Type(), t.Empty, option)
 	}
 }

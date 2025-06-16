@@ -95,7 +95,7 @@ func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 			b.printType(dst, method.Result.Type(), false, false)
 		}
 		dst.Code(">(\"")
-		dst.Code(build.StringToUnderlineName(server.Name.Name) + "/" + build.StringToUnderlineName(method.Name.Name))
+		dst.Code(build.StringToUnderlineName(method.Name.Name))
 		dst.Code("\", ")
 		dst.Code("0 << 32 | " + method.Id.Value)
 		dst.Code(", ")

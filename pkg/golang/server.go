@@ -122,6 +122,7 @@ func (b *Builder) printBinding(dst *build.Writer, method *ast.FuncType, bind *bu
 	}
 	if nil != verify {
 		dst.Code("\tif err := req.Verify(ctx); err != nil {\n")
+		dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/erro", "")
 		dst.Code("\t\treturn nil, erro.Wrap(err)\n")
 		dst.Code("\t}\n")
 	}

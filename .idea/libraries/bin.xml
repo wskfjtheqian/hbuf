@@ -1,0 +1,18 @@
+<component name="libraryTable">
+  <library name="bin">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/bin/linux_amd64_35be433.zip!/" />
+      <root url="jar://$PROJECT_DIR$/bin/linux_386_35be433.zip!/" />
+      <root url="jar://$PROJECT_DIR$/bin/windows_386_35be433.zip!/" />
+      <root url="jar://$PROJECT_DIR$/bin/darwin_amd64_35be433.zip!/" />
+      <root url="jar://$PROJECT_DIR$/bin/linux_arm_35be433.zip!/" />
+      <root url="jar://$PROJECT_DIR$/bin/linux_arm64_35be433.zip!/" />
+      <root url="jar://$PROJECT_DIR$/bin/darwin_arm64_35be433.zip!/" />
+      <root url="jar://$PROJECT_DIR$/bin/windows_arm64_35be433.zip!/" />
+      <root url="jar://$PROJECT_DIR$/bin/windows_arm_35be433.zip!/" />
+      <root url="jar://$PROJECT_DIR$/bin/windows_amd64_35be433.zip!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

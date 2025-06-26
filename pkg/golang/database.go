@@ -708,9 +708,9 @@ func (b *Builder) printInsertData(dst *build.Writer, typ *ast.DataType, val stri
 
 func (b *Builder) printInsertListData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField, isCache bool) {
 	name := build.StringToHumpName(typ.Name.Name)
-	dst.Code("func (g " + name + ") DbInsertList(ctx context.Context, val []*" + name + ") (int64, int64, error) {\n")
+	dst.Code("func (g " + name + ") DbInsertList(ctx context.Context, values []*" + name + ") (int64, int64, error) {\n")
 	dst.Tab(1).Code("tableName := db.GET(ctx).Table(\"").Code(b.GetTableName(db)).Code("\")\n")
-	dst.Code("\tif nil == val || 0 == len(val) {\n")
+	dst.Code("\tif nil == values || 0 == len(values) {\n")
 	dst.Code("\t\treturn 0, 0, nil\n")
 	dst.Code("\t}\n")
 	if isCache {
@@ -731,7 +731,7 @@ func (b *Builder) printInsertListData(dst *build.Writer, typ *ast.DataType, db *
 		dst.Code(field.Dbs[0].Name)
 	}
 	dst.Code(") VALUES\")\n")
-	dst.Code("\tfor i, val := range val {\n")
+	dst.Code("\tfor i, val := range values {\n")
 	dst.Code("\t\tif 0 != i {\n")
 	dst.Code("\t\t\ts.T(\",\")\n")
 	dst.Code("\t\t}\n")

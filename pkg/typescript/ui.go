@@ -273,7 +273,7 @@ func (b *Builder) printToString(dst *build.Writer, name string, expr ast.Expr, e
 				if empty {
 					dst.Code("null == ").Code(name).Code(" ? \"\" : ")
 				}
-				dst.Code(name).Code("!.toString()")
+				dst.Code("_ctx.$t(").Code(name).Code("?.toString())")
 			case build.Date:
 				if empty {
 					dst.Code("null == ").Code(name).Code(" ? \"\" : ")

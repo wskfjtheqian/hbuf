@@ -128,7 +128,7 @@ func (b *Builder) printBinding(dst *build.Writer, method *ast.FuncType, bind *bu
 	}
 	pack := b.getPackage(dst, bind.Server.Name)
 	if !isSub {
-		dst.Code("\treps, err := ")
+		dst.Code("\tresp, err := ")
 	} else {
 		dst.Code("\terr := ")
 	}
@@ -148,7 +148,7 @@ func (b *Builder) printBinding(dst *build.Writer, method *ast.FuncType, bind *bu
 		b.printType(dst, method.Result.Type(), true)
 		dst.Code("{")
 		b.printType(dst, bind.Method.Result.Type(), true)
-		dst.Code(": *reps}, ")
+		dst.Code(": *resp}, ")
 	}
 	dst.Code("nil\n")
 	return nil

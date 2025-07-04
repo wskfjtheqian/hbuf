@@ -594,13 +594,8 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(7).Code("precision={").Code(strconv.Itoa(form.digit)).Code("}\n")
 			dst.Tab(6).Code("/>\n")
 		} else if isArray {
-			dst.Tab(6).Code("<el-select\n")
+			dst.Tab(6).Code("<el-input-tag\n")
 			dst.Tab(7).Code("v-model={_ctx.model!.").Code(fieldName).Code("}\n")
-			dst.Tab(7).Code("multiple\n")
-			dst.Tab(7).Code("filterable\n")
-			dst.Tab(7).Code("allow-create\n")
-			dst.Tab(7).Code("default-first-option\n")
-			dst.Tab(7).Code("reserve-keyword={false}\n")
 			if isNull {
 				dst.Tab(7).Code("clearable\n")
 			}
@@ -608,7 +603,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				dst.Tab(7).Code(" disabled\n")
 			}
 			dst.Tab(7).Code(">\n")
-			dst.Tab(6).Code("</el-select>\n")
+			dst.Tab(6).Code("</el-input-tag>\n")
 		} else {
 			dst.Tab(6).Code("<el-input\n")
 			dst.Tab(7).Code("modelValue={")

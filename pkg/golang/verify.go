@@ -189,6 +189,8 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 				case build.Decimal:
 					if 0 < len(f.Min) || 0 < len(f.Max) {
 						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/rpc", "")
+						dst.Import("github.com/shopspring/decimal", "")
+
 						dst.Code("\tif ")
 						if 0 < len(f.Min) {
 							dst.Code("decimal.NewFromFloat(" + f.Min + ").GreaterThan(i.Get" + fName + "()) ")

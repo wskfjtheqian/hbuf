@@ -85,7 +85,7 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 				case build.Uint64:
 					b.verifyNum(dst, pName, val, f, "[0-9]\\\\d*", field.Type, "0", "18446744073709551615615")
 				case build.Date:
-					dst.Code("\tDateTime? val = DateTime.tryParse(value!);\n")
+					dst.Code("\tconst val = DateTime.tryParse(value!);\n")
 					dst.Code("\tif (null == val) {\n")
 					b.printVerifyError(dst, pName, val)
 					dst.Code("\t}\n")
@@ -120,7 +120,7 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 						dst.Code("\t}\n")
 					}
 					if i == len(verify.GetFormat())-1 {
-						dst.Code("\tif (!new RegExp(\"-?[0-9]\\\\d*.\\\\d*|0.\\\\d*[0-9]\\\\d*\").test(value")
+						dst.Code("\tif (!new RegExp(\"^-?\\\\d+(\\\\.\\\\d+)?$\").test(value")
 						if build.IsNil(field.Type) {
 							dst.Code("!")
 						}
@@ -129,7 +129,7 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 						dst.Code("\t}\n")
 
 						dst.Import("decimal.js", "* as d")
-						dst.Code("\tDecimal? val = Decimal.tryParse(value!);\n")
+						dst.Code("\tconst val = d.Decimal.tryParse(value!);\n")
 						dst.Code("\tif (null == val) {\n")
 						b.printVerifyError(dst, pName, val)
 						dst.Code("\t}\n")

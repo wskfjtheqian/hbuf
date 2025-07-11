@@ -4,7 +4,6 @@ import (
 	"hbuf/pkg/ast"
 	"hbuf/pkg/build"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -84,6 +83,8 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 					b.verifyNum(dst, pName, val, f, "[0-9]\\\\d*", field.Type, "-9223372036854775808", "9223372036854775808")
 				case build.Uint64:
 					b.verifyNum(dst, pName, val, f, "[0-9]\\\\d*", field.Type, "0", "18446744073709551615615")
+				case build.Decimal:
+					b.verifyNum(dst, pName, val, f, "^[+-]?\\\\d+(\\\\.\\\\d+)?$", field.Type, "", "")
 				case build.Date:
 					dst.Code("\tconst val = DateTime.tryParse(value!);\n")
 					dst.Code("\tif (null == val) {\n")
@@ -112,42 +113,6 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 						b.printVerifyError(dst, pName, val)
 						b.printVerifyError(dst, pName, val)
 						dst.Code("\t}\n")
-					}
-				case build.Decimal:
-					if 0 < len(f.Reg) {
-						dst.Code("\tif (!new RegExp(\"" + strings.ReplaceAll(f.Reg, "$", "\\$") + "\").test(value!)) {\n")
-						b.printVerifyError(dst, pName, val)
-						dst.Code("\t}\n")
-					}
-					if i == len(verify.GetFormat())-1 {
-						dst.Code("\tif (!new RegExp(\"^[+-]?\\\\d+(\\\\.\\\\d+)?$\").test(value")
-						if build.IsNil(field.Type) {
-							dst.Code("!")
-						}
-						dst.Code(")) {\n")
-						b.printVerifyError(dst, pName, val)
-						dst.Code("\t}\n")
-
-						dst.Import("decimal.js", "* as d")
-						dst.Code("\tconst val = d.Decimal.tryParse(value!);\n")
-						dst.Code("\tif (null == val) {\n")
-						b.printVerifyError(dst, pName, val)
-						dst.Code("\t}\n")
-						if 0 < len(f.Min) || 0 < len(f.Max) {
-							dst.Code("\tif (")
-							if 0 < len(f.Min) {
-								dst.Code("1 == val.compareTo(Decimal.fromInt(" + f.Min + "))")
-							}
-							if 0 < len(f.Max) {
-								if 0 < len(f.Min) {
-									dst.Code(" || ")
-								}
-								dst.Code("-1 == val.compareTo(Decimal.fromInt(" + f.Max + "))")
-							}
-							dst.Code(") {\n")
-							b.printVerifyError(dst, pName, val)
-							dst.Code("\t}\n")
-						}
 					}
 				case build.String:
 					if 0 < len(f.Min) || 0 < len(f.Max) {
@@ -215,9 +180,9 @@ func (b *Builder) verifyNum(dst *build.Writer, pName string, val *build.VerifyEn
 			dst.Code("new d.Decimal(").Code(f.Max).Code(").lessThan(val)")
 		}
 		dst.Code(") {\n")
-		b.printVerifyError(dst, pName, val)
+		b.printVerifyError(dst.Tab(1), pName, val)
 
-		dst.Code("\t}\n")
+		dst.Tab(1).Code("\t}\n")
 	}
 
 	dst.Tab(1).Code("} catch (e){\n")

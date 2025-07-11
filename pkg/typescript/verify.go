@@ -79,7 +79,7 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 				case build.Uint32:
 					b.verifyNum(dst, pName, val, f, "[0-9]\\\\d*", field.Type, "0", "4294967295")
 				case build.Float, build.Double:
-					b.verifyNum(dst, pName, val, f, "-?[0-9]\\\\d*.\\\\d*|0.\\\\d*[0-9]\\\\d*", field.Type, "", "")
+					b.verifyNum(dst, pName, val, f, "^[+-]?\\\\d+(\\\\.\\\\d+)?$", field.Type, "", "")
 				case build.Int64:
 					b.verifyNum(dst, pName, val, f, "[0-9]\\\\d*", field.Type, "-9223372036854775808", "9223372036854775808")
 				case build.Uint64:
@@ -120,7 +120,7 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 						dst.Code("\t}\n")
 					}
 					if i == len(verify.GetFormat())-1 {
-						dst.Code("\tif (!new RegExp(\"^-?\\\\d+(\\\\.\\\\d+)?$\").test(value")
+						dst.Code("\tif (!new RegExp(\"^[+-]?\\\\d+(\\\\.\\\\d+)?$\").test(value")
 						if build.IsNil(field.Type) {
 							dst.Code("!")
 						}

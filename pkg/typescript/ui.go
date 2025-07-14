@@ -531,7 +531,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(6).Code("<el-select\n")
 			if isNull {
 				dst.Tab(7).Code("modelValue={_ctx.model!.").Code(fieldName).Code("?.value}\n")
-				dst.Tab(7).Code("onUpdate:modelValue={($event: number | null) => !number ? null : _ctx.model!.").Code(fieldName).Code(" = $4.StatisticsDimensions.valueOf($event)}\n")
+				dst.Tab(7).Code("onUpdate:modelValue={($event: number | null) => !$event ? null : _ctx.model!.").Code(fieldName).Code(" = $4.StatisticsDimensions.valueOf($event)}\n")
 			} else {
 				dst.Tab(7).Code("modelValue={_ctx.model!.").Code(fieldName).Code(".value}\n")
 				dst.Tab(7).Code("onUpdate:modelValue={($event: number) => _ctx.model!.").Code(fieldName).Code(" = $4.StatisticsDimensions.valueOf($event)}\n")
@@ -563,7 +563,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(6).Code("<el-radio-group \n")
 			if isNull {
 				dst.Tab(7).Code("modelValue={_ctx.model!.").Code(fieldName).Code("?.value}\n")
-				dst.Tab(7).Code("onUpdate:modelValue={($event: number | null) => !number ? null : _ctx.model!.").Code(fieldName).Code(" = $4.StatisticsDimensions.valueOf($event)}\n")
+				dst.Tab(7).Code("onUpdate:modelValue={($event: number | null) => !$event ? null : _ctx.model!.").Code(fieldName).Code(" = $4.StatisticsDimensions.valueOf($event)}\n")
 			} else {
 				dst.Tab(7).Code("modelValue={_ctx.model!.").Code(fieldName).Code(".value}\n")
 				dst.Tab(7).Code("onUpdate:modelValue={($event: number) => _ctx.model!.").Code(fieldName).Code(" = $4.StatisticsDimensions.valueOf($event)}\n")
@@ -580,7 +580,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(6).Code("<el-radio-group\n")
 			if isNull {
 				dst.Tab(7).Code("modelValue={_ctx.model!.").Code(fieldName).Code("?.value}\n")
-				dst.Tab(7).Code("onUpdate:modelValue={($event: number | null) => !number ? null : _ctx.model!.").Code(fieldName).Code(" = $4.StatisticsDimensions.valueOf($event)}\n")
+				dst.Tab(7).Code("onUpdate:modelValue={($event: number | null) => !$event ? null : _ctx.model!.").Code(fieldName).Code(" = $4.StatisticsDimensions.valueOf($event)}\n")
 			} else {
 				dst.Tab(7).Code("modelValue={_ctx.model!.").Code(fieldName).Code(".value}\n")
 				dst.Tab(7).Code("onUpdate:modelValue={($event: number) => _ctx.model!.").Code(fieldName).Code(" = $4.StatisticsDimensions.valueOf($event)}\n")

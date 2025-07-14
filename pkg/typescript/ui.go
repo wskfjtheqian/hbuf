@@ -529,7 +529,9 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(6).Code("/>\n")
 		} else if "menu" == form.form {
 			dst.Tab(6).Code("<el-select\n")
-			dst.Tab(7).Code("v-model={_ctx.model!.").Code(fieldName).Code("}\n")
+			dst.Tab(7).Code("modelValue={_ctx.model!.").Code(fieldName).Code("?.value}}\n")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: number) => _ctx.model!.").Code(fieldName).Code(" = $4.StatisticsDimensions.valueOf($event)}}\n")
+
 			dst.Tab(7).Code("style={\"width:180px\"}\n")
 			dst.Tab(7).Code("size={props.size}\n")
 			if isNull {
@@ -553,7 +555,8 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Code("/>\n")
 		} else if "radio" == form.form {
-			dst.Tab(6).Code("<el-radio-group v-model={_ctx.model!.").Code(fieldName).Code("}\n")
+			dst.Tab(7).Code("modelValue={_ctx.model!.").Code(fieldName).Code("?.value}}\n")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: number) => _ctx.model!.").Code(fieldName).Code(" = $4.StatisticsDimensions.valueOf($event)}}\n")
 			dst.Tab(7).Code("size={props.size}\n")
 			if form.onlyRead {
 				dst.Tab(7).Code("disabled\n")
@@ -562,7 +565,8 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			b.printMenuItem(dst, field.Type, false, "el-radio")
 			dst.Tab(6).Code("</el-radio-group>\n")
 		} else if "radioButton" == form.form {
-			dst.Tab(6).Code("<el-radio-group v-model={_ctx.model!.").Code(fieldName).Code("}\n")
+			dst.Tab(7).Code("modelValue={_ctx.model!.").Code(fieldName).Code("?.value}}\n")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: number) => _ctx.model!.").Code(fieldName).Code(" = $4.StatisticsDimensions.valueOf($event)}}\n")
 			dst.Tab(7).Code("size={props.size}\n")
 			if form.onlyRead {
 				dst.Tab(7).Code("disabled\n")
@@ -663,7 +667,7 @@ func (b *Builder) printMenuItem(dst *build.Writer, expr ast.Expr, empty bool, op
 		dst.Code("\t\t\t\t\t\t{").Code(pkg).Code(".").Code(name).Code(".values.map((val) => {\n")
 		dst.Code("\t\t\t\t\t\t\treturn <" + option + " key={val.value}\n")
 		dst.Code("\t\t\t\t\t\t\t\tlabel={_ctx.$t(val.toString())}\n")
-		dst.Code("\t\t\t\t\t\t\t\tvalue={val}\n")
+		dst.Code("\t\t\t\t\t\t\t\tvalue={val.value}\n")
 		dst.Code("\t\t\t\t\t\t\t/>\n")
 		dst.Code("\t\t\t\t\t\t})}\n")
 	case *ast.Ident:

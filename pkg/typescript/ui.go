@@ -222,7 +222,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Code("\t\t\t\t\t\t\t\t<el-popover effect=\"light\" trigger=\"hover\" placement=\"top\" width=\"auto\">\n")
 			dst.Code("\t\t\t\t\t\t\t\t\t\t{{\n")
 			dst.Code("\t\t\t\t\t\t\t\t\t\t\tdefault: () => <el-image style={\"width: 200px; height: 200px\"} src={scope.row.").Code(fieldName).Code("}/>,\n")
-			dst.Code("\t\t\t\t\t\t\t\t\t\t\treference: () => <el-avatar shape=\"square\" size=\"60\" src={scope.row.").Code(fieldName).Code("}/>,\n")
+			dst.Code("\t\t\t\t\t\t\t\t\t\t\treference: () => <el-avatar shape=\"square\" size={200} src={scope.row.").Code(fieldName).Code("}/>,\n")
 			dst.Code("\t\t\t\t\t\t\t\t\t\t}}\n")
 			dst.Code("\t\t\t\t\t\t\t\t</el-popover>\n")
 			dst.Code("\t\t\t\t\t\t\t</>)\n")
@@ -555,13 +555,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(6).Code("/>\n")
 		} else if "menu" == form.form {
 			dst.Tab(6).Code("<el-select\n")
-			if isNull {
-				dst.Tab(7).Code("modelValue={_ctx.model!.").Code(fieldName).Code("?.value}\n")
-				dst.Tab(7).Code("onUpdate:modelValue={($event: number | null) => !$event ? null : _ctx.model!.").Code(fieldName).Code(" = $4.StatisticsDimensions.valueOf($event)}\n")
-			} else {
-				dst.Tab(7).Code("modelValue={_ctx.model!.").Code(fieldName).Code(".value}\n")
-				dst.Tab(7).Code("onUpdate:modelValue={($event: number) => _ctx.model!.").Code(fieldName).Code(" = $4.StatisticsDimensions.valueOf($event)}\n")
-			}
+			b.printMenuModelValue(dst, field.Type, fieldName, false, false)
 
 			dst.Tab(7).Code("style={\"width:180px\"}\n")
 			dst.Tab(7).Code("size={props.size}\n")
@@ -587,13 +581,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Code("/>\n")
 		} else if "radio" == form.form {
 			dst.Tab(6).Code("<el-radio-group \n")
-			if isNull {
-				dst.Tab(7).Code("modelValue={_ctx.model!.").Code(fieldName).Code("?.value}\n")
-				dst.Tab(7).Code("onUpdate:modelValue={($event: number | null) => !$event ? null : _ctx.model!.").Code(fieldName).Code(" = $4.StatisticsDimensions.valueOf($event)}\n")
-			} else {
-				dst.Tab(7).Code("modelValue={_ctx.model!.").Code(fieldName).Code(".value}\n")
-				dst.Tab(7).Code("onUpdate:modelValue={($event: number) => _ctx.model!.").Code(fieldName).Code(" = $4.StatisticsDimensions.valueOf($event)}\n")
-			}
+			b.printMenuModelValue(dst, field.Type, fieldName, false, false)
 
 			dst.Tab(7).Code("size={props.size}\n")
 			if form.onlyRead {
@@ -604,13 +592,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(6).Code("</el-radio-group>\n")
 		} else if "radioButton" == form.form {
 			dst.Tab(6).Code("<el-radio-group\n")
-			if isNull {
-				dst.Tab(7).Code("modelValue={_ctx.model!.").Code(fieldName).Code("?.value}\n")
-				dst.Tab(7).Code("onUpdate:modelValue={($event: number | null) => !$event ? null : _ctx.model!.").Code(fieldName).Code(" = $4.StatisticsDimensions.valueOf($event)}\n")
-			} else {
-				dst.Tab(7).Code("modelValue={_ctx.model!.").Code(fieldName).Code(".value}\n")
-				dst.Tab(7).Code("onUpdate:modelValue={($event: number) => _ctx.model!.").Code(fieldName).Code(" = $4.StatisticsDimensions.valueOf($event)}\n")
-			}
+			b.printMenuModelValue(dst, field.Type, fieldName, false, false)
 
 			dst.Tab(7).Code("size={props.size}\n")
 			if form.onlyRead {
@@ -649,7 +631,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				dst.Tab(7).Code("clearable\n")
 			}
 			if form.onlyRead {
-				dst.Tab(7).Code(" disabled\n")
+				dst.Tab(7).Code("disabled\n")
 			}
 			dst.Tab(7).Code(">\n")
 			dst.Tab(6).Code("</el-input-tag>\n")
@@ -763,5 +745,55 @@ func (b *Builder) printMenuItem(dst *build.Writer, expr ast.Expr, empty bool, op
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
 		b.printMenuItem(dst, t.Type(), t.Empty, option)
+	}
+}
+
+func (b *Builder) printMenuModelValue(dst *build.Writer, expr ast.Expr, fieldName string, isNull, isArray bool) {
+	switch expr.(type) {
+	case *ast.Ident:
+		t := expr.(*ast.Ident)
+		if nil != t.Obj {
+			if ast.Enum == t.Obj.Kind {
+				pkg := b.getPackage(dst, t, "")
+				name := build.StringToHumpName(t.Name)
+
+				if isNull {
+					dst.Tab(7).Code("modelValue={_ctx.model!.").Code(fieldName).Code("?.value}\n")
+					dst.Tab(7).Code("onUpdate:modelValue={($event: ")
+					if isArray {
+						dst.Code("number[]")
+					} else {
+						dst.Code("number")
+					}
+					dst.Code(" | null) => !$event ? null : _ctx.model!.").Code(fieldName).Code(" = ")
+				} else {
+					dst.Tab(7).Code("modelValue={_ctx.model!.").Code(fieldName).Code(".value}\n")
+					dst.Tab(7).Code("onUpdate:modelValue={($event: ")
+					if isArray {
+						dst.Code("number[]")
+					} else {
+						dst.Code("number")
+					}
+					dst.Code(") => _ctx.model!.").Code(fieldName).Code(" = \n")
+				}
+				if isArray {
+					if isNull {
+						dst.Code("$event?.map((e: number) => ").Code(pkg).Code(".").Code(name).Code(".valueOf(e))")
+					} else {
+						dst.Code("$event.map((e: number) => ").Code(pkg).Code(".").Code(name).Code(".valueOf(e))")
+					}
+				} else {
+					dst.Code(pkg).Code(".").Code(name).Code(".valueOf($event)")
+				}
+				dst.Code("}\n")
+			}
+		}
+	case *ast.ArrayType:
+		ar := expr.(*ast.ArrayType)
+		b.printMenuModelValue(dst, ar.Type(), fieldName, isNull, true)
+	case *ast.MapType:
+	case *ast.VarType:
+		t := expr.(*ast.VarType)
+		b.printMenuModelValue(dst, t.Type(), fieldName, true, isArray)
 	}
 }

@@ -222,7 +222,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Code("\t\t\t\t\t\t\t\t<el-popover effect=\"light\" trigger=\"hover\" placement=\"top\" width=\"auto\">\n")
 			dst.Code("\t\t\t\t\t\t\t\t\t\t{{\n")
 			dst.Code("\t\t\t\t\t\t\t\t\t\t\tdefault: () => <el-image style={\"width: 200px; height: 200px\"} src={scope.row.").Code(fieldName).Code("}/>,\n")
-			dst.Code("\t\t\t\t\t\t\t\t\t\t\treference: () => <el-avatar shape=\"square\" size={200} src={scope.row.").Code(fieldName).Code("}/>,\n")
+			dst.Code("\t\t\t\t\t\t\t\t\t\t\treference: () => <el-avatar shape=\"square\" size={60} src={scope.row.").Code(fieldName).Code("}/>,\n")
 			dst.Code("\t\t\t\t\t\t\t\t\t\t}}\n")
 			dst.Code("\t\t\t\t\t\t\t\t</el-popover>\n")
 			dst.Code("\t\t\t\t\t\t\t</>)\n")

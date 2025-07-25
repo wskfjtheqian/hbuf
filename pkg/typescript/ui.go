@@ -55,6 +55,9 @@ type ui struct {
 	clip       bool
 	unlink     bool
 	maxCount   int
+	step       *float64
+	min        *float64
+	max        *float64
 }
 
 func (b *Builder) getUI(tags []*ast.Tag) *ui {
@@ -131,7 +134,29 @@ func (b *Builder) getUI(tags []*ast.Tag) *ui {
 				for _, value := range item.Values {
 					form.extensions = append(form.extensions, value.Value[1:len(value.Value)-1])
 				}
+			} else if "min" == item.Name.Name {
+				atoi, err := strconv.ParseFloat(item.Values[0].Value[1:len(item.Values[0].Value)-1], 10)
+				if err != nil {
+					//TODO 添加错误处理
+					return nil
+				}
+				form.min = &atoi
+			} else if "max" == item.Name.Name {
+				atoi, err := strconv.ParseFloat(item.Values[0].Value[1:len(item.Values[0].Value)-1], 10)
+				if err != nil {
+					//TODO 添加错误处理
+					return nil
+				}
+				form.max = &atoi
+			} else if "step" == item.Name.Name {
+				atoi, err := strconv.ParseFloat(item.Values[0].Value[1:len(item.Values[0].Value)-1], 10)
+				if err != nil {
+					//TODO 添加错误处理
+					return nil
+				}
+				form.step = &atoi
 			}
+
 		}
 	}
 	return &form
@@ -427,6 +452,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			return nil
 		}
 
+		inNum := build.IsNumber(field.Type)
 		isArray := build.IsArray(field.Type)
 		isNull := build.IsNil(field.Type)
 		_, verify := build.GetTag(field.Tags, "verify")
@@ -627,6 +653,27 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(7).Code(">\n")
 			dst.Tab(6).Code("</el-input-tag>\n")
+		} else if inNum {
+			dst.Tab(6).Code("<el-input-number\n")
+			dst.Tab(7).Code("v-model={_ctx.model!." + fieldName + "}\n")
+			dst.Tab(7).Code("size={props.size}\n")
+			if isNull {
+				dst.Tab(7).Code("clearable\n")
+			}
+			if form.onlyRead {
+				dst.Tab(7).Code("disabled\n")
+			}
+			dst.Tab(7).Code("precision={").Code(strconv.Itoa(form.digit)).Code("}\n")
+			if form.min != nil {
+				dst.Tab(7).Code("min={").Code(strconv.FormatFloat(*form.min, 'f', -1, 64)).Code("}\n")
+			}
+			if form.max != nil {
+				dst.Tab(7).Code("max={").Code(strconv.FormatFloat(*form.max, 'f', -1, 64)).Code("}\n")
+			}
+			if form.step != nil {
+				dst.Tab(7).Code("step={").Code(strconv.FormatFloat(*form.step, 'f', -1, 64)).Code("}\n")
+			}
+			dst.Tab(6).Code("/>\n")
 		} else {
 			dst.Tab(6).Code("<el-input\n")
 			dst.Tab(7).Code("modelValue={")

@@ -318,7 +318,11 @@ func (b *Builder) printToString(dst *build.Writer, name string, expr ast.Expr, e
 			}
 		}
 	case *ast.ArrayType:
-		dst.Code("\"\"+").Code(name)
+		//default: (scope:any) => scope.row.platform?.map((e: $4.PlatformType) => _ctx.$t(e.toString())) || ""
+		ar := expr.(*ast.ArrayType)
+		dst.Code(name).Code("?.map((e:any)=>")
+		b.printToString(dst, "e", ar.Type(), false, digit, format, val)
+		dst.Code(")")
 	case *ast.MapType:
 		dst.Code("\"\"+").Code(name)
 	case *ast.VarType:
@@ -765,7 +769,7 @@ func (b *Builder) printMenuModelValue(dst *build.Writer, expr ast.Expr, fieldNam
 					} else {
 						dst.Code("number")
 					}
-					dst.Code(" | null) => !$event ? null : _ctx.model!.").Code(fieldName).Code(" = ")
+					dst.Code(" | null) => _ctx.model!.").Code(fieldName).Code(" = ($event == null || $event == undefined) ? null :")
 				} else {
 					dst.Tab(7).Code("modelValue={_ctx.model!.").Code(fieldName).Code(".value}\n")
 					dst.Tab(7).Code("onUpdate:modelValue={($event: ")

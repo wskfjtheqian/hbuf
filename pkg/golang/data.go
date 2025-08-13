@@ -60,7 +60,7 @@ func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
 	isFast := true
 	b.printDataExtend(dst, typ.Extends, &isFast)
 	for _, field := range fields {
-		dst.Code("\t")
+		dst.Tab(1).Code("")
 		dst.Code(build.StringFillRight(field.name, ' ', nameLen+1))
 		dst.Code(build.StringFillRight(field.typ, ' ', typLen+1))
 		dst.Code(build.StringFillRight(field.tag, ' ', tagLen+1))
@@ -69,11 +69,11 @@ func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
 	dst.Code("}\n\n")
 
 	dst.Code("func (g *" + build.StringToHumpName(typ.Name.Name) + ") ToData() ([]byte, error) {\n")
-	dst.Code("\treturn json.Marshal(g)\n")
+	dst.Tab(1).Code("return json.Marshal(g)\n")
 	dst.Code("}\n\n")
 
 	dst.Code("func (g *" + build.StringToHumpName(typ.Name.Name) + ") FormData(data []byte) error {\n")
-	dst.Code("\treturn json.Unmarshal(data, g)\n")
+	dst.Tab(1).Code("return json.Unmarshal(data, g)\n")
 	dst.Code("}\n\n")
 
 	for _, field := range typ.Fields.List {
@@ -84,14 +84,14 @@ func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
 		b.printType(dst, field.Type, false)
 		dst.Code(" {\n")
 		if field.Type.IsEmpty() && !build.IsArray(field.Type) && !build.IsMap(field.Type) {
-			dst.Code("\tif nil == g." + build.StringToHumpName(field.Name.Name) + " {\n")
-			dst.Code("\t\treturn ")
+			dst.Tab(1).Code("if nil == g." + build.StringToHumpName(field.Name.Name) + " {\n")
+			dst.Tab(2).Code("return ")
 			b.printDefault(dst, field.Type)
 			dst.Code("\n")
-			dst.Code("\t}\n")
-			dst.Code("\treturn *g." + build.StringToHumpName(field.Name.Name) + "\n")
+			dst.Tab(1).Code("}\n")
+			dst.Tab(1).Code("return *g." + build.StringToHumpName(field.Name.Name) + "\n")
 		} else {
-			dst.Code("\treturn g." + build.StringToHumpName(field.Name.Name) + "\n")
+			dst.Tab(1).Code("return g." + build.StringToHumpName(field.Name.Name) + "\n")
 		}
 		dst.Code("}\n\n")
 
@@ -101,7 +101,7 @@ func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
 		dst.Code("func (g *" + build.StringToHumpName(typ.Name.Name) + ") Set" + build.StringToHumpName(field.Name.Name) + "(val ")
 		b.printType(dst, field.Type, false)
 		dst.Code(") {\n")
-		dst.Code("\tg." + build.StringToHumpName(field.Name.Name) + " = ")
+		dst.Tab(1).Code("g." + build.StringToHumpName(field.Name.Name) + " = ")
 		if field.Type.IsEmpty() && !build.IsArray(field.Type) && !build.IsMap(field.Type) {
 			dst.Code("&val\n")
 		} else {
@@ -160,7 +160,7 @@ func (b *Builder) printDataExtend(dst *build.Writer, extends []*ast.Extends, isF
 			dst.Code("\n")
 		}
 		*isFast = false
-		dst.Code("\t")
+		dst.Tab(1).Code("")
 		pack := b.getPackage(dst, v.Name)
 		dst.Code(pack)
 		dst.Code(build.StringToHumpName(v.Name.Name))

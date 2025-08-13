@@ -24,36 +24,36 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) {
 	dst.Code("{\n")
 	for _, field := range typ.Fields.List {
 		if nil != field.Doc && 0 < len(field.Doc.Text()) {
-			dst.Code("\t/// Get " + field.Doc.Text())
+			dst.Tab(1).Code("/// Get " + field.Doc.Text())
 		}
 		isSuper := build.CheckSuperField(field.Name.Name, typ)
 		if isSuper {
-			dst.Code("\t@override\n")
+			dst.Tab(1).Code("@override\n")
 		}
-		dst.Code("\t")
+		dst.Tab(1).Code("")
 		b.printType(dst, field.Type, false)
 		dst.Code(" get " + build.StringToFirstLower(field.Name.Name))
 		dst.Code(";\n\n")
 
 		if nil != field.Doc && 0 < len(field.Doc.Text()) {
-			dst.Code("\t/// Set " + field.Doc.Text())
+			dst.Tab(1).Code("/// Set " + field.Doc.Text())
 		}
 		if isSuper {
-			dst.Code("\t@override\n")
+			dst.Tab(1).Code("@override\n")
 		}
-		dst.Code("\tset ")
+		dst.Tab(1).Code("set ")
 		dst.Code(build.StringToFirstLower(field.Name.Name) + "(")
 		b.printType(dst, field.Type, false)
 		dst.Code(" value);\n\n")
 	}
 	isParam := false
-	dst.Code("\tfactory " + build.StringToHumpName(typ.Name.Name) + "(")
+	dst.Tab(1).Code("factory " + build.StringToHumpName(typ.Name.Name) + "(")
 	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 		if !isParam {
 			dst.Code("{\n")
 			isParam = true
 		}
-		dst.Code("\t\t")
+		dst.Tab(2).Code("")
 		if !field.Type.IsEmpty() {
 			dst.Code("required ")
 		}
@@ -66,14 +66,14 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) {
 		return
 	}
 	if isParam {
-		dst.Code("\t}")
+		dst.Tab(1).Code("}")
 	} else {
-		dst.Code("\t")
+		dst.Tab(1).Code("")
 	}
 	dst.Code("){\n")
-	dst.Code("\t\treturn _" + build.StringToHumpName(typ.Name.Name) + "(\n")
+	dst.Tab(2).Code("return _" + build.StringToHumpName(typ.Name.Name) + "(\n")
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
-		dst.Code("\t\t\t")
+		dst.Tab(3).Code("")
 		dst.Code(build.StringToFirstLower(field.Name.Name))
 		dst.Code(": ")
 		dst.Code(build.StringToFirstLower(field.Name.Name))
@@ -83,25 +83,25 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) {
 	if err != nil {
 		return
 	}
-	dst.Code("\t\t);\n")
-	dst.Code("\t}\n\n")
+	dst.Tab(2).Code(");\n")
+	dst.Tab(1).Code("}\n\n")
 
-	dst.Code("\tstatic " + build.StringToHumpName(typ.Name.Name) + " fromMap(Map<String, dynamic> map){\n")
-	dst.Code("\t\treturn _" + build.StringToHumpName(typ.Name.Name) + ".fromMap(map);\n")
-	dst.Code("\t}\n\n")
+	dst.Tab(1).Code("static " + build.StringToHumpName(typ.Name.Name) + " fromMap(Map<String, dynamic> map){\n")
+	dst.Tab(2).Code("return _" + build.StringToHumpName(typ.Name.Name) + ".fromMap(map);\n")
+	dst.Tab(1).Code("}\n\n")
 
-	dst.Code("\tstatic " + build.StringToHumpName(typ.Name.Name) + " fromData(ByteData data){\n")
-	dst.Code("\t\treturn _" + build.StringToHumpName(typ.Name.Name) + ".fromData(data);\n")
-	dst.Code("\t}\n\n")
+	dst.Tab(1).Code("static " + build.StringToHumpName(typ.Name.Name) + " fromData(ByteData data){\n")
+	dst.Tab(2).Code("return _" + build.StringToHumpName(typ.Name.Name) + ".fromData(data);\n")
+	dst.Tab(1).Code("}\n\n")
 
 	isParam = false
-	dst.Code("\t" + build.StringToHumpName(typ.Name.Name) + " copyWith(")
+	dst.Tab(1).Code("" + build.StringToHumpName(typ.Name.Name) + " copyWith(")
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 		if !isParam {
 			dst.Code("{\n")
 			isParam = true
 		}
-		dst.Code("\t\t")
+		dst.Tab(2).Code("")
 		b.printType(dst, field.Type, true)
 		dst.Code("? " + build.StringToFirstLower(field.Name.Name))
 		dst.Code(",\n")
@@ -111,14 +111,14 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) {
 		return
 	}
 	if isParam {
-		dst.Code("\t}")
+		dst.Tab(1).Code("}")
 	} else {
-		dst.Code("\t")
+		dst.Tab(1).Code("")
 	}
 	dst.Code(");\n\n")
 
-	dst.Code("\t@override\n")
-	dst.Code("\t" + build.StringToHumpName(typ.Name.Name) + " copy();\n")
+	dst.Tab(1).Code("@override\n")
+	dst.Tab(1).Code("" + build.StringToHumpName(typ.Name.Name) + " copy();\n")
 
 	dst.Code("}\n\n")
 }
@@ -128,8 +128,8 @@ func (b *Builder) printDataEntity(dst *build.Writer, typ *ast.DataType) {
 	dst.Code(" {\n")
 
 	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
-		dst.Code("\t@override\n")
-		dst.Code("\t")
+		dst.Tab(1).Code("@override\n")
+		dst.Tab(1).Code("")
 		b.printType(dst, field.Type, false)
 		dst.Code(" " + build.StringToFirstLower(field.Name.Name))
 		dst.Code(";\n\n")
@@ -139,14 +139,14 @@ func (b *Builder) printDataEntity(dst *build.Writer, typ *ast.DataType) {
 		return
 	}
 
-	dst.Code("\t_" + build.StringToHumpName(typ.Name.Name) + "(")
+	dst.Tab(1).Code("_" + build.StringToHumpName(typ.Name.Name) + "(")
 	isParam := false
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 		if !isParam {
 			dst.Code("{\n")
 			isParam = true
 		}
-		dst.Code("\t\t")
+		dst.Tab(2).Code("")
 		if !field.Type.IsEmpty() {
 			dst.Code("required ")
 		}
@@ -157,18 +157,18 @@ func (b *Builder) printDataEntity(dst *build.Writer, typ *ast.DataType) {
 	if err != nil {
 		return
 	}
-	dst.Code("\t")
+	dst.Tab(1).Code("")
 	if isParam {
 		dst.Code("}")
 	}
 	dst.Code(");\n\n")
 
-	dst.Code("\tstatic _" + build.StringToHumpName(typ.Name.Name) + " fromMap(Map<String, dynamic> map){\n")
-	dst.Code("\t\t dynamic temp;\n")
-	dst.Code("\t\treturn _" + build.StringToHumpName(typ.Name.Name) + "(\n")
+	dst.Tab(1).Code("static _" + build.StringToHumpName(typ.Name.Name) + " fromMap(Map<String, dynamic> map){\n")
+	dst.Tab(2).Code(" dynamic temp;\n")
+	dst.Tab(2).Code("return _" + build.StringToHumpName(typ.Name.Name) + "(\n")
 
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
-		dst.Code("\t\t\t" + build.StringToFirstLower(field.Name.Name) + ": ")
+		dst.Tab(3).Code("" + build.StringToFirstLower(field.Name.Name) + ": ")
 		jsonName := build.StringToUnderlineName(field.Name.Name)
 		b.printFormMap(dst, "(temp = map[\""+jsonName+"\"])", "temp", field.Type, data, false)
 		dst.Code(",\n")
@@ -178,15 +178,15 @@ func (b *Builder) printDataEntity(dst *build.Writer, typ *ast.DataType) {
 		return
 	}
 
-	dst.Code("\t\t);\n")
-	dst.Code("\t}\n")
+	dst.Tab(2).Code(");\n")
+	dst.Tab(1).Code("}\n")
 
 	dst.Code("\n")
-	dst.Code("\t@override\n")
-	dst.Code("\tMap<String, dynamic> toMap() {\n")
-	dst.Code("\t\treturn {\n")
+	dst.Tab(1).Code("@override\n")
+	dst.Tab(1).Code("Map<String, dynamic> toMap() {\n")
+	dst.Tab(2).Code("return {\n")
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
-		dst.Code("\t\t\t\"" + build.StringToUnderlineName(field.Name.Name))
+		dst.Tab(3).Code("\"" + build.StringToUnderlineName(field.Name.Name))
 		dst.Code("\":")
 		b.printToMap(dst, build.StringToFirstLower(field.Name.Name), field.Type, data, false)
 		dst.Code(",\n")
@@ -195,11 +195,11 @@ func (b *Builder) printDataEntity(dst *build.Writer, typ *ast.DataType) {
 	if err != nil {
 		return
 	}
-	dst.Code("\t\t};\n")
-	dst.Code("\t}\n\n")
+	dst.Tab(2).Code("};\n")
+	dst.Tab(1).Code("}\n\n")
 
-	dst.Code("\tstatic _" + build.StringToHumpName(typ.Name.Name) + " fromData(ByteData data){\n")
-	dst.Code("\t\treturn _" + build.StringToHumpName(typ.Name.Name) + ".fromMap({});\n")
+	dst.Tab(1).Code("static _" + build.StringToHumpName(typ.Name.Name) + " fromData(ByteData data){\n")
+	dst.Tab(2).Code("return _" + build.StringToHumpName(typ.Name.Name) + ".fromMap({});\n")
 
 	//err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 	//	dst.Code("      " + build.StringToFirstLower(field.Name.Name))
@@ -212,12 +212,12 @@ func (b *Builder) printDataEntity(dst *build.Writer, typ *ast.DataType) {
 	//}
 
 	//dst.Code("    );\n")
-	dst.Code("\t}\n")
+	dst.Tab(1).Code("}\n")
 
 	dst.Code("\n")
-	dst.Code("\t@override\n")
-	dst.Code("\tByteData toData() {\n")
-	dst.Code("\t\treturn ByteData.view(Uint8List(12).buffer);\n")
+	dst.Tab(1).Code("@override\n")
+	dst.Tab(1).Code("ByteData toData() {\n")
+	dst.Tab(2).Code("return ByteData.view(Uint8List(12).buffer);\n")
 	//err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 	//	dst.Code("      \"" + getJsonName(field))
 	//	dst.Code("\": " + build.StringToFirstLower(field.Name.Name) + ",\n")
@@ -227,17 +227,17 @@ func (b *Builder) printDataEntity(dst *build.Writer, typ *ast.DataType) {
 	//	return
 	//}
 	//dst.Code("    };\n")
-	dst.Code("\t}\n\n")
+	dst.Tab(1).Code("}\n\n")
 
 	isParam = false
-	dst.Code("\t@override\n")
-	dst.Code("\t_" + build.StringToHumpName(typ.Name.Name) + " copyWith(")
+	dst.Tab(1).Code("@override\n")
+	dst.Tab(1).Code("_" + build.StringToHumpName(typ.Name.Name) + " copyWith(")
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 		if !isParam {
 			dst.Code("{\n")
 			isParam = true
 		}
-		dst.Code("\t\t")
+		dst.Tab(2).Code("")
 		b.printType(dst, field.Type, true)
 		dst.Code("? " + build.StringToFirstLower(field.Name.Name))
 		dst.Code(",\n")
@@ -247,14 +247,14 @@ func (b *Builder) printDataEntity(dst *build.Writer, typ *ast.DataType) {
 		return
 	}
 	if isParam {
-		dst.Code("\t}")
+		dst.Tab(1).Code("}")
 	} else {
-		dst.Code("\t")
+		dst.Tab(1).Code("")
 	}
 	dst.Code(") {\n")
-	dst.Code("\t\treturn _" + build.StringToHumpName(typ.Name.Name) + "(\n")
+	dst.Tab(2).Code("return _" + build.StringToHumpName(typ.Name.Name) + "(\n")
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
-		dst.Code("\t\t\t")
+		dst.Tab(3).Code("")
 		dst.Code(build.StringToFirstLower(field.Name.Name))
 		dst.Code(": ")
 		dst.Code(build.StringToFirstLower(field.Name.Name))
@@ -266,14 +266,14 @@ func (b *Builder) printDataEntity(dst *build.Writer, typ *ast.DataType) {
 	if err != nil {
 		return
 	}
-	dst.Code("\t\t);\n")
-	dst.Code("\t}\n\n")
+	dst.Tab(2).Code(");\n")
+	dst.Tab(1).Code("}\n\n")
 
-	dst.Code("\t@override\n")
-	dst.Code("\tbool operator ==(Object other) =>\n")
-	dst.Code("\t\t\tidentical(this, other) ||\n")
-	dst.Code("\t\t\tother is _" + build.StringToHumpName(typ.Name.Name) + " &&\n")
-	dst.Code("\t\t\t\t\truntimeType == other.runtimeType ")
+	dst.Tab(1).Code("@override\n")
+	dst.Tab(1).Code("bool operator ==(Object other) =>\n")
+	dst.Tab(3).Code("identical(this, other) ||\n")
+	dst.Tab(3).Code("other is _" + build.StringToHumpName(typ.Name.Name) + " &&\n")
+	dst.Tab(5).Code("runtimeType == other.runtimeType ")
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 		dst.Code("&& \n\t\t\t\t\t")
 		dst.Code(build.StringToFirstLower(field.Name.Name))
@@ -286,8 +286,8 @@ func (b *Builder) printDataEntity(dst *build.Writer, typ *ast.DataType) {
 	}
 	dst.Code(";\n\n")
 
-	dst.Code("\t@override\n")
-	dst.Code("\tint get hashCode => 0 ")
+	dst.Tab(1).Code("@override\n")
+	dst.Tab(1).Code("int get hashCode => 0 ")
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 		dst.Code(" ^ ")
 		dst.Code(build.StringToFirstLower(field.Name.Name))
@@ -299,11 +299,11 @@ func (b *Builder) printDataEntity(dst *build.Writer, typ *ast.DataType) {
 	}
 	dst.Code(";\n\n")
 
-	dst.Code("\t@override\n")
-	dst.Code("\t" + build.StringToHumpName(typ.Name.Name) + " copy(){\n")
-	dst.Code("\t\treturn _" + build.StringToHumpName(typ.Name.Name) + "(\n")
+	dst.Tab(1).Code("@override\n")
+	dst.Tab(1).Code("" + build.StringToHumpName(typ.Name.Name) + " copy(){\n")
+	dst.Tab(2).Code("return _" + build.StringToHumpName(typ.Name.Name) + "(\n")
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
-		dst.Code("\t\t\t")
+		dst.Tab(3).Code("")
 		dst.Code(build.StringToFirstLower(field.Name.Name))
 		dst.Code(": ")
 		b.printCopy(dst, build.StringToFirstLower(field.Name.Name), field.Type, data, true)
@@ -313,12 +313,12 @@ func (b *Builder) printDataEntity(dst *build.Writer, typ *ast.DataType) {
 	if err != nil {
 		return
 	}
-	dst.Code("\t\t);\n")
-	dst.Code("\t}\n")
+	dst.Tab(2).Code(");\n")
+	dst.Tab(1).Code("}\n")
 
-	dst.Code("\t@override\n")
-	dst.Code("\tString toString(){\n")
-	dst.Code("\t\treturn '''")
+	dst.Tab(1).Code("@override\n")
+	dst.Tab(1).Code("String toString(){\n")
+	dst.Tab(2).Code("return '''")
 	isFast := true
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 		if !isFast {
@@ -333,8 +333,8 @@ func (b *Builder) printDataEntity(dst *build.Writer, typ *ast.DataType) {
 	if err != nil {
 		return
 	}
-	dst.Code("\t\t''';\n")
-	dst.Code("\t}\n")
+	dst.Tab(2).Code("''';\n")
+	dst.Tab(1).Code("}\n")
 
 	dst.Code("}\n\n")
 }

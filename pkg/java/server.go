@@ -20,7 +20,7 @@ func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
 	if nil != typ.Doc && 0 < len(typ.Doc.Text()) {
 		dst.Code("///" + typ.Doc.Text())
 	}
-	dst.Code("\tinterface " + build.StringToHumpName(typ.Name.Name))
+	dst.Tab(1).Code("interface " + build.StringToHumpName(typ.Name.Name))
 	if nil != typ.Extends {
 		dst.Code(" extends ")
 		b.printExtend(dst, typ.Extends, false)
@@ -31,9 +31,9 @@ func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
 			dst.Code("///" + method.Doc.Text())
 		}
 		if build.CheckSuperMethod(method.Name.Name, typ) {
-			dst.Code("\t@override\n")
+			dst.Tab(1).Code("@override\n")
 		}
-		dst.Code("\t\tCompletableFuture<")
+		dst.Tab(2).Code("CompletableFuture<")
 		b.printType(dst, method.Result.Type(), false)
 		dst.Code("> " + build.StringToFirstLower(method.Name.Name))
 		dst.Code("(")
@@ -41,31 +41,31 @@ func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
 		dst.Code(" " + build.StringToFirstLower(method.ParamName.Name))
 		dst.Code(", Server.Context ctx) throws Exception ;\n\n")
 	}
-	dst.Code("\t}\n\n")
+	dst.Tab(1).Code("}\n\n")
 }
 
 func (b *Builder) printServerClient(dst *build.Writer, typ *ast.ServerType) {
-	dst.Code("\tclass " + build.StringToHumpName(typ.Name.Name) + "Client extends Server.ClientRouter implements " + build.StringToHumpName(typ.Name.Name))
+	dst.Tab(1).Code("class " + build.StringToHumpName(typ.Name.Name) + "Client extends Server.ClientRouter implements " + build.StringToHumpName(typ.Name.Name))
 
 	dst.Code("{\n")
 
-	dst.Code("\t\tpublic " + build.StringToHumpName(typ.Name.Name) + "Client(Server.Client client) {\n")
-	dst.Code("\t\t\tsuper(client);\n")
-	dst.Code("\t\t}\n\n")
+	dst.Tab(2).Code("public " + build.StringToHumpName(typ.Name.Name) + "Client(Server.Client client) {\n")
+	dst.Tab(3).Code("super(client);\n")
+	dst.Tab(2).Code("}\n\n")
 
-	dst.Code("\t\t@Override\n")
-	dst.Code("\t\tpublic String getName() {\n")
-	dst.Code("\t\t\treturn \"" + build.StringToUnderlineName(typ.Name.Name) + "\";\n")
-	dst.Code("\t\t}\n\n")
-	dst.Code("\t\t@Override\n")
-	dst.Code("\t\tpublic long getId() {\n")
-	//TODO dst.Code("\t\t\treturn " + typ.Id.Value + ";\n")
-	dst.Code("\t\t\treturn 0;\n")
-	dst.Code("\t\t}\n\n")
+	dst.Tab(2).Code("@Override\n")
+	dst.Tab(2).Code("public String getName() {\n")
+	dst.Tab(3).Code("return \"" + build.StringToUnderlineName(typ.Name.Name) + "\";\n")
+	dst.Tab(2).Code("}\n\n")
+	dst.Tab(2).Code("@Override\n")
+	dst.Tab(2).Code("public long getId() {\n")
+	//TODO dst.Tab(3).Code("return " + typ.Id.Value + ";\n")
+	dst.Tab(3).Code("return 0;\n")
+	dst.Tab(2).Code("}\n\n")
 
 	_ = build.EnumMethod(typ, func(method *ast.FuncType, server *ast.ServerType) error {
-		dst.Code("\t\t@Override\n")
-		dst.Code("\t\tpublic CompletableFuture<")
+		dst.Tab(2).Code("@Override\n")
+		dst.Tab(2).Code("public CompletableFuture<")
 		b.printType(dst, method.Result.Type(), false)
 		dst.Code("> " + build.StringToFirstLower(method.Name.Name))
 		dst.Code("(")
@@ -73,7 +73,7 @@ func (b *Builder) printServerClient(dst *build.Writer, typ *ast.ServerType) {
 		dst.Code(" " + build.StringToFirstLower(method.ParamName.Name))
 		dst.Code(", Server.Context ctx) throws Exception {\n")
 
-		dst.Code("\t\t\treturn invoke(\"")
+		dst.Tab(3).Code("return invoke(\"")
 		dst.Code(build.StringToUnderlineName(server.Name.Name) + "/" + build.StringToUnderlineName(method.Name.Name))
 		dst.Code("\", ")
 		//TODO dst.Code(server.Id.Value + " << 32 | " + method.Id.Value)
@@ -86,78 +86,78 @@ func (b *Builder) printServerClient(dst *build.Writer, typ *ast.ServerType) {
 		b.printType(dst, method.Result.Type(), false)
 		dst.Code("Impl().formData(data));\n")
 
-		dst.Code("\t\t}\n\n")
+		dst.Tab(2).Code("}\n\n")
 		return nil
 	})
-	dst.Code("\t}\n\n")
+	dst.Tab(1).Code("}\n\n")
 }
 
 func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 	//dst.Code("class " + build.StringToHumpName(typ.Name.Name) + "Router extends ServerRouter")
 	//
 	//dst.Code("{\n")
-	//dst.Code("\tfinal " + build.StringToHumpName(typ.Name.Name) + " server;\n\n")
+	//dst.Tab(1).Code("final " + build.StringToHumpName(typ.Name.Name) + " server;\n\n")
 	//
-	//dst.Code("\t@override\n")
-	//dst.Code("\tString get name => \"" + build.StringToUnderlineName(typ.Name.Name) + "\";\n\n")
+	//dst.Tab(1).Code("@override\n")
+	//dst.Tab(1).Code("String get name => \"" + build.StringToUnderlineName(typ.Name.Name) + "\";\n\n")
 	//
-	//dst.Code("\t@override\n")
-	//dst.Code("\tint get id => " + typ.Id.Values + ";\n\n")
+	//dst.Tab(1).Code("@override\n")
+	//dst.Tab(1).Code("int get id => " + typ.Id.Values + ";\n\n")
 	//
-	//dst.Code("\tMap<String, ServerInvoke> _invokeNames = {};\n\n")
+	//dst.Tab(1).Code("Map<String, ServerInvoke> _invokeNames = {};\n\n")
 	//
-	//dst.Code("\tMap<int, ServerInvoke> _invokeIds = {};\n\n")
+	//dst.Tab(1).Code("Map<int, ServerInvoke> _invokeIds = {};\n\n")
 	//
-	//dst.Code("\t@override\n")
-	//dst.Code("\tMap<String, ServerInvoke> get invokeNames => _invokeNames;\n\n")
+	//dst.Tab(1).Code("@override\n")
+	//dst.Tab(1).Code("Map<String, ServerInvoke> get invokeNames => _invokeNames;\n\n")
 	//
-	//dst.Code("\t@override\n")
-	//dst.Code("\tMap<int, ServerInvoke> get invokeIds => _invokeIds;\n\n")
+	//dst.Tab(1).Code("@override\n")
+	//dst.Tab(1).Code("Map<int, ServerInvoke> get invokeIds => _invokeIds;\n\n")
 	//
-	//dst.Code("\t" + build.StringToHumpName(typ.Name.Name) + "Router(this.server){\n")
-	//dst.Code("\t\t_invokeNames = {\n")
+	//dst.Tab(1).Code("" + build.StringToHumpName(typ.Name.Name) + "Router(this.server){\n")
+	//dst.Tab(2).Code("_invokeNames = {\n")
 	//_ = build.EnumMethod(typ, func(method *ast.FuncType, server *ast.ServerType) error {
-	//	dst.Code("\t\t\t\"" + build.StringToUnderlineName(server.Name.Name) + "/" + build.StringToUnderlineName(method.Name.Name) + "\": ServerInvoke(\n")
-	//	dst.Code("\t\t\t\ttoData: (List<int> buf) async {\n")
-	//	dst.Code("\t\t\t\t\treturn ")
+	//	dst.Tab(3).Code("\"" + build.StringToUnderlineName(server.Name.Name) + "/" + build.StringToUnderlineName(method.Name.Name) + "\": ServerInvoke(\n")
+	//	dst.Tab(4).Code("toData: (List<int> buf) async {\n")
+	//	dst.Tab(5).Code("return ")
 	//	b.printType(dst, method.Param.Type(), false)
 	//	dst.Code(".fromMap(json.decode(utf8.decode(buf)));\n")
-	//	dst.Code("\t\t\t\t},\n")
-	//	dst.Code("\t\t\t\tformData: (Data data) async {\n")
-	//	dst.Code("\t\t\t\t\t return utf8.encode(json.encode(data.toMap()));\n")
-	//	dst.Code("\t\t\t\t},\n")
-	//	dst.Code("\t\t\t\tinvoke: (Context ctx, Data data) async {\n")
-	//	dst.Code("\t\t\t\t\t return await server." + build.StringToFirstLower(method.Name.Name) + "(data as ")
+	//	dst.Tab(4).Code("},\n")
+	//	dst.Tab(4).Code("formData: (Data data) async {\n")
+	//	dst.Tab(5).Code(" return utf8.encode(json.encode(data.toMap()));\n")
+	//	dst.Tab(4).Code("},\n")
+	//	dst.Tab(4).Code("invoke: (Context ctx, Data data) async {\n")
+	//	dst.Tab(5).Code(" return await server." + build.StringToFirstLower(method.Name.Name) + "(data as ")
 	//	b.printType(dst, method.Param.Type(), false)
 	//	dst.Code(", ctx);\n")
-	//	dst.Code("\t\t\t\t},\n")
-	//	dst.Code("\t\t\t),\n")
+	//	dst.Tab(4).Code("},\n")
+	//	dst.Tab(3).Code("),\n")
 	//	return nil
 	//})
-	//dst.Code("\t\t};\n\n")
+	//dst.Tab(2).Code("};\n\n")
 	//
-	//dst.Code("\t\t_invokeIds = {\n")
+	//dst.Tab(2).Code("_invokeIds = {\n")
 	//_ = build.EnumMethod(typ, func(method *ast.FuncType, server *ast.ServerType) error {
-	//	dst.Code("\t\t\t\t" + server.Id.Values + " << 32 | " + method.Id.Values + ": ServerInvoke(\n")
-	//	dst.Code("\t\t\t\ttoData: (List<int> buf) async {\n")
-	//	dst.Code("\t\t\t\t\treturn ")
+	//	dst.Tab(4).Code("" + server.Id.Values + " << 32 | " + method.Id.Values + ": ServerInvoke(\n")
+	//	dst.Tab(4).Code("toData: (List<int> buf) async {\n")
+	//	dst.Tab(5).Code("return ")
 	//	b.printType(dst, method.Param.Type(), false)
 	//	dst.Code(".fromData(ByteData.view(Uint8List.fromList(buf).buffer));\n")
-	//	dst.Code("\t\t\t\t},\n")
-	//	dst.Code("\t\t\t\tformData: (Data data) async {\n")
-	//	dst.Code("\t\t\t\t\t return data.toData().buffer.asUint8List();\n")
-	//	dst.Code("\t\t\t\t},\n")
-	//	dst.Code("\t\t\t\tinvoke: (Context ctx, Data data) async {\n")
-	//	dst.Code("\t\t 	\t return await server." + build.StringToFirstLower(method.Name.Name) + "(data as ")
+	//	dst.Tab(4).Code("},\n")
+	//	dst.Tab(4).Code("formData: (Data data) async {\n")
+	//	dst.Tab(5).Code(" return data.toData().buffer.asUint8List();\n")
+	//	dst.Tab(4).Code("},\n")
+	//	dst.Tab(4).Code("invoke: (Context ctx, Data data) async {\n")
+	//	dst.Tab(2).Code(" 	\t return await server." + build.StringToFirstLower(method.Name.Name) + "(data as ")
 	//	b.printType(dst, method.Param.Type(), false)
 	//	dst.Code(", ctx);\n")
-	//	dst.Code("\t\t\t\t},\n")
-	//	dst.Code("\t\t\t),\n")
+	//	dst.Tab(4).Code("},\n")
+	//	dst.Tab(3).Code("),\n")
 	//	return nil
 	//})
-	//dst.Code("\t\t};\n\n")
+	//dst.Tab(2).Code("};\n\n")
 	//
-	//dst.Code("\t}\n\n")
+	//dst.Tab(1).Code("}\n\n")
 	//
 	////
 	////dst.Code("  @override\n")

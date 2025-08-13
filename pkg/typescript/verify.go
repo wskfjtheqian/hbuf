@@ -55,9 +55,9 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 				dst.Tab(1).Code("}\n")
 			}
 			if build.IsEnum(field.Type) {
-				//dst.Code("\tif 0 < len(i.Get" + fName + "().ToName()) {\n")
-				//dst.Code("\t\treturn &hbuf.Result{Code: int(" + pack + "), Msg: " + pack + ".ToName()}\n")
-				//dst.Code("\t}\n")
+				//dst.Tab(1).Code("if 0 < len(i.Get" + fName + "().ToName()) {\n")
+				//dst.Tab(2).Code("return &hbuf.Result{Code: int(" + pack + "), Msg: " + pack + ".ToName()}\n")
+				//dst.Tab(1).Code("}\n")
 			} else if build.IsMap(field.Type) {
 
 			} else if build.IsArray(field.Type) {
@@ -86,12 +86,12 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 				case build.Decimal:
 					b.verifyNum(dst, pName, val, f, "^[+-]?\\\\d+(\\\\.\\\\d+)?$", field.Type, "", "")
 				case build.Date:
-					dst.Code("\tconst val = DateTime.tryParse(value!);\n")
-					dst.Code("\tif (null == val) {\n")
+					dst.Tab(1).Code("const val = DateTime.tryParse(value!);\n")
+					dst.Tab(1).Code("if (null == val) {\n")
 					b.printVerifyError(dst, pName, val)
-					dst.Code("\t}\n")
+					dst.Tab(1).Code("}\n")
 					if 0 < len(f.Min) || 0 < len(f.Max) {
-						dst.Code("\tif (")
+						dst.Tab(1).Code("if (")
 						if 0 < len(f.Min) {
 							parse, err := time.Parse("2006-01-02T15:04:05Z", f.Min)
 							if err != nil {
@@ -112,11 +112,11 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 						dst.Code(") {\n")
 						b.printVerifyError(dst, pName, val)
 						b.printVerifyError(dst, pName, val)
-						dst.Code("\t}\n")
+						dst.Tab(1).Code("}\n")
 					}
 				case build.String:
 					if 0 < len(f.Min) || 0 < len(f.Max) {
-						dst.Code("\tif (")
+						dst.Tab(1).Code("if (")
 						if 0 < len(f.Min) {
 							dst.Code(f.Min + " > (value?.length ?? 0)")
 						}
@@ -128,12 +128,12 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 						}
 						dst.Code(") {\n")
 						b.printVerifyError(dst, pName, val)
-						dst.Code("\t}\n")
+						dst.Tab(1).Code("}\n")
 					}
 					if len(f.Reg) > 0 {
-						dst.Code("\tif (!new RegExp(\"" + f.Reg + "\").test(value!)) {\n")
+						dst.Tab(1).Code("if (!new RegExp(\"" + f.Reg + "\").test(value!)) {\n")
 						b.printVerifyError(dst, pName, val)
-						dst.Code("\t}\n")
+						dst.Tab(1).Code("}\n")
 					}
 				}
 			}

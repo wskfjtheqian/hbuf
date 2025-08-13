@@ -152,57 +152,57 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 	name := build.StringToHumpName(typ.Name.Name)
 	lang := dst.GetLang(name)
 	dst.Code("class Table" + name + build.StringToHumpName(u.suffix) + "Build {\n")
-	dst.Code("\tfinal List<" + name + "> list;\n\n")
-	dst.Code("\tfinal Set<" + name + "> select;\n\n")
-	dst.Code("\tfinal Function(BuildContext context,  Set<" + name + "> select)? onSelect;\n\n")
-	dst.Code("\tfinal TablesBuild<" + name + "> tables = TablesBuild();\n\n")
-	dst.Code("\tTable" + name + build.StringToHumpName(u.suffix) + "Build (this.list,{this.select = const {}, this.onSelect});\n\n")
+	dst.Tab(1).Code("final List<" + name + "> list;\n\n")
+	dst.Tab(1).Code("final Set<" + name + "> select;\n\n")
+	dst.Tab(1).Code("final Function(BuildContext context,  Set<" + name + "> select)? onSelect;\n\n")
+	dst.Tab(1).Code("final TablesBuild<" + name + "> tables = TablesBuild();\n\n")
+	dst.Tab(1).Code("Table" + name + build.StringToHumpName(u.suffix) + "Build (this.list,{this.select = const {}, this.onSelect});\n\n")
 
-	dst.Code("\tWidget build(BuildContext context, {Function(Table" + name + build.StringToHumpName(u.suffix) + "Build ui)? builder}) {\n")
-	dst.Code("\t\ttables.rowBuilder = (context, y) {\n")
-	dst.Code("\t\t\treturn TablesRow<" + name + ">(data: list[y]);\n")
-	dst.Code("\t\t};\n")
-	dst.Code("\t\ttables.rowCount = list.length;\n")
+	dst.Tab(1).Code("Widget build(BuildContext context, {Function(Table" + name + build.StringToHumpName(u.suffix) + "Build ui)? builder}) {\n")
+	dst.Tab(2).Code("tables.rowBuilder = (context, y) {\n")
+	dst.Tab(3).Code("return TablesRow<" + name + ">(data: list[y]);\n")
+	dst.Tab(2).Code("};\n")
+	dst.Tab(2).Code("tables.rowCount = list.length;\n")
 
-	dst.Code("\t\tif(null != onSelect){\n")
-	dst.Code("\t\t\ttables.columns[\"select_checkbox\"] = TablesColumn(\n")
-	dst.Code("\t\t\t\tindex: -1,\n")
-	dst.Code("\t\t\t\theaderBuilder: (context) {\n")
-	dst.Code("\t\t\t\t\tvar length = list.where((element) => select.contains(element)).length;\n")
-	dst.Code("\t\t\t\t\t\treturn TablesCell(\n")
-	dst.Code("\t\t\t\t\t\t\tchild: Checkbox(\n")
-	dst.Code("\t\t\t\t\t\t\tvalue: list.length == length ? true : (0 == length ? false : null),\n")
-	dst.Code("\t\t\t\t\t\t\ttristate: true,\n")
-	dst.Code("\t\t\t\t\t\t\tonChanged: (val) {\n")
-	dst.Code("\t\t\t\t\t\t\t\tif (null == val) {\n")
-	dst.Code("\t\t\t\t\t\t\t\t\tselect.clear();\n")
-	dst.Code("\t\t\t\t\t\t\t\t} else {\n")
-	dst.Code("\t\t\t\t\t\t\t\t\tfor (var item in list) {\n")
-	dst.Code("\t\t\t\t\t\t\t\t\t\tselect.add(item);\n")
-	dst.Code("\t\t\t\t\t\t\t\t\t}\n")
-	dst.Code("\t\t\t\t\t\t\t\t}\n")
-	dst.Code("\t\t\t\t\t\t\t\tonSelect?.call(context, select);\n")
-	dst.Code("\t\t\t\t\t\t\t},\n")
-	dst.Code("\t\t\t\t\t\t),\n")
-	dst.Code("\t\t\t\t\t);\n")
-	dst.Code("\t\t\t\t},\n")
-	dst.Code("\t\t\t\tcellBuilder: (context, x, y, " + name + " data) {\n")
-	dst.Code("\t\t\t\t\treturn TablesCell(\n")
-	dst.Code("\t\t\t\t\t\tchild: Checkbox(\n")
-	dst.Code("\t\t\t\t\t\t\tvalue: select.contains(data),\n")
-	dst.Code("\t\t\t\t\t\t\tonChanged: (val) {\n")
-	dst.Code("\t\t\t\t\t\t\t\tif (select.contains(data)) {\n")
-	dst.Code("\t\t\t\t\t\t\t\t\tselect.remove(data);\n")
-	dst.Code("\t\t\t\t\t\t\t\t} else {\n")
-	dst.Code("\t\t\t\t\t\t\t\t\tselect.add(data);\n")
-	dst.Code("\t\t\t\t\t\t\t\t}\n")
-	dst.Code("\t\t\t\t\t\t\t\tonSelect?.call(context, select);\n")
-	dst.Code("\t\t\t\t\t\t\t},\n")
-	dst.Code("\t\t\t\t\t\t),\n")
-	dst.Code("\t\t\t\t\t);\n")
-	dst.Code("\t\t\t\t},\n")
-	dst.Code("\t\t\t);\n")
-	dst.Code("\t\t}\n\n")
+	dst.Tab(2).Code("if(null != onSelect){\n")
+	dst.Tab(3).Code("tables.columns[\"select_checkbox\"] = TablesColumn(\n")
+	dst.Tab(4).Code("index: -1,\n")
+	dst.Tab(4).Code("headerBuilder: (context) {\n")
+	dst.Tab(5).Code("var length = list.where((element) => select.contains(element)).length;\n")
+	dst.Tab(6).Code("return TablesCell(\n")
+	dst.Tab(7).Code("child: Checkbox(\n")
+	dst.Tab(7).Code("value: list.length == length ? true : (0 == length ? false : null),\n")
+	dst.Tab(7).Code("tristate: true,\n")
+	dst.Tab(7).Code("onChanged: (val) {\n")
+	dst.Tab(8).Code("if (null == val) {\n")
+	dst.Tab(9).Code("select.clear();\n")
+	dst.Tab(8).Code("} else {\n")
+	dst.Tab(9).Code("for (var item in list) {\n")
+	dst.Tab(10).Code("select.add(item);\n")
+	dst.Tab(9).Code("}\n")
+	dst.Tab(8).Code("}\n")
+	dst.Tab(8).Code("onSelect?.call(context, select);\n")
+	dst.Tab(7).Code("},\n")
+	dst.Tab(6).Code("),\n")
+	dst.Tab(5).Code(");\n")
+	dst.Tab(4).Code("},\n")
+	dst.Tab(4).Code("cellBuilder: (context, x, y, " + name + " data) {\n")
+	dst.Tab(5).Code("return TablesCell(\n")
+	dst.Tab(6).Code("child: Checkbox(\n")
+	dst.Tab(7).Code("value: select.contains(data),\n")
+	dst.Tab(7).Code("onChanged: (val) {\n")
+	dst.Tab(8).Code("if (select.contains(data)) {\n")
+	dst.Tab(9).Code("select.remove(data);\n")
+	dst.Tab(8).Code("} else {\n")
+	dst.Tab(9).Code("select.add(data);\n")
+	dst.Tab(8).Code("}\n")
+	dst.Tab(8).Code("onSelect?.call(context, select);\n")
+	dst.Tab(7).Code("},\n")
+	dst.Tab(6).Code("),\n")
+	dst.Tab(5).Code(");\n")
+	dst.Tab(4).Code("},\n")
+	dst.Tab(3).Code(");\n")
+	dst.Tab(2).Code("}\n\n")
 
 	i := 0
 	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
@@ -219,18 +219,18 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 		if nil != table.index {
 			index = *table.index
 		}
-		dst.Code("\t\ttables.columns[\"")
+		dst.Tab(2).Code("tables.columns[\"")
 		fieldName := build.StringToFirstLower(field.Name.Name)
 		dst.Code(fieldName)
 		dst.Code("\"] = TablesColumn(\n")
-		dst.Code("\t\t\t\tindex: " + strconv.Itoa(index) + ",\n")
-		dst.Code("\t\t\t\theaderBuilder: (context) {\n")
-		dst.Code("\t\t\t\t\treturn TablesCell(child: Text(" + name + "Localizations.of(context)." + fieldName + "));\n")
-		dst.Code("\t\t\t\t},\n")
-		dst.Code("\t\t\t\tcellBuilder: (context, x, y, data) {\n")
+		dst.Tab(4).Code("index: " + strconv.Itoa(index) + ",\n")
+		dst.Tab(4).Code("headerBuilder: (context) {\n")
+		dst.Tab(5).Code("return TablesCell(child: Text(" + name + "Localizations.of(context)." + fieldName + "));\n")
+		dst.Tab(4).Code("},\n")
+		dst.Tab(4).Code("cellBuilder: (context, x, y, data) {\n")
 		if "image" == table.table {
-			dst.Code("\t\t\t\t\treturn TablesCell(\n")
-			dst.Code("\t\t\t\t\t\tchild: ((data." + fieldName)
+			dst.Tab(5).Code("return TablesCell(\n")
+			dst.Tab(6).Code("child: ((data." + fieldName)
 			if isNull {
 				dst.Code("?")
 			}
@@ -249,8 +249,8 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 				dst.Code("??\"\"")
 			}
 			dst.Code(").startsWith(\"http\")\n")
-			dst.Code("\t\t\t\t\t\t\t\t? Image.network(\n")
-			dst.Code("\t\t\t\t\t\t\t\t\t\tdata." + fieldName)
+			dst.Tab(8).Code("? Image.network(\n")
+			dst.Tab(10).Code("data." + fieldName)
 			if isArray {
 				if isNull {
 					dst.Code("!")
@@ -261,14 +261,14 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 				dst.Code("!")
 			}
 			dst.Code(",\n")
-			dst.Code("\t\t\t\t\t\t\t\t\t\tfit: BoxFit.contain,\n")
-			dst.Code("\t\t\t\t\t\t\t\t\t)\n")
-			dst.Code("\t\t\t\t\t\t\t\t: const SizedBox(),\n")
-			dst.Code("\t\t\t\t\t);\n")
+			dst.Tab(10).Code("fit: BoxFit.contain,\n")
+			dst.Tab(9).Code(")\n")
+			dst.Tab(8).Code(": const SizedBox(),\n")
+			dst.Tab(5).Code(");\n")
 		} else {
-			dst.Code("\t\t\t\treturn TablesCell(\n")
-			dst.Code("\t\t\t\t\tchild: Tooltip(\n")
-			dst.Code("\t\t\t\t\t\tmessage: data." + fieldName)
+			dst.Tab(4).Code("return TablesCell(\n")
+			dst.Tab(5).Code("child: Tooltip(\n")
+			dst.Tab(6).Code("message: data." + fieldName)
 			if isArray {
 				if isNull {
 					dst.Code("?")
@@ -283,8 +283,8 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 				b.printToString(dst, field.Type, false, table.digit, table.format, "??\"\"")
 			}
 			dst.Code(",\n")
-			dst.Code("\t\t\t\t\t\tchild: Text(\n")
-			dst.Code("\t\t\t\t\t\t\tdata." + fieldName)
+			dst.Tab(6).Code("child: Text(\n")
+			dst.Tab(7).Code("data." + fieldName)
 			if isArray {
 				if isNull {
 					dst.Code("?")
@@ -299,14 +299,14 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 				b.printToString(dst, field.Type, false, table.digit, table.format, "??\"\"")
 			}
 			dst.Code(",\n")
-			dst.Code("\t\t\t\t\t\t\tmaxLines: 1,\n")
-			dst.Code("\t\t\t\t\t\t\toverflow: TextOverflow.ellipsis,\n")
-			dst.Code("\t\t\t\t\t\t),\n")
-			dst.Code("\t\t\t\t\t),\n")
-			dst.Code("\t\t\t\t);\n")
+			dst.Tab(7).Code("maxLines: 1,\n")
+			dst.Tab(7).Code("overflow: TextOverflow.ellipsis,\n")
+			dst.Tab(6).Code("),\n")
+			dst.Tab(5).Code("),\n")
+			dst.Tab(4).Code(");\n")
 		}
-		dst.Code("\t\t\t\t},\n")
-		dst.Code("\t\t\t);\n")
+		dst.Tab(4).Code("},\n")
+		dst.Tab(3).Code(");\n")
 		lang.Add(fieldName, field.Tags)
 		return nil
 	})
@@ -314,9 +314,9 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 		return
 	}
 
-	dst.Code("\t\tbuilder?.call(this);\n")
-	dst.Code("\t\treturn tables.build(context);\n")
-	dst.Code("\t}\n")
+	dst.Tab(2).Code("builder?.call(this);\n")
+	dst.Tab(2).Code("return tables.build(context);\n")
+	dst.Tab(1).Code("}\n")
 	dst.Code("}\n\n")
 }
 
@@ -481,17 +481,17 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	name := build.StringToHumpName(typ.Name.Name)
 	lang := dst.GetLang(name)
 	dst.Code("class Form" + name + build.StringToHumpName(u.suffix) + "Build {\n")
-	dst.Code("\tfinal " + name + " info;\n\n")
-	dst.Code("\tfinal bool readOnly;\n\n")
-	dst.Code("\tfinal Map<double, int> sizes;\n\n")
-	dst.Code("\tfinal EdgeInsetsGeometry padding;\n\n")
+	dst.Tab(1).Code("final " + name + " info;\n\n")
+	dst.Tab(1).Code("final bool readOnly;\n\n")
+	dst.Tab(1).Code("final Map<double, int> sizes;\n\n")
+	dst.Tab(1).Code("final EdgeInsetsGeometry padding;\n\n")
 
-	dst.Code("\tForm" + name + build.StringToHumpName(u.suffix) + "Build (\n")
-	dst.Code("\t\tthis.info, {\n")
-	dst.Code("\t\tthis.readOnly = false,\n")
-	dst.Code("\t\tthis.sizes = const {},\n")
-	dst.Code("\t\tthis.padding = const EdgeInsets.only(),\n")
-	dst.Code("\t});\n\n")
+	dst.Tab(1).Code("Form" + name + build.StringToHumpName(u.suffix) + "Build (\n")
+	dst.Tab(2).Code("this.info, {\n")
+	dst.Tab(2).Code("this.readOnly = false,\n")
+	dst.Tab(2).Code("this.sizes = const {},\n")
+	dst.Tab(2).Code("this.padding = const EdgeInsets.only(),\n")
+	dst.Tab(1).Code("});\n\n")
 
 	fields := build.NewWriter()
 	setValue := build.NewWriter()
@@ -514,7 +514,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			return err
 		}
 		if "text" == form.form {
-			dst.Code("\tfinal TextFormBuild " + fieldName + " = TextFormBuild();\n\n")
+			dst.Tab(1).Code("final TextFormBuild " + fieldName + " = TextFormBuild();\n\n")
 			if isArray {
 				setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName)
 				if isNil {
@@ -558,7 +558,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			fields.Code("\t\t\t" + fieldName + ".build(context),\n")
 			lang.Add(fieldName, field.Tags)
 		} else if "click" == form.form {
-			dst.Code("\tfinal ClickFormBuild<")
+			dst.Tab(1).Code("final ClickFormBuild<")
 			b.printType(dst, field.Type, false)
 			dst.Code("> " + fieldName + " = ClickFormBuild();\n\n")
 
@@ -582,7 +582,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			fields.Code("\t\t\t" + fieldName + ".build(context),\n")
 			lang.Add(fieldName, field.Tags)
 		} else if "file" == form.form {
-			dst.Code("\tfinal FileFormBuild " + fieldName + " = FileFormBuild();\n\n")
+			dst.Tab(1).Code("final FileFormBuild " + fieldName + " = FileFormBuild();\n\n")
 			setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName)
 			b.printToString(setValue, field.Type, false, form.digit, form.format, "??\"\"")
 			setValue.Code(";\n")
@@ -614,7 +614,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			fields.Code("\t\t\t" + fieldName + ".build(context),\n")
 			lang.Add(fieldName, field.Tags)
 		} else if "image" == form.form {
-			dst.Code("\tfinal ImageFormBuild " + fieldName + " =  ImageFormBuild();\n\n")
+			dst.Tab(1).Code("final ImageFormBuild " + fieldName + " =  ImageFormBuild();\n\n")
 
 			if isArray {
 				if build.IsNil(field.Type) {
@@ -672,7 +672,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			lang.Add(fieldName, field.Tags)
 
 		} else if "menu" == form.form {
-			dst.Code("\tfinal MenuFormBuild<")
+			dst.Tab(1).Code("final MenuFormBuild<")
 			b.printType(dst, field.Type, false)
 			dst.Code("> " + fieldName + " = MenuFormBuild();\n\n")
 			setValue.Code("\t\t" + fieldName + ".value = info." + fieldName + ";\n")
@@ -699,7 +699,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			fields.Code("\t\t\t" + fieldName + ".build(context),\n")
 			lang.Add(fieldName, field.Tags)
 		} else if "date" == form.form {
-			dst.Code("\tfinal DatetimeFormBuild " + fieldName + " =  DatetimeFormBuild();\n\n")
+			dst.Tab(1).Code("final DatetimeFormBuild " + fieldName + " =  DatetimeFormBuild();\n\n")
 			setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName)
 			b.printToString(setValue, field.Type, false, form.digit, form.format, "??\"\"")
 			setValue.Code(";\n")
@@ -720,7 +720,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			fields.Code("\t\t\t" + fieldName + ".build(context),\n")
 			lang.Add(fieldName, field.Tags)
 		} else if "switch" == form.form {
-			dst.Code("\tfinal SwitchFormBuild " + fieldName + " =  SwitchFormBuild();\n\n")
+			dst.Tab(1).Code("final SwitchFormBuild " + fieldName + " =  SwitchFormBuild();\n\n")
 			setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName)
 			//b.printToString(setValue, field.Type, false, form.digit, form.format, "??\"\"")
 			setValue.Code(";\n")
@@ -752,13 +752,13 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		return
 	}
 
-	dst.Code("\tList<Widget> build(BuildContext context, {Function(BuildContext context, Form" + name + build.StringToHumpName(u.suffix) + "Build ui)? builder}) {\n")
+	dst.Tab(1).Code("List<Widget> build(BuildContext context, {Function(BuildContext context, Form" + name + build.StringToHumpName(u.suffix) + "Build ui)? builder}) {\n")
 	dst.Code(setValue.String())
-	dst.Code("\t\tbuilder?.call(context, this);\n")
-	dst.Code("\t\treturn <Widget>[\n")
+	dst.Tab(2).Code("builder?.call(context, this);\n")
+	dst.Tab(2).Code("return <Widget>[\n")
 	dst.Code(fields.String())
-	dst.Code("\t\t];\n")
-	dst.Code("\t}\n")
+	dst.Tab(2).Code("];\n")
+	dst.Tab(1).Code("}\n")
 	dst.Code("}\n\n")
 
 	dst.ImportByWriter(setValue)
@@ -769,11 +769,11 @@ func (b *Builder) printMenuItem(dst *build.Writer, expr ast.Expr, empty bool) {
 	case *ast.EnumType:
 		t := expr.(*ast.EnumType)
 		name := build.StringToHumpName(t.Name.Name)
-		dst.Code("\t\t\tfor (var item in " + name + ".values)\n")
-		dst.Code("\t\t\t\tDropdownMenuItem<" + name + ">(\n")
-		dst.Code("\t\t\t\t\tvalue: item,\n")
-		dst.Code("\t\t\t\t\tchild: Text(item.toText(context)),\n")
-		dst.Code("\t\t\t\t),\n")
+		dst.Tab(3).Code("for (var item in " + name + ".values)\n")
+		dst.Tab(4).Code("DropdownMenuItem<" + name + ">(\n")
+		dst.Tab(5).Code("value: item,\n")
+		dst.Tab(5).Code("child: Text(item.toText(context)),\n")
+		dst.Tab(4).Code("),\n")
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {

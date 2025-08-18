@@ -1,5 +1,6 @@
 package golang
 
+import "C"
 import (
 	"hbuf/pkg/ast"
 	"hbuf/pkg/build"
@@ -74,6 +75,11 @@ func (b *Builder) printServerDefault(dst *build.Writer, typ *ast.ServerType) err
 	dst.Code("func (s *Default" + serverName + ") Init(ctx context.Context) {\n")
 	dst.Code("}\n\n")
 
+	name := build.StringToUnderlineName(typ.Name.Name)
+	dst.Code("func (s *Default" + serverName + ") ServerName() string {\n")
+	dst.Tab(1).Code("return \"").Code(name).Code("\"\n")
+	dst.Code("}\n\n")
+
 	for _, method := range typ.Methods {
 		if nil != method.Doc && 0 < len(method.Doc.Text()) {
 			dst.Code("// " + build.StringToHumpName(method.Name.Name) + " " + method.Doc.Text())
@@ -110,6 +116,11 @@ func (b *Builder) printServerDefault(dst *build.Writer, typ *ast.ServerType) err
 		} else {
 			b.printBinding(dst, method, bind, isSub)
 		}
+		dst.Code("}\n\n")
+
+		dst.Code("func (s *Default" + serverName + ") ")
+		dst.Code(build.StringToHumpName(method.Name.Name)).Code("MethodName() string {\n")
+		dst.Tab(1).Code("return \"").Code(name).Code("/").Code(build.StringToUnderlineName(typ.Name.Name)).Code("/").Code(build.StringToUnderlineName(method.Name.Name)).Code("\"\n")
 		dst.Code("}\n\n")
 	}
 	return nil

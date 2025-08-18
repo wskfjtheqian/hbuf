@@ -358,17 +358,17 @@ func (b *Builder) printGetServerRouter(dst *build.Writer, typ *ast.ServerType) {
 	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/manage", "")
 	serverName := build.StringToHumpName(typ.Name.Name)
 
-	dst.Code("var NotFound" + serverName + " = &Default" + serverName + "{}\n\n")
+	dst.Code("var Default_" + serverName + " = &Default" + serverName + "{}\n\n")
 
 	dst.Code("func Get" + serverName + "(ctx context.Context) " + serverName + " {\n")
 	dst.Tab(1).Code("router := manage.GET(ctx).Get(&" + serverName + "Router{})\n")
 	dst.Tab(1).Code("if nil == router {\n")
-	dst.Tab(2).Code("return NotFound" + serverName + "\n")
+	dst.Tab(2).Code("return Default_" + serverName + "\n")
 	dst.Tab(1).Code("}\n")
 	dst.Tab(1).Code("if val, ok := router.(" + serverName + "); ok {\n")
 	dst.Tab(1).Code("	return val\n")
 	dst.Tab(1).Code("}\n")
-	dst.Tab(1).Code("return NotFound" + serverName + "\n")
+	dst.Tab(1).Code("return Default_" + serverName + "\n")
 	dst.Code("}\n\n")
 }
 

@@ -31,7 +31,6 @@ func gitVersion() string {
 // 编译程序
 func build(t *testing.T, out string, env ...string) error {
 	version := gitVersion()
-
 	cmd := exec.Command("go", "build", "-ldflags", "-X main.version="+version, "-o", out, "./cmd/main.go")
 	env = append(os.Environ(), env...)
 	cmd.Env = append(cmd.Env, env...)
@@ -161,6 +160,7 @@ func TestBuildAll(t *testing.T) {
 		err := build(t, bin, "GOOS="+config.GOOS, "GOARCH="+config.GOARCH, "CGO_ENABLED=0")
 		if err != nil {
 			t.Error(err)
+			continue
 		}
 
 		buildZip(t, bin, "./bin/"+config.GOOS+"_"+config.GOARCH+"_"+version+".zip")

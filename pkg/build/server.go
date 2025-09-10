@@ -47,7 +47,7 @@ func (b *Builder) checkServerItem(file *ast.File, server *ast.ServerType) error 
 		}
 
 		ident := item.Result.TypeExpr.(*ast.Ident)
-		if "void" != ident.Name {
+		if "void" != ident.Name && "stream" != ident.Name {
 			err = b.checkServerItemType(file, item.Result)
 			if err != nil {
 				return err
@@ -61,9 +61,12 @@ func (b *Builder) checkServerItem(file *ast.File, server *ast.ServerType) error 
 			}
 		}
 
-		err = b.checkServerItemType(file, item.Param)
-		if err != nil {
-			return err
+		ident = item.Param.TypeExpr.(*ast.Ident)
+		if "stream" != ident.Name {
+			err = b.checkServerItemType(file, item.Param)
+			if err != nil {
+				return err
+			}
 		}
 
 		if b.checkServerDuplicateItem(server, index, item.Name.Name) {

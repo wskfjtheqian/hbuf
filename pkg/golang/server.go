@@ -3,6 +3,7 @@ package golang
 import (
 	"hbuf/pkg/ast"
 	"hbuf/pkg/build"
+	"sort"
 )
 
 func (b *Builder) printServerCode(dst *build.Writer, typ *ast.ServerType) error {
@@ -232,6 +233,24 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 
 		dst.Tab(2).Code("&rpc.Method{\n")
 		dst.Tab(3).Code("Name: \"").Code(build.StringToUnderlineName(method.Name.Name)).Code("\",\n")
+		dst.Tab(3).Code("WithContext: func(ctx context.Context) context.Context {\n")
+		au := b.getTag(method.Tags)
+		if nil != au {
+			keys := build.GetKeysByMap(*au)
+			sort.Strings(keys)
+			for _, key := range keys {
+				values := (*au)[key]
+				if len(values) > 0 {
+					dst.Tab(4).Code("rpc.AddTag(ctx, \"").Code(key)
+					for _, val := range values {
+						dst.Code("\", \"").Code(val)
+					}
+					dst.Code("\")\n")
+				}
+			}
+		}
+		dst.Tab(4).Code("return ctx\n")
+		dst.Tab(3).Code("},\n")
 		dst.Tab(3).Code("Handler: func(ctx context.Context, req hbuf.Data) (hbuf.Data, error) {\n")
 		dst.Tab(4).Code("return server.").Code(build.StringToHumpName(method.Name.Name)).Code("(ctx, req.(*")
 		b.printType(dst, method.Param, true)
@@ -240,7 +259,7 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 		dst.Tab(3).Code("Decode: func(decoder func(v hbuf.Data) (hbuf.Data, error)) (hbuf.Data, error) {\n")
 		dst.Tab(4).Code("return decoder(&")
 		b.printType(dst, method.Param, true)
-		dst.Tab(4).Code("{})\n")
+		dst.Code("{})\n")
 		dst.Tab(3).Code("},\n")
 		dst.Tab(2).Code("},\n")
 

@@ -413,7 +413,7 @@ func (b *Builder) printParam(buf *build.Writer, text string, self *build.DBField
 				}
 				if 0 == len(field.Dbs[0].Converter) && build.IsArray(field.Field.Type) && 0 == len(temp) {
 					buf.Code(".L(\",\", ")
-					buf.Import("github.com/wskfjtheqian/hbuf_golang/pkg/utils", "utl")
+					buf.Import("github.com/wskfjtheqian/hbuf_golang/pkg/utl", "utl")
 					buf.Code("utl.ToAnyList(g." + build.StringToHumpName(field.Field.Name.Name) + ")...")
 				} else {
 					buf.Code(".V(")

@@ -39,6 +39,7 @@ type GoWriter struct {
 	server   *build.Writer
 	database *build.Writer
 	verify   *build.Writer
+	export   *build.Writer
 
 	packages string
 }
@@ -49,6 +50,7 @@ func (w *GoWriter) SetPackages(s string) {
 	w.server.Packages = s
 	w.database.Packages = s
 	w.verify.Packages = s
+	w.export.Packages = s
 	w.packages = s
 }
 
@@ -58,6 +60,7 @@ func (w *GoWriter) SetPath(file *ast.File) {
 	w.server.File = file
 	w.database.File = file
 	w.verify.File = file
+	w.export.File = file
 }
 
 func NewGoWriter() *GoWriter {
@@ -67,6 +70,7 @@ func NewGoWriter() *GoWriter {
 		server:   build.NewWriter(),
 		database: build.NewWriter(),
 		verify:   build.NewWriter(),
+		export:   build.NewWriter(),
 	}
 }
 
@@ -135,6 +139,13 @@ func Build(file *ast.File, fSet *token.FileSet, param *build.Param) error {
 			return err
 		}
 	}
+	if 0 < dst.export.GetCode().Len() {
+		err = b.writerFile(dst.export, dst.export.Packages, filepath.Join(dir, name+".export.go"), 0)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -219,6 +230,10 @@ func (b *Builder) printTypeSpec(dst *GoWriter, expr ast.Expr) error {
 			return err
 		}
 		err = b.printVerifyCode(dst.verify, expr.(*ast.DataType))
+		if err != nil {
+			return err
+		}
+		err = b.printExportCode(dst.export, expr.(*ast.DataType))
 		if err != nil {
 			return err
 		}

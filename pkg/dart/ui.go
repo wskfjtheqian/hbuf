@@ -516,7 +516,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		if "text" == form.form {
 			dst.Tab(1).Code("final TextFormBuild " + fieldName + " = TextFormBuild();\n\n")
 			if isArray {
-				setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName)
+				setValue.Tab(2).Code("" + fieldName + ".initialValue = info." + fieldName)
 				if isNil {
 					setValue.Code("?")
 				}
@@ -524,7 +524,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				b.printToString(setValue, field.Type, false, form.digit, form.format, "??\"\"")
 				setValue.Code(").join(\",\");\n")
 				if !form.onlyRead {
-					setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = ")
+					setValue.Tab(2).Code("" + fieldName + ".onSaved = (val) => info." + fieldName + " = ")
 					setValue.Code("val?.split(\",\").map((e) =>e")
 					b.printFormString(setValue, "val", field.Type, false, form.digit, form.format)
 					setValue.Code(").toList()")
@@ -534,69 +534,69 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 					setValue.Code(";\n")
 				}
 			} else {
-				setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName)
+				setValue.Tab(2).Code("" + fieldName + ".initialValue = info." + fieldName)
 				b.printToString(setValue, field.Type, false, form.digit, form.format, "??\"\"")
 				setValue.Code(";\n")
 				if !form.onlyRead {
-					setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = ")
+					setValue.Tab(2).Code("" + fieldName + ".onSaved = (val) => info." + fieldName + " = ")
 					setValue.Code("\"\" == val ? null : ")
 					b.printFormString(setValue, "val", field.Type, false, form.digit, form.format)
 					setValue.Code(";\n")
 				}
 			}
 
-			setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
-			setValue.Code("\t\t" + fieldName + ".widthSizes = sizes;\n")
-			setValue.Code("\t\t" + fieldName + ".maxLines = " + strconv.Itoa(form.maxLine) + ";\n")
-			setValue.Code("\t\t" + fieldName + ".padding = padding;\n")
+			setValue.Tab(2).Code("" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
+			setValue.Tab(2).Code("" + fieldName + ".widthSizes = sizes;\n")
+			setValue.Tab(2).Code("" + fieldName + ".maxLines = " + strconv.Itoa(form.maxLine) + ";\n")
+			setValue.Tab(2).Code("" + fieldName + ".padding = padding;\n")
 			if nil != verify {
 				b.getPackage(dst, typ.Name, "verify")
-				setValue.Code("\t\t" + fieldName + ".validator = (val) => verify" + name + "_" + build.StringToHumpName(fieldName) + "(context, val!);\n")
+				setValue.Tab(2).Code("" + fieldName + ".validator = (val) => verify" + name + "_" + build.StringToHumpName(fieldName) + "(context, val!);\n")
 			}
-			setValue.Code("\t\t" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n\n")
+			setValue.Tab(2).Code("" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n\n")
 
-			fields.Code("\t\t\t" + fieldName + ".build(context),\n")
+			fields.Tab(3).Code("" + fieldName + ".build(context),\n")
 			lang.Add(fieldName, field.Tags)
 		} else if "click" == form.form {
 			dst.Tab(1).Code("final ClickFormBuild<")
 			b.printType(dst, field.Type, false)
 			dst.Code("> " + fieldName + " = ClickFormBuild();\n\n")
 
-			setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName + ";\n")
+			setValue.Tab(2).Code("" + fieldName + ".initialValue = info." + fieldName + ";\n")
 			if !form.onlyRead {
-				setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = val")
+				setValue.Tab(2).Code("" + fieldName + ".onSaved = (val) => info." + fieldName + " = val")
 				if !build.IsNil(field.Type) {
 					setValue.Code("!")
 				}
 				setValue.Code(";\n")
 			}
-			setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
-			setValue.Code("\t\t" + fieldName + ".widthSizes = sizes;\n")
-			setValue.Code("\t\t" + fieldName + ".padding = padding;\n")
+			setValue.Tab(2).Code("" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
+			setValue.Tab(2).Code("" + fieldName + ".widthSizes = sizes;\n")
+			setValue.Tab(2).Code("" + fieldName + ".padding = padding;\n")
 			if nil != verify {
 				b.getPackage(dst, typ.Name, "verify")
-				setValue.Code("\t\t" + fieldName + ".validator = (val) => verify" + name + "_" + build.StringToHumpName(fieldName) + "(context, val!);\n")
+				setValue.Tab(2).Code("" + fieldName + ".validator = (val) => verify" + name + "_" + build.StringToHumpName(fieldName) + "(context, val!);\n")
 			}
-			setValue.Code("\t\t" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n\n")
+			setValue.Tab(2).Code("" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n\n")
 
-			fields.Code("\t\t\t" + fieldName + ".build(context),\n")
+			fields.Tab(3).Code("" + fieldName + ".build(context),\n")
 			lang.Add(fieldName, field.Tags)
 		} else if "file" == form.form {
 			dst.Tab(1).Code("final FileFormBuild " + fieldName + " = FileFormBuild();\n\n")
-			setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName)
+			setValue.Tab(2).Code("" + fieldName + ".initialValue = info." + fieldName)
 			b.printToString(setValue, field.Type, false, form.digit, form.format, "??\"\"")
 			setValue.Code(";\n")
 			if !form.onlyRead {
-				setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = ")
+				setValue.Tab(2).Code("" + fieldName + ".onSaved = (val) => info." + fieldName + " = ")
 				setValue.Code("\"\" == val ? null : ")
 				b.printFormString(setValue, "val", field.Type, false, form.digit, form.format)
 				setValue.Code(";\n")
 			}
-			setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
-			setValue.Code("\t\t" + fieldName + ".widthSizes = sizes;\n")
-			setValue.Code("\t\t" + fieldName + ".padding = padding;\n")
+			setValue.Tab(2).Code("" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
+			setValue.Tab(2).Code("" + fieldName + ".widthSizes = sizes;\n")
+			setValue.Tab(2).Code("" + fieldName + ".padding = padding;\n")
 			if 0 < len(form.extensions) {
-				setValue.Code("\t\t" + fieldName + ".extensions = <String>[")
+				setValue.Tab(2).Code("" + fieldName + ".extensions = <String>[")
 				for i, extension := range form.extensions {
 					if 0 < i {
 						setValue.Code(", ")
@@ -607,54 +607,54 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			if nil != verify {
 				b.getPackage(dst, typ.Name, "verify")
-				setValue.Code("\t\t" + fieldName + ".validator = (val) => verify" + name + "_" + build.StringToHumpName(fieldName) + "(context, val!);\n")
+				setValue.Tab(2).Code("" + fieldName + ".validator = (val) => verify" + name + "_" + build.StringToHumpName(fieldName) + "(context, val!);\n")
 			}
-			setValue.Code("\t\t" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n\n")
+			setValue.Tab(2).Code("" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n\n")
 
-			fields.Code("\t\t\t" + fieldName + ".build(context),\n")
+			fields.Tab(3).Code("" + fieldName + ".build(context),\n")
 			lang.Add(fieldName, field.Tags)
 		} else if "image" == form.form {
 			dst.Tab(1).Code("final ImageFormBuild " + fieldName + " =  ImageFormBuild();\n\n")
 
 			if isArray {
 				if build.IsNil(field.Type) {
-					setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName + "?.map((e) => ImageFormImage(e))?.toList() ?? [];\n")
+					setValue.Tab(2).Code("" + fieldName + ".initialValue = info." + fieldName + "?.map((e) => ImageFormImage(e))?.toList() ?? [];\n")
 					if !form.onlyRead {
-						setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = val!.map((e) => e.url).toList();\n")
+						setValue.Tab(2).Code("" + fieldName + ".onSaved = (val) => info." + fieldName + " = val!.map((e) => e.url).toList();\n")
 					}
 				} else {
-					setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName + ".map((e) => ImageFormImage(e)).toList();\n")
+					setValue.Tab(2).Code("" + fieldName + ".initialValue = info." + fieldName + ".map((e) => ImageFormImage(e)).toList();\n")
 					if !form.onlyRead {
-						setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = val!.map((e) => e.url).toList();\n")
+						setValue.Tab(2).Code("" + fieldName + ".onSaved = (val) => info." + fieldName + " = val!.map((e) => e.url).toList();\n")
 					}
 				}
 			} else {
 				if build.IsNil(field.Type) {
-					setValue.Code("\t\t" + fieldName + ".initialValue = [if (info." + fieldName + "?.startsWith(\"http\") ?? false) ImageFormImage(info." + fieldName + "!)];\n")
+					setValue.Tab(2).Code("" + fieldName + ".initialValue = [if (info." + fieldName + "?.startsWith(\"http\") ?? false) ImageFormImage(info." + fieldName + "!)];\n")
 					if !form.onlyRead {
-						setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = ((val?.isEmpty ?? true) ? null : val!.first.url);\n")
+						setValue.Tab(2).Code("" + fieldName + ".onSaved = (val) => info." + fieldName + " = ((val?.isEmpty ?? true) ? null : val!.first.url);\n")
 					}
 				} else {
-					setValue.Code("\t\t" + fieldName + ".initialValue = [ImageFormImage(info." + fieldName + ")];\n")
+					setValue.Tab(2).Code("" + fieldName + ".initialValue = [ImageFormImage(info." + fieldName + ")];\n")
 					if !form.onlyRead {
-						setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = val!.first.url;\n")
+						setValue.Tab(2).Code("" + fieldName + ".onSaved = (val) => info." + fieldName + " = val!.first.url;\n")
 					}
 				}
 			}
 
-			setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
-			setValue.Code("\t\t" + fieldName + ".maxCount = " + strconv.Itoa(form.maxCount) + ";\n")
-			setValue.Code("\t\t" + fieldName + ".widthSizes = sizes;\n")
-			setValue.Code("\t\t" + fieldName + ".padding = padding;\n")
+			setValue.Tab(2).Code("" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
+			setValue.Tab(2).Code("" + fieldName + ".maxCount = " + strconv.Itoa(form.maxCount) + ";\n")
+			setValue.Tab(2).Code("" + fieldName + ".widthSizes = sizes;\n")
+			setValue.Tab(2).Code("" + fieldName + ".padding = padding;\n")
 			if form.clip {
-				setValue.Code("\t\t" + fieldName + ".clip = true;\n")
+				setValue.Tab(2).Code("" + fieldName + ".clip = true;\n")
 			} else {
-				setValue.Code("\t\t" + fieldName + ".clip = false;\n")
+				setValue.Tab(2).Code("" + fieldName + ".clip = false;\n")
 			}
-			setValue.Code("\t\t" + fieldName + ".outWidth = " + strconv.FormatFloat(form.width, 'G', -1, 64) + ";\n")
-			setValue.Code("\t\t" + fieldName + ".outHeight = " + strconv.FormatFloat(form.height, 'G', -1, 64) + ";\n")
+			setValue.Tab(2).Code("" + fieldName + ".outWidth = " + strconv.FormatFloat(form.width, 'G', -1, 64) + ";\n")
+			setValue.Tab(2).Code("" + fieldName + ".outHeight = " + strconv.FormatFloat(form.height, 'G', -1, 64) + ";\n")
 			if 0 < len(form.extensions) {
-				setValue.Code("\t\t" + fieldName + ".extensions = <String>[")
+				setValue.Tab(2).Code("" + fieldName + ".extensions = <String>[")
 				for i, extension := range form.extensions {
 					if 0 < i {
 						setValue.Code(", ")
@@ -665,67 +665,67 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			if nil != verify {
 				b.getPackage(dst, typ.Name, "verify")
-				setValue.Code("\t\t" + fieldName + ".validator = (val) => verify" + name + "_" + build.StringToHumpName(fieldName) + "(context, val!);\n")
+				setValue.Tab(2).Code("" + fieldName + ".validator = (val) => verify" + name + "_" + build.StringToHumpName(fieldName) + "(context, val!);\n")
 			}
-			setValue.Code("\t\t" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n\n")
-			fields.Code("\t\t\t" + fieldName + ".build(context),\n")
+			setValue.Tab(2).Code("" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n\n")
+			fields.Tab(3).Code("" + fieldName + ".build(context),\n")
 			lang.Add(fieldName, field.Tags)
 
 		} else if "menu" == form.form {
 			dst.Tab(1).Code("final MenuFormBuild<")
 			b.printType(dst, field.Type, false)
 			dst.Code("> " + fieldName + " = MenuFormBuild();\n\n")
-			setValue.Code("\t\t" + fieldName + ".value = info." + fieldName + ";\n")
+			setValue.Tab(2).Code("" + fieldName + ".value = info." + fieldName + ";\n")
 			if !form.onlyRead {
-				setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = val")
+				setValue.Tab(2).Code("" + fieldName + ".onSaved = (val) => info." + fieldName + " = val")
 				if !build.IsNil(field.Type) {
 					setValue.Code("!")
 				}
 				setValue.Code(";\n")
 			}
-			setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
-			setValue.Code("\t\t" + fieldName + ".widthSizes = sizes;\n")
-			setValue.Code("\t\t" + fieldName + ".padding = padding;\n")
-			setValue.Code("\t\t" + fieldName + ".toNull = true;\n")
-			setValue.Code("\t\t" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n")
+			setValue.Tab(2).Code("" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
+			setValue.Tab(2).Code("" + fieldName + ".widthSizes = sizes;\n")
+			setValue.Tab(2).Code("" + fieldName + ".padding = padding;\n")
+			setValue.Tab(2).Code("" + fieldName + ".toNull = true;\n")
+			setValue.Tab(2).Code("" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n")
 			if nil != verify {
 				b.getPackage(dst, typ.Name, "verify")
-				setValue.Code("\t\t" + fieldName + ".validator = (val) => verify" + name + "_" + build.StringToHumpName(fieldName) + "(context, val?.toString());\n")
+				setValue.Tab(2).Code("" + fieldName + ".validator = (val) => verify" + name + "_" + build.StringToHumpName(fieldName) + "(context, val?.toString());\n")
 			}
-			setValue.Code("\t\t" + fieldName + ".items = [\n")
+			setValue.Tab(2).Code("" + fieldName + ".items = [\n")
 			b.printMenuItem(setValue, field.Type, false)
-			setValue.Code("\t\t];\n\n")
+			setValue.Tab(2).Code("];\n\n")
 
-			fields.Code("\t\t\t" + fieldName + ".build(context),\n")
+			fields.Tab(3).Code("" + fieldName + ".build(context),\n")
 			lang.Add(fieldName, field.Tags)
 		} else if "date" == form.form {
 			dst.Tab(1).Code("final DatetimeFormBuild " + fieldName + " =  DatetimeFormBuild();\n\n")
-			setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName)
+			setValue.Tab(2).Code("" + fieldName + ".initialValue = info." + fieldName)
 			b.printToString(setValue, field.Type, false, form.digit, form.format, "??\"\"")
 			setValue.Code(";\n")
 			if !form.onlyRead {
-				setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = ")
+				setValue.Tab(2).Code("" + fieldName + ".onSaved = (val) => info." + fieldName + " = ")
 				setValue.Code("\"\" == val ? null : ")
 				setValue.Code("val ;\n")
 			}
-			setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
-			setValue.Code("\t\t" + fieldName + ".widthSizes = sizes;\n")
-			setValue.Code("\t\t" + fieldName + ".padding = padding;\n")
+			setValue.Tab(2).Code("" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
+			setValue.Tab(2).Code("" + fieldName + ".widthSizes = sizes;\n")
+			setValue.Tab(2).Code("" + fieldName + ".padding = padding;\n")
 			if nil != verify {
 				b.getPackage(dst, typ.Name, "verify")
-				setValue.Code("\t\t" + fieldName + ".validator = (val) => verify" + name + "_" + build.StringToHumpName(fieldName) + "(context, val!);\n")
+				setValue.Tab(2).Code("" + fieldName + ".validator = (val) => verify" + name + "_" + build.StringToHumpName(fieldName) + "(context, val!);\n")
 			}
-			setValue.Code("\t\t" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n\n")
+			setValue.Tab(2).Code("" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n\n")
 
-			fields.Code("\t\t\t" + fieldName + ".build(context),\n")
+			fields.Tab(3).Code("" + fieldName + ".build(context),\n")
 			lang.Add(fieldName, field.Tags)
 		} else if "switch" == form.form {
 			dst.Tab(1).Code("final SwitchFormBuild " + fieldName + " =  SwitchFormBuild();\n\n")
-			setValue.Code("\t\t" + fieldName + ".initialValue = info." + fieldName)
+			setValue.Tab(2).Code("" + fieldName + ".initialValue = info." + fieldName)
 			//b.printToString(setValue, field.Type, false, form.digit, form.format, "??\"\"")
 			setValue.Code(";\n")
 			if !form.onlyRead {
-				setValue.Code("\t\t" + fieldName + ".onSaved = (val) => info." + fieldName + " = ")
+				setValue.Tab(2).Code("" + fieldName + ".onSaved = (val) => info." + fieldName + " = ")
 				if !build.IsNil(field.Type) {
 					setValue.Code("val ?? false ;\n")
 				} else {
@@ -733,16 +733,16 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				}
 
 			}
-			setValue.Code("\t\t" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
-			setValue.Code("\t\t" + fieldName + ".widthSizes = sizes;\n")
-			setValue.Code("\t\t" + fieldName + ".padding = padding;\n")
+			setValue.Tab(2).Code("" + fieldName + ".readOnly = readOnly || " + onlyRead + ";\n")
+			setValue.Tab(2).Code("" + fieldName + ".widthSizes = sizes;\n")
+			setValue.Tab(2).Code("" + fieldName + ".padding = padding;\n")
 			if nil != verify {
 				b.getPackage(dst, typ.Name, "verify")
-				setValue.Code("\t\t" + fieldName + ".validator = (val) => verify" + name + "_" + build.StringToHumpName(fieldName) + "(context, val!);\n")
+				setValue.Tab(2).Code("" + fieldName + ".validator = (val) => verify" + name + "_" + build.StringToHumpName(fieldName) + "(context, val!);\n")
 			}
-			setValue.Code("\t\t" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n\n")
+			setValue.Tab(2).Code("" + fieldName + ".decoration = InputDecoration(labelText: " + name + "Localizations.of(context)." + fieldName + ");\n\n")
 
-			fields.Code("\t\t\t" + fieldName + ".build(context),\n")
+			fields.Tab(3).Code("" + fieldName + ".build(context),\n")
 			lang.Add(fieldName, field.Tags)
 		}
 

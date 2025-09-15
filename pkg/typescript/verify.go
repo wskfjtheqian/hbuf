@@ -182,7 +182,7 @@ func (b *Builder) verifyNum(dst *build.Writer, pName string, val *build.VerifyEn
 		dst.Code(") {\n")
 		b.printVerifyError(dst.Tab(1), pName, val)
 
-		dst.Tab(1).Code("\t}\n")
+		dst.Tab(1).Tab(1).Code("}\n")
 	}
 
 	dst.Tab(1).Code("} catch (e){\n")

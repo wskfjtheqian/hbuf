@@ -77,7 +77,7 @@ func (b *Builder) printExportHeaderCode(dst *build.Writer, data *ast.DataType, k
 
 func (b *Builder) printExportDataCode(dst *build.Writer, data *ast.DataType, keys []string, maps map[string][]*ast.Field, lists []*ast.Field) error {
 	dName := build.StringToHumpName(data.Name.Name)
-	dst.Code("func (g *").Code(dName).Code(") ExportData(key string) []any {\n")
+	dst.Code("func (g *").Code(dName).Code(") ExportData(key string) ([]any, error){\n")
 	dst.Tab(1).Code("switch key {\n")
 	for _, key := range keys {
 		dst.Tab(1).Code("case \"").Code(key).Code("\":\n")
@@ -88,7 +88,7 @@ func (b *Builder) printExportDataCode(dst *build.Writer, data *ast.DataType, key
 				return err
 			}
 		}
-		dst.Tab(2).Code("return list\n")
+		dst.Tab(2).Code("return list, nil\n")
 	}
 	dst.Tab(1).Code("default :\n")
 	dst.Tab(2).Code("list := make([]any, ").Code(strconv.Itoa(len(lists))).Code(")\n")
@@ -98,7 +98,7 @@ func (b *Builder) printExportDataCode(dst *build.Writer, data *ast.DataType, key
 			return err
 		}
 	}
-	dst.Tab(2).Code("return list\n")
+	dst.Tab(2).Code("return list, nil\n")
 	dst.Tab(1).Code("}\n")
 
 	dst.Code("}\n\n")
@@ -116,8 +116,16 @@ func (b *Builder) printExportDataItemCode(dst *build.Writer, i int, item *ast.Fi
 
 	if build.IsArray(item.Type) || build.IsMap(item.Type) {
 		dst.Import("encoding/json", "")
-		dst.Tab(tab).Code("bytes, _ := json.Marshal(g.Get").Code(name).Code("())\n")
+		dst.Tab(tab).Code("bytes, err := json.Marshal(g.Get").Code(name).Code("())\n")
+		dst.Tab(tab).Code("if err!= nil {\n")
+		dst.Tab(tab + 1).Code("return nil, err\n")
+		dst.Tab(tab).Code("}\n")
 		dst.Tab(tab).Code("list[").Code(strconv.Itoa(i)).Code("] = string(bytes)\n")
+	} else if build.IsEnum(item.Type.Type()) {
+		dst.Tab(tab).Code("list[").Code(strconv.Itoa(i)).Code("] = g.Get").Code(name).Code("().ToName()\n")
+	} else if build.GetBaseType(item.Type.Type()) == build.Date {
+		dst.Import("time", "")
+		dst.Tab(tab).Code("list[").Code(strconv.Itoa(i)).Code("] = time.Time(g.Get").Code(name).Code("())\n")
 	} else {
 		dst.Tab(tab).Code("list[").Code(strconv.Itoa(i)).Code("] = g.Get").Code(name).Code("()\n")
 	}

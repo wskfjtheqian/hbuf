@@ -40,6 +40,7 @@ type GoWriter struct {
 	database *build.Writer
 	verify   *build.Writer
 	export   *build.Writer
+	mq       *build.Writer
 
 	packages string
 }
@@ -51,6 +52,7 @@ func (w *GoWriter) SetPackages(s string) {
 	w.database.Packages = s
 	w.verify.Packages = s
 	w.export.Packages = s
+	w.mq.Packages = s
 	w.packages = s
 }
 
@@ -61,6 +63,7 @@ func (w *GoWriter) SetPath(file *ast.File) {
 	w.database.File = file
 	w.verify.File = file
 	w.export.File = file
+	w.mq.File = file
 }
 
 func NewGoWriter() *GoWriter {
@@ -71,6 +74,7 @@ func NewGoWriter() *GoWriter {
 		database: build.NewWriter(),
 		verify:   build.NewWriter(),
 		export:   build.NewWriter(),
+		mq:       build.NewWriter(),
 	}
 }
 
@@ -141,6 +145,12 @@ func Build(file *ast.File, fSet *token.FileSet, param *build.Param) error {
 	}
 	if 0 < dst.export.GetCode().Len() {
 		err = b.writerFile(dst.export, dst.export.Packages, filepath.Join(dir, name+".export.go"), 0)
+		if err != nil {
+			return err
+		}
+	}
+	if 0 < dst.mq.GetCode().Len() {
+		err = b.writerFile(dst.mq, dst.mq.Packages, filepath.Join(dir, name+".mq.go"), 0)
 		if err != nil {
 			return err
 		}
@@ -237,6 +247,11 @@ func (b *Builder) printTypeSpec(dst *GoWriter, expr ast.Expr) error {
 		if err != nil {
 			return err
 		}
+		err = b.printMqCode(dst.mq, expr.(*ast.DataType))
+		if err != nil {
+			return err
+		}
+
 	case *ast.ServerType:
 		err := b.printServerCode(dst.server, expr.(*ast.ServerType))
 		if err != nil {

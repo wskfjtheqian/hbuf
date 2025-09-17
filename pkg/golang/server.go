@@ -190,13 +190,16 @@ func (b *Builder) printClient(dst *build.Writer, typ *ast.ServerType) {
 			b.printType(dst, method.Result.Type(), true)
 			dst.Code(", error) {\n")
 		}
-		dst.Tab(1).Code("response, err := rpc.ClientCall[*")
+		dst.Tab(1).Code("response, err := r.client.Invoke(ctx, 0, \"").Code(name).Code("\", \"")
+		dst.Code(build.StringToUnderlineName(method.Name.Name)).Code("\", req, rpc.NewResultResponse[*")
 		b.printType(dst, method.Result.Type(), true)
-		dst.Code("](ctx, r.client, 0, \"").Code(name).Code("\", \"").Code(build.StringToUnderlineName(method.Name.Name)).Code("\", req)\n")
+		dst.Code("])\n")
 		dst.Tab(1).Code("if err != nil {\n")
 		dst.Tab(2).Code("return nil, err\n")
 		dst.Tab(1).Code("}\n")
-		dst.Tab(1).Code("return response, nil\n")
+		dst.Tab(1).Code("return response.(*")
+		b.printType(dst, method.Result.Type(), true)
+		dst.Code("), nil\n")
 		dst.Code("}\n\n")
 		return nil
 	})
@@ -251,7 +254,7 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 		}
 		dst.Tab(4).Code("return ctx\n")
 		dst.Tab(3).Code("},\n")
-		dst.Tab(3).Code("Handler: func(ctx context.Context, req hbuf.Data) (hbuf.Data, error) {\n")
+		dst.Tab(3).Code("Handler: func(ctx context.Context, req any) (any, error) {\n")
 		dst.Tab(4).Code("return server.").Code(build.StringToHumpName(method.Name.Name)).Code("(ctx, req.(*")
 		b.printType(dst, method.Param, true)
 		dst.Code("))\n")

@@ -457,39 +457,32 @@ func (b *Builder) printListData(dst *build.Writer, typ *ast.DataType, key string
 	dst.Code(w.GetCode().String())
 
 	dst.Tab(1).Code("var ret []" + dName + "\n")
-	if nil != c {
-		dst.Tab(1).Code("cache := db.NewCache(tableName, s)\n")
-		dst.Tab(1).Code("ok, _ := cache.Get(ctx, &ret)\n")
-		dst.Tab(1).Code("if ok {\n")
-		dst.Tab(2).Code("return ret, nil\n")
-		dst.Tab(1).Code("}\n")
-	}
-	dst.Tab(1).Code("ret = make([]" + dName + ", 0)\n")
-	dst.Import("database/sql", "")
-	dst.Tab(1).Code("_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
-	dst.Tab(2).Code("var val " + dName + "\n")
-	dst.Tab(2).Code("err := rows.Scan(" + scan.String() + ")\n")
-	dst.Tab(2).Code("if err == nil {\n")
-	dst.Tab(3).Code("ret = append(ret, val)\n")
-	dst.Tab(2).Code("}\n")
-	dst.Tab(2).Code("return true, err\n")
-	dst.Tab(1).Code("})\n")
-	dst.Tab(1).Code("if err != nil {\n")
-	dst.Tab(2).Code("return nil, err\n")
-	dst.Tab(1).Code("}\n")
 
+	tab := 0
 	if nil != c {
+		tab = 1
 		dst.Import("math/rand", "")
 		dst.Import("time", "")
-		dst.Tab(1).Code("_ = cache.Set(ctx, ret, ")
-		if 0 < c.min {
-			dst.Code("time.Duration(rand.Intn(" + strconv.Itoa(c.max) + "-" + strconv.Itoa(c.min) + ")+" + strconv.Itoa(c.min) + ")*time.Second")
-		} else {
-			dst.Code("0")
-		}
-		dst.Code(")\n")
+
+		dst.Tab(1).Code("err := db.SaveCache(ctx, tableName, s, ret, time.Duration(rand.Intn(").Code(strconv.Itoa(c.max))
+		dst.Code("-").Code(strconv.Itoa(c.min)).Code(")+").Code(strconv.Itoa(c.min)).Code(")*time.Second,")
+		dst.Code("func(ctx context.Context) (any, error) {\n")
 	}
-	dst.Tab(1).Code("return ret, nil\n")
+	dst.Import("database/sql", "")
+	dst.Tab(tab + 1).Code("_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
+	dst.Tab(tab + 2).Code("var val " + dName + "\n")
+	dst.Tab(tab + 2).Code("err := rows.Scan(" + scan.String() + ")\n")
+	dst.Tab(tab + 2).Code("if err == nil {\n")
+	dst.Tab(tab + 3).Code("ret = append(ret, val)\n")
+	dst.Tab(tab + 2).Code("}\n")
+	dst.Tab(tab + 2).Code("return true, err\n")
+	dst.Tab(tab + 1).Code("})\n")
+
+	if nil != c {
+		dst.Tab(tab + 1).Code("return ret, err\n")
+		dst.Code("\t})\n")
+	}
+	dst.Tab(1).Code("return ret, err\n")
 	dst.Code("}\n")
 	dst.Code("\n")
 }
@@ -519,39 +512,31 @@ func (b *Builder) printMapData(dst *build.Writer, key string, typ *ast.DataType,
 	dst.Code(w.GetCode().String())
 
 	dst.Tab(1).Code("var ret map[" + kType.String() + "]" + dName + "\n")
+	tab := 0
 	if nil != c {
-		dst.Tab(1).Code("cache := db.NewCache(tableName, s)\n")
-		dst.Tab(1).Code("ok, _ := cache.Get(ctx, &ret)\n")
-		dst.Tab(1).Code("if ok {\n")
-		dst.Tab(2).Code("return ret, nil\n")
-		dst.Tab(1).Code("}\n")
-	}
-	dst.Tab(1).Code("ret = make(map[" + kType.String() + "]" + dName + ")\n")
-	dst.Import("database/sql", "")
-	dst.Tab(1).Code("_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
-	dst.Tab(2).Code("var val " + dName + "\n")
-	dst.Tab(2).Code("err := rows.Scan(" + scan.String() + ")\n")
-	dst.Tab(2).Code("if err == nil {\n")
-	dst.Tab(3).Code("ret[val.Get" + build.StringToHumpName(KName.String()) + "()] = val\n")
-	dst.Tab(2).Code("}\n")
-	dst.Tab(2).Code("return true, err\n")
-	dst.Tab(1).Code("})\n")
-	dst.Tab(1).Code("if err != nil {\n")
-	dst.Tab(2).Code("return nil, err\n")
-	dst.Tab(1).Code("}\n")
-
-	if nil != c {
+		tab = 1
 		dst.Import("math/rand", "")
 		dst.Import("time", "")
-		dst.Tab(1).Code("_ = cache.Set(ctx, ret, ")
-		if 0 < c.min {
-			dst.Code("time.Duration(rand.Intn(" + strconv.Itoa(c.max) + "-" + strconv.Itoa(c.min) + ")+" + strconv.Itoa(c.min) + ")*time.Second")
-		} else {
-			dst.Code("0")
-		}
-		dst.Code(")\n")
+
+		dst.Tab(1).Code("err := db.SaveCache(ctx, tableName, s, ret, time.Duration(rand.Intn(").Code(strconv.Itoa(c.max))
+		dst.Code("-").Code(strconv.Itoa(c.min)).Code(")+").Code(strconv.Itoa(c.min)).Code(")*time.Second,")
+		dst.Code(" func(ctx context.Context,) (any, error) {\n")
 	}
-	dst.Tab(1).Code("return ret, nil\n")
+	dst.Import("database/sql", "")
+	dst.Tab(tab + 1).Code("ret = make(map[" + kType.String() + "]" + dName + ")\n")
+	dst.Tab(tab + 1).Code("_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
+	dst.Tab(tab + 2).Code("var val " + dName + "\n")
+	dst.Tab(tab + 2).Code("err := rows.Scan(" + scan.String() + ")\n")
+	dst.Tab(tab + 2).Code("if err == nil {\n")
+	dst.Tab(tab + 3).Code("ret[val.Get" + build.StringToHumpName(KName.String()) + "()] = val\n")
+	dst.Tab(tab + 2).Code("}\n")
+	dst.Tab(tab + 2).Code("return true, err\n")
+	dst.Tab(tab + 1).Code("})\n")
+	if nil != c {
+		dst.Tab(tab + 1).Code("return ret, err\n")
+		dst.Code("\t})\n")
+	}
+	dst.Tab(1).Code("return ret, err\n")
 	dst.Code("}\n")
 	dst.Code("\n")
 }
@@ -568,34 +553,26 @@ func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build
 	dst.Tab(1).Code("s.T(\"SELECT COUNT(1) FROM \").T(tableName).T(\" WHERE is_deleted = 0\")\n")
 	dst.Code(w.GetCode().String())
 
-	dst.Tab(1).Code("var count int64\n")
+	dst.Tab(1).Code("var val int64\n")
+	tab := 0
 	if nil != c {
-		dst.Tab(1).Code("cache := db.NewCache(tableName, s)\n")
-		dst.Tab(1).Code("ok, _ := cache.Get(ctx, &count)\n")
-		dst.Tab(1).Code("if ok {\n")
-		dst.Tab(2).Code("return count, nil\n")
-		dst.Tab(1).Code("}\n")
-	}
-	dst.Import("database/sql", "")
-	dst.Tab(1).Code("_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
-	dst.Tab(2).Code("return false, rows.Scan(&count)\n")
-	dst.Tab(1).Code("})\n")
-	dst.Tab(1).Code("if err != nil {\n")
-	dst.Tab(2).Code("return 0, err\n")
-	dst.Tab(1).Code("}\n")
-
-	if nil != c {
+		tab = 1
 		dst.Import("math/rand", "")
 		dst.Import("time", "")
-		dst.Tab(1).Code("_ = cache.Set(ctx, count, ")
-		if 0 < c.min {
-			dst.Code("time.Duration(rand.Intn(" + strconv.Itoa(c.max) + "-" + strconv.Itoa(c.min) + ")+" + strconv.Itoa(c.min) + ")*time.Second")
-		} else {
-			dst.Code("0")
-		}
-		dst.Code(")\n")
+
+		dst.Tab(1).Code("err := db.SaveCache(ctx, tableName, s, &val, time.Duration(rand.Intn(").Code(strconv.Itoa(c.max))
+		dst.Code("-").Code(strconv.Itoa(c.min)).Code(")+").Code(strconv.Itoa(c.min)).Code(")*time.Second,")
+		dst.Code(" func(ctx context.Context) (any, error) {\n")
 	}
-	dst.Tab(1).Code("return count, nil\n")
+	dst.Import("database/sql", "")
+	dst.Tab(tab + 1).Code("_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
+	dst.Tab(tab + 2).Code("return false, rows.Scan(&val)\n")
+	dst.Tab(tab + 1).Code("})\n")
+	if nil != c {
+		dst.Tab(tab + 1).Code("return val, err\n")
+		dst.Code("\t})\n")
+	}
+	dst.Tab(1).Code("return val, err\n")
 	dst.Code("}\n")
 	dst.Code("\n")
 }
@@ -614,7 +591,7 @@ func (b *Builder) printDeleteData(dst *build.Writer, db *build.DB, wFields []*bu
 	dst.Code(w.GetCode().String())
 
 	if c {
-		dst.Tab(1).Code("defer db.NewCache(tableName, s).Clear(ctx)\n")
+		dst.Tab(1).Code("defer db.ClearCache(ctx,tableName)\n")
 	}
 	dst.Tab(1).Code("return s.Exec(ctx)\n")
 	dst.Code("}\n\n")
@@ -633,7 +610,7 @@ func (b *Builder) printRemoveData(dst *build.Writer, db *build.DB, wFields []*bu
 	dst.Code(w.GetCode().String())
 
 	if c {
-		dst.Tab(1).Code("defer db.NewCache(tableName, s).Clear(ctx)\n")
+		dst.Tab(1).Code("defer db.ClearCache(ctx,tableName)\n")
 	}
 	dst.Tab(1).Code("return s.Exec(ctx)\n")
 	dst.Code("}\n\n")
@@ -657,7 +634,7 @@ func (b *Builder) printInsertData(dst *build.Writer, typ *ast.DataType, val stri
 	dst.Code(set.String())
 
 	if nil != c {
-		dst.Tab(1).Code("defer db.NewCache(tableName, s).Clear(ctx)\n")
+		dst.Tab(1).Code("defer db.ClearCache(ctx,tableName)\n")
 	}
 	dst.Tab(1).Code("return s.Exec(ctx)\n")
 	dst.Code("}\n\n")
@@ -698,7 +675,7 @@ func (b *Builder) printInsertListData(dst *build.Writer, typ *ast.DataType, db *
 	dst.Code(").T(\")\")\n")
 	dst.Tab(1).Code("}\n")
 	if isCache {
-		dst.Tab(1).Code("defer db.NewCache(tableName, s).Clear(ctx)\n")
+		dst.Tab(1).Code("defer db.ClearCache(ctx,tableName)\n")
 	}
 	dst.Tab(1).Code("return s.Exec(ctx)\n")
 	dst.Code("}\n\n")
@@ -725,7 +702,7 @@ func (b *Builder) printUpdateData(dst *build.Writer, typ *ast.DataType, key stri
 	dst.Code(w.String())
 	dst.Code("\n")
 	if nil != c {
-		dst.Tab(1).Code("defer db.NewCache(tableName, s).Clear(ctx)\n")
+		dst.Tab(1).Code("defer db.ClearCache(ctx,tableName)\n")
 	}
 	dst.Tab(1).Code("return s.Exec(ctx)\n")
 	dst.Code("}\n\n")
@@ -752,7 +729,7 @@ func (b *Builder) printSetData(dst *build.Writer, typ *ast.DataType, key string,
 	dst.Code(w.String())
 	dst.Code("\n")
 	if nil != c {
-		dst.Tab(1).Code("defer db.NewCache(tableName, s).Clear(ctx)\n")
+		dst.Tab(1).Code("defer db.ClearCache(ctx,tableName)\n")
 	}
 	dst.Tab(1).Code("return s.Exec(ctx)\n")
 	dst.Code("}\n\n")
@@ -810,34 +787,29 @@ func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, key string,
 	dst.Tab(1).Code("s.T(\"SELECT " + item.String() + " FROM \").T(tableName).T(\" WHERE is_deleted = 0\")\n")
 	dst.Code(w.GetCode().String())
 	dst.Tab(1).Code("s.T(\" LIMIT 1\")\n")
-	dst.Tab(1).Code("var val " + dName + "\n")
+	dst.Tab(1).Code("var val *" + dName + "\n")
 
+	tab := 0
 	if nil != c {
-		dst.Tab(1).Code("cache := db.NewCache(tableName, s)\n")
-		dst.Tab(1).Code("ok, _ := cache.Get(ctx, &val)\n")
-		dst.Tab(1).Code("if ok {\n")
-		dst.Tab(2).Code("return &val, nil\n")
-		dst.Tab(1).Code("}\n")
-	}
-	dst.Import("database/sql", "")
-	dst.Tab(1).Code("_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
-	dst.Tab(2).Code("return false, rows.Scan(" + scan.String() + ")\n")
-	dst.Tab(1).Code("})\n")
-	dst.Tab(1).Code("if err != nil {\n")
-	dst.Tab(2).Code("return nil, err\n")
-	dst.Tab(1).Code("}\n")
-	if nil != c {
+		tab = 1
 		dst.Import("math/rand", "")
 		dst.Import("time", "")
-		dst.Tab(1).Code("_ = cache.Set(ctx, val, ")
-		if 0 < c.min {
-			dst.Code("time.Duration(rand.Intn(" + strconv.Itoa(c.max) + "-" + strconv.Itoa(c.min) + ")+" + strconv.Itoa(c.min) + ")*time.Second")
-		} else {
-			dst.Code("0")
-		}
-		dst.Code(")\n")
+
+		dst.Tab(1).Code("err := db.SaveCache(ctx, tableName, s, val, time.Duration(rand.Intn(").Code(strconv.Itoa(c.max))
+		dst.Code("-").Code(strconv.Itoa(c.min)).Code(")+").Code(strconv.Itoa(c.min)).Code(")*time.Second,")
+		dst.Code(" func(ctx context.Context) (any, error) {\n")
 	}
-	dst.Tab(1).Code("return &val, nil\n")
-	dst.Code("}\n\n")
+	dst.Import("database/sql", "")
+	dst.Tab(tab + 1).Code("_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
+	dst.Tab(tab + 2).Code("val = new(").Code(dName).Code(")\n")
+	dst.Tab(tab + 2).Code("return false, rows.Scan(" + scan.String() + ")\n")
+	dst.Tab(tab + 1).Code("})\n")
+	if nil != c {
+		dst.Tab(tab + 1).Code("return val, err\n")
+		dst.Code("\t})\n")
+	}
+	dst.Tab(1).Code("return val, err\n")
+	dst.Code("}\n")
+	dst.Code("\n")
 
 }

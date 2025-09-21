@@ -36,8 +36,11 @@ func (b *Builder) printDataDescriptor(dst *build.Writer, typ *ast.DataType) erro
 	dst.Import("unsafe", "")
 
 	dst.Code("var ").Code(name).Code(" ").Code(build.StringToHumpName(typ.Name.Name)).Code("\n")
-	dst.Code("var ").Code(name).Code("Descriptor = hbuf.NewDataDescriptor(0, false, reflect.TypeOf(&").Code(name).Code("), map[uint16]hbuf.Descriptor{\n")
+	dst.Code("var ").Code(name).Code("Descriptor = hbuf.NewDataDescriptor(0, false, reflect.TypeOf(&").Code(name).Code("), map[uint16]hbuf.Descriptor{")
 
+	if len(typ.Extends) > 0 {
+		dst.Code("\n")
+	}
 	id := 0
 	for _, extend := range typ.Extends {
 		v, _ := strconv.Atoi(extend.Id.Value)
@@ -51,7 +54,10 @@ func (b *Builder) printDataDescriptor(dst *build.Writer, typ *ast.DataType) erro
 		b.printDescriptor(dst, extend.Name, false, name, build.StringToHumpName(extend.Name.Name))
 		dst.Code(",\n")
 	}
-	dst.Code("}, map[uint16]hbuf.Descriptor{\n")
+	dst.Code("}, map[uint16]hbuf.Descriptor{")
+	if len(typ.Fields.List) > 0 {
+		dst.Code("\n")
+	}
 
 	id = 0
 	for _, field := range typ.Fields.List {
@@ -148,16 +154,16 @@ func (b *Builder) printDescriptor(dst *build.Writer, expr ast.Expr, isNull bool,
 	case *ast.ArrayType:
 		dst.Code("hbuf.NewListDescriptor[").Code(b.getDescriptorType(dst, expr.(*ast.ArrayType).VType, false)).Code("](").Code(offsetof).Code(", ")
 		b.printDescriptor(dst, expr.(*ast.ArrayType).VType, false, "", "")
-		dst.Code(",").Code(isPrt).Code(")")
+		dst.Code(", ").Code(isPrt).Code(")")
 
 	case *ast.MapType:
 		ma := expr.(*ast.MapType)
 
-		dst.Code("hbuf.NewMapDescriptor[").Code(b.getDescriptorType(dst, ma.Key, false)).Code(",").Code(b.getDescriptorType(dst, ma.VType, false)).Code("](").Code(offsetof).Code(", ")
+		dst.Code("hbuf.NewMapDescriptor[").Code(b.getDescriptorType(dst, ma.Key, false)).Code(", ").Code(b.getDescriptorType(dst, ma.VType, false)).Code("](").Code(offsetof).Code(", ")
 		b.printDescriptor(dst, ma.Key, false, "", "")
 		dst.Code(", ")
 		b.printDescriptor(dst, ma.VType, false, "", "")
-		dst.Code(",").Code(isPrt).Code(")")
+		dst.Code(", ").Code(isPrt).Code(")")
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
 		b.printDescriptor(dst, t.Type(), isNull || t.Empty, structName, fieldName)
@@ -213,12 +219,12 @@ func (b *Builder) printDataStruct(dst *build.Writer, typ *ast.DataType) error {
 		dst.Tab(1).Code("")
 		dst.Code(build.StringFillRight(field.name, ' ', nameLen+1))
 		dst.Code(build.StringFillRight(field.typ, ' ', typLen+1))
-		dst.Code(build.StringFillRight(field.tag, ' ', tagLen+1))
+		dst.Code(build.StringFillRight(field.tag, ' ', tagLen))
 		dst.Code("//").Code(strings.Trim(strings.ReplaceAll(field.comment, "\n", " "), " ")).Code("\n")
 	}
 	dst.Code("}\n\n")
 
-	dst.Code("func (g *" + build.StringToHumpName(typ.Name.Name) + ") Descriptors() hbuf.Descriptor  {\n")
+	dst.Code("func (g *" + build.StringToHumpName(typ.Name.Name) + ") Descriptors() hbuf.Descriptor {\n")
 	dst.Tab(1).Code("return ").Code(build.StringToFirstLower(typ.Name.Name)).Code("Descriptor\n")
 	dst.Code("}\n\n")
 

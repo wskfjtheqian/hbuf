@@ -591,7 +591,7 @@ func (b *Builder) printDeleteData(dst *build.Writer, db *build.DB, wFields []*bu
 	dst.Code(w.GetCode().String())
 
 	if c {
-		dst.Tab(1).Code("defer db.ClearCache(ctx,tableName)\n")
+		dst.Tab(1).Code("defer db.ClearCache(ctx, tableName)\n")
 	}
 	dst.Tab(1).Code("return s.Exec(ctx)\n")
 	dst.Code("}\n\n")
@@ -610,7 +610,7 @@ func (b *Builder) printRemoveData(dst *build.Writer, db *build.DB, wFields []*bu
 	dst.Code(w.GetCode().String())
 
 	if c {
-		dst.Tab(1).Code("defer db.ClearCache(ctx,tableName)\n")
+		dst.Tab(1).Code("defer db.ClearCache(ctx, tableName)\n")
 	}
 	dst.Tab(1).Code("return s.Exec(ctx)\n")
 	dst.Code("}\n\n")
@@ -634,7 +634,7 @@ func (b *Builder) printInsertData(dst *build.Writer, typ *ast.DataType, val stri
 	dst.Code(set.String())
 
 	if nil != c {
-		dst.Tab(1).Code("defer db.ClearCache(ctx,tableName)\n")
+		dst.Tab(1).Code("defer db.ClearCache(ctx, tableName)\n")
 	}
 	dst.Tab(1).Code("return s.Exec(ctx)\n")
 	dst.Code("}\n\n")
@@ -675,7 +675,7 @@ func (b *Builder) printInsertListData(dst *build.Writer, typ *ast.DataType, db *
 	dst.Code(").T(\")\")\n")
 	dst.Tab(1).Code("}\n")
 	if isCache {
-		dst.Tab(1).Code("defer db.ClearCache(ctx,tableName)\n")
+		dst.Tab(1).Code("defer db.ClearCache(ctx, tableName)\n")
 	}
 	dst.Tab(1).Code("return s.Exec(ctx)\n")
 	dst.Code("}\n\n")
@@ -702,7 +702,7 @@ func (b *Builder) printUpdateData(dst *build.Writer, typ *ast.DataType, key stri
 	dst.Code(w.String())
 	dst.Code("\n")
 	if nil != c {
-		dst.Tab(1).Code("defer db.ClearCache(ctx,tableName)\n")
+		dst.Tab(1).Code("defer db.ClearCache(ctx, tableName)\n")
 	}
 	dst.Tab(1).Code("return s.Exec(ctx)\n")
 	dst.Code("}\n\n")
@@ -729,7 +729,7 @@ func (b *Builder) printSetData(dst *build.Writer, typ *ast.DataType, key string,
 	dst.Code(w.String())
 	dst.Code("\n")
 	if nil != c {
-		dst.Tab(1).Code("defer db.ClearCache(ctx,tableName)\n")
+		dst.Tab(1).Code("defer db.ClearCache(ctx, tableName)\n")
 	}
 	dst.Tab(1).Code("return s.Exec(ctx)\n")
 	dst.Code("}\n\n")
@@ -795,7 +795,7 @@ func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, key string,
 		dst.Import("math/rand", "")
 		dst.Import("time", "")
 
-		dst.Tab(1).Code("err := db.SaveCache(ctx, tableName, s, val, time.Duration(rand.Intn(").Code(strconv.Itoa(c.max))
+		dst.Tab(1).Code("err := db.SaveCache(ctx, tableName, s, &val, time.Duration(rand.Intn(").Code(strconv.Itoa(c.max))
 		dst.Code("-").Code(strconv.Itoa(c.min)).Code(")+").Code(strconv.Itoa(c.min)).Code(")*time.Second,")
 		dst.Code(" func(ctx context.Context) (any, error) {\n")
 	}

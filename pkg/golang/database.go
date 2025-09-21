@@ -279,22 +279,22 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 		for i, item := range text {
 			if 1 == len(text) || !build.IsArray(field.Field.Type) {
 				if build.IsNil(field.Field.Type) {
-					where.Code("\tif nil != g." + fieldName + " {\n")
+					where.Tab(1).Code("if nil != g." + fieldName + " {\n")
 					_ = b.printParam(where, item, field, fields, "", "\t\ts")
-					where.Code("\t}\n")
+					where.Tab(1).Code("}\n")
 				} else {
 					_ = b.printParam(where, item, field, fields, "", "\ts")
 				}
 			} else {
 				if build.IsNil(field.Field.Type) {
-					where.Code("\tif nil != g." + fieldName + " && " + strconv.Itoa(i) + " < len(g." + fieldName + ")")
+					where.Tab(1).Code("if nil != g." + fieldName + " && " + strconv.Itoa(i) + " < len(g." + fieldName + ")")
 					array := field.Field.Type.(*ast.ArrayType)
 					if array.VType.Empty {
 						where.Code(" && nil != g." + fieldName + "[" + strconv.Itoa(i) + "]")
 					}
 					where.Code(" {\n")
 					_ = b.printParam(where, item, field, fields, "["+strconv.Itoa(i)+"]", "\t\ts")
-					where.Code("\t}\n")
+					where.Tab(1).Code("}\n")
 				} else {
 					_ = b.printParam(where, item, field, fields, "["+strconv.Itoa(i)+"]", "\ts")
 				}
@@ -308,16 +308,16 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 			group := field.Dbs[0].Group
 			if 0 < len(group) {
 				if build.IsNil(field.Field.Type) {
-					where.Code("\tif nil != g." + build.StringToHumpName(field.Field.Name.Name) + " {\t")
+					where.Tab(1).Code("if nil != g." + build.StringToHumpName(field.Field.Name.Name) + " {\t")
 				}
 				if isFist {
-					where.Code("\ts.T(\" GROUP BY \")")
+					where.Tab(1).Code("s.T(\" GROUP BY \")")
 				} else {
-					where.Code("\ts.T(\", \")")
+					where.Tab(1).Code("s.T(\", \")")
 				}
 				_ = b.printParam(where, group, field, fields, "", "")
 				if build.IsNil(field.Field.Type) {
-					where.Code("\t}\n")
+					where.Tab(1).Code("}\n")
 				}
 			}
 		}
@@ -328,7 +328,7 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 		for _, field := range fields {
 			order := field.Dbs[0].Order
 			if 0 < len(order) {
-				where.Code("\tif ")
+				where.Tab(1).Code("if ")
 				if build.IsNil(field.Field.Type) {
 					where.Code("nil != g." + build.StringToHumpName(field.Field.Name.Name))
 					where.Code(" && (\"ASC\" == *g." + build.StringToHumpName(field.Field.Name.Name) + " || \"DESC\" == *g." + build.StringToHumpName(field.Field.Name.Name) + ")")
@@ -337,11 +337,11 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 				}
 
 				where.Code(" {\n")
-				where.Code("\t\ts.T(\" ORDER BY \")")
+				where.Tab(2).Code("s.T(\" ORDER BY \")")
 
 				_ = b.printParam(where, order, field, fields, "", "")
 
-				where.Code("\t}\n")
+				where.Tab(1).Code("}\n")
 			}
 		}
 	}
@@ -349,10 +349,10 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 	if page {
 		if limit, ok := b.getLimit(fields); ok {
 			if offset, ok := b.getOffset(fields); ok {
-				where.Code("\ts.T(\" LIMIT " + offset.Dbs[0].Offset + ", " + limit.Dbs[0].Limit + "\")")
+				where.Tab(1).Code("s.T(\" LIMIT " + offset.Dbs[0].Offset + ", " + limit.Dbs[0].Limit + "\")")
 				where.Code(".P(g." + build.StringToHumpName(offset.Field.Name.Name) + ", g." + build.StringToHumpName(limit.Field.Name.Name) + ")\n")
 			} else {
-				where.Code("\ts.T(\" LIMIT " + limit.Dbs[0].Limit + "\")")
+				where.Tab(1).Code("s.T(\" LIMIT " + limit.Dbs[0].Limit + "\")")
 				where.Code(".P(g." + build.StringToHumpName(limit.Field.Name.Name) + ")\n")
 			}
 		}
@@ -480,7 +480,7 @@ func (b *Builder) printListData(dst *build.Writer, typ *ast.DataType, key string
 
 	if nil != c {
 		dst.Tab(tab + 1).Code("return ret, err\n")
-		dst.Code("\t})\n")
+		dst.Tab(1).Code("})\n")
 	}
 	dst.Tab(1).Code("return ret, err\n")
 	dst.Code("}\n")
@@ -534,7 +534,7 @@ func (b *Builder) printMapData(dst *build.Writer, key string, typ *ast.DataType,
 	dst.Tab(tab + 1).Code("})\n")
 	if nil != c {
 		dst.Tab(tab + 1).Code("return ret, err\n")
-		dst.Code("\t})\n")
+		dst.Tab(1).Code("})\n")
 	}
 	dst.Tab(1).Code("return ret, err\n")
 	dst.Code("}\n")
@@ -570,7 +570,7 @@ func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build
 	dst.Tab(tab + 1).Code("})\n")
 	if nil != c {
 		dst.Tab(tab + 1).Code("return val, err\n")
-		dst.Code("\t})\n")
+		dst.Tab(1).Code("})\n")
 	}
 	dst.Tab(1).Code("return val, err\n")
 	dst.Code("}\n")
@@ -806,7 +806,7 @@ func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, key string,
 	dst.Tab(tab + 1).Code("})\n")
 	if nil != c {
 		dst.Tab(tab + 1).Code("return val, err\n")
-		dst.Code("\t})\n")
+		dst.Tab(1).Code("})\n")
 	}
 	dst.Tab(1).Code("return val, err\n")
 	dst.Code("}\n")

@@ -22,9 +22,9 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) {
 	dst.Code(" {\n")
 	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 		if nil != field.Doc && 0 < len(field.Doc.Text()) {
-			dst.Code("\t///" + field.Doc.Text())
+			dst.Tab(1).Code("///" + field.Doc.Text())
 		}
-		dst.Code("\t")
+		dst.Tab(1).Code("")
 		dst.Code(build.StringToFirstLower(field.Name.Name) + ": ")
 		b.printType(dst, field.Type, false, false)
 		dst.Code(" = ")
@@ -36,11 +36,11 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) {
 		return
 	}
 
-	dst.Code("\tpublic static fromJson(json: Record<string, any>): " + build.StringToHumpName(typ.Name.Name) + "{\n")
-	dst.Code("\t\tconst ret = new " + build.StringToHumpName(typ.Name.Name) + "()\n")
-	dst.Code("\t\tlet temp:any\n")
+	dst.Tab(1).Code("public static fromJson(json: Record<string, any>): " + build.StringToHumpName(typ.Name.Name) + "{\n")
+	dst.Tab(2).Code("const ret = new " + build.StringToHumpName(typ.Name.Name) + "()\n")
+	dst.Tab(2).Code("let temp:any\n")
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
-		dst.Code("\t\tret." + build.StringToFirstLower(field.Name.Name) + " = ")
+		dst.Tab(2).Code("ret." + build.StringToFirstLower(field.Name.Name) + " = ")
 		jsonName := build.StringToUnderlineName(field.Name.Name)
 		b.printFormMap(dst, "(temp = json[\""+jsonName+"\"])", "temp", field.Type, data, false, false)
 		dst.Code("\n")
@@ -50,14 +50,14 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) {
 		return
 	}
 
-	dst.Code("\t\treturn ret\n")
-	dst.Code("\t}\n\n")
+	dst.Tab(2).Code("return ret\n")
+	dst.Tab(1).Code("}\n\n")
 
 	dst.Code("\n")
-	dst.Code("\tpublic toJson(): Record<string, any> {\n")
-	dst.Code("\t\treturn {\n")
+	dst.Tab(1).Code("public toJson(): Record<string, any> {\n")
+	dst.Tab(2).Code("return {\n")
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
-		dst.Code("\t\t\t\"" + build.StringToUnderlineName(field.Name.Name))
+		dst.Tab(3).Code("\"" + build.StringToUnderlineName(field.Name.Name))
 		dst.Code("\": ")
 		b.printToJson(dst, "this.", build.StringToFirstLower(field.Name.Name), field.Type, data, false, false)
 		dst.Code(",\n")
@@ -66,29 +66,29 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) {
 	if err != nil {
 		return
 	}
-	dst.Code("\t\t};\n")
-	dst.Code("\t}\n\n")
+	dst.Tab(2).Code("};\n")
+	dst.Tab(1).Code("}\n\n")
 
-	dst.Code("\tpublic static fromData(data: BinaryData): " + build.StringToHumpName(typ.Name.Name) + " {\n")
-	dst.Code("\t\tconst ret = new " + build.StringToHumpName(typ.Name.Name) + "()\n")
-	dst.Code("\t\treturn ret\n")
-	dst.Code("\t}\n\n")
+	dst.Tab(1).Code("public static fromData(data: BinaryData): " + build.StringToHumpName(typ.Name.Name) + " {\n")
+	dst.Tab(2).Code("const ret = new " + build.StringToHumpName(typ.Name.Name) + "()\n")
+	dst.Tab(2).Code("return ret\n")
+	dst.Tab(1).Code("}\n\n")
 
-	dst.Code("\tpublic toData(): BinaryData {\n")
-	dst.Code("\t\treturn new ArrayBuffer(0)\n")
-	dst.Code("\t}\n\n")
+	dst.Tab(1).Code("public toData(): BinaryData {\n")
+	dst.Tab(2).Code("return new ArrayBuffer(0)\n")
+	dst.Tab(1).Code("}\n\n")
 
-	dst.Code("\tpublic clone(): ").Code(build.StringToHumpName(typ.Name.Name)).Code(" {\n")
-	dst.Code("\t\tconst ret = new ").Code(build.StringToHumpName(typ.Name.Name)).Code("()\n")
+	dst.Tab(1).Code("public clone(): ").Code(build.StringToHumpName(typ.Name.Name)).Code(" {\n")
+	dst.Tab(2).Code("const ret = new ").Code(build.StringToHumpName(typ.Name.Name)).Code("()\n")
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
-		dst.Code("\t\tret.").Code(build.StringToFirstLower(field.Name.Name))
+		dst.Tab(2).Code("ret.").Code(build.StringToFirstLower(field.Name.Name))
 		dst.Code(" = ")
 		b.printCopy(dst, "this.", build.StringToFirstLower(field.Name.Name), field.Type, data, true, false)
 		dst.Code("\n")
 		return nil
 	})
-	dst.Code("\t\treturn ret\n")
-	dst.Code("\t}\n")
+	dst.Tab(2).Code("return ret\n")
+	dst.Tab(1).Code("}\n")
 	dst.Code("}\n\n")
 }
 

@@ -26,11 +26,11 @@ func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
 	dst.Code(" {\n")
 	for _, method := range typ.Methods {
 		if nil != method.Doc && 0 < len(method.Doc.Text()) {
-			dst.Code("\t//" + method.Doc.Text())
+			dst.Tab(1).Code("//" + method.Doc.Text())
 		}
 		isMethod := method.Result.Type().(*ast.Ident).Name == "void"
 
-		dst.Code("\t" + build.StringToFirstLower(method.Name.Name))
+		dst.Tab(1).Code("" + build.StringToFirstLower(method.Name.Name))
 		dst.Code("(")
 		dst.Code(build.StringToFirstLower(method.ParamName.Name) + ": ")
 		b.printType(dst, method.Param, false, false)
@@ -55,25 +55,25 @@ func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 
 	dst.Code("{\n")
 
-	dst.Code("\tconstructor(client: h.Client){\n")
-	dst.Code("\t\tsuper(client)\n")
-	dst.Code("\t}\n")
+	dst.Tab(1).Code("constructor(client: h.Client){\n")
+	dst.Tab(2).Code("super(client)\n")
+	dst.Tab(1).Code("}\n")
 
-	dst.Code("\tget name(): string {\n")
-	dst.Code("\t\treturn \"" + build.StringToUnderlineName(typ.Name.Name) + "\"\n")
-	dst.Code("\t}\n\n")
+	dst.Tab(1).Code("get name(): string {\n")
+	dst.Tab(2).Code("return \"" + build.StringToUnderlineName(typ.Name.Name) + "\"\n")
+	dst.Tab(1).Code("}\n\n")
 
-	dst.Code("\tget id(): number {\n")
-	dst.Code("\t\treturn 0\t\n")
-	dst.Code("\t}\n\n")
+	dst.Tab(1).Code("get id(): number {\n")
+	dst.Tab(2).Code("return 0\t\n")
+	dst.Tab(1).Code("}\n\n")
 
 	_ = build.EnumMethod(typ, func(method *ast.FuncType, server *ast.ServerType) error {
 		if nil != method.Doc && 0 < len(method.Doc.Text()) {
-			dst.Code("\t//" + method.Doc.Text())
+			dst.Tab(1).Code("//" + method.Doc.Text())
 		}
 		isMethod := method.Result.Type().(*ast.Ident).Name == "void"
 
-		dst.Code("\t" + build.StringToFirstLower(method.Name.Name))
+		dst.Tab(1).Code("" + build.StringToFirstLower(method.Name.Name))
 		dst.Code("(")
 		dst.Code(build.StringToFirstLower(method.ParamName.Name) + ": ")
 		b.printType(dst, method.Param, false, false)
@@ -88,7 +88,7 @@ func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 
 		dst.Code("> {\n")
 
-		dst.Code("\t\treturn this.invoke<")
+		dst.Tab(2).Code("return this.invoke<")
 		if isMethod {
 			dst.Code("void")
 		} else {
@@ -110,7 +110,7 @@ func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 			dst.Code(".fromData);\n")
 		}
 
-		dst.Code("\t}\n\n")
+		dst.Tab(1).Code("}\n\n")
 		return nil
 	})
 	dst.Code("}\n\n")
@@ -119,48 +119,48 @@ func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 
 	dst.Code("export class " + build.StringToHumpName(typ.Name.Name) + "Router implements h.ServerRouter {\n")
-	dst.Code("\treadonly server: " + build.StringToHumpName(typ.Name.Name) + "\n")
+	dst.Tab(1).Code("readonly server: " + build.StringToHumpName(typ.Name.Name) + "\n")
 	dst.Code("\n")
-	dst.Code("\tinvoke: Record<string, h.ServerInvoke>\n")
+	dst.Tab(1).Code("invoke: Record<string, h.ServerInvoke>\n")
 	dst.Code("\n")
-	dst.Code("\tgetInvoke(): Record<string, h.ServerInvoke> {\n")
-	dst.Code("\t\treturn this.invoke\n")
-	dst.Code("\t}\n")
+	dst.Tab(1).Code("getInvoke(): Record<string, h.ServerInvoke> {\n")
+	dst.Tab(2).Code("return this.invoke\n")
+	dst.Tab(1).Code("}\n")
 	dst.Code("\n")
-	dst.Code("\tgetName(): string {\n")
-	dst.Code("\t\treturn \"" + build.StringToUnderlineName(typ.Name.Name) + "\"\n")
-	dst.Code("\t}\n")
+	dst.Tab(1).Code("getName(): string {\n")
+	dst.Tab(2).Code("return \"" + build.StringToUnderlineName(typ.Name.Name) + "\"\n")
+	dst.Tab(1).Code("}\n")
 	dst.Code("\n")
-	dst.Code("\tgetId(): number {\n")
-	dst.Code("\t\treturn 0\n")
-	dst.Code("\t}\n")
+	dst.Tab(1).Code("getId(): number {\n")
+	dst.Tab(2).Code("return 0\n")
+	dst.Tab(1).Code("}\n")
 	dst.Code("\n")
-	dst.Code("\tconstructor(server: " + build.StringToHumpName(typ.Name.Name) + ") {\n")
-	dst.Code("\t\tthis.server = server\n")
-	dst.Code("\t\tthis.invoke = {\n")
+	dst.Tab(1).Code("constructor(server: " + build.StringToHumpName(typ.Name.Name) + ") {\n")
+	dst.Tab(2).Code("this.server = server\n")
+	dst.Tab(2).Code("this.invoke = {\n")
 	err := build.EnumMethod(typ, func(method *ast.FuncType, server *ast.ServerType) error {
-		dst.Code("\t\t\t\"" + build.StringToUnderlineName(method.Name.Name) + "\": {\n")
-		dst.Code("\t\t\t\tformData(data: BinaryData | Record<string, any>): h.Data {\n")
-		dst.Code("\t\t\t\t\treturn ")
+		dst.Tab(3).Code("\"" + build.StringToUnderlineName(method.Name.Name) + "\": {\n")
+		dst.Tab(4).Code("formData(data: BinaryData | Record<string, any>): h.Data {\n")
+		dst.Tab(5).Code("return ")
 		b.printType(dst, method.Param.Type(), false, false)
 		dst.Code(".fromJson(data)\n")
-		dst.Code("\t\t\t\t},\n")
-		dst.Code("\t\t\t\ttoData(data: h.Data): BinaryData | Record<string, any> {\n")
-		dst.Code("\t\t\t\t\treturn data.toJson()\n")
-		dst.Code("\t\t\t\t},\n")
-		dst.Code("\t\t\t\tinvoke(data: h.Data, ctx?: h.Context): Promise<h.Data | void> {\n")
-		dst.Code("\t\t\t\t\treturn server." + build.StringToFirstLower(method.Name.Name) + "(data as ")
+		dst.Tab(4).Code("},\n")
+		dst.Tab(4).Code("toData(data: h.Data): BinaryData | Record<string, any> {\n")
+		dst.Tab(5).Code("return data.toJson()\n")
+		dst.Tab(4).Code("},\n")
+		dst.Tab(4).Code("invoke(data: h.Data, ctx?: h.Context): Promise<h.Data | void> {\n")
+		dst.Tab(5).Code("return server." + build.StringToFirstLower(method.Name.Name) + "(data as ")
 		b.printType(dst, method.Param.Type(), false, false)
 		dst.Code(", ctx);\n")
-		dst.Code("\t\t\t\t}\n")
-		dst.Code("\t\t\t},\n")
+		dst.Tab(4).Code("}\n")
+		dst.Tab(3).Code("},\n")
 		return nil
 	})
 	if err != nil {
 		return
 	}
 
-	dst.Code("\t\t}\n")
-	dst.Code("\t}\n")
+	dst.Tab(2).Code("}\n")
+	dst.Tab(1).Code("}\n")
 	dst.Code("}\n")
 }

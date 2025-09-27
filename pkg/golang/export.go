@@ -54,7 +54,7 @@ func (b *Builder) printExportCode(dst *build.Writer, data *ast.DataType) error {
 
 func (b *Builder) printExportHeaderCode(dst *build.Writer, data *ast.DataType, keys []string, maps map[string][]*ast.Field, lists []*ast.Field) error {
 	dName := build.StringToHumpName(data.Name.Name)
-	dst.Code("func (g *").Code(dName).Code(") ExportHeader(key string) []string {\n")
+	dst.Code("func (g ").Code(dName).Code(") ExportHeader(key string) []string {\n")
 	dst.Tab(1).Code("switch key {\n")
 	for _, key := range keys {
 		dst.Tab(1).Code("case \"").Code(key).Code("\":\n")
@@ -77,7 +77,7 @@ func (b *Builder) printExportHeaderCode(dst *build.Writer, data *ast.DataType, k
 
 func (b *Builder) printExportDataCode(dst *build.Writer, data *ast.DataType, keys []string, maps map[string][]*ast.Field, lists []*ast.Field) error {
 	dName := build.StringToHumpName(data.Name.Name)
-	dst.Code("func (g *").Code(dName).Code(") ExportData(key string) ([]any, error){\n")
+	dst.Code("func (g ").Code(dName).Code(") ExportData(key string) ([]any, error){\n")
 	dst.Tab(1).Code("switch key {\n")
 	for _, key := range keys {
 		dst.Tab(1).Code("case \"").Code(key).Code("\":\n")

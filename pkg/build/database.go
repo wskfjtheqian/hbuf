@@ -20,6 +20,7 @@ type DB struct {
 	Del       bool
 	Get       string
 	List      string
+	ListAsync string
 	Map       string
 	Count     bool
 	Table     string
@@ -89,6 +90,8 @@ func GetDB(n string, tag []*ast.Tag) []*DB {
 						db.Get = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 					} else if "list" == item.Name.Name {
 						db.List = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
+					} else if "listAsync" == item.Name.Name {
+						db.ListAsync = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 					} else if "map" == item.Name.Name {
 						db.Map = strings.ToLower(item.Values[0].Value[1 : len(item.Values[0].Value)-1])
 					} else if "table" == item.Name.Name {

@@ -94,6 +94,16 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 		b.printListData(dst, typ, val, dbs[0], w, f, fType, c)
 	}
 
+	val = strings.ToLower(fDbs[0].ListAsync)
+	if "self" == val || "parent" == val {
+		w := wFields
+		f := fields
+		if "self" == val {
+			f = wFields
+		}
+		b.printListAsyncData(dst, typ, val, dbs[0], w, f, fType, c)
+	}
+
 	if 0 < len(fDbs[0].Map) {
 		ks := strings.Split(fDbs[0].Map, ":")
 		if 1 < len(ks) {
@@ -483,6 +493,40 @@ func (b *Builder) printListData(dst *build.Writer, typ *ast.DataType, key string
 		dst.Tab(1).Code("})\n")
 	}
 	dst.Tab(1).Code("return ret, err\n")
+	dst.Code("}\n")
+	dst.Code("\n")
+}
+
+func (b *Builder) printListAsyncData(dst *build.Writer, typ *ast.DataType, key string, db *build.DB, wFields []*build.DBField, fields []*build.DBField, fType *ast.DataType, c *cache) {
+	fName := build.StringToHumpName(fType.Name.Name)
+	dName := build.StringToHumpName(typ.Name.Name)
+	if typ != fType {
+		key = "self"
+	} else if "self" == key {
+		dName = fName
+	}
+	w := b.getParamWhere(dst, wFields, true, true, true)
+	dst.AddImports(w.GetImports())
+
+	item, scan, _ := b.getItemAndValue(fields, key)
+	dst.Code("func (g " + fName + ") DbListAsync(ctx context.Context, fn func(ctx context.Context, ret *" + dName + ") (bool, error)) (error) {\n")
+	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
+	dst.Tab(1).Code("s := db.NewBuilder()\n")
+	dst.Tab(1).Code("s.T(\"SELECT " + item.String() + " FROM \").T(tableName).T(\" WHERE is_deleted = 0\")\n")
+	dst.Code(w.GetCode().String())
+
+	tab := 0
+	dst.Import("database/sql", "")
+	dst.Tab(tab + 1).Code("_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
+	dst.Tab(tab + 2).Code("var val " + dName + "\n")
+	dst.Tab(tab + 2).Code("err := rows.Scan(" + scan.String() + ")\n")
+	dst.Tab(tab + 2).Code("if err != nil {\n")
+	dst.Tab(tab + 3).Code("return false, err\n")
+	dst.Tab(tab + 2).Code("}\n")
+	dst.Tab(tab + 2).Code("return fn(ctx, &val)\n")
+	dst.Tab(tab + 1).Code("})\n")
+
+	dst.Tab(1).Code("return err\n")
 	dst.Code("}\n")
 	dst.Code("\n")
 }

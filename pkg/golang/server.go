@@ -291,6 +291,10 @@ func (b *Builder) printGetServerRouter(dst *build.Writer, typ *ast.ServerType) {
 	dst.Tab(1).Code("}\n")
 	dst.Tab(1).Code("return NotFound" + serverName + "\n")
 	dst.Code("}\n\n")
+
+	dst.Code("func " + serverName + "Name() string {\n")
+	dst.Tab(1).Code("return \"").Code(build.StringToUnderlineName(typ.Name.Name)).Code("\"\n")
+	dst.Code("}\n\n")
 }
 
 func (b *Builder) printServerExtend(dst *build.Writer, extends []*ast.Extends, isFast *bool) {

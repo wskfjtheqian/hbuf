@@ -9,7 +9,7 @@ import (
 func (b *Builder) printServerCode(dst *build.Writer, typ *ast.ServerType) error {
 	dst.Import("context", "")
 
-	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/rpc", "")
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc", "")
 	b.printServer(dst, typ)
 	b.printClient(dst, typ)
 	b.printServerRouter(dst, typ)
@@ -79,7 +79,7 @@ func (b *Builder) printServerDefault(dst *build.Writer, typ *ast.ServerType) err
 		}
 		isSub := method.Result.Type().(*ast.Ident).Name == "void"
 
-		dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/erro", "")
+		dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/herror", "")
 
 		dst.Code("func (s *Default" + serverName + ") ")
 		dst.Code(build.StringToHumpName(method.Name.Name))
@@ -106,7 +106,7 @@ func (b *Builder) printServerDefault(dst *build.Writer, typ *ast.ServerType) err
 				dst.Tab(1).Code("return nil,")
 			}
 
-			dst.Code(" erro.NewError(\"not find server " + build.StringToUnderlineName(typ.Name.Name) + "\")\n")
+			dst.Code(" herror.NewError(\"not find server " + build.StringToUnderlineName(typ.Name.Name) + "\")\n")
 		} else {
 			b.printBinding(dst, method, bind, isSub)
 		}
@@ -122,7 +122,7 @@ func (b *Builder) printBinding(dst *build.Writer, method *ast.FuncType, bind *bu
 	}
 	if nil != verify {
 		dst.Tab(1).Code("if err := req.Verify(ctx); err != nil {\n")
-		dst.Tab(2).Code("return nil, erro.Wrap(err)\n")
+		dst.Tab(2).Code("return nil, herror.Wrap(err)\n")
 		dst.Tab(1).Code("}\n")
 	}
 	pack := b.getPackage(dst, bind.Server.Name)
@@ -138,7 +138,7 @@ func (b *Builder) printBinding(dst *build.Writer, method *ast.FuncType, bind *bu
 	dst.Code(")\n")
 
 	dst.Tab(1).Code("if err != nil {\n")
-	dst.Tab(2).Code("return nil, erro.Wrap(err)\n")
+	dst.Tab(2).Code("return nil, herror.Wrap(err)\n")
 	dst.Tab(1).Code("}\n")
 
 	dst.Tab(1).Code("return ")
@@ -156,13 +156,13 @@ func (b *Builder) printBinding(dst *build.Writer, method *ast.FuncType, bind *bu
 func (b *Builder) printClient(dst *build.Writer, typ *ast.ServerType) {
 	serverName := build.StringToHumpName(typ.Name.Name)
 	dst.Code("type " + serverName + "Client struct {\n")
-	dst.Tab(1).Code("client *rpc.Client\n")
+	dst.Tab(1).Code("client *hrpc.Client\n")
 	dst.Code("}\n\n")
 
 	dst.Code("func (p *" + serverName + "Client) Init(ctx context.Context) {\n")
 	dst.Code("}\n\n")
 
-	dst.Code("func New" + serverName + "Client(client *rpc.Client) " + serverName + " {\n")
+	dst.Code("func New" + serverName + "Client(client *hrpc.Client) " + serverName + " {\n")
 	dst.Tab(1).Code("return &" + serverName + "Client{\n")
 	dst.Tab(2).Code("client: client,\n")
 	dst.Tab(1).Code("}\n")
@@ -191,7 +191,7 @@ func (b *Builder) printClient(dst *build.Writer, typ *ast.ServerType) {
 			dst.Code(", error) {\n")
 		}
 		dst.Tab(1).Code("response, err := r.client.Invoke(ctx, 0, \"").Code(name).Code("\", \"")
-		dst.Code(build.StringToUnderlineName(method.Name.Name)).Code("\", req, rpc.NewResultResponse[*")
+		dst.Code(build.StringToUnderlineName(method.Name.Name)).Code("\", req, hrpc.NewResultResponse[*")
 		b.printType(dst, method.Result.Type(), true)
 		dst.Code("])\n")
 		dst.Tab(1).Code("if err != nil {\n")
@@ -230,11 +230,11 @@ func (b *Builder) getTag(tags []*ast.Tag) *Tag {
 
 func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 	serverName := build.StringToHumpName(typ.Name.Name)
-	dst.Tab(0).Code("func Register").Code(serverName).Code("(r rpc.ServerRegister, server ").Code(serverName).Code(") {\n")
+	dst.Tab(0).Code("func Register").Code(serverName).Code("(r hrpc.ServerRegister, server ").Code(serverName).Code(") {\n")
 	dst.Tab(1).Code("r.Register(0, \"").Code(build.StringToUnderlineName(typ.Name.Name)).Code("\",\n")
 	err := build.EnumMethod(typ, func(method *ast.FuncType, server *ast.ServerType) error {
 
-		dst.Tab(2).Code("&rpc.Method{\n")
+		dst.Tab(2).Code("&hrpc.Method{\n")
 		dst.Tab(3).Code("Name: \"").Code(build.StringToUnderlineName(method.Name.Name)).Code("\",\n")
 		dst.Tab(3).Code("WithContext: func(ctx context.Context) context.Context {\n")
 		au := b.getTag(method.Tags)
@@ -244,7 +244,7 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 			for _, key := range keys {
 				values := (*au)[key]
 				if len(values) > 0 {
-					dst.Tab(4).Code("rpc.AddTag(ctx, \"").Code(key)
+					dst.Tab(4).Code("hrpc.AddTag(ctx, \"").Code(key)
 					for _, val := range values {
 						dst.Code("\", \"").Code(val)
 					}
@@ -276,13 +276,13 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 }
 
 func (b *Builder) printGetServerRouter(dst *build.Writer, typ *ast.ServerType) {
-	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/service", "")
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hservice", "")
 	serverName := build.StringToHumpName(typ.Name.Name)
 
 	dst.Code("var NotFound" + serverName + " = &Default" + serverName + "{}\n\n")
 
 	dst.Code("func Get" + serverName + "(ctx context.Context) " + serverName + " {\n")
-	dst.Tab(1).Code("router := service.GetClient(ctx, \"").Code(build.StringToUnderlineName(serverName)).Code("\")\n")
+	dst.Tab(1).Code("router := hservice.GetClient(ctx, \"").Code(build.StringToUnderlineName(serverName)).Code("\")\n")
 	dst.Tab(1).Code("if nil == router {\n")
 	dst.Tab(2).Code("return NotFound" + serverName + "\n")
 	dst.Tab(1).Code("}\n")

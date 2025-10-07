@@ -48,7 +48,7 @@ func getCache(name string, tags []*ast.Tag) *cache {
 
 func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error {
 	dst.Import("context", "")
-	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/sql", "db")
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db")
 
 	dbs, wFields, key, err := b.getDBField(typ)
 	if 0 == len(dbs) || nil != err {
@@ -423,7 +423,7 @@ func (b *Builder) printParam(buf *build.Writer, text string, self *build.DBField
 				}
 				if 0 == len(field.Dbs[0].Converter) && build.IsArray(field.Field.Type) && 0 == len(temp) {
 					buf.Code(".L(\",\", ")
-					buf.Import("github.com/wskfjtheqian/hbuf_golang/pkg/utl", "utl")
+					buf.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hutl", "utl")
 					buf.Code("utl.ToAnyList(g." + build.StringToHumpName(field.Field.Name.Name) + ")...")
 				} else {
 					buf.Code(".V(")

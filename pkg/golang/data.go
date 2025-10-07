@@ -35,8 +35,9 @@ func (b *Builder) printDataDescriptor(dst *build.Writer, typ *ast.DataType) erro
 	dst.Import("reflect", "")
 	dst.Import("unsafe", "")
 
-	dst.Code("var ").Code(name).Code(" ").Code(build.StringToHumpName(typ.Name.Name)).Code("\n")
-	dst.Code("var ").Code(name).Code("Descriptor = hbuf.NewDataDescriptor(0, false, reflect.TypeOf(&").Code(name).Code("), map[uint16]hbuf.Descriptor{")
+	dst.Code("var ").Code(name).Code("Descriptor = hbuf.NewSyncDescriptor(func() hbuf.Descriptor {\n")
+	dst.Tab(1).Code("var ").Code(name).Code(" ").Code(build.StringToHumpName(typ.Name.Name)).Code("\n")
+	dst.Tab(1).Code("return hbuf.NewDataDescriptor(0, false, reflect.TypeOf(&").Code(name).Code("), map[uint16]hbuf.Descriptor{")
 
 	if len(typ.Extends) > 0 {
 		dst.Code("\n")
@@ -50,7 +51,7 @@ func (b *Builder) printDataDescriptor(dst *build.Writer, typ *ast.DataType) erro
 	}
 	length := len(strconv.Itoa(id)) + 1
 	for _, extend := range typ.Extends {
-		dst.Tab(1).Code(extend.Id.Value).Code(":").Code(strings.Repeat(" ", length-len(extend.Id.Value)))
+		dst.Tab(2).Code(extend.Id.Value).Code(":").Code(strings.Repeat(" ", length-len(extend.Id.Value)))
 		b.printDescriptor(dst, extend.Name, false, name, build.StringToHumpName(extend.Name.Name))
 		dst.Code(",\n")
 	}
@@ -68,10 +69,11 @@ func (b *Builder) printDataDescriptor(dst *build.Writer, typ *ast.DataType) erro
 	}
 	length = len(strconv.Itoa(id)) + 1
 	for _, field := range typ.Fields.List {
-		dst.Tab(1).Code(field.Id.Value).Code(":").Code(strings.Repeat(" ", length-len(field.Id.Value)))
+		dst.Tab(2).Code(field.Id.Value).Code(":").Code(strings.Repeat(" ", length-len(field.Id.Value)))
 		b.printDescriptor(dst, field.Type, false, name, build.StringToHumpName(field.Name.Name))
 		dst.Code(",\n")
 	}
+	dst.Tab(1).Code("})\n")
 	dst.Code("})\n\n")
 
 	return nil
@@ -225,7 +227,7 @@ func (b *Builder) printDataStruct(dst *build.Writer, typ *ast.DataType) error {
 	dst.Code("}\n\n")
 
 	dst.Code("func (g *" + build.StringToHumpName(typ.Name.Name) + ") Descriptors() hbuf.Descriptor {\n")
-	dst.Tab(1).Code("return ").Code(build.StringToFirstLower(typ.Name.Name)).Code("Descriptor\n")
+	dst.Tab(1).Code("return ").Code(build.StringToFirstLower(typ.Name.Name)).Code("Descriptor.Desc()\n")
 	dst.Code("}\n\n")
 
 	for _, field := range typ.Fields.List {

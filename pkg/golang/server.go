@@ -79,8 +79,6 @@ func (b *Builder) printServerDefault(dst *build.Writer, typ *ast.ServerType) err
 		}
 		isSub := method.Result.Type().(*ast.Ident).Name == "void"
 
-		dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/herror", "")
-
 		dst.Code("func (s *Default" + serverName + ") ")
 		dst.Code(build.StringToHumpName(method.Name.Name))
 		dst.Code("(ctx context.Context, ")
@@ -106,6 +104,7 @@ func (b *Builder) printServerDefault(dst *build.Writer, typ *ast.ServerType) err
 				dst.Tab(1).Code("return nil,")
 			}
 
+			dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/herror", "")
 			dst.Code(" herror.NewError(\"not find server " + build.StringToUnderlineName(typ.Name.Name) + "\")\n")
 		} else {
 			b.printBinding(dst, method, bind, isSub)
@@ -122,7 +121,7 @@ func (b *Builder) printBinding(dst *build.Writer, method *ast.FuncType, bind *bu
 	}
 	if nil != verify {
 		dst.Tab(1).Code("if err := req.Verify(ctx); err != nil {\n")
-		dst.Tab(2).Code("return nil, herror.Wrap(err)\n")
+		dst.Tab(2).Code("return nil, err\n")
 		dst.Tab(1).Code("}\n")
 	}
 	pack := b.getPackage(dst, bind.Server.Name)
@@ -138,7 +137,7 @@ func (b *Builder) printBinding(dst *build.Writer, method *ast.FuncType, bind *bu
 	dst.Code(")\n")
 
 	dst.Tab(1).Code("if err != nil {\n")
-	dst.Tab(2).Code("return nil, herror.Wrap(err)\n")
+	dst.Tab(2).Code("return nil, err\n")
 	dst.Tab(1).Code("}\n")
 
 	dst.Tab(1).Code("return ")

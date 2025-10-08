@@ -15,10 +15,13 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) {
 	if nil != typ.Doc && 0 < len(typ.Doc.Text()) {
 		dst.Code("///" + typ.Doc.Text())
 	}
-	dst.Code("export class " + build.StringToHumpName(typ.Name.Name) + " implements h.Data")
+	dst.Code("export class ").Code(build.StringToHumpName(typ.Name.Name))
 	if nil != typ.Extends {
-		b.printExtend(dst, typ.Extends, true)
+		dst.Code(" extends ")
+		b.printExtend(dst, typ.Extends, false)
 	}
+	dst.Code(" implements h.Data")
+
 	dst.Code(" {\n")
 	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 		if nil != field.Doc && 0 < len(field.Doc.Text()) {
@@ -69,12 +72,12 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) {
 	dst.Tab(2).Code("};\n")
 	dst.Tab(1).Code("}\n\n")
 
-	dst.Tab(1).Code("public static fromData(data: BinaryData): " + build.StringToHumpName(typ.Name.Name) + " {\n")
+	dst.Tab(1).Code("public static fromData(data: ArrayBuffer): " + build.StringToHumpName(typ.Name.Name) + " {\n")
 	dst.Tab(2).Code("const ret = new " + build.StringToHumpName(typ.Name.Name) + "()\n")
 	dst.Tab(2).Code("return ret\n")
 	dst.Tab(1).Code("}\n\n")
 
-	dst.Tab(1).Code("public toData(): BinaryData {\n")
+	dst.Tab(1).Code("public toData(): ArrayBuffer {\n")
 	dst.Tab(2).Code("return new ArrayBuffer(0)\n")
 	dst.Tab(1).Code("}\n\n")
 

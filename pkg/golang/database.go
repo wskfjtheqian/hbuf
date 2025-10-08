@@ -474,7 +474,7 @@ func (b *Builder) printListData(dst *build.Writer, typ *ast.DataType, key string
 		dst.Import("math/rand", "")
 		dst.Import("time", "")
 
-		dst.Tab(1).Code("err := db.SaveCache(ctx, tableName, s, ret, time.Duration(rand.Intn(").Code(strconv.Itoa(c.max))
+		dst.Tab(1).Code("err := db.SaveCache(ctx, tableName, s, &ret, time.Duration(rand.Intn(").Code(strconv.Itoa(c.max))
 		dst.Code("-").Code(strconv.Itoa(c.min)).Code(")+").Code(strconv.Itoa(c.min)).Code(")*time.Second,")
 		dst.Code("func(ctx context.Context) (any, error) {\n")
 	}
@@ -562,7 +562,7 @@ func (b *Builder) printMapData(dst *build.Writer, key string, typ *ast.DataType,
 		dst.Import("math/rand", "")
 		dst.Import("time", "")
 
-		dst.Tab(1).Code("err := db.SaveCache(ctx, tableName, s, ret, time.Duration(rand.Intn(").Code(strconv.Itoa(c.max))
+		dst.Tab(1).Code("err := db.SaveCache(ctx, tableName, s, &ret, time.Duration(rand.Intn(").Code(strconv.Itoa(c.max))
 		dst.Code("-").Code(strconv.Itoa(c.min)).Code(")+").Code(strconv.Itoa(c.min)).Code(")*time.Second,")
 		dst.Code(" func(ctx context.Context,) (any, error) {\n")
 	}
@@ -631,7 +631,7 @@ func (b *Builder) printDeleteData(dst *build.Writer, db *build.DB, wFields []*bu
 	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
 	dst.Tab(1).Code("s := db.NewBuilder()\n")
 	dst.Import("time", "")
-	dst.Tab(1).Code("s.T(\"UPDATE \").T(tableName).T(\" SET is_deleted = 1, delete_time = \").V(time.Now().UnixMilli()).T(\" WHERE is_deleted = 0\")\n")
+	dst.Tab(1).Code("s.T(\"UPDATE \").T(tableName).T(\" SET is_deleted = 1, delete_time = \").V(time.Now()).T(\" WHERE is_deleted = 0\")\n")
 	dst.Code(w.GetCode().String())
 
 	if c {

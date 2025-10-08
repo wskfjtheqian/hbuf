@@ -4,6 +4,7 @@ import (
 	"hbuf/pkg/ast"
 	"hbuf/pkg/build"
 	"strconv"
+	"strings"
 )
 
 // 创建表单代码
@@ -407,6 +408,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Tab(1).Code("name: '" + name + "FormItems',\n")
 	dst.Tab(1).Code("props: {\n")
 	dst.Tab(2).Code("size: String,\n")
+	dst.Tab(2).Code("isAdd: Boolean,\n")
 	dst.Tab(2).Code("position: Array<String>,\n")
 	dst.Tab(2).Code("hide: Array<String>,\n")
 	dst.Tab(2).Code("model: ")
@@ -419,7 +421,8 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Tab(2).Code("return (_ctx: Record<string, any>) => {\n")
 	dst.Tab(3).Code("const maps: Record<string, any> = {\n")
 	langName := build.StringToFirstLower(name)
-	//i := 0
+
+	disabled := make([]string, 0)
 	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 
 		form := b.getUI(field.Tags)
@@ -631,6 +634,10 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		lang.Add(fieldName, field.Tags)
 		dst.Tab(5).Code("</el-form-item>\n")
 		dst.Tab(4).Code("),\n")
+
+		if form.onlyRead {
+			disabled = append(disabled, "\""+fieldName+"\"")
+		}
 		return nil
 	})
 	if err != nil {
@@ -653,7 +660,8 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Code("                    list.push(key)\n")
 	dst.Code("                }\n")
 	dst.Code("            }\n")
-	dst.Code("            return list.map((it) => maps[it]())\n")
+	dst.Code("            const disabled = [").Code(strings.Join(disabled, ", ")).Code("]\n")
+	dst.Code("            return list.filter((it) => !props.isAdd || !disabled.includes(it)).map((it) => maps[it]())\n")
 	dst.Tab(2).Code("};\n")
 	dst.Tab(1).Code("}\n")
 	dst.Code("});\n\n")

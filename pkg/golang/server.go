@@ -190,7 +190,9 @@ func (b *Builder) printClient(dst *build.Writer, typ *ast.ServerType) {
 			dst.Code(", error) {\n")
 		}
 		dst.Tab(1).Code("response, err := r.client.Invoke(ctx, 0, \"").Code(name).Code("\", \"")
-		dst.Code(build.StringToUnderlineName(method.Name.Name)).Code("\", req, hrpc.NewResultResponse[*")
+		dst.Code(build.StringToUnderlineName(method.Name.Name)).Code("\", \"")
+		dst.Code(b.getFilterTag(method))
+		dst.Code("\", req, hrpc.NewResultResponse[*")
 		b.printType(dst, method.Result.Type(), true)
 		dst.Code("])\n")
 		dst.Tab(1).Code("if err != nil {\n")
@@ -230,11 +232,12 @@ func (b *Builder) getTag(tags []*ast.Tag) *Tag {
 func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 	serverName := build.StringToHumpName(typ.Name.Name)
 	dst.Tab(0).Code("func Register").Code(serverName).Code("(r hrpc.ServerRegister, server ").Code(serverName).Code(") {\n")
-	dst.Tab(1).Code("r.Register(0, \"").Code(build.StringToUnderlineName(typ.Name.Name)).Code("\",\n")
+	dst.Tab(1).Code("r.Register(0, \"").Code(build.StringToUnderlineName(typ.Name.Name)).Code("\", ").Code("server").Code(",\n")
 	err := build.EnumMethod(typ, func(method *ast.FuncType, server *ast.ServerType) error {
 
 		dst.Tab(2).Code("&hrpc.Method{\n")
 		dst.Tab(3).Code("Name: \"").Code(build.StringToUnderlineName(method.Name.Name)).Code("\",\n")
+		dst.Tab(3).Code("Tag: \"").Code(b.getFilterTag(method)).Code("\",\n")
 		dst.Tab(3).Code("WithContext: func(ctx context.Context) context.Context {\n")
 		au := b.getTag(method.Tags)
 		if nil != au {
@@ -308,4 +311,17 @@ func (b *Builder) printServerExtend(dst *build.Writer, extends []*ast.Extends, i
 		dst.Code("Default" + build.StringToHumpName(v.Name.Name))
 		dst.Code("\n")
 	}
+}
+
+func (b *Builder) getFilterTag(method *ast.FuncType) string {
+	tag, ok := build.GetTag(method.Tags, "filter")
+	if !ok || nil == tag.KV {
+		return ""
+	}
+	for _, item := range tag.KV {
+		if item.Name.Name == "tag" {
+			return item.Values[0].Value[1 : len(item.Values[0].Value)-1]
+		}
+	}
+	return ""
 }

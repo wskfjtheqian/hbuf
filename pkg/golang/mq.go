@@ -60,8 +60,8 @@ func (b *Builder) printJetStreamPublishCode(dst *build.Writer, data *ast.DataTyp
 
 func (b *Builder) printJetStreamSubscribeCode(dst *build.Writer, data *ast.DataType, tag *ast.Tag) error {
 	name := build.StringToHumpName(data.Name.Name)
-	dst.Tab(0).Code("func (g ").Code(name).Code(") JsSubscribe(ctx context.Context, stream string, durable string, handler func(ctx context.Context, msgId string, msg *").Code(name).Code(") error) error {\n")
-	dst.Tab(1).Code("return hmq.JetStreamSubscribe(ctx, stream, \"").Code(name).Code("\", durable, handler)\n")
+	dst.Tab(0).Code("func (g ").Code(name).Code(") JsSubscribe(ctx context.Context, stream string, durable string, handler func(ctx context.Context, msgId string, msg *").Code(name).Code(") error, options ...hmq.SubscribeOption) error {\n")
+	dst.Tab(1).Code("return hmq.JetStreamSubscribe(ctx, stream, \"").Code(name).Code("\", durable, handler, options...)\n")
 	dst.Tab(0).Code("}\n\n")
 	return nil
 }

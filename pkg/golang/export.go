@@ -77,7 +77,16 @@ func (b *Builder) printExportHeaderCode(dst *build.Writer, data *ast.DataType, k
 
 func (b *Builder) printExportDataCode(dst *build.Writer, data *ast.DataType, keys []string, maps map[string][]*ast.Field, lists []*ast.Field) error {
 	dName := build.StringToHumpName(data.Name.Name)
-	dst.Code("func (g ").Code(dName).Code(") ExportData(key string) ([]any, error){\n")
+	dst.Code("func (g ").Code(dName).Code(") ExportData(key string, zoneOffset int32) ([]any, error){\n")
+
+	for _, item := range lists {
+		if build.GetBaseType(item.Type.Type()) == build.Date {
+			dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hutl", "hutl")
+			dst.Tab(1).Code("loc := hutl.ZoneByOffset(zoneOffset)\n")
+			break
+		}
+	}
+
 	dst.Tab(1).Code("switch key {\n")
 	for _, key := range keys {
 		dst.Tab(1).Code("case \"").Code(key).Code("\":\n")
@@ -125,7 +134,7 @@ func (b *Builder) printExportDataItemCode(dst *build.Writer, i int, item *ast.Fi
 		dst.Tab(tab).Code("list[").Code(strconv.Itoa(i)).Code("] = g.Get").Code(name).Code("().ToName()\n")
 	} else if build.GetBaseType(item.Type.Type()) == build.Date {
 		dst.Import("time", "")
-		dst.Tab(tab).Code("list[").Code(strconv.Itoa(i)).Code("] = time.Time(g.Get").Code(name).Code("())\n")
+		dst.Tab(tab).Code("list[").Code(strconv.Itoa(i)).Code("] = time.Time(g.Get").Code(name).Code("()).In(loc)\n")
 	} else {
 		dst.Tab(tab).Code("list[").Code(strconv.Itoa(i)).Code("] = g.Get").Code(name).Code("()\n")
 	}

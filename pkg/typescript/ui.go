@@ -56,6 +56,9 @@ type ui struct {
 	clip       bool
 	unlink     bool
 	maxCount   int
+	step       *float64
+	min        *float64
+	max        *float64
 }
 
 func (b *Builder) getUI(tags []*ast.Tag) *ui {
@@ -132,7 +135,29 @@ func (b *Builder) getUI(tags []*ast.Tag) *ui {
 				for _, value := range item.Values {
 					form.extensions = append(form.extensions, value.Value[1:len(value.Value)-1])
 				}
+			} else if "min" == item.Name.Name {
+				atoi, err := strconv.ParseFloat(item.Values[0].Value[1:len(item.Values[0].Value)-1], 10)
+				if err != nil {
+					//TODO 添加错误处理
+					return nil
+				}
+				form.min = &atoi
+			} else if "max" == item.Name.Name {
+				atoi, err := strconv.ParseFloat(item.Values[0].Value[1:len(item.Values[0].Value)-1], 10)
+				if err != nil {
+					//TODO 添加错误处理
+					return nil
+				}
+				form.max = &atoi
+			} else if "step" == item.Name.Name {
+				atoi, err := strconv.ParseFloat(item.Values[0].Value[1:len(item.Values[0].Value)-1], 10)
+				if err != nil {
+					//TODO 添加错误处理
+					return nil
+				}
+				form.step = &atoi
 			}
+
 		}
 	}
 	return &form
@@ -160,8 +185,9 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Code("export const " + name + "TableColumn = defineComponent({\n")
 	dst.Tab(1).Code("name: '" + name + "TableColumn',\n")
 	dst.Tab(1).Code("props: {\n")
+	dst.Tab(2).Code("setting: (Function as unknown) as () => ((name: string, lang: string, list: { name: string, val: any }[]) => { name: string, val: any }[]),\n")
 	dst.Tab(2).Code("position: Array<String>,\n")
-	dst.Tab(2).Code("hide: Array<String>,\n")
+	dst.Tab(2).Code("filter: (Function as unknown) as () => (item: string) => boolean,\n")
 	dst.Tab(1).Code("},\n")
 	dst.Tab(1).Code("setup(props:any) {\n")
 	dst.Tab(2).Code("return (_ctx: Record<string, any>) => {\n")
@@ -183,7 +209,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 		if nil != table.index {
 			//index = *table.index
 		}
-		//dst.Tab(4).Code("<el-table-column prop="adminId" label="adminId" width="140"/>\n")
+		//dst.Code("                <el-table-column prop="adminId" label="adminId" width="140"/>\n")
 		fieldName := build.StringToFirstLower(field.Name.Name)
 		dst.Tab(4).Code("\"").Code(fieldName).Code("\": () =>(\n")
 
@@ -198,7 +224,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(8).Code("<el-popover effect=\"light\" trigger=\"hover\" placement=\"top\" width=\"auto\">\n")
 			dst.Tab(10).Code("{{\n")
 			dst.Tab(11).Code("default: () => <el-image style={\"width: 200px; height: 200px\"} src={scope.row.").Code(fieldName).Code("}/>,\n")
-			dst.Tab(11).Code("reference: () => <el-avatar shape=\"square\" size=\"60\" src={scope.row.").Code(fieldName).Code("}/>,\n")
+			dst.Tab(11).Code("reference: () => <el-avatar shape=\"square\" size={60} src={scope.row.").Code(fieldName).Code("}/>,\n")
 			dst.Tab(10).Code("}}\n")
 			dst.Tab(8).Code("</el-popover>\n")
 			dst.Tab(7).Code("</>)\n")
@@ -224,22 +250,36 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 	}
 
 	dst.Tab(3).Code("}\n")
-	dst.Tab(3).Code("for (const key in _ctx.$slots) {\n")
-	dst.Tab(4).Code("maps[key] = _ctx.$slots[key]\n")
-	dst.Tab(3).Code("}\n")
-	dst.Tab(3).Code("const list: string[] = []\n")
-	dst.Tab(3).Code("for (const i in _ctx.position) {\n")
-	dst.Tab(4).Code("const key = _ctx.position[i]\n")
-	dst.Tab(4).Code("if (!list.includes(key) && maps[key]) {\n")
-	dst.Tab(5).Code("list.push(key)\n")
-	dst.Tab(4).Code("}\n")
-	dst.Tab(3).Code("}\n")
-	dst.Tab(3).Code("for (const key in maps) {\n")
-	dst.Tab(4).Code("if (!list.includes(key) && maps[key] && !_ctx.hide?.includes(key)) {\n")
-	dst.Tab(5).Code("list.push(key)\n")
-	dst.Tab(4).Code("}\n")
-	dst.Tab(3).Code("}\n")
-	dst.Tab(3).Code("return list.map((it) => maps[it]())\n")
+	dst.Code("            for (const key in _ctx.$slots) {\n")
+	dst.Code("                maps[key] = _ctx.$slots[key]\n")
+	dst.Code("            }\n")
+	dst.Code("\n")
+	dst.Code("            let list: { name: string, val: any }[] = []\n")
+	dst.Code("            for (const key in maps) {\n")
+	dst.Code("                if (maps[key] && (!_ctx.filter || _ctx.filter(key))) {\n")
+	dst.Code("                    list.push({name: key, val: maps[key]})\n")
+	dst.Code("                }\n")
+	dst.Code("            }\n")
+	dst.Code("            list.sort((a, b) => {\n")
+	dst.Code("                const indexA = props.position?.indexOf(a.name) ?? 0\n")
+	dst.Code("                const indexB = props.position?.indexOf(b.name) ?? 0\n")
+	dst.Code("                if (indexA < 0 && indexB < 0) {\n")
+	dst.Code("                    return 0\n")
+	dst.Code("                } else if (indexA < 0) {\n")
+	dst.Code("                    return 1\n")
+	dst.Code("                } else if (indexB < 0) {\n")
+	dst.Code("                    return -1\n")
+	dst.Code("                } else {\n")
+	dst.Code("                    return indexA - indexB\n")
+	dst.Code("                }\n")
+	dst.Code("            })\n")
+	dst.Code("\n")
+	dst.Code("            if (props.setting) {\n")
+	dst.Code("                list = props.setting(\"").Code(name).Code("\", \"").Code(langName).Code("Lang\", list)\n")
+	dst.Code("            }\n")
+	dst.Code("            return list.map((it) => it.val())\n")
+	dst.Code("\n")
+
 	dst.Tab(2).Code("};\n")
 	dst.Tab(1).Code("}\n")
 	dst.Code("});\n\n")
@@ -274,7 +314,7 @@ func (b *Builder) printToString(dst *build.Writer, name string, expr ast.Expr, e
 				if empty {
 					dst.Code("null == ").Code(name).Code(" ? \"\" : ")
 				}
-				dst.Code(name).Code("!.toString()")
+				dst.Code("_ctx.$t(").Code(name).Code("?.toString())")
 			case build.Date:
 				if empty {
 					dst.Code("null == ").Code(name).Code(" ? \"\" : ")
@@ -294,7 +334,11 @@ func (b *Builder) printToString(dst *build.Writer, name string, expr ast.Expr, e
 			}
 		}
 	case *ast.ArrayType:
-		dst.Code("\"\"+").Code(name)
+		//default: (scope:any) => scope.row.platform?.map((e: $4.PlatformType) => _ctx.$t(e.toString())) || ""
+		ar := expr.(*ast.ArrayType)
+		dst.Code(name).Code("?.map((e:any)=>")
+		b.printToString(dst, "e", ar.Type(), false, digit, format, val)
+		dst.Code(")")
 	case *ast.MapType:
 		dst.Code("\"\"+").Code(name)
 	case *ast.VarType:
@@ -410,7 +454,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Tab(2).Code("size: String,\n")
 	dst.Tab(2).Code("isAdd: Boolean,\n")
 	dst.Tab(2).Code("position: Array<String>,\n")
-	dst.Tab(2).Code("hide: Array<String>,\n")
+	dst.Tab(2).Code("filter: (Function as unknown) as () => (item: string) => boolean,\n")
 	dst.Tab(2).Code("model: ")
 	b.printType(dst, typ.Name, false, false)
 	dst.Code("\n")
@@ -430,6 +474,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			return nil
 		}
 
+		inNum := build.IsNumber(field.Type)
 		isArray := build.IsArray(field.Type)
 		isNull := build.IsNil(field.Type)
 		_, verify := build.GetTag(field.Tags, "verify")
@@ -532,7 +577,8 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(6).Code("/>\n")
 		} else if "menu" == form.form {
 			dst.Tab(6).Code("<el-select\n")
-			dst.Tab(7).Code("v-model={_ctx.model!.").Code(fieldName).Code("}\n")
+			b.printMenuModelValue(dst, field.Type, fieldName, false, false)
+
 			dst.Tab(7).Code("style={\"width:180px\"}\n")
 			dst.Tab(7).Code("size={props.size}\n")
 			if isNull {
@@ -556,7 +602,9 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Code("/>\n")
 		} else if "radio" == form.form {
-			dst.Tab(6).Code("<el-radio-group v-model={_ctx.model!.").Code(fieldName).Code("}\n")
+			dst.Tab(6).Code("<el-radio-group \n")
+			b.printMenuModelValue(dst, field.Type, fieldName, false, false)
+
 			dst.Tab(7).Code("size={props.size}\n")
 			if form.onlyRead {
 				dst.Tab(7).Code("disabled\n")
@@ -565,7 +613,9 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			b.printMenuItem(dst, field.Type, false, "el-radio")
 			dst.Tab(6).Code("</el-radio-group>\n")
 		} else if "radioButton" == form.form {
-			dst.Tab(6).Code("<el-radio-group v-model={_ctx.model!.").Code(fieldName).Code("}\n")
+			dst.Tab(6).Code("<el-radio-group\n")
+			b.printMenuModelValue(dst, field.Type, fieldName, false, false)
+
 			dst.Tab(7).Code("size={props.size}\n")
 			if form.onlyRead {
 				dst.Tab(7).Code("disabled\n")
@@ -597,21 +647,37 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(7).Code("precision={").Code(strconv.Itoa(form.digit)).Code("}\n")
 			dst.Tab(6).Code("/>\n")
 		} else if isArray {
-			dst.Tab(6).Code("<el-select\n")
+			dst.Tab(6).Code("<el-input-tag\n")
 			dst.Tab(7).Code("v-model={_ctx.model!.").Code(fieldName).Code("}\n")
-			dst.Tab(7).Code("multiple\n")
-			dst.Tab(7).Code("filterable\n")
-			dst.Tab(7).Code("allow-create\n")
-			dst.Tab(7).Code("default-first-option\n")
-			dst.Tab(7).Code("reserve-keyword={false}\n")
 			if isNull {
 				dst.Tab(7).Code("clearable\n")
 			}
 			if form.onlyRead {
-				dst.Tab(7).Code(" disabled\n")
+				dst.Tab(7).Code("disabled\n")
 			}
 			dst.Tab(7).Code(">\n")
-			dst.Tab(6).Code("</el-select>\n")
+			dst.Tab(6).Code("</el-input-tag>\n")
+		} else if inNum {
+			dst.Tab(6).Code("<el-input-number\n")
+			dst.Tab(7).Code("v-model={_ctx.model!." + fieldName + "}\n")
+			dst.Tab(7).Code("size={props.size}\n")
+			if isNull {
+				dst.Tab(7).Code("clearable\n")
+			}
+			if form.onlyRead {
+				dst.Tab(7).Code("disabled\n")
+			}
+			dst.Tab(7).Code("precision={").Code(strconv.Itoa(form.digit)).Code("}\n")
+			if form.min != nil {
+				dst.Tab(7).Code("min={").Code(strconv.FormatFloat(*form.min, 'f', -1, 64)).Code("}\n")
+			}
+			if form.max != nil {
+				dst.Tab(7).Code("max={").Code(strconv.FormatFloat(*form.max, 'f', -1, 64)).Code("}\n")
+			}
+			if form.step != nil {
+				dst.Tab(7).Code("step={").Code(strconv.FormatFloat(*form.step, 'f', -1, 64)).Code("}\n")
+			}
+			dst.Tab(6).Code("/>\n")
 		} else {
 			dst.Tab(6).Code("<el-input\n")
 			dst.Tab(7).Code("modelValue={")
@@ -680,7 +746,7 @@ func (b *Builder) printMenuItem(dst *build.Writer, expr ast.Expr, empty bool, op
 		dst.Tab(6).Code("{").Code(pkg).Code(".").Code(name).Code(".values.map((val) => {\n")
 		dst.Tab(7).Code("return <" + option + " key={val.value}\n")
 		dst.Tab(8).Code("label={_ctx.$t(val.toString())}\n")
-		dst.Tab(8).Code("value={val}\n")
+		dst.Tab(8).Code("value={val.value}\n")
 		dst.Tab(7).Code("/>\n")
 		dst.Tab(6).Code("})}\n")
 	case *ast.Ident:
@@ -710,5 +776,55 @@ func (b *Builder) printMenuItem(dst *build.Writer, expr ast.Expr, empty bool, op
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
 		b.printMenuItem(dst, t.Type(), t.Empty, option)
+	}
+}
+
+func (b *Builder) printMenuModelValue(dst *build.Writer, expr ast.Expr, fieldName string, isNull, isArray bool) {
+	switch expr.(type) {
+	case *ast.Ident:
+		t := expr.(*ast.Ident)
+		if nil != t.Obj {
+			if ast.Enum == t.Obj.Kind {
+				pkg := b.getPackage(dst, t, "")
+				name := build.StringToHumpName(t.Name)
+
+				if isNull {
+					dst.Tab(7).Code("modelValue={_ctx.model!.").Code(fieldName).Code("?.value}\n")
+					dst.Tab(7).Code("onUpdate:modelValue={($event: ")
+					if isArray {
+						dst.Code("number[]")
+					} else {
+						dst.Code("number")
+					}
+					dst.Code(" | null) => _ctx.model!.").Code(fieldName).Code(" = ($event == null || $event == undefined) ? null :")
+				} else {
+					dst.Tab(7).Code("modelValue={_ctx.model!.").Code(fieldName).Code(".value}\n")
+					dst.Tab(7).Code("onUpdate:modelValue={($event: ")
+					if isArray {
+						dst.Code("number[]")
+					} else {
+						dst.Code("number")
+					}
+					dst.Code(") => _ctx.model!.").Code(fieldName).Code(" = \n")
+				}
+				if isArray {
+					if isNull {
+						dst.Code("$event?.map((e: number) => ").Code(pkg).Code(".").Code(name).Code(".valueOf(e))")
+					} else {
+						dst.Code("$event.map((e: number) => ").Code(pkg).Code(".").Code(name).Code(".valueOf(e))")
+					}
+				} else {
+					dst.Code(pkg).Code(".").Code(name).Code(".valueOf($event)")
+				}
+				dst.Code("}\n")
+			}
+		}
+	case *ast.ArrayType:
+		ar := expr.(*ast.ArrayType)
+		b.printMenuModelValue(dst, ar.Type(), fieldName, isNull, true)
+	case *ast.MapType:
+	case *ast.VarType:
+		t := expr.(*ast.VarType)
+		b.printMenuModelValue(dst, t.Type(), fieldName, true, isArray)
 	}
 }

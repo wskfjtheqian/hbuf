@@ -15,13 +15,10 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) {
 	if nil != typ.Doc && 0 < len(typ.Doc.Text()) {
 		dst.Code("///" + typ.Doc.Text())
 	}
-	dst.Code("export class ").Code(build.StringToHumpName(typ.Name.Name))
+	dst.Code("export class " + build.StringToHumpName(typ.Name.Name) + " implements h.Data")
 	if nil != typ.Extends {
-		dst.Code(" extends ")
-		b.printExtend(dst, typ.Extends, false)
+		b.printExtend(dst, typ.Extends, true)
 	}
-	dst.Code(" implements h.Data")
-
 	dst.Code(" {\n")
 	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 		if nil != field.Doc && 0 < len(field.Doc.Text()) {

@@ -125,11 +125,13 @@ func (b *Builder) printExportDataItemCode(dst *build.Writer, i int, item *ast.Fi
 
 	if build.IsArray(item.Type) || build.IsMap(item.Type) {
 		dst.Import("encoding/json", "")
-		dst.Tab(tab).Code("bytes, err := json.Marshal(g.Get").Code(name).Code("())\n")
-		dst.Tab(tab).Code("if err!= nil {\n")
-		dst.Tab(tab + 1).Code("return nil, err\n")
+		dst.Tab(tab).Code("{\n")
+		dst.Tab(tab + 1).Code("bytes, err := json.Marshal(g.Get").Code(name).Code("())\n")
+		dst.Tab(tab + 1).Code("if err!= nil {\n")
+		dst.Tab(tab + 2).Code("return nil, err\n")
+		dst.Tab(tab + 1).Code("}\n")
+		dst.Tab(tab + 1).Code("list[").Code(strconv.Itoa(i)).Code("] = string(bytes)\n")
 		dst.Tab(tab).Code("}\n")
-		dst.Tab(tab).Code("list[").Code(strconv.Itoa(i)).Code("] = string(bytes)\n")
 	} else if build.IsEnum(item.Type.Type()) {
 		dst.Tab(tab).Code("list[").Code(strconv.Itoa(i)).Code("] = g.Get").Code(name).Code("().ToName()\n")
 	} else if build.GetBaseType(item.Type.Type()) == build.Date {

@@ -12,7 +12,7 @@ func (b *Builder) printFormCode(dst *build.Writer, expr ast.Expr) {
 
 	switch expr.(type) {
 	case *ast.DataType:
-		dst.Import("vue", "{defineComponent, PropType}")
+		dst.Import("vue", "{defineComponent, type PropType}")
 		typ := expr.(*ast.DataType)
 		b.getPackage(dst, typ.Name, "")
 		b.printDataUi(dst, typ)

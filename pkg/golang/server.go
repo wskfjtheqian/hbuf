@@ -12,13 +12,8 @@ func (b *Builder) printServerCode(dst *build.Writer, typ *ast.ServerType) error 
 	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc", "")
 	b.printServer(dst, typ)
 	b.printClient(dst, typ)
-	err := b.printLocalClient(dst, typ)
-	if err != nil {
-		return err
-	}
 	b.printServerRouter(dst, typ)
-
-	err = b.printServerDefault(dst, typ)
+	err := b.printServerDefault(dst, typ)
 	if err != nil {
 		return err
 	}
@@ -159,25 +154,17 @@ func (b *Builder) printBinding(dst *build.Writer, method *ast.FuncType, bind *bu
 
 func (b *Builder) printClient(dst *build.Writer, typ *ast.ServerType) {
 	serverName := build.StringToHumpName(typ.Name.Name)
-	dst.Code("type ").Code(serverName).Code("Client struct {\n")
+	dst.Code("type " + serverName + "Client struct {\n")
 	dst.Tab(1).Code("client *hrpc.Client\n")
 	dst.Code("}\n\n")
 
-	dst.Code("func (p *").Code(serverName).Code("Client) Init(ctx context.Context) {\n")
+	dst.Code("func (p *" + serverName + "Client) Init(ctx context.Context) {\n")
 	dst.Code("}\n\n")
 
-	dst.Code("func New").Code(serverName).Code("Client(client *hrpc.Client, localClient ").Code(serverName).Code(") ").Code(serverName).Code(" {\n")
-	dst.Tab(1).Code("if localClient != nil {\n")
-	dst.Tab(2).Code("return &").Code(serverName).Code("LocalClient{\n")
-	dst.Tab(3).Code("LocalClient:  hrpc.NewLocalClient(client),\n")
-	dst.Tab(3).Code("client: localClient,\n")
-	dst.Tab(2).Code("}\n")
-	dst.Tab(1).Code("} else {\n")
-	dst.Tab(2).Code("return &" + serverName + "Client{\n")
-	dst.Tab(3).Code("client: client,\n")
-	dst.Tab(2).Code("}\n")
+	dst.Code("func New" + serverName + "Client(client *hrpc.Client) " + serverName + " {\n")
+	dst.Tab(1).Code("return &" + serverName + "Client{\n")
+	dst.Tab(2).Code("client: client,\n")
 	dst.Tab(1).Code("}\n")
-
 	dst.Code("}\n\n")
 	name := build.StringToUnderlineName(typ.Name.Name)
 	err := build.EnumMethod(typ, func(method *ast.FuncType, server *ast.ServerType) error {
@@ -337,63 +324,4 @@ func (b *Builder) getFilterTag(method *ast.FuncType) string {
 		}
 	}
 	return ""
-}
-
-func (b *Builder) printLocalClient(dst *build.Writer, typ *ast.ServerType) error {
-	serverName := build.StringToHumpName(typ.Name.Name)
-	dst.Code("type " + serverName + "LocalClient struct {\n")
-	dst.Tab(1).Code("hrpc.LocalClient\n")
-	dst.Tab(1).Code("client ").Code(serverName).Code("\n")
-	dst.Code("}\n\n")
-
-	dst.Code("func (p *" + serverName + "LocalClient) Init(ctx context.Context) {\n")
-	dst.Code("}\n\n")
-
-	err := build.EnumMethod(typ, func(method *ast.FuncType, server *ast.ServerType) error {
-		if nil != method.Doc && 0 < len(method.Doc.Text()) {
-			dst.Code("// " + build.StringToHumpName(method.Name.Name) + " " + method.Doc.Text())
-		}
-		dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "")
-
-		isMethod := method.Result.Type().(*ast.Ident).Name == "void"
-
-		dst.Code("func (c *" + serverName + "LocalClient) ")
-		dst.Code(build.StringToHumpName(method.Name.Name))
-		dst.Code("(ctx context.Context, ")
-		dst.Code(build.StringToFirstLower(method.ParamName.Name))
-		dst.Code(" *")
-		b.printType(dst, method.Param, true)
-		dst.Code(") ")
-		if isMethod {
-			dst.Code("error {\n")
-		} else {
-			dst.Code("(*")
-			b.printType(dst, method.Result.Type(), true)
-			dst.Code(", error) {\n")
-		}
-		dst.Tab(1).Code("reps, err := c.Middleware(func(ctx context.Context, req any) (any, error) {\n")
-		dst.Tab(1).Code("	return c.client.").Code(build.StringToHumpName(method.Name.Name)).Code("(ctx, ")
-		dst.Code(build.StringToFirstLower(method.ParamName.Name))
-		dst.Code(".(*")
-		b.printType(dst, method.Param, true)
-		dst.Code("))\n ")
-		dst.Tab(1).Code("})(ctx, req)\n")
-		dst.Tab(1).Code("if err != nil {\n")
-		dst.Tab(1).Code("	return nil, err\n")
-		dst.Tab(1).Code("}\n")
-		if isMethod {
-			dst.Code("return nil\n")
-		} else {
-			dst.Tab(1).Code("return reps.")
-			dst.Code("(*")
-			b.printType(dst, method.Result.Type(), true)
-			dst.Code("), nil\n")
-		}
-		dst.Code("}\n\n")
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-	return nil
 }

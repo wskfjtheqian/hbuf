@@ -12,7 +12,7 @@ func (b *Builder) printFormCode(dst *build.Writer, expr ast.Expr) {
 
 	switch expr.(type) {
 	case *ast.DataType:
-		dst.Import("vue", "{defineComponent}")
+		dst.Import("vue", "{defineComponent, PropType}")
 		typ := expr.(*ast.DataType)
 		b.getPackage(dst, typ.Name, "")
 		b.printDataUi(dst, typ)
@@ -455,9 +455,12 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Tab(2).Code("isAdd: Boolean,\n")
 	dst.Tab(2).Code("position: Array<String>,\n")
 	dst.Tab(2).Code("filter: (Function as unknown) as () => (item: string) => boolean,\n")
-	dst.Tab(2).Code("model: ")
+	dst.Tab(2).Code("model: {\n")
+	dst.Tab(3).Code("type: Object as PropType<")
 	b.printType(dst, typ.Name, false, false)
-	dst.Code("\n")
+	dst.Code(">,\n")
+	dst.Tab(3).Code("required: true,\n")
+	dst.Tab(2).Code("},\n")
 	dst.Tab(1).Code("},\n")
 	dst.Tab(1).Code("setup(props: Record<string, any>) {\n")
 	dst.Import("element-plus", "{useLocale}")
@@ -722,7 +725,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Tab(4).Code("}\n")
 	dst.Tab(3).Code("}\n")
 	dst.Tab(3).Code("for (const key in maps) {\n")
-	dst.Tab(4).Code("if (!list.includes(key) && maps[key] && !_ctx.hide?.includes(key)) {\n")
+	dst.Tab(4).Code("if (!list.includes(key) && maps[key] && (!_ctx.filter || _ctx.filter(key))) {\n")
 	dst.Tab(5).Code("list.push(key)\n")
 	dst.Tab(4).Code("}\n")
 	dst.Tab(3).Code("}\n")

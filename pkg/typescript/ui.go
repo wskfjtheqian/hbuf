@@ -200,15 +200,6 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 			return nil
 		}
 
-		//isEnum := build.IsEnum(field.Type)
-		//isArray := build.IsArray(field.Type)
-		//isNull := build.IsNil(field.Type)
-		//i++
-		//index := i
-		if nil != table.index {
-			//index = *table.index
-		}
-		//dst.Code("                <el-table-column prop="adminId" label="adminId" width="140"/>\n")
 		fieldName := build.StringToFirstLower(field.Name.Name)
 		dst.Tab(4).Code("\"").Code(fieldName).Code("\": () =>(\n")
 
@@ -337,7 +328,7 @@ func (b *Builder) printToString(dst *build.Writer, name string, expr ast.Expr, e
 		ar := expr.(*ast.ArrayType)
 		dst.Code(name).Code("?.map((e:any)=>")
 		b.printToString(dst, "e", ar.Type(), false, digit, format, val)
-		dst.Code(")")
+		dst.Code(")?.join(\",\") || \"\"")
 	case *ast.MapType:
 		dst.Code("\"\"+").Code(name)
 	case *ast.VarType:

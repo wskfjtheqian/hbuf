@@ -338,7 +338,7 @@ func (b *Builder) printToString(dst *build.Writer, name string, expr ast.Expr, e
 		ar := expr.(*ast.ArrayType)
 		dst.Code(name).Code("?.map((e:any)=>")
 		b.printToString(dst, "e", ar.Type(), false, digit, format, val)
-		dst.Code(")")
+		dst.Code(")?.join(\",\") || \"\"")
 	case *ast.MapType:
 		dst.Code("\"\"+").Code(name)
 	case *ast.VarType:

@@ -194,7 +194,7 @@ func (b *Builder) printClient(dst *build.Writer, typ *ast.ServerType) {
 		dst.Code(b.getFilterTag(method))
 		dst.Code("\", req, hrpc.NewResultResponse[*")
 		b.printType(dst, method.Result.Type(), true)
-		dst.Code("])\n")
+		dst.Code("]())\n")
 		dst.Tab(1).Code("if err != nil {\n")
 		dst.Tab(2).Code("return nil, err\n")
 		dst.Tab(1).Code("}\n")

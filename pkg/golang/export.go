@@ -8,9 +8,17 @@ import (
 )
 
 func (b *Builder) printExportCode(dst *build.Writer, data *ast.DataType) error {
+	export, err := build.GetExport(data.Tags)
+	if err != nil {
+		return err
+	}
+	if export == nil {
+		return nil
+	}
+
 	maps := make(map[string][]*ast.Field)
 	lists := make([]*ast.Field, 0)
-	err := build.EnumField(data, func(field *ast.Field, data *ast.DataType) error {
+	err = build.EnumField(data, func(field *ast.Field, data *ast.DataType) error {
 		export, err := build.GetExport(field.Tags)
 		if err != nil {
 			return err

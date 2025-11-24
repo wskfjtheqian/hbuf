@@ -646,6 +646,29 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(7).Code("precision={").Code(strconv.Itoa(form.digit)).Code("}\n")
 			dst.Tab(6).Code("/>\n")
+		} else if "textarea" == form.form {
+			dst.Tab(6).Code("<el-input\n")
+			dst.Tab(7).Code("modelValue={")
+			b.printToString(dst, "_ctx.model!."+fieldName, field.Type, false, form.digit, form.format, " ?? \"\"")
+			dst.Code("}\n")
+
+			dst.Tab(7).Code("onUpdate:modelValue={($event: string) => _ctx.model!.").Code(fieldName).Code(" = ")
+			b.printFormString(dst, "$event", field.Type, false, form.digit, form.format)
+			dst.Code("}\n")
+			dst.Tab(7).Code("size={props.size}\n")
+			dst.Tab(7).Code("type=\"textarea\"\n")
+			if isNull {
+				dst.Tab(7).Code("clearable\n")
+			}
+			if isNull {
+				dst.Tab(7).Code("clearable\n")
+			}
+			if form.onlyRead {
+				dst.Tab(7).Code("disabled\n")
+			}
+			dst.Tab(7).Code("precision={").Code(strconv.Itoa(form.digit)).Code("}\n")
+			dst.Tab(6).Code("/>\n")
+
 		} else if isArray {
 			dst.Tab(6).Code("<el-input-tag\n")
 			dst.Tab(7).Code("v-model={_ctx.model!.").Code(fieldName).Code("}\n")

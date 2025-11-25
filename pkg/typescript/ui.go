@@ -660,9 +660,6 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			if isNull {
 				dst.Tab(7).Code("clearable\n")
 			}
-			if isNull {
-				dst.Tab(7).Code("clearable\n")
-			}
 			if form.onlyRead {
 				dst.Tab(7).Code("disabled\n")
 			}

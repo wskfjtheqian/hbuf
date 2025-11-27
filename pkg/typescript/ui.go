@@ -41,24 +41,26 @@ func (b *Builder) printEnumUi(dst *build.Writer, typ *ast.EnumType) {
 }
 
 type ui struct {
-	suffix     string
-	onlyRead   bool
-	form       string
-	toNull     bool
-	table      string
-	format     string
-	digit      int
-	index      *int
-	width      float64
-	height     float64
-	maxLine    int
-	extensions []string
-	clip       bool
-	unlink     bool
-	maxCount   int
-	step       *float64
-	min        *float64
-	max        *float64
+	suffix       string
+	onlyRead     bool
+	form         string
+	toNull       bool
+	table        string
+	format       string
+	digit        int
+	index        *int
+	width        float64
+	height       float64
+	maxLine      int
+	extensions   []string
+	clip         bool
+	unlink       bool
+	textarea     bool
+	multilingual bool
+	maxCount     int
+	step         *float64
+	min          *float64
+	max          *float64
 }
 
 func (b *Builder) getUI(tags []*ast.Tag) *ui {
@@ -131,31 +133,35 @@ func (b *Builder) getUI(tags []*ast.Tag) *ui {
 				form.toNull = "true" == item.Values[0].Value[1:len(item.Values[0].Value)-1]
 			} else if "unlink" == item.Name.Name {
 				form.unlink = "true" == item.Values[0].Value[1:len(item.Values[0].Value)-1]
+			} else if "multilingual" == item.Name.Name {
+				form.multilingual = "true" == item.Values[0].Value[1:len(item.Values[0].Value)-1]
+			} else if "textarea" == item.Name.Name {
+				form.textarea = "true" == item.Values[0].Value[1:len(item.Values[0].Value)-1]
 			} else if "extensions" == item.Name.Name {
 				for _, value := range item.Values {
 					form.extensions = append(form.extensions, value.Value[1:len(value.Value)-1])
 				}
 			} else if "min" == item.Name.Name {
-				atoi, err := strconv.ParseFloat(item.Values[0].Value[1:len(item.Values[0].Value)-1], 10)
+				v, err := strconv.ParseFloat(item.Values[0].Value[1:len(item.Values[0].Value)-1], 10)
 				if err != nil {
 					//TODO 添加错误处理
 					return nil
 				}
-				form.min = &atoi
+				form.min = &v
 			} else if "max" == item.Name.Name {
-				atoi, err := strconv.ParseFloat(item.Values[0].Value[1:len(item.Values[0].Value)-1], 10)
+				v, err := strconv.ParseFloat(item.Values[0].Value[1:len(item.Values[0].Value)-1], 10)
 				if err != nil {
 					//TODO 添加错误处理
 					return nil
 				}
-				form.max = &atoi
+				form.max = &v
 			} else if "step" == item.Name.Name {
-				atoi, err := strconv.ParseFloat(item.Values[0].Value[1:len(item.Values[0].Value)-1], 10)
+				v, err := strconv.ParseFloat(item.Values[0].Value[1:len(item.Values[0].Value)-1], 10)
 				if err != nil {
 					//TODO 添加错误处理
 					return nil
 				}
-				form.step = &atoi
+				form.step = &v
 			}
 
 		}
@@ -451,7 +457,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Code("export const " + name + "FormItems = defineComponent({\n")
 	dst.Tab(1).Code("name: '" + name + "FormItems',\n")
 	dst.Tab(1).Code("props: {\n")
-	dst.Tab(2).Code("size: String,\n")
+	dst.Tab(2).Code("size: String as PropType<\"large\" | \"default\" | \"small\">,\n")
 	dst.Tab(2).Code("isAdd: Boolean,\n")
 	dst.Tab(2).Code("position: Array<String>,\n")
 	dst.Tab(2).Code("filter: (Function as unknown) as () => (item: string) => boolean,\n")
@@ -572,20 +578,23 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				dst.Code("{false}\n")
 			}
 			if form.onlyRead {
-				dst.Code(" disabled  \n")
+				dst.Tab(7).Code(" disabled  \n")
 			}
 			dst.Tab(6).Code("/>\n")
 		} else if "menu" == form.form {
 			dst.Tab(6).Code("<el-select\n")
 			b.printMenuModelValue(dst, field.Type, fieldName, false, false)
 
-			dst.Tab(7).Code("style={\"width:180px\"}\n")
+			dst.Tab(7).Code("style={\"min-width:180px\"}\n")
 			dst.Tab(7).Code("size={props.size}\n")
 			if isNull {
 				dst.Tab(7).Code("clearable\n")
 			}
 			if form.onlyRead {
 				dst.Tab(7).Code("disabled  \n")
+			}
+			if isArray {
+				dst.Tab(7).Code("multiple\n")
 			}
 			dst.Tab(7).Code(">\n")
 			b.printMenuItem(dst, field.Type, false, "el-option")
@@ -646,26 +655,6 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(7).Code("precision={").Code(strconv.Itoa(form.digit)).Code("}\n")
 			dst.Tab(6).Code("/>\n")
-		} else if "textarea" == form.form {
-			dst.Tab(6).Code("<el-input\n")
-			dst.Tab(7).Code("modelValue={")
-			b.printToString(dst, "_ctx.model!."+fieldName, field.Type, false, form.digit, form.format, " ?? \"\"")
-			dst.Code("}\n")
-
-			dst.Tab(7).Code("onUpdate:modelValue={($event: string) => _ctx.model!.").Code(fieldName).Code(" = ")
-			b.printFormString(dst, "$event", field.Type, false, form.digit, form.format)
-			dst.Code("}\n")
-			dst.Tab(7).Code("size={props.size}\n")
-			dst.Tab(7).Code("type=\"textarea\"\n")
-			if isNull {
-				dst.Tab(7).Code("clearable\n")
-			}
-			if form.onlyRead {
-				dst.Tab(7).Code("disabled\n")
-			}
-			dst.Tab(7).Code("precision={").Code(strconv.Itoa(form.digit)).Code("}\n")
-			dst.Tab(6).Code("/>\n")
-
 		} else if isArray {
 			dst.Tab(6).Code("<el-input-tag\n")
 			dst.Tab(7).Code("v-model={_ctx.model!.").Code(fieldName).Code("}\n")
@@ -699,7 +688,12 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(6).Code("/>\n")
 		} else {
-			dst.Tab(6).Code("<el-input\n")
+			if form.multilingual {
+				dst.Tab(6).Code("<input-lang\n")
+			} else {
+				dst.Tab(6).Code("<el-input\n")
+			}
+
 			dst.Tab(7).Code("modelValue={")
 			b.printToString(dst, "_ctx.model!."+fieldName, field.Type, false, form.digit, form.format, "")
 			dst.Code("}\n")
@@ -711,9 +705,14 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			if isNull {
 				dst.Tab(7).Code("clearable\n")
 			}
+			if form.textarea {
+				dst.Tab(7).Code("type={\"textarea\"}\n")
+			}
+
 			if form.onlyRead {
 				dst.Tab(7).Code("disabled\n")
 			}
+
 			dst.Tab(7).Code("precision={").Code(strconv.Itoa(form.digit)).Code("}\n")
 			dst.Tab(6).Code("/>\n")
 		}
@@ -776,13 +775,8 @@ func (b *Builder) printMenuItem(dst *build.Writer, expr ast.Expr, empty bool, op
 			b.printMenuItem(dst, t.Obj.Decl.(*ast.TypeSpec).Type, empty, option)
 		}
 	case *ast.ArrayType:
-		//ar := expr.(*ast.ArrayType)
-		//dst.Code("List<")
-		//printType(dst, ar.VType, false)
-		//dst.Code(">")
-		//if ar.Empty && !notEmpty {
-		//	dst.Code("?")
-		//}
+		ar := expr.(*ast.ArrayType)
+		b.printMenuItem(dst, ar.VType, empty, option)
 	case *ast.MapType:
 		//ma := expr.(*ast.MapType)
 		//dst.Code("Map<")
@@ -807,9 +801,20 @@ func (b *Builder) printMenuModelValue(dst *build.Writer, expr ast.Expr, fieldNam
 			if ast.Enum == t.Obj.Kind {
 				pkg := b.getPackage(dst, t, "")
 				name := build.StringToHumpName(t.Name)
+				if isNull {
+					dst.Tab(7).Code("modelValue={_ctx.model!.").Code(fieldName).Code("?")
+				} else {
+					dst.Tab(7).Code("modelValue={_ctx.model!.").Code(fieldName).Code("")
+				}
+				if isArray {
+					dst.Code(".map((e : ").Code(pkg).Code(".").Code(name).Code(") => e.value)")
+				} else {
+					dst.Code(".value")
+				}
+
+				dst.Code("}\n")
 
 				if isNull {
-					dst.Tab(7).Code("modelValue={_ctx.model!.").Code(fieldName).Code("?.value}\n")
 					dst.Tab(7).Code("onUpdate:modelValue={($event: ")
 					if isArray {
 						dst.Code("number[]")
@@ -818,7 +823,6 @@ func (b *Builder) printMenuModelValue(dst *build.Writer, expr ast.Expr, fieldNam
 					}
 					dst.Code(" | null) => _ctx.model!.").Code(fieldName).Code(" = ($event == null || $event == undefined) ? null :")
 				} else {
-					dst.Tab(7).Code("modelValue={_ctx.model!.").Code(fieldName).Code(".value}\n")
 					dst.Tab(7).Code("onUpdate:modelValue={($event: ")
 					if isArray {
 						dst.Code("number[]")

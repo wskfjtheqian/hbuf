@@ -41,26 +41,26 @@ func (b *Builder) printEnumUi(dst *build.Writer, typ *ast.EnumType) {
 }
 
 type ui struct {
-	suffix       string
-	onlyRead     bool
-	form         string
-	toNull       bool
-	table        string
-	format       string
-	digit        int
-	index        *int
-	width        float64
-	height       float64
-	maxLine      int
-	extensions   []string
-	clip         bool
-	unlink       bool
-	textarea     bool
-	multilingual bool
-	maxCount     int
-	step         *float64
-	min          *float64
-	max          *float64
+	suffix     string
+	onlyRead   bool
+	form       string
+	toNull     bool
+	table      string
+	format     string
+	custom     string
+	digit      int
+	index      *int
+	width      float64
+	height     float64
+	maxLine    int
+	extensions []string
+	clip       bool
+	unlink     bool
+	textarea   bool
+	maxCount   int
+	step       *float64
+	min        *float64
+	max        *float64
 }
 
 func (b *Builder) getUI(tags []*ast.Tag) *ui {
@@ -81,6 +81,8 @@ func (b *Builder) getUI(tags []*ast.Tag) *ui {
 				form.onlyRead = "true" == item.Values[0].Value[1:len(item.Values[0].Value)-1]
 			} else if "form" == item.Name.Name {
 				form.form = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
+			} else if "custom" == item.Name.Name {
+				form.custom = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 			} else if "table" == item.Name.Name {
 				form.table = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 			} else if "digit" == item.Name.Name {
@@ -133,8 +135,6 @@ func (b *Builder) getUI(tags []*ast.Tag) *ui {
 				form.toNull = "true" == item.Values[0].Value[1:len(item.Values[0].Value)-1]
 			} else if "unlink" == item.Name.Name {
 				form.unlink = "true" == item.Values[0].Value[1:len(item.Values[0].Value)-1]
-			} else if "multilingual" == item.Name.Name {
-				form.multilingual = "true" == item.Values[0].Value[1:len(item.Values[0].Value)-1]
 			} else if "textarea" == item.Name.Name {
 				form.textarea = "true" == item.Values[0].Value[1:len(item.Values[0].Value)-1]
 			} else if "extensions" == item.Name.Name {
@@ -385,17 +385,15 @@ func (b *Builder) printFormString(dst *build.Writer, name string, expr ast.Expr,
 				}
 				dst.Code("(/^[+]?[0-9]+$/.test(").Code(name).Code(") ? Number.parseInt(" + name + ") :").Code(name).Code(")")
 			case build.Int64:
-				dst.Import("long", "Long")
 				if empty {
 					dst.Code("(").Code(name).Code(" == null || ").Code(name).Code(".length == 0)").Code(" ? null : ")
 				}
-				dst.Code("(/^[-+]?[0-9]+$/.test(").Code(name).Code(") ? Long.fromValue(" + name + ") :").Code(name).Code(")")
+				dst.Code("(/^[-+]?[0-9]+$/.test(").Code(name).Code(") ? BigInt(" + name + ") :").Code(name).Code(")")
 			case build.Uint64:
-				dst.Import("long", "Long")
 				if empty {
 					dst.Code("(").Code(name).Code(" == null || ").Code(name).Code(".length == 0)").Code(" ? null : ")
 				}
-				dst.Code("(/^[+]?[0-9]+$/.test(").Code(name).Code(") ? Long.fromValue(" + name + ") :").Code(name).Code(")")
+				dst.Code("(/^[+]?[0-9]+$/.test(").Code(name).Code(") ? BigInt(" + name + ") :").Code(name).Code(")")
 			case build.Float, build.Double:
 				if empty {
 					dst.Code("(").Code(name).Code(" == null || ").Code(name).Code(".length == 0)").Code(" ? null : ")
@@ -480,6 +478,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			return nil
 		}
 
+		tagName := form.custom
 		inNum := build.IsNumber(field.Type)
 		isArray := build.IsArray(field.Type)
 		isNull := build.IsNil(field.Type)
@@ -499,7 +498,10 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		}
 		dst.Code(">\n")
 		if "datetime" == form.form || "date" == form.form || "dates" == form.form || "year" == form.form || "month" == form.form {
-			dst.Tab(6).Code("<el-date-picker\n")
+			if len(tagName) == 0 {
+				tagName = "el-date-picker"
+			}
+			dst.Tab(6).Code("<").Code(tagName).Code("\n")
 			dst.Tab(7).Code("modelValue={")
 			if isArray {
 				dst.Import("hbuf_ts", "* as h")
@@ -582,7 +584,10 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(6).Code("/>\n")
 		} else if "menu" == form.form {
-			dst.Tab(6).Code("<el-select\n")
+			if len(tagName) == 0 {
+				tagName = "el-select"
+			}
+			dst.Tab(6).Code("<").Code(tagName).Code("\n")
 			b.printMenuModelValue(dst, field.Type, fieldName, false, false)
 
 			dst.Tab(7).Code("style={\"min-width:180px\"}\n")
@@ -598,9 +603,14 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(7).Code(">\n")
 			b.printMenuItem(dst, field.Type, false, "el-option")
-			dst.Tab(6).Code("</el-select>\n")
+			dst.Tab(6).Code("</").Code(tagName).Code(">\n")
 		} else if "switch" == form.form {
-			dst.Tab(5).Code("<el-switch modelValue={_ctx.model!.").Code(fieldName).Code(" ??= false")
+			if len(tagName) == 0 {
+				tagName = "el-switch"
+			}
+			dst.Tab(6).Code("<").Code(tagName).Code("\n")
+
+			dst.Tab(5).Code("modelValue={_ctx.model!.").Code(fieldName).Code(" ??= false")
 			dst.Code("}\n")
 
 			dst.Tab(8).Code("onUpdate:modelValue={($event: string) => _ctx.model!.").Code(fieldName).Code(" = $event")
@@ -611,7 +621,11 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Code("/>\n")
 		} else if "radio" == form.form {
-			dst.Tab(6).Code("<el-radio-group \n")
+			if len(tagName) == 0 {
+				tagName = "el-radio-group"
+			}
+			dst.Tab(6).Code("<").Code(tagName).Code("\n")
+
 			b.printMenuModelValue(dst, field.Type, fieldName, false, false)
 
 			dst.Tab(7).Code("size={props.size}\n")
@@ -620,9 +634,12 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(7).Code(">\n")
 			b.printMenuItem(dst, field.Type, false, "el-radio")
-			dst.Tab(6).Code("</el-radio-group>\n")
+			dst.Tab(6).Code("</").Code(tagName).Code(">\n")
 		} else if "radioButton" == form.form {
-			dst.Tab(6).Code("<el-radio-group\n")
+			if len(tagName) == 0 {
+				tagName = "el-radio-group"
+			}
+			dst.Tab(6).Code("<").Code(tagName).Code("\n")
 			b.printMenuModelValue(dst, field.Type, fieldName, false, false)
 
 			dst.Tab(7).Code("size={props.size}\n")
@@ -631,9 +648,12 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(7).Code(">\n")
 			b.printMenuItem(dst, field.Type, false, "el-radio-button")
-			dst.Tab(6).Code("</el-radio-group>\n")
+			dst.Tab(6).Code("</").Code(tagName).Code(">\n")
 		} else if "pass" == form.form {
-			dst.Tab(6).Code("<el-input\n")
+			if len(tagName) == 0 {
+				tagName = "el-input"
+			}
+			dst.Tab(6).Code("<").Code(tagName).Code("\n")
 			dst.Tab(7).Code("modelValue={")
 			b.printToString(dst, "_ctx.model!."+fieldName, field.Type, false, form.digit, form.format, " ?? \"\"")
 			dst.Code("}\n")
@@ -656,7 +676,11 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(7).Code("precision={").Code(strconv.Itoa(form.digit)).Code("}\n")
 			dst.Tab(6).Code("/>\n")
 		} else if isArray {
-			dst.Tab(6).Code("<el-input-tag\n")
+			if len(tagName) == 0 {
+				tagName = "el-input-tag"
+			}
+			dst.Tab(6).Code("<").Code(tagName).Code("\n")
+
 			dst.Tab(7).Code("v-model={_ctx.model!.").Code(fieldName).Code("}\n")
 			if isNull {
 				dst.Tab(7).Code("clearable\n")
@@ -665,9 +689,13 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				dst.Tab(7).Code("disabled\n")
 			}
 			dst.Tab(7).Code(">\n")
-			dst.Tab(6).Code("</el-input-tag>\n")
+			dst.Tab(6).Code("</").Code(tagName).Code(">\n")
 		} else if inNum {
-			dst.Tab(6).Code("<el-input-number\n")
+			if len(tagName) == 0 {
+				tagName = "el-input-number"
+			}
+			dst.Tab(6).Code("<").Code(tagName).Code("\n")
+
 			dst.Tab(7).Code("v-model={_ctx.model!." + fieldName + "}\n")
 			dst.Tab(7).Code("size={props.size}\n")
 			if isNull {
@@ -688,11 +716,10 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(6).Code("/>\n")
 		} else {
-			if form.multilingual {
-				dst.Tab(6).Code("<input-lang\n")
-			} else {
-				dst.Tab(6).Code("<el-input\n")
+			if len(tagName) == 0 {
+				tagName = "el-input"
 			}
+			dst.Tab(6).Code("<").Code(tagName).Code("\n")
 
 			dst.Tab(7).Code("modelValue={")
 			b.printToString(dst, "_ctx.model!."+fieldName, field.Type, false, form.digit, form.format, "")

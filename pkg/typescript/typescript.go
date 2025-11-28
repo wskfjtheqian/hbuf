@@ -12,14 +12,14 @@ import (
 )
 
 var _types = map[build.BaseType]string{
-	build.Int8: "number", build.Int16: "number", build.Int32: "number", build.Int64: "Long", build.Uint8: "number",
-	build.Uint16: "number", build.Uint32: "number", build.Uint64: "Long", build.Bool: "boolean", build.Float: "number",
+	build.Int8: "number", build.Int16: "number", build.Int32: "number", build.Int64: "bigint", build.Uint8: "number",
+	build.Uint16: "number", build.Uint32: "number", build.Uint64: "bigint", build.Bool: "boolean", build.Float: "number",
 	build.Double: "number", build.String: "string", build.Date: "Date", build.Decimal: "d.Decimal",
 }
 
 var _typesValue = map[build.BaseType]string{
-	build.Int8: "0", build.Int16: "0", build.Int32: "0", build.Int64: "Long.ZERO", build.Uint8: "0",
-	build.Uint16: "0", build.Uint32: "0", build.Uint64: "Long.ZERO", build.Bool: "false", build.Float: "0.0",
+	build.Int8: "0", build.Int16: "0", build.Int32: "0", build.Int64: "BigInt(0)", build.Uint8: "0",
+	build.Uint16: "0", build.Uint32: "0", build.Uint64: "BigInt(0)", build.Bool: "false", build.Float: "0.0",
 	build.Double: "0.0", build.String: "\"\"", build.Date: "new Date()", build.Decimal: "new d.Decimal(0)",
 }
 
@@ -262,7 +262,6 @@ func (b *Builder) printType(dst *build.Writer, expr ast.Expr, notEmpty bool, isR
 				if build.Decimal == build.BaseType((expr.(*ast.Ident).Name)) {
 					dst.Import("decimal.js", "* as d")
 				} else if build.Int64 == build.BaseType((expr.(*ast.Ident).Name)) || build.Uint64 == build.BaseType((expr.(*ast.Ident).Name)) {
-					dst.Import("long", "Long")
 				}
 				dst.Code(_types[build.BaseType((expr.(*ast.Ident).Name))])
 			}
@@ -346,7 +345,6 @@ func (b *Builder) printDefault(dst *build.Writer, expr ast.Expr, notEmpty bool) 
 			if build.Decimal == build.BaseType((expr.(*ast.Ident).Name)) {
 				dst.Import("decimal.js", "* as d")
 			} else if build.Int64 == build.BaseType((expr.(*ast.Ident).Name)) || build.Uint64 == build.BaseType((expr.(*ast.Ident).Name)) {
-				dst.Import("long", "Long")
 			}
 			dst.Code(_typesValue[build.BaseType((expr.(*ast.Ident).Name))])
 		}

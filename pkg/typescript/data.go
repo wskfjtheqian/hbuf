@@ -125,9 +125,9 @@ func (b *Builder) printCopy(dst *build.Writer, self, name string, expr ast.Expr,
 					dst.Code(self).Code(name)
 				} else {
 					if empty {
-						dst.Code(self).Code(name).Code(" == null ? null : Long.fromValue(").Code(self).Code(name).Code(")")
+						dst.Code(self).Code(name).Code(" == null ? null : BigInt(").Code(self).Code(name).Code(")")
 					} else {
-						dst.Code("Long.fromValue(").Code(self).Code(name).Code(")")
+						dst.Code("BigInt(").Code(self).Code(name).Code(")")
 					}
 				}
 			case build.Date:
@@ -228,11 +228,10 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 						dst.Code("null == " + name + " ? \"\" : " + v + ".toString()")
 					}
 				} else {
-					dst.Import("long", "Long")
 					if empty {
-						dst.Code("null == " + name + " ? null : Long.fromString(" + v + ".toString())")
+						dst.Code("null == " + name + " ? null : BigInt(" + v + " as string).valueOf()")
 					} else {
-						dst.Code("null == " + name + " ? Long.ZERO : Long.fromString(" + v + ".toString())")
+						dst.Code("null == " + name + " ? BigInt(0) : (BigInt(" + v + " as string).valueOf() ?? BigInt(0))")
 					}
 				}
 			case build.Float, build.Double:

@@ -40,21 +40,31 @@ func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
 		if nil != method.Doc && 0 < len(method.Doc.Text()) {
 			dst.Tab(1).Code("//" + build.StringToHumpName(method.Name.Name) + " " + method.Doc.Text())
 		}
-		isMethod := method.Result.Type().(*ast.Ident).Name == "void"
 
 		dst.Tab(1).Code("" + build.StringToHumpName(method.Name.Name))
 		dst.Code("(ctx context.Context, ")
 		dst.Code(build.StringToFirstLower(method.ParamName.Name))
-		dst.Code(" *")
-		b.printType(dst, method.Param, true)
+		if method.Param.Type().(*ast.Ident).Name == "stream" {
+			dst.Import("io", "")
+			dst.Code(" io.Reader")
+		} else {
+			dst.Code(" *")
+			b.printType(dst, method.Param, true)
+		}
+
 		dst.Code(") ")
-		if isMethod {
+
+		resultType := method.Result.Type().(*ast.Ident).Name
+		if resultType == "void" {
 			dst.Code("error\n")
+		} else if resultType == "stream" {
+			dst.Code("(io.ReadCloser, error)\n")
 		} else {
 			dst.Code("(*")
 			b.printType(dst, method.Result.Type(), true)
 			dst.Code(", error)\n")
 		}
+
 	}
 	dst.Code("}\n\n")
 }
@@ -77,29 +87,38 @@ func (b *Builder) printServerDefault(dst *build.Writer, typ *ast.ServerType) err
 		if nil != method.Doc && 0 < len(method.Doc.Text()) {
 			dst.Code("// " + build.StringToHumpName(method.Name.Name) + " " + method.Doc.Text())
 		}
-		isSub := method.Result.Type().(*ast.Ident).Name == "void"
 
 		dst.Code("func (s *Default" + serverName + ") ")
 		dst.Code(build.StringToHumpName(method.Name.Name))
-		dst.Code("(ctx context.Context, ")
-		dst.Code(build.StringToFirstLower(method.ParamName.Name))
-		dst.Code(" *")
-		b.printType(dst, method.Param, true)
-		if isSub {
-			dst.Code(") error {\n")
+		dst.Code("(ctx context.Context, req")
+		if method.Param.Type().(*ast.Ident).Name == "stream" {
+			dst.Import("io", "")
+			dst.Code(" io.Reader")
 		} else {
-			dst.Code(") (*")
-			b.printType(dst, method.Result.Type(), true)
-			dst.Code(", error) {\n")
+			dst.Code(" *")
+			b.printType(dst, method.Param, true)
 		}
 
+		dst.Code(") ")
+		resultType := method.Result.Type().(*ast.Ident).Name
+		if resultType == "void" {
+			dst.Code("error")
+		} else if resultType == "stream" {
+			dst.Code("(io.ReadCloser, error)")
+		} else {
+			dst.Code("(*")
+			b.printType(dst, method.Result.Type(), true)
+			dst.Code(", error)")
+		}
+		dst.Code("{\n")
+		isSub := method.Result.Type().(*ast.Ident).Name == "void"
 		bind, err := build.GetBinding(method.Tags, dst.File, b.GetDataType)
 		if nil != err {
 			return err
 		}
 		if bind == nil {
 			if isSub {
-				dst.Tab(1).Code("return ")
+				dst.Tab(1).Code("return")
 			} else {
 				dst.Tab(1).Code("return nil,")
 			}
@@ -107,7 +126,10 @@ func (b *Builder) printServerDefault(dst *build.Writer, typ *ast.ServerType) err
 			dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/herror", "")
 			dst.Code(" herror.NewError(\"not find server " + build.StringToUnderlineName(typ.Name.Name) + "\")\n")
 		} else {
-			b.printBinding(dst, method, bind, isSub)
+			err := b.printBinding(dst, method, bind, isSub)
+			if err != nil {
+				return err
+			}
 		}
 		dst.Code("}\n\n")
 	}
@@ -173,34 +195,64 @@ func (b *Builder) printClient(dst *build.Writer, typ *ast.ServerType) {
 		}
 		dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "")
 
-		isMethod := method.Result.Type().(*ast.Ident).Name == "void"
+		resultType := method.Result.Type().(*ast.Ident).Name
+		paramType := method.Param.Type().(*ast.Ident).Name
 
 		dst.Code("func (r *" + serverName + "Client) ")
 		dst.Code(build.StringToHumpName(method.Name.Name))
 		dst.Code("(ctx context.Context, ")
 		dst.Code(build.StringToFirstLower(method.ParamName.Name))
-		dst.Code(" *")
-		b.printType(dst, method.Param, true)
+		if paramType == "stream" {
+			dst.Import("io", "")
+			dst.Code(" io.Reader")
+		} else {
+			dst.Code(" *")
+			b.printType(dst, method.Param, true)
+		}
 		dst.Code(") ")
-		if isMethod {
+
+		if resultType == "void" {
 			dst.Code("error {\n")
+		} else if resultType == "stream" {
+			dst.Code("(io.ReadCloser, error) {\n")
 		} else {
 			dst.Code("(*")
 			b.printType(dst, method.Result.Type(), true)
 			dst.Code(", error) {\n")
 		}
+
 		dst.Tab(1).Code("response, err := r.client.Invoke(ctx, 0, \"").Code(name).Code("\", \"")
 		dst.Code(build.StringToUnderlineName(method.Name.Name)).Code("\", \"")
 		dst.Code(b.getFilterTag(method))
-		dst.Code("\", req, hrpc.NewResultResponse[*")
-		b.printType(dst, method.Result.Type(), true)
-		dst.Code("]())\n")
-		dst.Tab(1).Code("if err != nil {\n")
-		dst.Tab(2).Code("return nil, err\n")
-		dst.Tab(1).Code("}\n")
-		dst.Tab(1).Code("return response.(*")
-		b.printType(dst, method.Result.Type(), true)
-		dst.Code("), nil\n")
+		dst.Code("\", req, ")
+		if resultType == "void" || resultType == "stream" {
+			dst.Code("nil")
+		} else {
+			dst.Code("hrpc.NewResultResponse[*")
+			b.printType(dst, method.Result.Type(), true)
+			dst.Code("]()")
+		}
+		dst.Code(")\n")
+
+		if resultType == "void" {
+			dst.Tab(1).Code("if err != nil {\n")
+			dst.Tab(2).Code("return nil\n")
+			dst.Tab(1).Code("}\n")
+			dst.Tab(1).Code("response.(io.ReadCloser).Close()\n")
+			dst.Tab(1).Code("return nil\n")
+		} else {
+			dst.Tab(1).Code("if err != nil {\n")
+			dst.Tab(2).Code("return nil, err\n")
+			dst.Tab(1).Code("}\n")
+			dst.Tab(1).Code("return response.(")
+			if resultType == "stream" {
+				dst.Code("io.ReadCloser")
+			} else {
+				dst.Code("*")
+				b.printType(dst, method.Result.Type(), true)
+			}
+			dst.Code("), nil\n")
+		}
 		dst.Code("}\n\n")
 		return nil
 	})
@@ -254,18 +306,34 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 				}
 			}
 		}
+
 		dst.Tab(4).Code("return ctx\n")
 		dst.Tab(3).Code("},\n")
 		dst.Tab(3).Code("Handler: func(ctx context.Context, req any) (any, error) {\n")
-		dst.Tab(4).Code("return server.").Code(build.StringToHumpName(method.Name.Name)).Code("(ctx, req.(*")
-		b.printType(dst, method.Param, true)
+		resultType := method.Result.Type().(*ast.Ident).Name
+		dst.Tab(4).Code("return ")
+		if resultType == "void" {
+			dst.Code("nil, ")
+		}
+		paramType := method.Param.Type().(*ast.Ident).Name
+		dst.Code("server.").Code(build.StringToHumpName(method.Name.Name)).Code("(ctx, req.(")
+		if paramType == "stream" {
+			dst.Code("io.Reader")
+		} else {
+			dst.Code("*")
+			b.printType(dst, method.Param, true)
+		}
+
 		dst.Code("))\n")
 		dst.Tab(3).Code("},\n")
-		dst.Tab(3).Code("Decode: func(decoder func(v hbuf.Data) (hbuf.Data, error)) (hbuf.Data, error) {\n")
-		dst.Tab(4).Code("return decoder(&")
-		b.printType(dst, method.Param, true)
-		dst.Code("{})\n")
-		dst.Tab(3).Code("},\n")
+
+		if !(resultType == "void" || resultType == "stream") {
+			dst.Tab(3).Code("Decode: func(decoder func(v hbuf.Data) (hbuf.Data, error)) (hbuf.Data, error) {\n")
+			dst.Tab(4).Code("return decoder(&")
+			b.printType(dst, method.Param, true)
+			dst.Code("{})\n")
+			dst.Tab(3).Code("},\n")
+		}
 		dst.Tab(2).Code("},\n")
 
 		return nil

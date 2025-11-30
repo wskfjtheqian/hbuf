@@ -307,15 +307,16 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 			}
 		}
 
+		resultType := method.Result.Type().(*ast.Ident).Name
+		paramType := method.Param.Type().(*ast.Ident).Name
+
 		dst.Tab(4).Code("return ctx\n")
 		dst.Tab(3).Code("},\n")
 		dst.Tab(3).Code("Handler: func(ctx context.Context, req any) (any, error) {\n")
-		resultType := method.Result.Type().(*ast.Ident).Name
 		dst.Tab(4).Code("return ")
 		if resultType == "void" {
 			dst.Code("nil, ")
 		}
-		paramType := method.Param.Type().(*ast.Ident).Name
 		dst.Code("server.").Code(build.StringToHumpName(method.Name.Name)).Code("(ctx, req.(")
 		if paramType == "stream" {
 			dst.Code("io.Reader")
@@ -327,7 +328,7 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 		dst.Code("))\n")
 		dst.Tab(3).Code("},\n")
 
-		if !(resultType == "void" || resultType == "stream") {
+		if paramType != "stream" {
 			dst.Tab(3).Code("Decode: func(decoder func(v hbuf.Data) (hbuf.Data, error)) (hbuf.Data, error) {\n")
 			dst.Tab(4).Code("return decoder(&")
 			b.printType(dst, method.Param, true)

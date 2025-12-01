@@ -28,17 +28,26 @@ func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
 		if nil != method.Doc && 0 < len(method.Doc.Text()) {
 			dst.Tab(1).Code("//" + method.Doc.Text())
 		}
-		isMethod := method.Result.Type().(*ast.Ident).Name == "void"
+
+		resultType := method.Result.Type().(*ast.Ident).Name
+		paramType := method.Param.Type().(*ast.Ident).Name
 
 		dst.Tab(1).Code("" + build.StringToFirstLower(method.Name.Name))
 		dst.Code("(")
 		dst.Code(build.StringToFirstLower(method.ParamName.Name) + ": ")
-		b.printType(dst, method.Param, false, false)
+
+		if paramType == "stream" {
+			dst.Code("Blob | ArrayBuffer")
+		} else {
+			b.printType(dst, method.Param, false, false)
+		}
 
 		dst.Code(", ctx?: h.Context): ")
 		dst.Code("Promise<")
-		if isMethod {
+		if resultType == "void" {
 			dst.Code("void")
+		} else if resultType == "stream" {
+			dst.Code("Blob | ArrayBuffer")
 		} else {
 			b.printType(dst, method.Result.Type(), false, false)
 		}
@@ -71,17 +80,24 @@ func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 		if nil != method.Doc && 0 < len(method.Doc.Text()) {
 			dst.Tab(1).Code("//" + method.Doc.Text())
 		}
-		isMethod := method.Result.Type().(*ast.Ident).Name == "void"
+		resultType := method.Result.Type().(*ast.Ident).Name
+		paramType := method.Param.Type().(*ast.Ident).Name
 
 		dst.Tab(1).Code("" + build.StringToFirstLower(method.Name.Name))
 		dst.Code("(")
 		dst.Code(build.StringToFirstLower(method.ParamName.Name) + ": ")
-		b.printType(dst, method.Param, false, false)
+		if paramType == "stream" {
+			dst.Code("Blob | ArrayBuffer")
+		} else {
+			b.printType(dst, method.Param, false, false)
+		}
 
 		dst.Code(", ctx?: h.Context): ")
 		dst.Code("Promise<")
-		if isMethod {
+		if resultType == "void" {
 			dst.Code("void")
+		} else if resultType == "stream" {
+			dst.Code("Blob | ArrayBuffer")
 		} else {
 			b.printType(dst, method.Result.Type(), false, false)
 		}
@@ -89,8 +105,10 @@ func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 		dst.Code("> {\n")
 
 		dst.Tab(2).Code("return this.invoke<")
-		if isMethod {
+		if resultType == "void" {
 			dst.Code("void")
+		} else if resultType == "stream" {
+			dst.Code("Blob | ArrayBuffer")
 		} else {
 			b.printType(dst, method.Result.Type(), false, false)
 		}
@@ -101,7 +119,7 @@ func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 		dst.Code(", ")
 		dst.Code(build.StringToFirstLower(method.ParamName.Name))
 		dst.Code(", ")
-		if isMethod {
+		if resultType == "void" || resultType == "stream" {
 			dst.Code("null, null);\n")
 		} else {
 			b.printType(dst, method.Result.Type(), false, false)
@@ -139,18 +157,36 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 	dst.Tab(2).Code("this.server = server\n")
 	dst.Tab(2).Code("this.invoke = {\n")
 	err := build.EnumMethod(typ, func(method *ast.FuncType, server *ast.ServerType) error {
+
+		paramType := method.Param.Type().(*ast.Ident).Name
+
 		dst.Tab(3).Code("\"" + build.StringToUnderlineName(method.Name.Name) + "\": {\n")
-		dst.Tab(4).Code("formData(data: ArrayBuffer | Record<string, any>): h.Data {\n")
+		dst.Tab(4).Code("formData(data: Blob | ArrayBuffer | Record<string, any>):  Blob | ArrayBuffer | h.Data {\n")
 		dst.Tab(5).Code("return ")
-		b.printType(dst, method.Param.Type(), false, false)
-		dst.Code(".fromJson(data)\n")
+		if paramType == "void" || paramType == "stream" {
+			dst.Code("data as ArrayBuffer |h.Data\n")
+		} else {
+			b.printType(dst, method.Param.Type(), false, false)
+			dst.Code(".fromJson(data)\n")
+		}
+
 		dst.Tab(4).Code("},\n")
-		dst.Tab(4).Code("toData(data: h.Data): ArrayBuffer | Record<string, any> {\n")
-		dst.Tab(5).Code("return data.toJson()\n")
+		dst.Tab(4).Code("toData(data: Blob | ArrayBuffer | h.Data): Blob | ArrayBuffer | Record<string, any> {\n")
+		dst.Tab(5).Code("return ")
+		if paramType == "void" || paramType == "stream" {
+			dst.Code("data as Blob | ArrayBuffer\n")
+		} else {
+			dst.Code("(data as h.Data).toJson()\n")
+		}
+
 		dst.Tab(4).Code("},\n")
-		dst.Tab(4).Code("invoke(data: h.Data, ctx?: h.Context): Promise<h.Data | void> {\n")
+		dst.Tab(4).Code("invoke(data: Blob | ArrayBuffer | h.Data, ctx?: h.Context): Promise<h.Data | void> {\n")
 		dst.Tab(5).Code("return server." + build.StringToFirstLower(method.Name.Name) + "(data as ")
-		b.printType(dst, method.Param.Type(), false, false)
+		if paramType == "void" || paramType == "stream" {
+			dst.Code("Blob | ArrayBuffer")
+		} else {
+			b.printType(dst, method.Param.Type(), false, false)
+		}
 		dst.Code(", ctx);\n")
 		dst.Tab(4).Code("}\n")
 		dst.Tab(3).Code("},\n")

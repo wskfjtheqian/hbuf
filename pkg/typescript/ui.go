@@ -61,6 +61,12 @@ type ui struct {
 	step       *float64
 	min        *float64
 	max        *float64
+
+	outType string
+	outSize []int
+	fit     string
+	typ     string
+	limit   int
 }
 
 func (b *Builder) getUI(tags []*ast.Tag) *ui {
@@ -85,6 +91,12 @@ func (b *Builder) getUI(tags []*ast.Tag) *ui {
 				form.custom = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 			} else if "table" == item.Name.Name {
 				form.table = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
+			} else if "outType" == item.Name.Name {
+				form.outType = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
+			} else if "fit" == item.Name.Name {
+				form.fit = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
+			} else if "type" == item.Name.Name {
+				form.typ = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 			} else if "digit" == item.Name.Name {
 				atoi, err := strconv.Atoi(item.Values[0].Value[1 : len(item.Values[0].Value)-1])
 				if err != nil {
@@ -92,6 +104,23 @@ func (b *Builder) getUI(tags []*ast.Tag) *ui {
 					return nil
 				}
 				form.digit = atoi
+			} else if "outSize" == item.Name.Name {
+				for _, value := range item.Values {
+					atoi, err := strconv.Atoi(value.Value[1 : len(value.Value)-1])
+					if err != nil {
+						//TODO 添加错误处理
+						return nil
+					}
+					form.outSize = append(form.outSize, atoi)
+				}
+			} else if "limit" == item.Name.Name {
+				atoi, err := strconv.Atoi(item.Values[0].Value[1 : len(item.Values[0].Value)-1])
+				if err != nil {
+					//TODO 添加错误处理
+					return nil
+				}
+				form.limit = atoi
+
 			} else if "index" == item.Name.Name {
 				atoi, err := strconv.Atoi(item.Values[0].Value[1 : len(item.Values[0].Value)-1])
 				if err != nil {
@@ -229,8 +258,8 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(7).Code("default: (scope:any) => (<>\n")
 			dst.Tab(8).Code("<el-popover effect=\"light\" trigger=\"hover\" placement=\"top\" width=\"auto\">\n")
 			dst.Tab(10).Code("{{\n")
-			dst.Tab(11).Code("default: () => <el-image style={\"width: 200px; height: 200px\"} src={scope.row.").Code(fieldName).Code("}/>,\n")
-			dst.Tab(11).Code("reference: () => <el-avatar shape=\"square\" size={60} src={scope.row.").Code(fieldName).Code("}/>,\n")
+			dst.Tab(11).Code("default: () => <el-image style={\"width: 200px; height: 200px\"} src={scope.row.").Code(fieldName).Code("} fit=\"contain\"/>,\n")
+			dst.Tab(11).Code("reference: () => <el-avatar shape=\"square\" size={60} src={scope.row.").Code(fieldName).Code("+'?width=60&height=60'} cover style={\"margin-top: 6px\"}/>,\n")
 			dst.Tab(10).Code("}}\n")
 			dst.Tab(8).Code("</el-popover>\n")
 			dst.Tab(7).Code("</>)\n")
@@ -239,6 +268,11 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(6).Code("{{\n")
 			dst.Tab(7).Code("default: (scope:any) => (<el-switch v-model={scope.row!.").Code(fieldName).Code("} disabled />)\n")
 			dst.Tab(6).Code("}}\n")
+		} else if "link" == table.table {
+			dst.Tab(6).Code("{{\n")
+			dst.Tab(7).Code("default: (scope:any) => (<el-link href={scope.row!.").Code(fieldName).Code("} target=\"_blank\"> scope.row!.").Code(fieldName).Code(" </el-link>)\n")
+			dst.Tab(6).Code("}}\n")
+
 		} else {
 			dst.Tab(6).Code("{{\n")
 			dst.Tab(7).Code("default: (scope:any) =>")
@@ -715,6 +749,61 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				dst.Tab(7).Code("step={").Code(strconv.FormatFloat(*form.step, 'f', -1, 64)).Code("}\n")
 			}
 			dst.Tab(6).Code("/>\n")
+		} else if "file" == form.form {
+			if len(tagName) == 0 {
+				tagName = "input-file"
+			}
+			dst.Tab(6).Code("<").Code(tagName).Code("\n")
+
+			dst.Tab(7).Code("modelValue={")
+			b.printToString(dst, "_ctx.model!."+fieldName, field.Type, false, form.digit, form.format, "")
+			dst.Code("}\n")
+
+			dst.Tab(7).Code("onUpdate:modelValue={($event: string) => _ctx.model!.").Code(fieldName).Code(" = ")
+			b.printFormString(dst, "$event", field.Type, false, form.digit, form.format)
+			dst.Code("}\n")
+			dst.Tab(7).Code("size={props.size}\n")
+			if isNull {
+				dst.Tab(7).Code("clearable\n")
+			}
+			if len(form.typ) > 0 {
+				dst.Tab(7).Code("type=\"").Code(form.typ).Code("\"\n")
+			}
+
+			if form.limit > 0 {
+				dst.Tab(7).Code("limit={").Code(strconv.Itoa(form.limit)).Code("}\n")
+			}
+
+			if len(form.outSize) > 0 {
+				dst.Tab(7).Code("outWidth={").Code(strconv.Itoa(form.outSize[0])).Code("}\n")
+			}
+
+			if len(form.outSize) > 1 {
+				dst.Tab(7).Code("outHeight={").Code(strconv.Itoa(form.outSize[0])).Code("}\n")
+			}
+
+			if len(form.outType) > 0 {
+				dst.Tab(7).Code("outType={").Code(form.outType).Code("}\n")
+			}
+
+			if form.onlyRead {
+				dst.Tab(7).Code("readonly\n")
+			}
+
+			if form.clip {
+				dst.Tab(7).Code("clip\n")
+			}
+
+			if isArray {
+				dst.Tab(7).Code("multiple\n")
+			}
+
+			if form.onlyRead {
+				dst.Tab(7).Code("disabled\n")
+			}
+
+			dst.Tab(7).Code("precision={").Code(strconv.Itoa(form.digit)).Code("}\n")
+			dst.Tab(6).Code("/>\n")
 		} else {
 			if len(tagName) == 0 {
 				tagName = "el-input"
@@ -841,20 +930,15 @@ func (b *Builder) printMenuModelValue(dst *build.Writer, expr ast.Expr, fieldNam
 
 				dst.Code("}\n")
 
+				dst.Tab(7).Code("onUpdate:modelValue={($event: number")
 				if isNull {
-					dst.Tab(7).Code("onUpdate:modelValue={($event: ")
 					if isArray {
-						dst.Code("number[]")
-					} else {
-						dst.Code("number")
+						dst.Code("[]")
 					}
 					dst.Code(" | null) => _ctx.model!.").Code(fieldName).Code(" = ($event == null || $event == undefined) ? null :")
 				} else {
-					dst.Tab(7).Code("onUpdate:modelValue={($event: ")
 					if isArray {
-						dst.Code("number[]")
-					} else {
-						dst.Code("number")
+						dst.Code("[]")
 					}
 					dst.Code(") => _ctx.model!.").Code(fieldName).Code(" = \n")
 				}
@@ -869,6 +953,16 @@ func (b *Builder) printMenuModelValue(dst *build.Writer, expr ast.Expr, fieldNam
 				}
 				dst.Code("}\n")
 			}
+		} else {
+			dst.Tab(7).Code("modelValue={_ctx.model!.").Code(fieldName).Code("}\n")
+
+			dst.Tab(7).Code("onUpdate:modelValue={($event: ")
+			if isArray {
+				dst.Code("number[]")
+			} else {
+				dst.Code("number")
+			}
+			dst.Code(" | null) => _ctx.model!.").Code(fieldName).Code(" = $event }\n")
 		}
 	case *ast.ArrayType:
 		ar := expr.(*ast.ArrayType)

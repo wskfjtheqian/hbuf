@@ -24,22 +24,20 @@ func (b *Builder) printEnum(dst *build.Writer, typ *ast.EnumType) {
 	dst.Tab(2).Code("this.name = name;\n")
 	dst.Tab(1).Code("}\n")
 
-	dst.Tab(1).Code("public static valueOf(value: number): " + enumName + " {\n")
+	dst.Tab(1).Code("public static valueOf(value: number): " + enumName + "| undefined {\n")
 	dst.Tab(1).Code("	for (const i in " + enumName + ".values) {\n")
 	dst.Tab(1).Code("		if (" + enumName + ".values[i].value == value) {\n")
 	dst.Tab(1).Code("			return " + enumName + ".values[i];\n")
 	dst.Tab(1).Code("		}\n")
 	dst.Tab(1).Code("	}\n")
-	dst.Tab(1).Code("	throw 'Get " + enumName + " by value error, value=${value}';\n")
 	dst.Tab(1).Code("}\n\n")
 
-	dst.Tab(1).Code("public static nameOf(name: string): " + enumName + " {\n")
+	dst.Tab(1).Code("public static nameOf(name: string): " + enumName + " | undefined {\n")
 	dst.Tab(1).Code("	for (const i in " + enumName + ".values) {\n")
 	dst.Tab(1).Code("		if (" + enumName + ".values[i].name == name) {\n")
 	dst.Tab(1).Code("			return " + enumName + ".values[i];\n")
 	dst.Tab(1).Code("		}\n")
 	dst.Tab(1).Code("	}\n")
-	dst.Tab(1).Code("	throw 'Get " + enumName + " by name error, name=${name}';\n")
 	dst.Tab(1).Code("}\n\n")
 
 	for _, item := range typ.Items {

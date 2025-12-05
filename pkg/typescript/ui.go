@@ -376,7 +376,7 @@ func (b *Builder) printToString(dst *build.Writer, name string, expr ast.Expr, e
 	case *ast.ArrayType:
 		//default: (scope:any) => scope.row.platform?.map((e: $4.PlatformType) => _ctx.$t(e.toString())) || ""
 		ar := expr.(*ast.ArrayType)
-		dst.Code(name).Code("?.map((e:any)=>")
+		dst.Code(name).Code("?.map((e:any)=> e && ")
 		b.printToString(dst, "e", ar.Type(), false, digit, format, val)
 		dst.Code(")?.join(\",\") || \"\"")
 	case *ast.MapType:

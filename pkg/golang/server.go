@@ -238,6 +238,7 @@ func (b *Builder) printClient(dst *build.Writer, typ *ast.ServerType) {
 			dst.Tab(1).Code("if err != nil {\n")
 			dst.Tab(2).Code("return nil\n")
 			dst.Tab(1).Code("}\n")
+			dst.Import("io", "")
 			dst.Tab(1).Code("response.(io.ReadCloser).Close()\n")
 			dst.Tab(1).Code("return nil\n")
 		} else {

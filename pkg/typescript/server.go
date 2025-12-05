@@ -167,7 +167,7 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 			dst.Code("data as ArrayBuffer |h.Data\n")
 		} else {
 			b.printType(dst, method.Param.Type(), false, false)
-			dst.Code(".fromJson(data)\n")
+			dst.Code(".fromJson(data as Record<string, any>)\n")
 		}
 
 		dst.Tab(4).Code("},\n")

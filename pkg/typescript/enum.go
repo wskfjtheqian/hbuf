@@ -20,24 +20,26 @@ func (b *Builder) printEnum(dst *build.Writer, typ *ast.EnumType) {
 	dst.Tab(1).Code("public readonly name: string\n\n")
 
 	dst.Tab(1).Code("private constructor(value: number, name: string) {\n")
-	dst.Tab(2).Code("this.value = value;\n")
-	dst.Tab(2).Code("this.name = name;\n")
+	dst.Tab(2).Code("this.value = value\n")
+	dst.Tab(2).Code("this.name = name\n")
 	dst.Tab(1).Code("}\n")
 
-	dst.Tab(1).Code("public static valueOf(value: number): " + enumName + "| undefined {\n")
+	dst.Tab(1).Code("public static valueOf(value: number): " + enumName + " {\n")
 	dst.Tab(1).Code("	for (const i in " + enumName + ".values) {\n")
 	dst.Tab(1).Code("		if (" + enumName + ".values[i].value == value) {\n")
-	dst.Tab(1).Code("			return " + enumName + ".values[i];\n")
+	dst.Tab(1).Code("			return " + enumName + ".values[i]\n")
 	dst.Tab(1).Code("		}\n")
 	dst.Tab(1).Code("	}\n")
+	dst.Tab(1).Code("	return { value: value, name: `Unknown ${value}` }\n")
 	dst.Tab(1).Code("}\n\n")
 
-	dst.Tab(1).Code("public static nameOf(name: string): " + enumName + " | undefined {\n")
+	dst.Tab(1).Code("public static nameOf(name: string): " + enumName + " {\n")
 	dst.Tab(1).Code("	for (const i in " + enumName + ".values) {\n")
 	dst.Tab(1).Code("		if (" + enumName + ".values[i].name == name) {\n")
-	dst.Tab(1).Code("			return " + enumName + ".values[i];\n")
+	dst.Tab(1).Code("			return " + enumName + ".values[i]\n")
 	dst.Tab(1).Code("		}\n")
 	dst.Tab(1).Code("	}\n")
+	dst.Tab(1).Code("	return { value: -1, name: name }\n")
 	dst.Tab(1).Code("}\n\n")
 
 	for _, item := range typ.Items {
@@ -47,14 +49,14 @@ func (b *Builder) printEnum(dst *build.Writer, typ *ast.EnumType) {
 		itemName := build.StringToAllUpper(item.Name.Name)
 		dst.Tab(1).Code("public static readonly " + itemName + " = new " + enumName + "(")
 		dst.Code(item.Id.Value + ", \"" + build.StringToHumpName(item.Name.Name) + "\"")
-		dst.Code(");\n\n")
+		dst.Code(")\n\n")
 	}
 	dst.Code("\n")
 	dst.Tab(1).Code("public static readonly values: " + enumName + "[] = [\n")
 	for _, item := range typ.Items {
 		dst.Tab(2).Code("" + enumName + "." + build.StringToAllUpper(item.Name.Name) + ",\n")
 	}
-	dst.Tab(1).Code("];\n\n")
+	dst.Tab(1).Code("]\n\n")
 
 	dst.Tab(1).Code("toString(): string {\n")
 	dst.Tab(2).Code("return \"").Code(build.StringToFirstLower(enumName)).Code("Lang.\" + this.name\n")

@@ -5,6 +5,33 @@ import (
 	"hbuf/pkg/scanner"
 )
 
+type Marshal struct {
+	In  []string
+	Out []string
+}
+
+func GetMarshal(tag []*ast.Tag) *Marshal {
+	val, ok := GetTag(tag, "marshal")
+	if !ok {
+		return nil
+	}
+	marshal := Marshal{}
+	if nil != val.KV {
+		for _, item := range val.KV {
+			if "out" == item.Name.Name {
+				for _, value := range item.Values {
+					marshal.Out = append(marshal.Out, value.Value[1:len(value.Value)-1])
+				}
+			} else if "in" == item.Name.Name {
+				for _, value := range item.Values {
+					marshal.In = append(marshal.In, value.Value[1:len(value.Value)-1])
+				}
+			}
+		}
+	}
+	return &marshal
+}
+
 func (b *Builder) checkData(file *ast.File, data *ast.DataType, index int) error {
 	err := b.checkTags(data.Tags)
 	if err != nil {

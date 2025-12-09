@@ -110,3 +110,7 @@ server StudentServer:BaseServer = 0 {
 #### 六、注解
 
 
+marshal  序列化注解
+out  出参注解
+in  入参注解
+

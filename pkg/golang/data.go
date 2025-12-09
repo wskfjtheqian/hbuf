@@ -191,10 +191,32 @@ func (b *Builder) printDataStruct(dst *build.Writer, typ *ast.DataType) error {
 		b.printType(temp, field.Type, true)
 		dst.AddImports(temp.GetImports())
 
+		marshal := build.GetMarshal(field.Tags)
+
+		inOut := ""
+		if marshal != nil {
+			for i, in := range marshal.In {
+				if len(in) > 0 {
+					if i > 0 {
+						inOut += "|"
+					}
+					inOut += "I" + in
+				}
+			}
+			for i, out := range marshal.Out {
+				if len(out) > 0 {
+					if i > 0 {
+						inOut += "|"
+					}
+					inOut += "O" + out
+				}
+			}
+			inOut = ",filter:" + inOut
+		}
 		fields[i] = dataField{
 			name: build.StringToHumpName(field.Name.Name),
 			typ:  temp.String(),
-			tag:  "`json:\"" + build.StringToUnderlineName(field.Name.Name) + ",omitempty\" hbuf:\"" + field.Id.Value + "\"` ",
+			tag:  "`json:\"" + build.StringToUnderlineName(field.Name.Name) + ",omitempty" + inOut + "\" hbuf:\"" + field.Id.Value + "\"` ",
 		}
 
 		if nil != field.Doc && 0 < len(field.Doc.Text()) {

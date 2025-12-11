@@ -270,9 +270,20 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(6).Code("}}\n")
 		} else if "link" == table.table {
 			dst.Tab(6).Code("{{\n")
-			dst.Tab(7).Code("default: (scope:any) => (<el-link href={scope.row!.").Code(fieldName).Code("} target=\"_blank\"> scope.row!.").Code(fieldName).Code(" </el-link>)\n")
+			dst.Tab(7).Code("default: (scope: any) => (\n")
+			dst.Tab(8).Code("<el-link href={scope.row!.").Code(fieldName).Code("} target=\"_blank\">{{\n")
+			dst.Tab(9).Code("default: () => scope.row.").Code(fieldName).Code("\n")
+			dst.Tab(8).Code("}}</el-link>\n")
+			dst.Tab(7).Code(")\n")
 			dst.Tab(6).Code("}}\n")
-
+		} else if "color" == table.table {
+			dst.Tab(6).Code("{{\n")
+			dst.Tab(7).Code("default: (scope: any) => (\n")
+			dst.Tab(8).Code("<el-tag color={scope.row!.").Code(fieldName).Code("} effect=\"dark\">{{\n")
+			dst.Tab(9).Code("default: () => scope.row.").Code(fieldName).Code("\n")
+			dst.Tab(8).Code("}}</el-tag>\n")
+			dst.Tab(7).Code(")\n")
+			dst.Tab(6).Code("}}\n")
 		} else {
 			dst.Tab(6).Code("{{\n")
 			dst.Tab(7).Code("default: (scope:any) =>")
@@ -747,6 +758,22 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			if form.step != nil {
 				dst.Tab(7).Code("step={").Code(strconv.FormatFloat(*form.step, 'f', -1, 64)).Code("}\n")
+			}
+			dst.Tab(6).Code("/>\n")
+		} else if "color" == form.form {
+			if len(tagName) == 0 {
+				tagName = "el-color-picker"
+			}
+			dst.Tab(6).Code("<").Code(tagName).Code("\n")
+
+			dst.Tab(7).Code("v-model={_ctx.model!." + fieldName + "}\n")
+			dst.Tab(7).Code("size={props.size}\n")
+			dst.Tab(7).Code("show-alpha color-format=\"hex\"\n")
+			if isNull {
+				dst.Tab(7).Code("clearable\n")
+			}
+			if form.onlyRead {
+				dst.Tab(7).Code("disabled\n")
 			}
 			dst.Tab(6).Code("/>\n")
 		} else if "file" == form.form {

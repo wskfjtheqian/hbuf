@@ -41,13 +41,12 @@ func (b *Builder) printEnumUi(dst *build.Writer, typ *ast.EnumType) {
 }
 
 type ui struct {
+	form       []string
+	table      []string
 	suffix     string
 	onlyRead   bool
-	form       string
 	toNull     bool
-	table      string
 	format     string
-	custom     string
 	digit      int
 	index      *int
 	width      float64
@@ -83,14 +82,16 @@ func (b *Builder) getUI(tags []*ast.Tag) *ui {
 	}
 	if nil != val.KV {
 		for _, item := range val.KV {
-			if "onlyRead" == item.Name.Name {
-				form.onlyRead = "true" == item.Values[0].Value[1:len(item.Values[0].Value)-1]
-			} else if "form" == item.Name.Name {
-				form.form = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
-			} else if "custom" == item.Name.Name {
-				form.custom = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
+			if "form" == item.Name.Name {
+				for _, value := range item.Values {
+					form.form = append(form.form, value.Value[1:len(value.Value)-1])
+				}
 			} else if "table" == item.Name.Name {
-				form.table = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
+				for _, value := range item.Values {
+					form.table = append(form.table, value.Value[1:len(value.Value)-1])
+				}
+			} else if "onlyRead" == item.Name.Name {
+				form.onlyRead = "true" == item.Values[0].Value[1:len(item.Values[0].Value)-1]
 			} else if "outType" == item.Name.Name {
 				form.outType = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 			} else if "fit" == item.Name.Name {
@@ -204,10 +205,10 @@ func (b *Builder) printDataUi(dst *build.Writer, typ *ast.DataType) {
 		return
 	}
 
-	if u.form == "true" {
+	if len(u.form) > 0 && u.form[0] == "true" {
 		b.printForm(dst, typ, u)
 	}
-	if u.table == "true" {
+	if len(u.table) > 0 && u.table[0] == "true" {
 		b.printTable(dst, typ, u)
 	}
 
@@ -253,44 +254,45 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 		dst.Code(" show-overflow-tooltip")
 		dst.Code(" min-width=\"").Code(strconv.FormatFloat(table.width, 'g', -1, 64)).Code("\"")
 		dst.Code(">\n")
-		if "image" == table.table {
-			dst.Tab(6).Code("{{\n")
-			dst.Tab(7).Code("default: (scope:any) => (<>\n")
+
+		tag := ""
+		custom := ""
+		if len(table.table) > 0 {
+			tag = table.table[0]
+		}
+		if len(table.table) > 1 {
+			custom = table.table[1]
+		}
+		dst.Tab(6).Code("{{\n")
+		dst.Tab(7).Code("default: (scope:any) => (\n")
+
+		if len(custom) > 0 {
+			dst.Tab(8).Code("<").Code(custom).Code(" value={scope.row.").Code(fieldName).Code("} />\n")
+		} else if "image" == tag {
 			dst.Tab(8).Code("<el-popover effect=\"light\" trigger=\"hover\" placement=\"top\" width=\"auto\">\n")
 			dst.Tab(10).Code("{{\n")
 			dst.Tab(11).Code("default: () => <el-image style={\"width: 200px; height: 200px\"} src={scope.row.").Code(fieldName).Code("} fit=\"contain\"/>,\n")
 			dst.Tab(11).Code("reference: () => <el-avatar shape=\"square\" size={60} src={scope.row.").Code(fieldName).Code("+'?width=60&height=60'} cover style={\"margin-top: 6px\"}/>,\n")
 			dst.Tab(10).Code("}}\n")
 			dst.Tab(8).Code("</el-popover>\n")
-			dst.Tab(7).Code("</>)\n")
-			dst.Tab(6).Code("}}\n")
-		} else if "switch" == table.table {
-			dst.Tab(6).Code("{{\n")
-			dst.Tab(7).Code("default: (scope:any) => (<el-switch v-model={scope.row!.").Code(fieldName).Code("} disabled />)\n")
-			dst.Tab(6).Code("}}\n")
-		} else if "link" == table.table {
-			dst.Tab(6).Code("{{\n")
-			dst.Tab(7).Code("default: (scope: any) => (\n")
+		} else if "switch" == tag {
+			dst.Tab(8).Code("<el-switch v-model={scope.row!.").Code(fieldName).Code("} disabled />\n")
+		} else if "link" == tag {
 			dst.Tab(8).Code("<el-link href={scope.row!.").Code(fieldName).Code("} target=\"_blank\">{{\n")
 			dst.Tab(9).Code("default: () => scope.row.").Code(fieldName).Code("\n")
 			dst.Tab(8).Code("}}</el-link>\n")
-			dst.Tab(7).Code(")\n")
-			dst.Tab(6).Code("}}\n")
-		} else if "color" == table.table {
-			dst.Tab(6).Code("{{\n")
-			dst.Tab(7).Code("default: (scope: any) => (\n")
+		} else if "color" == tag {
 			dst.Tab(8).Code("<el-tag color={scope.row!.").Code(fieldName).Code("} effect=\"dark\">{{\n")
 			dst.Tab(9).Code("default: () => scope.row.").Code(fieldName).Code("\n")
 			dst.Tab(8).Code("}}</el-tag>\n")
-			dst.Tab(7).Code(")\n")
-			dst.Tab(6).Code("}}\n")
 		} else {
-			dst.Tab(6).Code("{{\n")
-			dst.Tab(7).Code("default: (scope:any) =>")
+			dst.Tab(8)
 			b.printToString(dst, "scope.row."+fieldName, field.Type, false, table.digit, table.format, " || \"\"")
 			dst.Code("\n")
-			dst.Tab(6).Code("}}\n")
 		}
+
+		dst.Tab(7).Code(")\n")
+		dst.Tab(6).Code("}}\n")
 		dst.Tab(5).Code("</el-table-column>\n")
 		dst.Tab(4).Code("),\n")
 		lang.Add(fieldName, field.Tags)
@@ -523,7 +525,6 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			return nil
 		}
 
-		tagName := form.custom
 		inNum := build.IsNumber(field.Type)
 		isArray := build.IsArray(field.Type)
 		isNull := build.IsNil(field.Type)
@@ -533,6 +534,16 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		if nil != form.index {
 			//index = *table.index
 		}
+
+		formTag := ""
+		customTag := ""
+		if len(form.form) > 0 {
+			formTag = form.form[0]
+		}
+		if len(form.form) > 1 {
+			customTag = form.form[1]
+		}
+
 		fieldName := build.StringToFirstLower(field.Name.Name)
 		dst.Tab(4).Code("\"").Code(fieldName).Code("\": () =>(\n")
 		dst.Tab(5).Code("<el-form-item prop=\"").Code(fieldName).Code("\"")
@@ -542,11 +553,11 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Code(" rules={[{validator: ").Code(pName).Code(".verify").Code(name).Code("_").Code(build.StringToHumpName(field.Name.Name)).Code("(locale), trigger: 'blur'}]}")
 		}
 		dst.Code(">\n")
-		if "datetime" == form.form || "date" == form.form || "dates" == form.form || "year" == form.form || "month" == form.form {
-			if len(tagName) == 0 {
-				tagName = "el-date-picker"
+		if "datetime" == formTag || "date" == formTag || "dates" == formTag || "year" == formTag || "month" == formTag {
+			if len(customTag) == 0 {
+				customTag = "el-date-picker"
 			}
-			dst.Tab(6).Code("<").Code(tagName).Code("\n")
+			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 			dst.Tab(7).Code("modelValue={")
 			if isArray {
 				dst.Import("hbuf_ts", "* as h")
@@ -561,25 +572,25 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			if isArray {
 				dst.Import("hbuf_ts", "* as h")
-				if "datetime" == form.form {
+				if "datetime" == formTag {
 					dst.Code("h.convertArray($event, (e) => _ctx.$timeToUtc(e))")
-				} else if "month" == form.form {
+				} else if "month" == formTag {
 					dst.Code("h.convertArray([($event! as Date[])[0] as Date, new Date((($event! as Date[])[1] as Date).getFullYear(), (($event! as Date[])[1] as Date).getMonth() + 1, 0, 23, 59, 59, 999)], (e) => _ctx.$timeToUtc(e))")
-				} else if "dates" == form.form {
+				} else if "dates" == formTag {
 					dst.Code("h.convertArray($event, (e) => _ctx.$timeToUtc(e))")
-				} else if "year" == form.form {
+				} else if "year" == formTag {
 					dst.Code("h.convertArray($event, (e) => _ctx.$timeToUtc(e))")
 				} else {
 					dst.Code("h.convertArray([($event! as Date[])[0] as Date, new Date((($event! as Date[])[1] as Date).setHours(23,59,59,999))], (e) => _ctx.$timeToUtc(e))")
 				}
 			} else {
-				if "datetime" == form.form {
+				if "datetime" == formTag {
 					dst.Code("_ctx.$timeToUtc($event)")
-				} else if "month" == form.form {
+				} else if "month" == formTag {
 					dst.Code("_ctx.$timeToUtc($event)")
-				} else if "dates" == form.form {
+				} else if "dates" == formTag {
 					dst.Code("($event?.length ?? 0 == 0) ? null :_ctx.$timeToUtc($event[0])")
-				} else if "year" == form.form {
+				} else if "year" == formTag {
 					dst.Code("_ctx.$timeToUtc($event)")
 				} else {
 					dst.Code("_ctx.$timeToUtc($event)")
@@ -588,25 +599,25 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Code("}\n")
 			dst.Tab(7).Code("type=\"")
 			if isArray {
-				if "datetime" == form.form {
+				if "datetime" == formTag {
 					dst.Code("datetimerange")
-				} else if "month" == form.form {
+				} else if "month" == formTag {
 					dst.Code("monthrange")
-				} else if "dates" == form.form {
+				} else if "dates" == formTag {
 					dst.Code("dates")
-				} else if "year" == form.form {
+				} else if "year" == formTag {
 					dst.Code("years")
 				} else {
 					dst.Code("daterange")
 				}
 			} else {
-				if "datetime" == form.form {
+				if "datetime" == formTag {
 					dst.Code("datetime")
-				} else if "month" == form.form {
+				} else if "month" == formTag {
 					dst.Code("month")
-				} else if "dates" == form.form {
+				} else if "dates" == formTag {
 					dst.Code("dates")
-				} else if "year" == form.form {
+				} else if "year" == formTag {
 					dst.Code("year")
 				} else {
 					dst.Code("date")
@@ -628,11 +639,11 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				dst.Tab(7).Code(" disabled  \n")
 			}
 			dst.Tab(6).Code("/>\n")
-		} else if "menu" == form.form {
-			if len(tagName) == 0 {
-				tagName = "el-select"
+		} else if "menu" == formTag {
+			if len(customTag) == 0 {
+				customTag = "el-select"
 			}
-			dst.Tab(6).Code("<").Code(tagName).Code("\n")
+			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 			b.printMenuModelValue(dst, field.Type, fieldName, false, false)
 
 			dst.Tab(7).Code("style={\"min-width:180px\"}\n")
@@ -648,12 +659,12 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(7).Code(">\n")
 			b.printMenuItem(dst, field.Type, false, "el-option")
-			dst.Tab(6).Code("</").Code(tagName).Code(">\n")
-		} else if "switch" == form.form {
-			if len(tagName) == 0 {
-				tagName = "el-switch"
+			dst.Tab(6).Code("</").Code(customTag).Code(">\n")
+		} else if "switch" == formTag {
+			if len(customTag) == 0 {
+				customTag = "el-switch"
 			}
-			dst.Tab(6).Code("<").Code(tagName).Code("\n")
+			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 
 			dst.Tab(5).Code("modelValue={_ctx.model!.").Code(fieldName).Code(" ??= false")
 			dst.Code("}\n")
@@ -665,11 +676,11 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				dst.Code(" disabled")
 			}
 			dst.Code("/>\n")
-		} else if "radio" == form.form {
-			if len(tagName) == 0 {
-				tagName = "el-radio-group"
+		} else if "radio" == formTag {
+			if len(customTag) == 0 {
+				customTag = "el-radio-group"
 			}
-			dst.Tab(6).Code("<").Code(tagName).Code("\n")
+			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 
 			b.printMenuModelValue(dst, field.Type, fieldName, false, false)
 
@@ -679,12 +690,12 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(7).Code(">\n")
 			b.printMenuItem(dst, field.Type, false, "el-radio")
-			dst.Tab(6).Code("</").Code(tagName).Code(">\n")
-		} else if "radioButton" == form.form {
-			if len(tagName) == 0 {
-				tagName = "el-radio-group"
+			dst.Tab(6).Code("</").Code(customTag).Code(">\n")
+		} else if "radioButton" == formTag {
+			if len(customTag) == 0 {
+				customTag = "el-radio-group"
 			}
-			dst.Tab(6).Code("<").Code(tagName).Code("\n")
+			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 			b.printMenuModelValue(dst, field.Type, fieldName, false, false)
 
 			dst.Tab(7).Code("size={props.size}\n")
@@ -693,12 +704,12 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(7).Code(">\n")
 			b.printMenuItem(dst, field.Type, false, "el-radio-button")
-			dst.Tab(6).Code("</").Code(tagName).Code(">\n")
-		} else if "pass" == form.form {
-			if len(tagName) == 0 {
-				tagName = "el-input"
+			dst.Tab(6).Code("</").Code(customTag).Code(">\n")
+		} else if "pass" == formTag {
+			if len(customTag) == 0 {
+				customTag = "el-input"
 			}
-			dst.Tab(6).Code("<").Code(tagName).Code("\n")
+			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 			dst.Tab(7).Code("modelValue={")
 			b.printToString(dst, "_ctx.model!."+fieldName, field.Type, false, form.digit, form.format, " ?? \"\"")
 			dst.Code("}\n")
@@ -721,10 +732,10 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(7).Code("precision={").Code(strconv.Itoa(form.digit)).Code("}\n")
 			dst.Tab(6).Code("/>\n")
 		} else if isArray {
-			if len(tagName) == 0 {
-				tagName = "el-input-tag"
+			if len(customTag) == 0 {
+				customTag = "el-input-tag"
 			}
-			dst.Tab(6).Code("<").Code(tagName).Code("\n")
+			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 
 			dst.Tab(7).Code("v-model={_ctx.model!.").Code(fieldName).Code("}\n")
 			if isNull {
@@ -734,12 +745,12 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				dst.Tab(7).Code("disabled\n")
 			}
 			dst.Tab(7).Code(">\n")
-			dst.Tab(6).Code("</").Code(tagName).Code(">\n")
+			dst.Tab(6).Code("</").Code(customTag).Code(">\n")
 		} else if inNum {
-			if len(tagName) == 0 {
-				tagName = "el-input-number"
+			if len(customTag) == 0 {
+				customTag = "el-input-number"
 			}
-			dst.Tab(6).Code("<").Code(tagName).Code("\n")
+			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 
 			dst.Tab(7).Code("v-model={_ctx.model!." + fieldName + "}\n")
 			dst.Tab(7).Code("size={props.size}\n")
@@ -760,11 +771,11 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				dst.Tab(7).Code("step={").Code(strconv.FormatFloat(*form.step, 'f', -1, 64)).Code("}\n")
 			}
 			dst.Tab(6).Code("/>\n")
-		} else if "color" == form.form {
-			if len(tagName) == 0 {
-				tagName = "el-color-picker"
+		} else if "color" == formTag {
+			if len(customTag) == 0 {
+				customTag = "el-color-picker"
 			}
-			dst.Tab(6).Code("<").Code(tagName).Code("\n")
+			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 
 			dst.Tab(7).Code("v-model={_ctx.model!." + fieldName + "}\n")
 			dst.Tab(7).Code("size={props.size}\n")
@@ -776,11 +787,11 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				dst.Tab(7).Code("disabled\n")
 			}
 			dst.Tab(6).Code("/>\n")
-		} else if "file" == form.form {
-			if len(tagName) == 0 {
-				tagName = "input-file"
+		} else if "file" == formTag {
+			if len(customTag) == 0 {
+				customTag = "input-file"
 			}
-			dst.Tab(6).Code("<").Code(tagName).Code("\n")
+			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 
 			dst.Tab(7).Code("modelValue={")
 			b.printToString(dst, "_ctx.model!."+fieldName, field.Type, false, form.digit, form.format, "")
@@ -832,10 +843,10 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(7).Code("precision={").Code(strconv.Itoa(form.digit)).Code("}\n")
 			dst.Tab(6).Code("/>\n")
 		} else {
-			if len(tagName) == 0 {
-				tagName = "el-input"
+			if len(customTag) == 0 {
+				customTag = "el-input"
 			}
-			dst.Tab(6).Code("<").Code(tagName).Code("\n")
+			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 
 			dst.Tab(7).Code("modelValue={")
 			b.printToString(dst, "_ctx.model!."+fieldName, field.Type, false, form.digit, form.format, "")

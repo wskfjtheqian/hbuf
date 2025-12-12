@@ -257,7 +257,9 @@ func (b *Builder) getItemAndValue(fields []*build.DBField, key string) (strings.
 	isFist := true
 	for _, field := range fields {
 		get := ""
-		if 0 < len(field.Dbs[0].Get) {
+		if field.Dbs[0].Get == "-" {
+			continue
+		} else if 0 < len(field.Dbs[0].Get) {
 			get = strings.ReplaceAll(field.Dbs[0].Get, "?", build.StringToUnderlineName(field.Dbs[0].Name))
 		} else if "self" == key {
 			get = build.StringToUnderlineName(field.Dbs[0].Name)

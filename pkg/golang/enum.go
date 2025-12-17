@@ -13,6 +13,25 @@ func printEnumCode(dst *build.Writer, typ *ast.EnumType) {
 	}
 	maxLen := 0
 	dst.Code("type " + name + " int32\n\n")
+
+	dst.Import("strconv", "")
+	dst.Import("strings", "")
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/herror", "")
+
+	dst.Code("func (t ").Code(name).Code(") MarshalJSON() ([]byte, error) {\n")
+	dst.Tab(1).Code("return []byte(strconv.FormatInt(int64(t), 10)), nil\n")
+	dst.Code("}\n")
+	dst.Code("\n")
+	dst.Code("func (e *").Code(name).Code(") UnmarshalJSON(data []byte) error {\n")
+	dst.Tab(1).Code("parseInt, err := strconv.ParseInt(strings.Trim(string(data), \"\\\"\"), 10, 64)\n")
+	dst.Tab(1).Code("if err != nil {\n")
+	dst.Tab(1).Code("parseInt = 0\n")
+	dst.Tab(1).Code("herror.PrintStack(err)\n")
+	dst.Code("}\n")
+	dst.Tab(1).Code("*e = ").Code(name).Code("(parseInt)\n")
+	dst.Tab(1).Code("return nil\n")
+	dst.Code("}\n")
+
 	for _, item := range typ.Items {
 		itemName := build.StringToHumpName(item.Name.Name)
 		l := len(itemName)
@@ -26,8 +45,8 @@ func printEnumCode(dst *build.Writer, typ *ast.EnumType) {
 	}
 
 	dst.Code("func (e " + name + ") Pointer() *" + name + " {\n")
-	dst.Code("	pointer := e\n")
-	dst.Code("	return &pointer\n")
+	dst.Tab(1).Code("pointer := e\n")
+	dst.Tab(1).Code("return &pointer\n")
 	dst.Code("}\n\n")
 
 	space := strings.Builder{}

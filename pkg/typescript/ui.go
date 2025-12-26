@@ -648,11 +648,12 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 
 			dst.Tab(7).Code("style={\"min-width:180px\"}\n")
 			dst.Tab(7).Code("size={props.size}\n")
+			dst.Tab(7).Code("filterable\n")
 			if isNull {
 				dst.Tab(7).Code("clearable\n")
 			}
 			if form.onlyRead {
-				dst.Tab(7).Code("disabled  \n")
+				dst.Tab(7).Code("disabled\n")
 			}
 			if isArray {
 				dst.Tab(7).Code("multiple\n")

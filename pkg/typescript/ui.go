@@ -545,8 +545,10 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		}
 
 		fieldName := build.StringToFirstLower(field.Name.Name)
+		className := build.StringToMiddleLine(field.Name.Name)
+
 		dst.Tab(4).Code("\"").Code(fieldName).Code("\": () =>(\n")
-		dst.Tab(5).Code("<el-form-item prop=\"").Code(fieldName).Code("\"")
+		dst.Tab(5).Code("<el-form-item class=\"").Code(className).Code("\" prop=\"").Code(fieldName).Code("\"")
 		dst.Code(" label={_ctx.$t(\"").Code(langName).Code("Lang.").Code(fieldName).Code("\")}")
 		if verify {
 			pName := b.getPackage(dst, typ.Name, "verify")

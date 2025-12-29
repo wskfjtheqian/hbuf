@@ -284,9 +284,9 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 				} else {
 					dst.Import("decimal.js", "* as d")
 					if empty {
-						dst.Code("null == " + name + " ? null : new d.Decimal(" + v + ")")
+						dst.Code("null == " + name + " ? null : new d.Decimal(" + v + " as string )")
 					} else {
-						dst.Code("null == " + name + " ? new d.Decimal(0) : new d.Decimal(" + v + ") ")
+						dst.Code("null == " + name + " ? new d.Decimal(0) : new d.Decimal(" + v + " as string ) ")
 					}
 				}
 			default:

@@ -537,6 +537,27 @@ func StringToAllUpper(val string) string {
 	return ret
 }
 
+// StringToMiddleLine 转中线
+func StringToMiddleLine(val string) string {
+	ret := strings.Builder{}
+	for i := 0; i < len(val); i++ {
+		c := val[i]
+		if '_' == c {
+			if i > 0 {
+				ret.WriteByte('-')
+			}
+		} else if c >= 'A' && c <= 'Z' {
+			if i > 0 {
+				ret.WriteByte('-')
+			}
+			ret.WriteByte(c - 'A' + 'a')
+		} else {
+			ret.WriteByte(c)
+		}
+	}
+	return ret.String()
+}
+
 func IsNumber(expr ast.Expr) bool {
 	if t, ok := expr.(*ast.VarType); ok {
 		if t, ok := t.TypeExpr.(*ast.Ident); ok {

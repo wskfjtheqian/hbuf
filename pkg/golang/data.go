@@ -213,6 +213,7 @@ func (b *Builder) printDataStruct(dst *build.Writer, typ *ast.DataType) error {
 			}
 			inOut = ",filter:" + inOut
 		}
+
 		fields[i] = dataField{
 			name: build.StringToHumpName(field.Name.Name),
 			typ:  temp.String(),

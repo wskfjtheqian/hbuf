@@ -36,7 +36,7 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) {
 		return
 	}
 
-	dst.Tab(1).Code("public static fromMap(json: Record<string, any>): " + build.StringToHumpName(typ.Name.Name) + "{\n")
+	dst.Tab(1).Code("public static fromMap(json: Record<string, any>, tag: string): " + build.StringToHumpName(typ.Name.Name) + "{\n")
 	dst.Tab(2).Code("const ret = new " + build.StringToHumpName(typ.Name.Name) + "()\n")
 	dst.Tab(2).Code("let temp:any\n")
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
@@ -54,7 +54,7 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) {
 	dst.Tab(1).Code("}\n\n")
 
 	dst.Code("\n")
-	dst.Tab(1).Code("public toMap(): Record<string, any> {\n")
+	dst.Tab(1).Code("public toMap(tag: string): Record<string, any> {\n")
 	dst.Tab(2).Code("return {\n")
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 		dst.Tab(3).Code("\"" + build.StringToUnderlineName(field.Name.Name))
@@ -205,9 +205,9 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 				}
 			} else if ast.Data == t.Obj.Kind {
 				if empty {
-					dst.Code("null == " + name + " ? null : " + p + "." + t.Name + ".fromMap(" + v + ")")
+					dst.Code("null == " + name + " ? null : " + p + "." + t.Name + ".fromMap(" + v + ", tag)")
 				} else {
-					dst.Code("null == " + name + " ? " + p + "." + t.Name + ".fromMap({}) : " + p + "." + t.Name + ".fromMap(" + v + ")")
+					dst.Code("null == " + name + " ? " + p + "." + t.Name + ".fromMap({}, tag) : " + p + "." + t.Name + ".fromMap(" + v + ", tag)")
 				}
 			} else {
 				dst.Code("map[\"" + name + "\"]")
@@ -353,9 +353,9 @@ func (b *Builder) printToMap(dst *build.Writer, key string, name string, expr as
 				}
 			} else if ast.Data == t.Obj.Kind {
 				if empty {
-					dst.Code(name + "?.toMap()")
+					dst.Code(name + "?.toMap(tag)")
 				} else {
-					dst.Code(name + ".toMap()")
+					dst.Code(name + ".toMap(tag)")
 				}
 			} else {
 				dst.Code(name)

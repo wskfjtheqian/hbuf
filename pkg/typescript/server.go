@@ -122,7 +122,7 @@ func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 		dst.Code(build.StringToFirstLower(method.ParamName.Name))
 		dst.Code(", ")
 		if resultType == "void" || resultType == "stream" {
-			dst.Code("null, null)\n")
+			dst.Code("undefined)\n")
 		} else {
 			b.printType(dst, method.Result.Type(), false, false)
 			dst.Code(".fromMap)\n")

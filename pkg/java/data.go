@@ -123,9 +123,9 @@ func (b *Builder) printCopy(dst *build.Writer, name string, expr ast.Expr, data 
 			switch build.BaseType(expr.(*ast.Ident).Name) {
 			case build.Decimal:
 				if empty {
-					dst.Code("null == " + name + " ? null : Decimal.fromJson(" + name + "!.toJson())")
+					dst.Code("null == " + name + " ? null : Decimal.fromJson(" + name + "!.toMap())")
 				} else {
-					dst.Code("Decimal.fromJson(" + name + ".toJson())")
+					dst.Code("Decimal.fromJson(" + name + ".toMap())")
 				}
 			default:
 				dst.Code(name)

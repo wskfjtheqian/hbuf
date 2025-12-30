@@ -220,8 +220,13 @@ func (b *Builder) printClient(dst *build.Writer, typ *ast.ServerType) {
 			b.printType(dst, method.Result.Type(), true)
 			dst.Code(", error) {\n")
 		}
-
-		dst.Tab(1).Code("response, err := r.client.Invoke(ctx, 0, \"").Code(name).Code("\", \"")
+		dst.Tab(1)
+		if resultType == "void" {
+			dst.Code("_")
+		} else {
+			dst.Code("response")
+		}
+		dst.Code(", err := r.client.Invoke(ctx, 0, \"").Code(name).Code("\", \"")
 		dst.Code(build.StringToUnderlineName(method.Name.Name)).Code("\", \"")
 		dst.Code(b.getFilterTag(method))
 		dst.Code("\", req, ")
@@ -238,8 +243,6 @@ func (b *Builder) printClient(dst *build.Writer, typ *ast.ServerType) {
 			dst.Tab(1).Code("if err != nil {\n")
 			dst.Tab(2).Code("return nil\n")
 			dst.Tab(1).Code("}\n")
-			dst.Import("io", "")
-			dst.Tab(1).Code("response.(io.ReadCloser).Close()\n")
 			dst.Tab(1).Code("return nil\n")
 		} else {
 			dst.Tab(1).Code("if err != nil {\n")
@@ -247,6 +250,7 @@ func (b *Builder) printClient(dst *build.Writer, typ *ast.ServerType) {
 			dst.Tab(1).Code("}\n")
 			dst.Tab(1).Code("return response.(")
 			if resultType == "stream" {
+				dst.Import("io", "")
 				dst.Code("io.ReadCloser")
 			} else {
 				dst.Code("*")

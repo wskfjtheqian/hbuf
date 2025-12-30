@@ -36,7 +36,7 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) {
 		return
 	}
 
-	dst.Tab(1).Code("public static fromJson(json: Record<string, any>): " + build.StringToHumpName(typ.Name.Name) + "{\n")
+	dst.Tab(1).Code("public static fromMap(json: Record<string, any>): " + build.StringToHumpName(typ.Name.Name) + "{\n")
 	dst.Tab(2).Code("const ret = new " + build.StringToHumpName(typ.Name.Name) + "()\n")
 	dst.Tab(2).Code("let temp:any\n")
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
@@ -54,12 +54,12 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) {
 	dst.Tab(1).Code("}\n\n")
 
 	dst.Code("\n")
-	dst.Tab(1).Code("public toJson(): Record<string, any> {\n")
+	dst.Tab(1).Code("public toMap(): Record<string, any> {\n")
 	dst.Tab(2).Code("return {\n")
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 		dst.Tab(3).Code("\"" + build.StringToUnderlineName(field.Name.Name))
 		dst.Code("\": ")
-		b.printToJson(dst, "this.", build.StringToFirstLower(field.Name.Name), field.Type, data, false, false)
+		b.printToMap(dst, "this.", build.StringToFirstLower(field.Name.Name), field.Type, data, false, false)
 		dst.Code(",\n")
 		return nil
 	})
@@ -205,9 +205,9 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 				}
 			} else if ast.Data == t.Obj.Kind {
 				if empty {
-					dst.Code("null == " + name + " ? null : " + p + "." + t.Name + ".fromJson(" + v + ")")
+					dst.Code("null == " + name + " ? null : " + p + "." + t.Name + ".fromMap(" + v + ")")
 				} else {
-					dst.Code("null == " + name + " ? " + p + "." + t.Name + ".fromJson({}) : " + p + "." + t.Name + ".fromJson(" + v + ")")
+					dst.Code("null == " + name + " ? " + p + "." + t.Name + ".fromMap({}) : " + p + "." + t.Name + ".fromMap(" + v + ")")
 				}
 			} else {
 				dst.Code("map[\"" + name + "\"]")
@@ -336,7 +336,7 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 	}
 }
 
-func (b *Builder) printToJson(dst *build.Writer, key string, name string, expr ast.Expr, data *ast.DataType, empty bool, isRecordKey bool) {
+func (b *Builder) printToMap(dst *build.Writer, key string, name string, expr ast.Expr, data *ast.DataType, empty bool, isRecordKey bool) {
 	switch expr.(type) {
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
@@ -353,9 +353,9 @@ func (b *Builder) printToJson(dst *build.Writer, key string, name string, expr a
 				}
 			} else if ast.Data == t.Obj.Kind {
 				if empty {
-					dst.Code(name + "?.toJson()")
+					dst.Code(name + "?.toMap()")
 				} else {
-					dst.Code(name + ".toJson()")
+					dst.Code(name + ".toMap()")
 				}
 			} else {
 				dst.Code(name)
@@ -401,11 +401,11 @@ func (b *Builder) printToJson(dst *build.Writer, key string, name string, expr a
 		empty = t.IsEmpty()
 		if empty {
 			dst.Code("h.convertArray(" + key + name + ",(e) => ")
-			b.printToJson(dst, "", "e", t.VType, data, empty, false)
+			b.printToMap(dst, "", "e", t.VType, data, empty, false)
 			dst.Code(")")
 		} else {
 			dst.Code("h.convertArray(" + key + name + ",(e) => ")
-			b.printToJson(dst, "", "e", t.VType, data, empty, false)
+			b.printToMap(dst, "", "e", t.VType, data, empty, false)
 			dst.Code(")")
 		}
 	case *ast.MapType:
@@ -413,21 +413,21 @@ func (b *Builder) printToJson(dst *build.Writer, key string, name string, expr a
 		empty = t.IsEmpty()
 		if empty {
 			dst.Code("h.convertRecord(" + key + name + ", (key, value) => new h.RecordEntry(")
-			b.printToJson(dst, "", "key", t.Key, data, empty, true)
+			b.printToMap(dst, "", "key", t.Key, data, empty, true)
 			dst.Code(",")
-			b.printToJson(dst, "", "value", t.VType, data, empty, false)
+			b.printToMap(dst, "", "value", t.VType, data, empty, false)
 			dst.Code("))")
 		} else {
 			dst.Code("h.convertRecord(" + key + name + ", (key, value) => new h.RecordEntry(")
-			b.printToJson(dst, "", "key", t.Key, data, empty, true)
+			b.printToMap(dst, "", "key", t.Key, data, empty, true)
 			dst.Code(",")
-			b.printToJson(dst, "", "value", t.VType, data, empty, false)
+			b.printToMap(dst, "", "value", t.VType, data, empty, false)
 			dst.Code("))")
 		}
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
 		dst.Code(key)
-		b.printToJson(dst, "", name, t.Type(), data, t.Empty, isRecordKey)
+		b.printToMap(dst, "", name, t.Type(), data, t.Empty, isRecordKey)
 	}
 }
 

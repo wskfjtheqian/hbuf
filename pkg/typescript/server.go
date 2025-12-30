@@ -114,9 +114,9 @@ func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 		} else {
 			b.printType(dst, method.Result.Type(), false, false)
 		}
-		dst.Code(">(this.name, this.id << 32 | ")
+		dst.Code(">(this.id << 32 | ")
 		dst.Code(method.Id.Value)
-		dst.Code(", \"")
+		dst.Code(", this.name,  \"")
 		dst.Code(build.StringToUnderlineName(method.Name.Name))
 		dst.Code("\", \"\", ")
 		dst.Code(build.StringToFirstLower(method.ParamName.Name))
@@ -142,21 +142,33 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 	dst.Code("server: ").Code(serverName).Code(") {\n")
 	dst.Tab(1).Code("r.register(0, \"").Code(build.StringToUnderlineName(typ.Name.Name)).Code("\", [\n")
 	err := build.EnumMethod(typ, func(method *ast.FuncType, server *ast.ServerType) error {
-		//paramType := method.Param.Type().(*ast.Ident).Name
+		paramType := method.Param.Type().(*ast.Ident).Name
+
 		dst.Tab(2).Code("{\n")
 		dst.Tab(3).Code("id: 0,\n")
 		dst.Tab(3).Code("name: \"").Code(build.StringToUnderlineName(method.Name.Name)).Code("\",\n")
 		dst.Tab(3).Code("handler: (req: h.RequestType, opt?: h.Option): Promise<h.ResponseType> => {\n")
-		dst.Tab(4).Code("return server.").Code(build.StringToFirstLower(method.Name.Name)).Code("(req as ")
-		b.printType(dst, method.Param.Type(), false, false)
-		dst.Code(", opt)\n")
+		dst.Tab(4).Code("return server.").Code(build.StringToFirstLower(method.Name.Name)).Code("(")
+		if paramType == "stream" {
+			dst.Code("req as h.BufferType,")
+		} else if paramType == "void" {
+		} else {
+			dst.Code("req as ")
+			b.printType(dst, method.Param.Type(), false, false)
+			dst.Code(", ")
+		}
+		dst.Code("opt)\n")
 		dst.Tab(3).Code("},\n")
 		dst.Tab(3).Code("withContext: (opt?: h.Option): h.Option | undefined => {\n")
 		dst.Tab(4).Code("return opt\n")
 		dst.Tab(3).Code("},\n")
-		dst.Tab(3).Code("from: ")
-		b.printType(dst, method.Param.Type(), false, false)
-		dst.Code(".fromMap,\n")
+		if paramType == "void" || paramType == "stream" {
+
+		} else {
+			dst.Tab(3).Code("from: ")
+			b.printType(dst, method.Param.Type(), false, false)
+			dst.Code(".fromMap,\n")
+		}
 		dst.Tab(3).Code("tag: \"\",\n")
 		dst.Tab(2).Code("},\n")
 		return nil

@@ -3,6 +3,7 @@ package build
 import (
 	"hbuf/pkg/ast"
 	"hbuf/pkg/scanner"
+	"strconv"
 )
 
 func (b *Builder) checkServer(file *ast.File, server *ast.ServerType, index int) error {
@@ -83,12 +84,26 @@ func (b *Builder) checkServerItem(file *ast.File, server *ast.ServerType) error 
 			}
 		}
 
-		//if b.checkDataDuplicateValue(server, index, item.Id.Values) {
+		//if b.checkServerDuplicateValue(server, index, item.Id.Values) {
 		//	return scanner.Error{
 		//		Pos: b.fset.Position(item.Id.Pos()),
 		//		Msg: "Duplicate item: " + item.Id.Values,
 		//	}
 		//}
+		id, err := strconv.ParseInt(item.Id.Value, 10, 64)
+		if err != nil {
+			return scanner.Error{
+				Pos: b.fset.Position(item.Id.Pos()),
+				Msg: "Invalid id: " + item.Id.Value,
+			}
+		}
+
+		if id < 1 || id > 0xFFFF {
+			return scanner.Error{
+				Pos: b.fset.Position(item.Id.Pos()),
+				Msg: "Invalid id: " + item.Id.Value,
+			}
+		}
 	}
 	return nil
 }

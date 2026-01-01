@@ -3,6 +3,7 @@ package build
 import (
 	"hbuf/pkg/ast"
 	"hbuf/pkg/scanner"
+	"strconv"
 )
 
 type Marshal struct {
@@ -78,6 +79,25 @@ func (b *Builder) checkDataExtends(file *ast.File, data *ast.DataType, index int
 			return scanner.Error{
 				Pos: b.fset.Position(item.Name.NamePos),
 				Msg: "Duplicate item: " + item.Name.Name,
+			}
+		}
+		if b.checkDataDuplicateValue(data, i, item.Id.Value) {
+			return scanner.Error{
+				Pos: b.fset.Position(item.Id.Pos()),
+				Msg: "Duplicate id: " + item.Id.Value,
+			}
+		}
+		id, err := strconv.ParseInt(item.Id.Value, 10, 64)
+		if err != nil {
+			return scanner.Error{
+				Pos: b.fset.Position(item.Id.Pos()),
+				Msg: "Invalid id: " + item.Id.Value,
+			}
+		}
+		if id < 1 || id > 0xFFFF {
+			return scanner.Error{
+				Pos: b.fset.Position(item.Id.Pos()),
+				Msg: "Invalid id: " + item.Id.Value,
 			}
 		}
 
@@ -218,10 +238,18 @@ func (b *Builder) checkDataItem(file *ast.File, data *ast.DataType) error {
 				Msg: "Duplicate item: " + item.Name.Name,
 			}
 		}
-		if b.checkDataDuplicateValue(data, index, item.Id.Value) {
+		id, err := strconv.ParseInt(item.Id.Value, 10, 64)
+		if err != nil {
 			return scanner.Error{
 				Pos: b.fset.Position(item.Id.Pos()),
-				Msg: "Duplicate item: " + item.Id.Value,
+				Msg: "Invalid id: " + item.Id.Value,
+			}
+		}
+
+		if id < 1 || id > 0xFFFF {
+			return scanner.Error{
+				Pos: b.fset.Position(item.Id.Pos()),
+				Msg: "Invalid id: " + item.Id.Value,
 			}
 		}
 	}

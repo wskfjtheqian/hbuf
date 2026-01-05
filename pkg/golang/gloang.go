@@ -383,5 +383,9 @@ func (b *Builder) converter(field *build.DBField, name string) string {
 	if "json" == field.Dbs[0].Converter {
 		return "db.NewJson(&" + name + "." + fName + ")"
 	}
+	if "string" == field.Dbs[0].Converter {
+		return "db.NewString(&" + name + "." + fName + ")"
+	}
+
 	return "&" + name + "." + fName
 }

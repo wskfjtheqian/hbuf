@@ -272,7 +272,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(8).Code("<el-popover effect=\"light\" trigger=\"hover\" placement=\"top\" width=\"auto\">\n")
 			dst.Tab(10).Code("{{\n")
 			dst.Tab(11).Code("default: () => <el-image style={\"width: 200px; height: 200px\"} src={scope.row.").Code(fieldName).Code("} fit=\"contain\"/>,\n")
-			dst.Tab(11).Code("reference: () => <el-avatar shape=\"square\" size={60} src={scope.row.").Code(fieldName).Code("+'?width=60&height=60'} cover style={\"margin-top: 6px\"}/>,\n")
+			dst.Tab(11).Code("reference: () => <el-avatar shape=\"square\" size={60} src={scope.row.").Code(fieldName).Code("+'?w=60&w=60&f=cover'} cover style={\"margin-top: 6px\"}/>,\n")
 			dst.Tab(10).Code("}}\n")
 			dst.Tab(8).Code("</el-popover>\n")
 		} else if "switch" == tag {
@@ -287,7 +287,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(8).Code("}}</el-tag>\n")
 		} else {
 			dst.Tab(8)
-			b.printToString(dst, "scope.row."+fieldName, field.Type, false, table.digit, table.format, " || \"\"")
+			b.printToString(dst, "scope.row."+fieldName, field.Type, false, table.digit, table.format, " || \"\"", true)
 			dst.Code("\n")
 		}
 
@@ -339,7 +339,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 
 }
 
-func (b *Builder) printToString(dst *build.Writer, name string, expr ast.Expr, empty bool, digit int, format string, val string) {
+func (b *Builder) printToString(dst *build.Writer, name string, expr ast.Expr, empty bool, digit int, format string, val string, isDigit bool) {
 	switch expr.(type) {
 	case *ast.EnumType:
 		if empty {
@@ -350,7 +350,7 @@ func (b *Builder) printToString(dst *build.Writer, name string, expr ast.Expr, e
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
 			b.getPackage(dst, expr, "")
-			b.printToString(dst, name, t.Obj.Decl.(*ast.TypeSpec).Type, empty, digit, format, val)
+			b.printToString(dst, name, t.Obj.Decl.(*ast.TypeSpec).Type, empty, digit, format, val, isDigit)
 		} else {
 			switch build.BaseType(t.Name) {
 			case build.Int8, build.Int16, build.Int32, build.Int64, build.Uint8, build.Uint16, build.Uint32, build.Uint64:
@@ -362,7 +362,11 @@ func (b *Builder) printToString(dst *build.Writer, name string, expr ast.Expr, e
 				if empty {
 					dst.Code("null == ").Code(name).Code(" ? \"\" : ")
 				}
-				dst.Code(name).Code("!.toFixed(" + strconv.Itoa(digit) + ")")
+				if isDigit {
+					dst.Code(name).Code("!.toFixed(" + strconv.Itoa(digit) + ")")
+				} else {
+					dst.Code(name).Code("!.toString()")
+				}
 			case build.Bool:
 				if empty {
 					dst.Code("null == ").Code(name).Code(" ? \"\" : ")
@@ -381,7 +385,11 @@ func (b *Builder) printToString(dst *build.Writer, name string, expr ast.Expr, e
 				if empty {
 					dst.Code("null == ").Code(name).Code(" ? \"\" : ")
 				}
-				dst.Code(name).Code("!.toFixed(" + strconv.Itoa(digit) + ")")
+				if isDigit {
+					dst.Code(name).Code("!.toFixed(" + strconv.Itoa(digit) + ")")
+				} else {
+					dst.Code(name).Code("!.toString()")
+				}
 			default:
 				dst.Code(name)
 			}
@@ -390,13 +398,13 @@ func (b *Builder) printToString(dst *build.Writer, name string, expr ast.Expr, e
 		//default: (scope:any) => scope.row.platform?.map((e: $4.PlatformType) => _ctx.$t(e.toString())) || ""
 		ar := expr.(*ast.ArrayType)
 		dst.Code(name).Code("?.map((e:any)=>")
-		b.printToString(dst, "e", ar.Type(), false, digit, format, val)
+		b.printToString(dst, "e", ar.Type(), false, digit, format, val, isDigit)
 		dst.Code(")?.join(\",\") || \"\"")
 	case *ast.MapType:
 		dst.Code("\"\"+").Code(name)
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
-		b.printToString(dst, name, t.Type(), t.Empty, digit, format, val)
+		b.printToString(dst, name, t.Type(), t.Empty, digit, format, val, isDigit)
 		if t.Empty {
 			dst.Code(val)
 		}
@@ -421,47 +429,20 @@ func (b *Builder) printFormString(dst *build.Writer, name string, expr ast.Expr,
 			b.printFormString(dst, name, t.Obj.Decl.(*ast.TypeSpec).Type, empty, digit, format)
 		} else {
 			switch build.BaseType(t.Name) {
-			case build.Int8, build.Int16, build.Int32:
-				if empty {
-					dst.Code("(").Code(name).Code(" == null || ").Code(name).Code(".length == 0)").Code(" ? null : ")
-				}
-				dst.Code("(/^[-+]?[0-9]+$/.test(").Code(name).Code(") ? Number.parseInt(" + name + ") :").Code(name).Code(")")
-			case build.Uint8, build.Uint16, build.Uint32:
-				if empty {
-					dst.Code("(").Code(name).Code(" == null || ").Code(name).Code(".length == 0)").Code(" ? null : ")
-				}
-				dst.Code("(/^[+]?[0-9]+$/.test(").Code(name).Code(") ? Number.parseInt(" + name + ") :").Code(name).Code(")")
-			case build.Int64:
-				if empty {
-					dst.Code("(").Code(name).Code(" == null || ").Code(name).Code(".length == 0)").Code(" ? null : ")
-				}
-				dst.Code("(/^[-+]?[0-9]+$/.test(").Code(name).Code(") ? BigInt(" + name + ") :").Code(name).Code(")")
-			case build.Uint64:
-				if empty {
-					dst.Code("(").Code(name).Code(" == null || ").Code(name).Code(".length == 0)").Code(" ? null : ")
-				}
-				dst.Code("(/^[+]?[0-9]+$/.test(").Code(name).Code(") ? BigInt(" + name + ") :").Code(name).Code(")")
+			case build.Int8, build.Int16, build.Int32, build.Int64, build.Uint8, build.Uint16, build.Uint32, build.Uint64:
+				dst.Code("Number.parseInt(").Code(name).Code(" ?? 0)")
 			case build.Float, build.Double:
-				if empty {
-					dst.Code("(").Code(name).Code(" == null || ").Code(name).Code(".length == 0)").Code(" ? null : ")
-				}
-				dst.Code("(/([-+]?\\d+)(\\.\\d+)?/.test(").Code(name).Code(") ? Number.parseFloat(" + name + ") :").Code(name).Code(")")
+				dst.Code("Number.parseFloat(").Code(name).Code(" ?? 0)")
 			case build.Bool:
 				if empty {
 					dst.Code("(").Code(name).Code(" == null || ").Code(name).Code(".length == 0)").Code(" ? null : ")
 				}
 				dst.Code("(\"true\" == ").Code(name).Code(")")
 			case build.Date:
-				if empty {
-					dst.Code("(").Code(name).Code(" == null || ").Code(name).Code(".length == 0)").Code(" ? null : ")
-				}
-				dst.Code("Date.parse(" + name + ") ?? ").Code(name)
+				dst.Code("Date.parse(").Code(name).Code(" ?? \"\")")
 			case build.Decimal:
 				dst.Import("decimal.js", "* as d")
-				if empty {
-					dst.Code(name + " == null ? null : ")
-				}
-				dst.Code("function () {try {return new d.Decimal(").Code(name).Code(")} catch (e) {return null}}()")
+				dst.Code("new d.Decimal(").Code(name).Code(" ?? 0)")
 			default:
 				if empty {
 					dst.Code("(").Code(name).Code(" == null || ").Code(name).Code(".length == 0)").Code(" ? null : ")
@@ -520,12 +501,16 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	disabled := make([]string, 0)
 	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 
+		if field.Name.Name == "min_amount" {
+			println("min_amount")
+		}
+
 		form := b.getUI(field.Tags)
 		if nil == form || 0 == len(form.form) {
 			return nil
 		}
 
-		inNum := build.IsNumber(field.Type)
+		isNum := build.IsNumber(field.Type)
 		isArray := build.IsArray(field.Type)
 		isNull := build.IsNil(field.Type)
 		_, verify := build.GetTag(field.Tags, "verify")
@@ -714,12 +699,13 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 			dst.Tab(7).Code("modelValue={")
-			b.printToString(dst, "_ctx.model!."+fieldName, field.Type, false, form.digit, form.format, " ?? \"\"")
+			b.printToString(dst, "_ctx.model!."+fieldName, field.Type, false, form.digit, form.format, " ?? \"\"", false)
 			dst.Code("}\n")
 
-			dst.Tab(7).Code("onUpdate:modelValue={($event: string) => _ctx.model!.").Code(fieldName).Code(" = ")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: string) => {try{ _ctx.model!.").Code(fieldName).Code(" = ")
 			b.printFormString(dst, "$event", field.Type, false, form.digit, form.format)
-			dst.Code("}\n")
+			dst.Code(" }catch(e){} }}\n")
+
 			dst.Tab(7).Code("size={props.size}\n")
 			dst.Tab(7).Code("type=\"password\"\n")
 			dst.Tab(7).Code("show-password\n")
@@ -749,13 +735,20 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(7).Code(">\n")
 			dst.Tab(6).Code("</").Code(customTag).Code(">\n")
-		} else if inNum {
+		} else if "number" == formTag && isNum {
 			if len(customTag) == 0 {
 				customTag = "el-input-number"
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 
-			dst.Tab(7).Code("v-model={_ctx.model!." + fieldName + "}\n")
+			dst.Tab(7).Code("modelValue={")
+			b.printToString(dst, "_ctx.model!."+fieldName, field.Type, false, form.digit, form.format, "", false)
+			dst.Code("}\n")
+
+			dst.Tab(7).Code("onUpdate:modelValue={($event: string) => {try{ _ctx.model!.").Code(fieldName).Code(" = ")
+			b.printFormString(dst, "$event", field.Type, false, form.digit, form.format)
+			dst.Code(" }catch(e){} }}\n")
+
 			dst.Tab(7).Code("size={props.size}\n")
 			if isNull {
 				dst.Tab(7).Code("clearable\n")
@@ -797,12 +790,13 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 
 			dst.Tab(7).Code("modelValue={")
-			b.printToString(dst, "_ctx.model!."+fieldName, field.Type, false, form.digit, form.format, "")
+			b.printToString(dst, "_ctx.model!."+fieldName, field.Type, false, form.digit, form.format, "", false)
 			dst.Code("}\n")
 
-			dst.Tab(7).Code("onUpdate:modelValue={($event: string) => _ctx.model!.").Code(fieldName).Code(" = ")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: string) => {try{ _ctx.model!.").Code(fieldName).Code(" = ")
 			b.printFormString(dst, "$event", field.Type, false, form.digit, form.format)
-			dst.Code("}\n")
+			dst.Code(" }catch(e){} }}\n")
+
 			dst.Tab(7).Code("size={props.size}\n")
 			if isNull {
 				dst.Tab(7).Code("clearable\n")
@@ -852,17 +846,21 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 
 			dst.Tab(7).Code("modelValue={")
-			b.printToString(dst, "_ctx.model!."+fieldName, field.Type, false, form.digit, form.format, "")
+			b.printToString(dst, "_ctx.model!."+fieldName, field.Type, false, form.digit, form.format, "", false)
 			dst.Code("}\n")
 
-			dst.Tab(7).Code("onUpdate:modelValue={($event: string) => _ctx.model!.").Code(fieldName).Code(" = ")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: string) =>{try{ _ctx.model!.").Code(fieldName).Code(" = ")
 			b.printFormString(dst, "$event", field.Type, false, form.digit, form.format)
-			dst.Code("}\n")
+			dst.Code(" }catch(e){} }}\n")
+
 			dst.Tab(7).Code("size={props.size}\n")
 			if isNull {
 				dst.Tab(7).Code("clearable\n")
 			}
-			if form.textarea {
+			if isNum {
+				dst.Tab(7).Code("type={\"number\"}\n")
+			}
+			if !isNum && form.textarea {
 				dst.Tab(7).Code("type={\"textarea\"}\n")
 			}
 

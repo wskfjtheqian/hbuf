@@ -141,8 +141,7 @@ func (b *Builder) printExportDataItemCode(dst *build.Writer, i int, item *ast.Fi
 	} else if build.IsEnum(item.Type.Type()) {
 		dst.Tab(tab).Code("list[").Code(strconv.Itoa(i)).Code("] = g.Get").Code(name).Code("().ToName()\n")
 	} else if build.GetBaseType(item.Type.Type()) == build.Date {
-		dst.Import("time", "")
-		dst.Tab(tab).Code("list[").Code(strconv.Itoa(i)).Code("] = time.Time(g.Get").Code(name).Code("()).In(loc)\n")
+		dst.Tab(tab).Code("list[").Code(strconv.Itoa(i)).Code("] = g.Get").Code(name).Code("().In(loc)\n")
 	} else {
 		dst.Tab(tab).Code("list[").Code(strconv.Itoa(i)).Code("] = g.Get").Code(name).Code("()\n")
 	}

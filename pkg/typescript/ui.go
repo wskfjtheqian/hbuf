@@ -500,10 +500,10 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 
 	disabled := make([]string, 0)
 	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
-
-		if field.Name.Name == "min_amount" {
-			println("min_amount")
-		}
+		//
+		//if field.Name.Name == "min_amount" {
+		//	println("min_amount")
+		//}
 
 		form := b.getUI(field.Tags)
 		if nil == form || 0 == len(form.form) {

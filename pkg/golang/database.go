@@ -360,12 +360,36 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 
 	if page {
 		if limit, ok := b.getLimit(fields); ok {
+			limitName := build.StringToHumpName(limit.Field.Name.Name)
 			if offset, ok := b.getOffset(fields); ok {
-				where.Tab(1).Code("s.T(\" LIMIT " + offset.Dbs[0].Offset + ", " + limit.Dbs[0].Limit + "\")")
-				where.Code(".P(g." + build.StringToHumpName(offset.Field.Name.Name) + ", g." + build.StringToHumpName(limit.Field.Name.Name) + ")\n")
+				offsetName := build.StringToHumpName(offset.Field.Name.Name)
+				if build.IsNil(offset.Field.Type) || build.IsNil(limit.Field.Type) {
+					if !build.IsNil(offset.Field.Type) {
+						where.Tab(1).Code("if nil != g." + limitName + " {\n")
+					} else if !build.IsNil(limit.Field.Type) {
+						where.Tab(1).Code("if nil != g." + offsetName + " {\n")
+					} else {
+						where.Tab(1).Code("if nil != g." + offsetName + " && nil != g." + limitName + " {\n")
+					}
+					where.Tab(2).Code("s.T(\" LIMIT " + offset.Dbs[0].Offset + ", " + limit.Dbs[0].Limit + "\")")
+					where.Code(".P(g." + offsetName + ", g." + limitName + ")\n")
+					where.Tab(1).Code("}\n")
+				} else {
+					where.Tab(1).Code("s.T(\" LIMIT " + offset.Dbs[0].Offset + ", " + limit.Dbs[0].Limit + "\")")
+					where.Code(".P(g." + offsetName + ", g." + limitName + ")\n")
+				}
+
 			} else {
-				where.Tab(1).Code("s.T(\" LIMIT " + limit.Dbs[0].Limit + "\")")
-				where.Code(".P(g." + build.StringToHumpName(limit.Field.Name.Name) + ")\n")
+
+				if build.IsNil(limit.Field.Type) {
+					where.Tab(1).Code("if nil != g." + limitName + " {\n")
+					where.Tab(2).Code("s.T(\" LIMIT " + limit.Dbs[0].Limit + "\")")
+					where.Code(".P(g." + limitName + ")\n")
+					where.Tab(1).Code("}\n")
+				} else {
+					where.Tab(1).Code("s.T(\" LIMIT " + limit.Dbs[0].Limit + "\")")
+					where.Code(".P(g." + limitName + ")\n")
+				}
 			}
 		}
 	}

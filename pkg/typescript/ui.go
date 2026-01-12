@@ -287,7 +287,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(8).Code("}}</el-tag>\n")
 		} else {
 			dst.Tab(8)
-			b.printToString(dst, "scope.row."+fieldName, field.Type, false, table.digit, table.format, " || \"\"", true)
+			b.printTableString(dst, "scope.row."+fieldName, field.Type, false, table.digit, table.format, " || \"\"", true)
 			dst.Code("\n")
 		}
 
@@ -339,7 +339,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 
 }
 
-func (b *Builder) printToString(dst *build.Writer, name string, expr ast.Expr, empty bool, digit int, format string, val string, isDigit bool) {
+func (b *Builder) printTableString(dst *build.Writer, name string, expr ast.Expr, empty bool, digit int, format string, val string, isDigit bool) {
 	switch expr.(type) {
 	case *ast.EnumType:
 		if empty {
@@ -350,7 +350,7 @@ func (b *Builder) printToString(dst *build.Writer, name string, expr ast.Expr, e
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
 			b.getPackage(dst, expr, "")
-			b.printToString(dst, name, t.Obj.Decl.(*ast.TypeSpec).Type, empty, digit, format, val, isDigit)
+			b.printTableString(dst, name, t.Obj.Decl.(*ast.TypeSpec).Type, empty, digit, format, val, isDigit)
 		} else {
 			switch build.BaseType(t.Name) {
 			case build.Int8, build.Int16, build.Int32, build.Int64, build.Uint8, build.Uint16, build.Uint32, build.Uint64:
@@ -398,81 +398,18 @@ func (b *Builder) printToString(dst *build.Writer, name string, expr ast.Expr, e
 		//default: (scope:any) => scope.row.platform?.map((e: $4.PlatformType) => _ctx.$t(e.toString())) || ""
 		ar := expr.(*ast.ArrayType)
 		dst.Code(name).Code("?.map((e:any)=>")
-		b.printToString(dst, "e", ar.Type(), false, digit, format, val, isDigit)
+		b.printTableString(dst, "e", ar.Type(), false, digit, format, val, isDigit)
 		dst.Code(")?.join(\",\") || \"\"")
 	case *ast.MapType:
 		dst.Code("\"\"+").Code(name)
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
-		b.printToString(dst, name, t.Type(), t.Empty, digit, format, val, isDigit)
+		b.printTableString(dst, name, t.Type(), t.Empty, digit, format, val, isDigit)
 		if t.Empty {
 			dst.Code(val)
 		}
 	default:
 		dst.Code("\"\"+").Code(name)
-	}
-}
-
-func (b *Builder) printFormString(dst *build.Writer, name string, expr ast.Expr, empty bool, digit int, format string) {
-	switch expr.(type) {
-	case *ast.EnumType:
-		t := expr.(*ast.EnumType)
-		if empty {
-			dst.Code("(").Code(name).Code(" == null || ").Code(name).Code(".length == 0)").Code(" ? null : ")
-		}
-		p := b.getPackage(dst, t.Name, "")
-		dst.Code("(").Code(p).Code(".").Code(t.Name.Name).Code(".nameOf(").Code(name).Code("))")
-	case *ast.Ident:
-		t := expr.(*ast.Ident)
-		if nil != t.Obj {
-			b.getPackage(dst, expr, "")
-			b.printFormString(dst, name, t.Obj.Decl.(*ast.TypeSpec).Type, empty, digit, format)
-		} else {
-			switch build.BaseType(t.Name) {
-			case build.Int8, build.Int16, build.Int32, build.Int64, build.Uint8, build.Uint16, build.Uint32, build.Uint64:
-				dst.Code("Number.parseInt(").Code(name).Code(" ?? 0)")
-			case build.Float, build.Double:
-				dst.Code("Number.parseFloat(").Code(name).Code(" ?? 0)")
-			case build.Bool:
-				if empty {
-					dst.Code("(").Code(name).Code(" == null || ").Code(name).Code(".length == 0)").Code(" ? null : ")
-				}
-				dst.Code("(\"true\" == ").Code(name).Code(")")
-			case build.Date:
-				dst.Code("Date.parse(").Code(name).Code(" ?? \"\")")
-			case build.Decimal:
-				dst.Import("decimal.js", "* as d")
-				dst.Code("new d.Decimal(").Code(name).Code(" ?? 0)")
-			default:
-				if empty {
-					dst.Code("(").Code(name).Code(" == null || ").Code(name).Code(".length == 0)").Code(" ? null : ")
-				}
-				dst.Code(name)
-			}
-		}
-	case *ast.ArrayType:
-		dst.Code(name)
-		//ar := expr.(*ast.ArrayType)
-		//dst.Code("List<")
-		//printType(dst, ar.VType, false)
-		//dst.Code(">")
-		//if ar.Empty && !notEmpty {
-		//	dst.Code("?")
-		//}
-	case *ast.MapType:
-		dst.Code(name)
-		//ma := expr.(*ast.MapType)
-		//dst.Code("Map<")
-		//printType(dst, ma.Key, false)
-		//dst.Code(", ")
-		//printType(dst, ma.VType, false)
-		//dst.Code(">")
-		//if ma.Empty && !notEmpty {
-		//	dst.Code("?")
-		//}
-	case *ast.VarType:
-		t := expr.(*ast.VarType)
-		b.printFormString(dst, name, t.Type(), t.Empty, digit, format)
 	}
 }
 
@@ -500,11 +437,6 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 
 	disabled := make([]string, 0)
 	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
-		//
-		//if field.Name.Name == "min_amount" {
-		//	println("min_amount")
-		//}
-
 		form := b.getUI(field.Tags)
 		if nil == form || 0 == len(form.form) {
 			return nil
@@ -631,7 +563,12 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				customTag = "el-select"
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
-			b.printMenuModelValue(dst, field.Type, fieldName, false, false)
+			dst.Tab(7).Code("modelValue={")
+			b.printGetValue(dst, field.Type, "_ctx.model!."+fieldName, isNull, form.digit, form.format)
+			dst.Code("}\n")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: string[] | string | null) => _ctx.model!.").Code(fieldName).Code(" = ")
+			b.printSetValue(dst, field.Type, "$event", isNull)
+			dst.Code("}\n")
 
 			dst.Tab(7).Code("style={\"min-width:180px\"}\n")
 			dst.Tab(7).Code("size={props.size}\n")
@@ -669,8 +606,12 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				customTag = "el-radio-group"
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
-
-			b.printMenuModelValue(dst, field.Type, fieldName, false, false)
+			dst.Tab(7).Code("modelValue={")
+			b.printGetValue(dst, field.Type, "_ctx.model!."+fieldName, isNull, form.digit, form.format)
+			dst.Code("}\n")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: string[] | string | null) => _ctx.model!.").Code(fieldName).Code(" = ")
+			b.printSetValue(dst, field.Type, "$event", isNull)
+			dst.Code("}\n")
 
 			dst.Tab(7).Code("size={props.size}\n")
 			if form.onlyRead {
@@ -684,7 +625,12 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				customTag = "el-radio-group"
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
-			b.printMenuModelValue(dst, field.Type, fieldName, false, false)
+			dst.Tab(7).Code("modelValue={")
+			b.printGetValue(dst, field.Type, "_ctx.model!."+fieldName, isNull, form.digit, form.format)
+			dst.Code("}\n")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: string[] | string | null) => _ctx.model!.").Code(fieldName).Code(" = ")
+			b.printSetValue(dst, field.Type, "$event", isNull)
+			dst.Code("}\n")
 
 			dst.Tab(7).Code("size={props.size}\n")
 			if form.onlyRead {
@@ -699,12 +645,11 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 			dst.Tab(7).Code("modelValue={")
-			b.printToString(dst, "_ctx.model!."+fieldName, field.Type, false, form.digit, form.format, " ?? \"\"", false)
+			b.printGetValue(dst, field.Type, "_ctx.model!."+fieldName, isNull, form.digit, form.format)
 			dst.Code("}\n")
-
-			dst.Tab(7).Code("onUpdate:modelValue={($event: string) => {try{ _ctx.model!.").Code(fieldName).Code(" = ")
-			b.printFormString(dst, "$event", field.Type, false, form.digit, form.format)
-			dst.Code(" }catch(e){} }}\n")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: string | null) => _ctx.model!.").Code(fieldName).Code(" = ")
+			b.printSetValue(dst, field.Type, "$event", isNull)
+			dst.Code("}\n")
 
 			dst.Tab(7).Code("size={props.size}\n")
 			dst.Tab(7).Code("type=\"password\"\n")
@@ -740,14 +685,12 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				customTag = "el-input-number"
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
-
 			dst.Tab(7).Code("modelValue={")
-			b.printToString(dst, "_ctx.model!."+fieldName, field.Type, false, form.digit, form.format, "", false)
+			b.printGetValue(dst, field.Type, "_ctx.model!."+fieldName, isNull, form.digit, form.format)
 			dst.Code("}\n")
-
-			dst.Tab(7).Code("onUpdate:modelValue={($event: string) => {try{ _ctx.model!.").Code(fieldName).Code(" = ")
-			b.printFormString(dst, "$event", field.Type, false, form.digit, form.format)
-			dst.Code(" }catch(e){} }}\n")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: string | null) => _ctx.model!.").Code(fieldName).Code(" = ")
+			b.printSetValue(dst, field.Type, "$event", isNull)
+			dst.Code("}\n")
 
 			dst.Tab(7).Code("size={props.size}\n")
 			if isNull {
@@ -788,14 +731,12 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				customTag = "input-file"
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
-
 			dst.Tab(7).Code("modelValue={")
-			b.printToString(dst, "_ctx.model!."+fieldName, field.Type, false, form.digit, form.format, "", false)
+			b.printGetValue(dst, field.Type, "_ctx.model!."+fieldName, isNull, form.digit, form.format)
 			dst.Code("}\n")
-
-			dst.Tab(7).Code("onUpdate:modelValue={($event: string) => {try{ _ctx.model!.").Code(fieldName).Code(" = ")
-			b.printFormString(dst, "$event", field.Type, false, form.digit, form.format)
-			dst.Code(" }catch(e){} }}\n")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: string | null) => _ctx.model!.").Code(fieldName).Code(" = ")
+			b.printSetValue(dst, field.Type, "$event", isNull)
+			dst.Code("}\n")
 
 			dst.Tab(7).Code("size={props.size}\n")
 			if isNull {
@@ -844,14 +785,15 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				customTag = "el-input"
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
-
+			//if fieldName == "userName" {
+			//	println("userName")
+			//}
 			dst.Tab(7).Code("modelValue={")
-			b.printToString(dst, "_ctx.model!."+fieldName, field.Type, false, form.digit, form.format, "", false)
+			b.printGetValue(dst, field.Type, "_ctx.model!."+fieldName, isNull, form.digit, form.format)
 			dst.Code("}\n")
-
-			dst.Tab(7).Code("onUpdate:modelValue={($event: string) =>{try{ _ctx.model!.").Code(fieldName).Code(" = ")
-			b.printFormString(dst, "$event", field.Type, false, form.digit, form.format)
-			dst.Code(" }catch(e){} }}\n")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: string | null) => _ctx.model!.").Code(fieldName).Code(" = ")
+			b.printSetValue(dst, field.Type, "$event", isNull)
+			dst.Code("}\n")
 
 			dst.Tab(7).Code("size={props.size}\n")
 			if isNull {
@@ -917,12 +859,12 @@ func (b *Builder) printMenuItem(dst *build.Writer, expr ast.Expr, empty bool, op
 		t := expr.(*ast.EnumType)
 		pkg := b.getPackage(dst, t.Name, "")
 		name := build.StringToHumpName(t.Name.Name)
-		dst.Tab(6).Code("{").Code(pkg).Code(".").Code(name).Code(".values.map((val) => {\n")
-		dst.Tab(7).Code("return <" + option + " key={val.value}\n")
-		dst.Tab(8).Code("label={_ctx.$t(val.toString())}\n")
-		dst.Tab(8).Code("value={val.value}\n")
-		dst.Tab(7).Code("/>\n")
-		dst.Tab(6).Code("})}\n")
+		dst.Tab(6 + 1).Code("{").Code(pkg).Code(".").Code(name).Code(".values.map((val) => {\n")
+		dst.Tab(7 + 1).Code("return <" + option + " key={val.name}\n")
+		dst.Tab(8 + 1).Code("label={_ctx.$t(val.toString())}\n")
+		dst.Tab(8 + 1).Code("value={val.name}\n")
+		dst.Tab(7 + 1).Code("/>\n")
+		dst.Tab(6 + 1).Code("})}\n")
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
@@ -948,67 +890,128 @@ func (b *Builder) printMenuItem(dst *build.Writer, expr ast.Expr, empty bool, op
 	}
 }
 
-func (b *Builder) printMenuModelValue(dst *build.Writer, expr ast.Expr, fieldName string, isNull, isArray bool) {
+func (b *Builder) printGetValue(dst *build.Writer, expr ast.Expr, name string, isNull bool, digit int, format string) {
 	switch expr.(type) {
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
 			if ast.Enum == t.Obj.Kind {
-				pkg := b.getPackage(dst, t, "")
-				name := build.StringToHumpName(t.Name)
+				dst.Code(name)
 				if isNull {
-					dst.Tab(7).Code("modelValue={_ctx.model!.").Code(fieldName).Code("?")
-				} else {
-					dst.Tab(7).Code("modelValue={_ctx.model!.").Code(fieldName).Code("")
+					dst.Code("?")
 				}
-				if isArray {
-					dst.Code(".map((e : ").Code(pkg).Code(".").Code(name).Code(") => e.value)")
-				} else {
-					dst.Code(".value")
-				}
-
-				dst.Code("}\n")
-
-				dst.Tab(7).Code("onUpdate:modelValue={($event: number")
-				if isNull {
-					if isArray {
-						dst.Code("[]")
-					}
-					dst.Code(" | null) => _ctx.model!.").Code(fieldName).Code(" = ($event == null || $event == undefined) ? null :")
-				} else {
-					if isArray {
-						dst.Code("[]")
-					}
-					dst.Code(") => _ctx.model!.").Code(fieldName).Code(" = \n")
-				}
-				if isArray {
-					if isNull {
-						dst.Code("$event?.map((e: number) => ").Code(pkg).Code(".").Code(name).Code(".valueOf(e))")
-					} else {
-						dst.Code("$event.map((e: number) => ").Code(pkg).Code(".").Code(name).Code(".valueOf(e))")
-					}
-				} else {
-					dst.Code(pkg).Code(".").Code(name).Code(".valueOf($event)")
-				}
-				dst.Code("}\n")
+				dst.Code(".name")
 			}
+		} else if build.BaseType(t.Name) == build.Date {
+			if isNull {
+				dst.Code(name).Code(" == null").Code(" ? \"\" : ")
+			}
+			dst.Import("hbuf_ts", "* as h")
+			if 0 == len(format) {
+				format = "yyyy/MM/dd HH:mm:ss"
+			}
+			dst.Code("_ctx.$fd(").Code(name).Code(",\"").Code(format).Code("\")")
 		} else {
-			dst.Tab(7).Code("modelValue={_ctx.model!.").Code(fieldName).Code("}\n")
-
-			dst.Tab(7).Code("onUpdate:modelValue={($event: ")
-			if isArray {
-				dst.Code("number[]")
-			} else {
-				dst.Code("number")
+			dst.Code(name)
+			if isNull {
+				dst.Code("?")
 			}
-			dst.Code(" | null) => _ctx.model!.").Code(fieldName).Code(" = $event }\n")
+			switch build.BaseType(t.Name) {
+			case build.Int8, build.Int16, build.Int32, build.Uint8, build.Uint16, build.Uint32:
+				dst.Code(".toString()")
+			case build.Int64, build.Uint64:
+				dst.Code(".toString()")
+			case build.Float, build.Double:
+				dst.Code(".toFixed(").Code(strconv.Itoa(digit)).Code(")")
+			case build.Bool:
+				dst.Code(".toString()")
+			case build.Decimal:
+				dst.Code(".toFixed(").Code(strconv.Itoa(digit)).Code(")")
+			default:
+				dst.Code("? ''")
+			}
+			if isNull {
+				dst.Code("?? ''")
+			}
 		}
 	case *ast.ArrayType:
 		ar := expr.(*ast.ArrayType)
-		b.printMenuModelValue(dst, ar.Type(), fieldName, isNull, true)
+		dst.Code(name)
+		if isNull {
+			dst.Code("?")
+		}
+		dst.Code(".map((item: any)=> ")
+		b.printGetValue(dst, ar.Type(), "item", ar.IsEmpty(), digit, format)
+		dst.Code(")")
 	case *ast.MapType:
+		dst.Code("null")
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
-		b.printMenuModelValue(dst, t.Type(), fieldName, true, isArray)
+		b.printGetValue(dst, t.Type(), name, true, 0, "")
 	}
+}
+
+func (b *Builder) printSetValue(dst *build.Writer, expr ast.Expr, name string, isNull bool) {
+	switch expr.(type) {
+	case *ast.Ident:
+		if isNull {
+			dst.Code("(").Code(name).Code("?.length ?? 0) == 0 ? ").Code("null : (")
+		}
+		t := expr.(*ast.Ident)
+		if nil != t.Obj {
+			if ast.Enum == t.Obj.Kind {
+				pkg := b.getPackage(dst, t, "")
+				dst.Code(pkg).Code(".").Code(build.StringToHumpName(t.Name)).Code(".nameOf(").Code(name).Code(" as string)")
+			}
+		} else {
+			switch build.BaseType(t.Name) {
+			case build.Int8, build.Int16, build.Int32, build.Uint8, build.Uint16, build.Uint32:
+				dst.Code("Number.parseInt(").Code(name).Code(" ?? '0')")
+			case build.Int64, build.Uint64:
+				dst.Code("BigInt((").Code(name).Code(" as (string | null)) ?? '0')")
+			case build.Float, build.Double:
+				dst.Code("Number.parseFloat(").Code(name).Code(" ?? '0')")
+			case build.Bool:
+				if isNull {
+					dst.Code("(").Code(name).Code(" == null || ").Code(name).Code(".length == 0)").Code(" ? null : ")
+				}
+				dst.Code("(\"true\" == ").Code(name).Code(")")
+			case build.Date:
+				dst.Code("Date.parse(").Code(name).Code(" ?? \"\")")
+			case build.Decimal:
+				dst.Import("decimal.js", "* as d")
+				dst.Code("new d.Decimal((").Code(name).Code(" as (string | null)) ?? '0')")
+			default:
+				dst.Code(name)
+			}
+		}
+		if isNull {
+			dst.Code(")")
+		}
+	case *ast.ArrayType:
+		ar := expr.(*ast.ArrayType)
+		if isNull {
+			dst.Code("!(").Code(name).Code("?.length ?? 0) ? ").Code("null : (")
+		}
+		dst.Code("(").Code(name).Code(" as (string[] | null))")
+		if isNull {
+			dst.Code("?")
+		}
+		dst.Code(".map((item: string)=> ")
+		b.printSetValue(dst, ar.Type(), "item", false)
+		dst.Code(")")
+		if isNull {
+			dst.Code(")")
+		}
+	case *ast.MapType:
+		if isNull {
+			dst.Code("null")
+		} else {
+			dst.Code("{}")
+		}
+	case *ast.VarType:
+		t := expr.(*ast.VarType)
+		b.printSetValue(dst, t.Type(), name, true)
+	}
+
 }

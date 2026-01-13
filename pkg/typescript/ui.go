@@ -564,10 +564,10 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 			dst.Tab(7).Code("modelValue={")
-			b.printGetValue(dst, field.Type, "_ctx.model!."+fieldName, isNull, form.digit, form.format)
+			b.printGetStringValue(dst, field.Type, "_ctx.model!."+fieldName, isNull, form.digit, form.format)
 			dst.Code("}\n")
 			dst.Tab(7).Code("onUpdate:modelValue={($event: string[] | string | null) => _ctx.model!.").Code(fieldName).Code(" = ")
-			b.printSetValue(dst, field.Type, "$event", isNull)
+			b.printSetStringValue(dst, field.Type, "$event", isNull)
 			dst.Code("}\n")
 
 			dst.Tab(7).Code("style={\"min-width:180px\"}\n")
@@ -591,7 +591,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 
-			dst.Tab(5).Code("modelValue={_ctx.model!.").Code(fieldName).Code(" ??= false")
+			dst.Tab(7).Code("modelValue={_ctx.model!.").Code(fieldName).Code(" ??= false")
 			dst.Code("}\n")
 
 			dst.Tab(8).Code("onUpdate:modelValue={($event: string) => _ctx.model!.").Code(fieldName).Code(" = $event")
@@ -600,17 +600,17 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			if form.onlyRead {
 				dst.Code(" disabled")
 			}
-			dst.Code("/>\n")
+			dst.Tab(6).Code("/>\n")
 		} else if "radio" == formTag {
 			if len(customTag) == 0 {
 				customTag = "el-radio-group"
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 			dst.Tab(7).Code("modelValue={")
-			b.printGetValue(dst, field.Type, "_ctx.model!."+fieldName, isNull, form.digit, form.format)
+			b.printGetStringValue(dst, field.Type, "_ctx.model!."+fieldName, isNull, form.digit, form.format)
 			dst.Code("}\n")
 			dst.Tab(7).Code("onUpdate:modelValue={($event: string[] | string | null) => _ctx.model!.").Code(fieldName).Code(" = ")
-			b.printSetValue(dst, field.Type, "$event", isNull)
+			b.printSetStringValue(dst, field.Type, "$event", isNull)
 			dst.Code("}\n")
 
 			dst.Tab(7).Code("size={props.size}\n")
@@ -626,10 +626,10 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 			dst.Tab(7).Code("modelValue={")
-			b.printGetValue(dst, field.Type, "_ctx.model!."+fieldName, isNull, form.digit, form.format)
+			b.printGetStringValue(dst, field.Type, "_ctx.model!."+fieldName, isNull, form.digit, form.format)
 			dst.Code("}\n")
 			dst.Tab(7).Code("onUpdate:modelValue={($event: string[] | string | null) => _ctx.model!.").Code(fieldName).Code(" = ")
-			b.printSetValue(dst, field.Type, "$event", isNull)
+			b.printSetStringValue(dst, field.Type, "$event", isNull)
 			dst.Code("}\n")
 
 			dst.Tab(7).Code("size={props.size}\n")
@@ -645,10 +645,10 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 			dst.Tab(7).Code("modelValue={")
-			b.printGetValue(dst, field.Type, "_ctx.model!."+fieldName, isNull, form.digit, form.format)
+			b.printGetStringValue(dst, field.Type, "_ctx.model!."+fieldName, isNull, form.digit, form.format)
 			dst.Code("}\n")
 			dst.Tab(7).Code("onUpdate:modelValue={($event: string | null) => _ctx.model!.").Code(fieldName).Code(" = ")
-			b.printSetValue(dst, field.Type, "$event", isNull)
+			b.printSetStringValue(dst, field.Type, "$event", isNull)
 			dst.Code("}\n")
 
 			dst.Tab(7).Code("size={props.size}\n")
@@ -686,10 +686,10 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 			dst.Tab(7).Code("modelValue={")
-			b.printGetValue(dst, field.Type, "_ctx.model!."+fieldName, isNull, form.digit, form.format)
+			b.printGetNumberValue(dst, field.Type, "_ctx.model!."+fieldName, isNull)
 			dst.Code("}\n")
-			dst.Tab(7).Code("onUpdate:modelValue={($event: string | null) => _ctx.model!.").Code(fieldName).Code(" = ")
-			b.printSetValue(dst, field.Type, "$event", isNull)
+			dst.Tab(7).Code("onUpdate:modelValue={($event: number | null) => _ctx.model!.").Code(fieldName).Code(" = ")
+			b.printSetNumberValue(dst, field.Type, "$event", isNull)
 			dst.Code("}\n")
 
 			dst.Tab(7).Code("size={props.size}\n")
@@ -732,10 +732,10 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 			dst.Tab(7).Code("modelValue={")
-			b.printGetValue(dst, field.Type, "_ctx.model!."+fieldName, isNull, form.digit, form.format)
+			b.printGetStringValue(dst, field.Type, "_ctx.model!."+fieldName, isNull, form.digit, form.format)
 			dst.Code("}\n")
 			dst.Tab(7).Code("onUpdate:modelValue={($event: string | null) => _ctx.model!.").Code(fieldName).Code(" = ")
-			b.printSetValue(dst, field.Type, "$event", isNull)
+			b.printSetStringValue(dst, field.Type, "$event", isNull)
 			dst.Code("}\n")
 
 			dst.Tab(7).Code("size={props.size}\n")
@@ -789,10 +789,10 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			//	println("userName")
 			//}
 			dst.Tab(7).Code("modelValue={")
-			b.printGetValue(dst, field.Type, "_ctx.model!."+fieldName, isNull, form.digit, form.format)
+			b.printGetStringValue(dst, field.Type, "_ctx.model!."+fieldName, isNull, form.digit, form.format)
 			dst.Code("}\n")
 			dst.Tab(7).Code("onUpdate:modelValue={($event: string | null) => _ctx.model!.").Code(fieldName).Code(" = ")
-			b.printSetValue(dst, field.Type, "$event", isNull)
+			b.printSetStringValue(dst, field.Type, "$event", isNull)
 			dst.Code("}\n")
 
 			dst.Tab(7).Code("size={props.size}\n")
@@ -890,7 +890,7 @@ func (b *Builder) printMenuItem(dst *build.Writer, expr ast.Expr, empty bool, op
 	}
 }
 
-func (b *Builder) printGetValue(dst *build.Writer, expr ast.Expr, name string, isNull bool, digit int, format string) {
+func (b *Builder) printGetStringValue(dst *build.Writer, expr ast.Expr, name string, isNull bool, digit int, format string) {
 	switch expr.(type) {
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
@@ -941,17 +941,17 @@ func (b *Builder) printGetValue(dst *build.Writer, expr ast.Expr, name string, i
 			dst.Code("?")
 		}
 		dst.Code(".map((item: any)=> ")
-		b.printGetValue(dst, ar.Type(), "item", ar.IsEmpty(), digit, format)
+		b.printGetStringValue(dst, ar.Type(), "item", ar.IsEmpty(), digit, format)
 		dst.Code(")")
 	case *ast.MapType:
 		dst.Code("null")
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
-		b.printGetValue(dst, t.Type(), name, true, 0, "")
+		b.printGetStringValue(dst, t.Type(), name, true, digit, format)
 	}
 }
 
-func (b *Builder) printSetValue(dst *build.Writer, expr ast.Expr, name string, isNull bool) {
+func (b *Builder) printSetStringValue(dst *build.Writer, expr ast.Expr, name string, isNull bool) {
 	switch expr.(type) {
 	case *ast.Ident:
 		if isNull {
@@ -998,7 +998,7 @@ func (b *Builder) printSetValue(dst *build.Writer, expr ast.Expr, name string, i
 			dst.Code("?")
 		}
 		dst.Code(".map((item: string)=> ")
-		b.printSetValue(dst, ar.Type(), "item", false)
+		b.printSetStringValue(dst, ar.Type(), "item", false)
 		dst.Code(")")
 		if isNull {
 			dst.Code(")")
@@ -1011,7 +1011,122 @@ func (b *Builder) printSetValue(dst *build.Writer, expr ast.Expr, name string, i
 		}
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
-		b.printSetValue(dst, t.Type(), name, true)
+		b.printSetStringValue(dst, t.Type(), name, true)
+	}
+
+}
+
+func (b *Builder) printGetNumberValue(dst *build.Writer, expr ast.Expr, name string, isNull bool) {
+	switch expr.(type) {
+	case *ast.Ident:
+		t := expr.(*ast.Ident)
+		if nil != t.Obj {
+			if ast.Enum == t.Obj.Kind {
+				if isNull {
+					dst.Code(name).Code(" == null").Code(" ? null : ")
+				}
+				dst.Code(name)
+			}
+		} else if build.BaseType(t.Name) == build.Date {
+			if isNull {
+				dst.Code(name).Code(" == null").Code(" ? null : ")
+			}
+			dst.Code(name).Code("!.getTime()")
+		} else {
+			if isNull {
+				dst.Code(name).Code(" == null").Code(" ? null : ")
+			}
+			switch build.BaseType(t.Name) {
+			case build.Int8, build.Int16, build.Int32, build.Uint8, build.Uint16, build.Uint32:
+				dst.Code(name)
+			case build.Int64, build.Uint64:
+
+				dst.Code("Number(").Code(name).Code(")")
+			case build.Float, build.Double:
+				dst.Code(name)
+			case build.Bool:
+				dst.Code("Number(").Code(name).Code(" == \"true\" ? 1 : 0")
+			case build.Decimal:
+				dst.Code(name)
+			default:
+				dst.Code(name)
+			}
+		}
+	case *ast.ArrayType:
+		ar := expr.(*ast.ArrayType)
+		dst.Code(name)
+		if isNull {
+			dst.Code("?")
+		}
+		dst.Code(".map((item: any)=> ")
+		b.printGetNumberValue(dst, ar.Type(), "item", ar.IsEmpty())
+		dst.Code(")")
+	case *ast.MapType:
+		dst.Code("null")
+	case *ast.VarType:
+		t := expr.(*ast.VarType)
+		b.printGetNumberValue(dst, t.Type(), name, true)
+	}
+}
+
+func (b *Builder) printSetNumberValue(dst *build.Writer, expr ast.Expr, name string, isNull bool) {
+	switch expr.(type) {
+	case *ast.Ident:
+		if isNull {
+			dst.Code("(").Code(name).Code(" == null ? ").Code("null : (")
+		}
+		t := expr.(*ast.Ident)
+		if nil != t.Obj {
+			if ast.Enum == t.Obj.Kind {
+				pkg := b.getPackage(dst, t, "")
+				dst.Code(pkg).Code(".").Code(build.StringToHumpName(t.Name)).Code(".valueOf(").Code(name).Code("!)")
+			}
+		} else {
+			switch build.BaseType(t.Name) {
+			case build.Int8, build.Int16, build.Int32, build.Uint8, build.Uint16, build.Uint32:
+				dst.Code(name).Code("!")
+			case build.Int64, build.Uint64:
+				dst.Code("BigInt(").Code(name).Code("!)")
+			case build.Float, build.Double:
+				dst.Code("BigInt(").Code(name).Code("!)")
+			case build.Bool:
+				dst.Code(name).Code(" != 0")
+			case build.Date:
+				dst.Code("new Date(").Code(name).Code("!)")
+			case build.Decimal:
+				dst.Import("decimal.js", "* as d")
+				dst.Code("new d.Decimal(").Code(name).Code("!)")
+			default:
+				dst.Code(name)
+			}
+		}
+		if isNull {
+			dst.Code("))")
+		}
+	case *ast.ArrayType:
+		ar := expr.(*ast.ArrayType)
+		if isNull {
+			dst.Code("!(").Code(name).Code("?.length ?? 0) ? ").Code("null : (")
+		}
+		dst.Code("(").Code(name).Code(" as (number[] | null))")
+		if isNull {
+			dst.Code("?")
+		}
+		dst.Code(".map((number: string)=> ")
+		b.printSetNumberValue(dst, ar.Type(), "item", false)
+		dst.Code(")")
+		if isNull {
+			dst.Code(")")
+		}
+	case *ast.MapType:
+		if isNull {
+			dst.Code("null")
+		} else {
+			dst.Code("{}")
+		}
+	case *ast.VarType:
+		t := expr.(*ast.VarType)
+		b.printSetNumberValue(dst, t.Type(), name, true)
 	}
 
 }

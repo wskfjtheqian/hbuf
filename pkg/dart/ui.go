@@ -355,7 +355,7 @@ func (b *Builder) printToString(dst *build.Writer, expr ast.Expr, empty bool, di
 				}
 				dst.Import("package:hbuf_flutter/hbuf_flutter.dart", "")
 				if 0 == len(format) {
-					format = "yyyy/MM/dd HH:mm:ss"
+					format = "YYYY/MM/DD HH:mm:ss"
 				}
 				dst.Code(".format(\"" + format + "\")")
 			case build.Decimal:

@@ -51,12 +51,12 @@ type ui struct {
 	index      *int
 	width      float64
 	height     float64
-	maxLine    int
 	extensions []string
 	clip       bool
 	unlink     bool
 	textarea   bool
-	maxCount   int
+	maxLine    *int64
+	maxCount   *int64
 	step       *float64
 	min        *float64
 	max        *float64
@@ -76,8 +76,6 @@ func (b *Builder) getUI(tags []*ast.Tag) *ui {
 	form := ui{
 		width:      160,
 		height:     160,
-		maxLine:    1,
-		maxCount:   1,
 		extensions: []string{},
 	}
 	if nil != val.KV {
@@ -151,14 +149,14 @@ func (b *Builder) getUI(tags []*ast.Tag) *ui {
 					println(err.Error())
 					return nil
 				}
-				form.maxLine = int(atoi)
+				form.maxLine = &atoi
 			} else if "maxCount" == item.Name.Name {
 				atoi, err := strconv.ParseInt(item.Values[0].Value[1:len(item.Values[0].Value)-1], 10, 64)
 				if err != nil {
 					println(err.Error())
 					return nil
 				}
-				form.maxCount = int(atoi)
+				form.maxCount = &atoi
 			} else if "clip" == item.Name.Name {
 				form.clip = "true" == item.Values[0].Value[1:len(item.Values[0].Value)-1]
 			} else if "toNull" == item.Name.Name {
@@ -378,7 +376,7 @@ func (b *Builder) printTableString(dst *build.Writer, name string, expr ast.Expr
 				}
 				dst.Import("hbuf_ts", "* as h")
 				if 0 == len(format) {
-					format = "yyyy/MM/dd HH:mm:ss"
+					format = "YYYY/MM/DD HH:mm:ss"
 				}
 				dst.Code("_ctx.$fd(").Code(name).Code(",\"").Code(format).Code("\")")
 			case build.Decimal:
@@ -477,9 +475,9 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		}
 		dst.Code(">\n")
 
-		//if fieldName == "maintainStart" {
-		//	println(fieldName)
-		//}
+		if field.Name.Name == "channel_ids_bbb" {
+			println(fieldName)
+		}
 
 		if "date" == formTag {
 			if len(customTag) == 0 {
@@ -496,35 +494,41 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Code("}\n")
 
-			dst.Tab(7).Code("onUpdate:modelValue={($event: (number | string | Date) | (number | string | Date)[] | null) => model.").Code(fieldName).Code(" = ")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: (number | string | Date) | (number | string | Date)[] | null) => model.").Code(fieldName).Code(" = (")
 
 			if isArray {
 				dst.Code("($event as (Date[] | null))")
-				if isNull {
-					dst.Code("?")
-				}
-				dst.Code(".map((v, i)=> i == 0 ? _ctx.$timeToUtc(v) : _ctx.$timeToUtc(")
+				dst.Code("?")
+				dst.Code(".map((v, i)=> i == 0 ? _ctx.$timeToUtc(v) as Date : _ctx.$timeToUtc(")
 
 				switch form.format {
 				case "YYYY":
-					dst.Code("new Date(v.getFullYear(), 12, 31, 23, 59, 59, 999)")
+					dst.Code("new Date(v.getFullYear(), 12, 31, 23, 59, 59, 999) as Date")
 				case "YYYY/MM":
-					dst.Code("new Date(v.getFullYear(), v.getMonth(), 31, 23, 59, 59, 999)")
+					dst.Code("new Date(v.getFullYear(), v.getMonth(), 31, 23, 59, 59, 999) as Date")
 				case "YYYY/MM/DD":
-					dst.Code("new Date(v.getFullYear(), v.getMonth(), v.getDate(), 23, 59, 59, 999)")
+					dst.Code("new Date(v.getFullYear(), v.getMonth(), v.getDate(), 23, 59, 59, 999) as Date")
 				case "YYYY/MM/DD HH":
-					dst.Code("new Date(v.getFullYear(), v.getMonth(), v.getDate(), v.getHours(), 59, 59, 999)")
+					dst.Code("new Date(v.getFullYear(), v.getMonth(), v.getDate(), v.getHours(), 59, 59, 999) as Date")
 				case "YYYY/MM/DD HH:mm":
-					dst.Code("new Date(v.getFullYear(), v.getMonth(), v.getDate(), v.getHours(), v.getMinutes(), 59, 999)")
+					dst.Code("new Date(v.getFullYear(), v.getMonth(), v.getDate(), v.getHours(), v.getMinutes(), 59, 999) as Date")
 				default:
-					dst.Code("new Date(v.getFullYear(), v.getMonth(), v.getDate(), v.getHours(), v.getMinutes(), v.getSeconds(), 999)")
+					dst.Code("new Date(v.getFullYear(), v.getMonth(), v.getDate(), v.getHours(), v.getMinutes(), v.getSeconds(), 999) as Date")
 				}
 				dst.Code("))")
 			} else {
 				if isNull {
 					dst.Code("(!$event) ? null : ")
 				}
-				dst.Code("_ctx.$timeToUtc($event)")
+				dst.Code("_ctx.$timeToUtc($event) as Date")
+			}
+			dst.Code(")")
+			if isNull {
+				dst.Code(" ?? null")
+			} else if isArray {
+				dst.Code(" ?? []")
+			} else {
+				dst.Code("new Date()")
 			}
 			dst.Code("}\n")
 			if isArray {
@@ -603,7 +607,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(7).Code("modelValue={model.").Code(fieldName).Code(" ??= false")
 			dst.Code("}\n")
 
-			dst.Tab(8).Code("onUpdate:modelValue={($event: string) => model.").Code(fieldName).Code(" = $event")
+			dst.Tab(8).Code("onUpdate:modelValue={($event: boolean) => model.").Code(fieldName).Code(" = $event")
 			dst.Code("}\n")
 
 			if form.onlyRead {
@@ -818,6 +822,13 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			if form.onlyRead {
 				dst.Tab(7).Code("disabled\n")
 			}
+			if form.maxCount != nil && !isNum && form.textarea {
+				dst.Tab(7).Code("maxlength = {").Code(strconv.FormatInt(*form.maxCount, 10)).Code("}\n")
+				dst.Tab(7).Code("show-word-limit\n")
+			}
+			if form.maxLine != nil && !isNum && form.textarea {
+				dst.Tab(7).Code("rows = {").Code(strconv.FormatInt(*form.maxLine, 10)).Code("}\n")
+			}
 
 			dst.Tab(7).Code("precision={").Code(strconv.Itoa(form.digit)).Code("}\n")
 			dst.Tab(6).Code("/>\n")
@@ -917,30 +928,38 @@ func (b *Builder) printGetStringValue(dst *build.Writer, expr ast.Expr, name str
 			}
 			dst.Import("hbuf_ts", "* as h")
 			if 0 == len(format) {
-				format = "yyyy/MM/dd HH:mm:ss"
+				format = "YYYY/MM/DD HH:mm:ss"
 			}
 			dst.Code("_ctx.$fd(").Code(name).Code(",\"").Code(format).Code("\")")
 		} else {
 			dst.Code(name)
-			if isNull {
-				dst.Code("?")
-			}
 			switch build.BaseType(t.Name) {
 			case build.Int8, build.Int16, build.Int32, build.Uint8, build.Uint16, build.Uint32:
+				if isNull {
+					dst.Code("?")
+				}
 				dst.Code(".toString()")
 			case build.Int64, build.Uint64:
+				if isNull {
+					dst.Code("?")
+				}
 				dst.Code(".toString()")
 			case build.Float, build.Double:
+				if isNull {
+					dst.Code("?")
+				}
 				dst.Code(".toFixed(").Code(strconv.Itoa(digit)).Code(")")
 			case build.Bool:
+				if isNull {
+					dst.Code("?")
+				}
 				dst.Code(".toString()")
 			case build.Decimal:
+				if isNull {
+					dst.Code("?")
+				}
 				dst.Code(".toFixed(").Code(strconv.Itoa(digit)).Code(")")
 			default:
-				dst.Code("? ''")
-			}
-			if isNull {
-				dst.Code("?? ''")
 			}
 		}
 	case *ast.ArrayType:
@@ -963,54 +982,97 @@ func (b *Builder) printGetStringValue(dst *build.Writer, expr ast.Expr, name str
 func (b *Builder) printSetStringValue(dst *build.Writer, expr ast.Expr, name string, isNull bool) {
 	switch expr.(type) {
 	case *ast.Ident:
-		if isNull {
-			dst.Code("(").Code(name).Code("?.length ?? 0) == 0 ? ").Code("null : (")
-		}
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
 			if ast.Enum == t.Obj.Kind {
 				pkg := b.getPackage(dst, t, "")
-				dst.Code(pkg).Code(".").Code(build.StringToHumpName(t.Name)).Code(".nameOf(").Code(name).Code(" as string)")
+				dst.Code("((").Code(name).Code("?.length ?? 0) == 0 ? ")
+				if isNull {
+					dst.Code("null")
+				} else {
+					dst.Code(pkg).Code(".").Code(build.StringToHumpName(t.Name)).Code(".valueOf(0)")
+				}
+				dst.Code(" : (")
+				dst.Code(pkg).Code(".").Code(build.StringToHumpName(t.Name)).Code(".nameOf(").Code(name).Code("! as string)")
+				dst.Code("))")
 			}
 		} else {
 			switch build.BaseType(t.Name) {
 			case build.Int8, build.Int16, build.Int32, build.Uint8, build.Uint16, build.Uint32:
-				dst.Code("Number.parseInt(").Code(name).Code(" ?? '0')")
-			case build.Int64, build.Uint64:
-				dst.Code("BigInt((").Code(name).Code(" as (string | null)) ?? '0')")
-			case build.Float, build.Double:
-				dst.Code("Number.parseFloat(").Code(name).Code(" ?? '0')")
-			case build.Bool:
+				dst.Code("((").Code(name).Code("?.length ?? 0) == 0 ? ")
 				if isNull {
-					dst.Code("(").Code(name).Code(" == null || ").Code(name).Code(".length == 0)").Code(" ? null : ")
+					dst.Code("null")
+				} else {
+					dst.Code("0")
 				}
-				dst.Code("(\"true\" == ").Code(name).Code(")")
+				dst.Code(" : (Number.parseInt(").Code(name).Code("! as string)))")
+			case build.Int64, build.Uint64:
+				dst.Code("((").Code(name).Code("?.length ?? 0) == 0 ? ")
+				if isNull {
+					dst.Code("null")
+				} else {
+					dst.Code("0n")
+				}
+				dst.Code(" : (BigInt(").Code(name).Code("! as string)))")
+			case build.Float, build.Double:
+				dst.Code("((").Code(name).Code("?.length ?? 0) == 0 ? ")
+				if isNull {
+					dst.Code("null")
+				} else {
+					dst.Code("0")
+				}
+				dst.Code(" : (Number.parseFloat(").Code(name).Code("! as string))")
+
+			case build.Bool:
+				dst.Code("((").Code(name).Code("?.length ?? 0) == 0 ? ")
+				if isNull {
+					dst.Code("null")
+				} else {
+					dst.Code("0")
+				}
+				dst.Code(" : (\"true\" == ").Code(name).Code("))")
 			case build.Date:
-				dst.Code("Date.parse(").Code(name).Code(" ?? \"\")")
+				dst.Code("((").Code(name).Code("?.length ?? 0) == 0 ? ")
+				if isNull {
+					dst.Code("null")
+				} else {
+					dst.Code("new Date()")
+				}
+				dst.Code(" : (new Date(").Code(name).Code("! as string)))")
 			case build.Decimal:
 				dst.Import("decimal.js", "* as d")
-				dst.Code("new d.Decimal((").Code(name).Code(" as (string | null)) ?? '0')")
+				dst.Code("((").Code(name).Code("?.length ?? 0) == 0 ? ")
+				if isNull {
+					dst.Code("null")
+				} else {
+					dst.Code("d.Decimal(0)")
+				}
+				dst.Code(" : (new d.Decimal(").Code(name).Code("! as string)))")
+
 			default:
-				dst.Code(name)
+				dst.Code("((").Code(name).Code("?.length ?? 0) == 0 ? ")
+				if isNull {
+					dst.Code("null")
+				} else {
+					dst.Code("''")
+				}
+				dst.Code(" : ").Code(name).Code("! as string)")
 			}
 		}
-		if isNull {
-			dst.Code(")")
-		}
+
 	case *ast.ArrayType:
 		ar := expr.(*ast.ArrayType)
-		if isNull {
-			dst.Code("!(").Code(name).Code("?.length ?? 0) ? ").Code("null : (")
-		}
 		dst.Code("(").Code(name).Code(" as (string[] | null))")
 		if isNull {
 			dst.Code("?")
 		}
 		dst.Code(".map((item: string)=> ")
-		b.printSetStringValue(dst, ar.Type(), "item", false)
+		b.printSetStringValue(dst, ar.Type(), "item", ar.IsEmpty())
 		dst.Code(")")
 		if isNull {
-			dst.Code(")")
+			dst.Code(" ?? null")
+		} else {
+			dst.Code(" ?? []")
 		}
 	case *ast.MapType:
 		if isNull {
@@ -1020,7 +1082,7 @@ func (b *Builder) printSetStringValue(dst *build.Writer, expr ast.Expr, name str
 		}
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
-		b.printSetStringValue(dst, t.Type(), name, true)
+		b.printSetStringValue(dst, t.Type(), name, t.IsEmpty())
 	}
 
 }
@@ -1074,58 +1136,102 @@ func (b *Builder) printGetNumberValue(dst *build.Writer, expr ast.Expr, name str
 		dst.Code("null")
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
-		b.printGetNumberValue(dst, t.Type(), name, true)
+		b.printGetNumberValue(dst, t.Type(), name, t.IsEmpty())
 	}
 }
 
 func (b *Builder) printSetNumberValue(dst *build.Writer, expr ast.Expr, name string, isNull bool) {
 	switch expr.(type) {
 	case *ast.Ident:
-		if isNull {
-			dst.Code("(").Code(name).Code(" == null ? ").Code("null : (")
-		}
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
 			if ast.Enum == t.Obj.Kind {
 				pkg := b.getPackage(dst, t, "")
-				dst.Code(pkg).Code(".").Code(build.StringToHumpName(t.Name)).Code(".valueOf(").Code(name).Code("!)")
+				dst.Code("(").Code(name).Code(" == null ? ")
+				if isNull {
+					dst.Code("null")
+				} else {
+					dst.Code(pkg).Code(".").Code(build.StringToHumpName(t.Name)).Code(".valueOf(0)")
+				}
+				dst.Code(" : (")
+				dst.Code(pkg).Code(".").Code(build.StringToHumpName(t.Name)).Code(".valueOf(").Code(name).Code("! as number)))")
 			}
 		} else {
 			switch build.BaseType(t.Name) {
 			case build.Int8, build.Int16, build.Int32, build.Uint8, build.Uint16, build.Uint32:
-				dst.Code(name).Code("!")
+				dst.Code("(").Code(name).Code(" == null ? ")
+				if isNull {
+					dst.Code("null")
+				} else {
+					dst.Code("0")
+				}
+				dst.Code(" : (").Code(name).Code("! as number))")
 			case build.Int64, build.Uint64:
-				dst.Code("BigInt(").Code(name).Code("!)")
+				dst.Code("(").Code(name).Code(" == null ? ")
+				if isNull {
+					dst.Code("null")
+				} else {
+					dst.Code("0n")
+				}
+				dst.Code(" : (BigInt(").Code(name).Code("! as number)))")
 			case build.Float, build.Double:
-				dst.Code("BigInt(").Code(name).Code("!)")
+				dst.Code("(").Code(name).Code(" == null ? ")
+				if isNull {
+					dst.Code("null")
+				} else {
+					dst.Code("0")
+				}
+				dst.Code(" : (").Code(name).Code("! as number))")
 			case build.Bool:
-				dst.Code(name).Code(" != 0")
+				dst.Code("(").Code(name).Code(" == null ? ")
+				if isNull {
+					dst.Code("null")
+				} else {
+					dst.Code("0")
+				}
+				dst.Code(" : (0 != ").Code(name).Code("))")
 			case build.Date:
-				dst.Code("new Date(").Code(name).Code("!)")
+				dst.Code("(").Code(name).Code(" == null ? ")
+				if isNull {
+					dst.Code("null")
+				} else {
+					dst.Code("new Date()")
+				}
+				dst.Code(" : (new Date(").Code(name).Code("! as number)))")
 			case build.Decimal:
 				dst.Import("decimal.js", "* as d")
-				dst.Code("new d.Decimal(").Code(name).Code("!)")
+				dst.Code("(").Code(name).Code(" == null ? ")
+				if isNull {
+					dst.Code("null")
+				} else {
+					dst.Code("d.Decimal(0)")
+				}
+				dst.Code(" : (new d.Decimal(").Code(name).Code("! as number)))")
+
 			default:
-				dst.Code(name)
+				dst.Code("(").Code(name).Code(" == null ? ")
+				if isNull {
+					dst.Code("null")
+				} else {
+					dst.Code("''")
+				}
+				dst.Code(" : ").Code(name).Code("! as number)")
 			}
 		}
-		if isNull {
-			dst.Code("))")
-		}
+
 	case *ast.ArrayType:
 		ar := expr.(*ast.ArrayType)
-		if isNull {
-			dst.Code("!(").Code(name).Code("?.length ?? 0) ? ").Code("null : (")
-		}
 		dst.Code("(").Code(name).Code(" as (number[] | null))")
 		if isNull {
 			dst.Code("?")
 		}
-		dst.Code(".map((number: string)=> ")
-		b.printSetNumberValue(dst, ar.Type(), "item", false)
+		dst.Code(".map((item: number)=> ")
+		b.printSetNumberValue(dst, ar.Type(), "item", ar.IsEmpty())
 		dst.Code(")")
 		if isNull {
-			dst.Code(")")
+			dst.Code(" ?? null")
+		} else {
+			dst.Code(" ?? []")
 		}
 	case *ast.MapType:
 		if isNull {
@@ -1135,7 +1241,6 @@ func (b *Builder) printSetNumberValue(dst *build.Writer, expr ast.Expr, name str
 		}
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
-		b.printSetNumberValue(dst, t.Type(), name, true)
+		b.printSetNumberValue(dst, t.Type(), name, t.IsEmpty())
 	}
-
 }

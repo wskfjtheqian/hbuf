@@ -569,7 +569,6 @@ func IsNumber(expr ast.Expr) bool {
 	}
 	return false
 }
-
 func IsNil(expr ast.Expr) bool {
 	switch expr.(type) {
 	case *ast.VarType:

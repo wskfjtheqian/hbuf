@@ -432,6 +432,9 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Import("element-plus", "{useLocale}")
 	dst.Tab(2).Code("const locale = useLocale()\n")
 	dst.Tab(2).Code("return (_ctx: Record<string, any>) => {\n")
+	dst.Tab(3).Code("const model = _ctx.model! as ")
+	b.printType(dst, typ.Name, false, false)
+	dst.Code("\n")
 	dst.Tab(3).Code("const maps: Record<string, any> = {\n")
 	langName := build.StringToFirstLower(name)
 
@@ -443,6 +446,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		}
 
 		isNum := build.IsNumber(field.Type)
+		isEnum := build.IsEnum(field.Type)
 		isArray := build.IsArray(field.Type)
 		isNull := build.IsNil(field.Type)
 		_, verify := build.GetTag(field.Tags, "verify")
@@ -472,80 +476,85 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Code(" rules={[{validator: ").Code(pName).Code(".verify").Code(name).Code("_").Code(build.StringToHumpName(field.Name.Name)).Code("(locale), trigger: 'blur'}]}")
 		}
 		dst.Code(">\n")
-		if "datetime" == formTag || "date" == formTag || "dates" == formTag || "year" == formTag || "month" == formTag {
+
+		//if fieldName == "maintainStart" {
+		//	println(fieldName)
+		//}
+
+		if "date" == formTag {
 			if len(customTag) == 0 {
 				customTag = "el-date-picker"
 			}
+
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 			dst.Tab(7).Code("modelValue={")
 			if isArray {
 				dst.Import("hbuf_ts", "* as h")
-				dst.Code(" h.convertArray(_ctx.model!.").Code(fieldName).Code(", (e) => _ctx.$timeToLocal(e))")
+				dst.Code(" h.convertArray(model.").Code(fieldName).Code(", (e) => _ctx.$timeToLocal(e))")
 			} else {
-				dst.Code("_ctx.$timeToLocal(_ctx.model!.").Code(fieldName).Code(")")
+				dst.Code("_ctx.$timeToLocal(model.").Code(fieldName).Code(")")
 			}
 			dst.Code("}\n")
-			dst.Tab(7).Code("onUpdate:modelValue={($event: (number | string | Date) | (number | string | Date)[] | null) => _ctx.model!.").Code(fieldName).Code(" = ")
-			if isNull {
-				dst.Code("(!$event) ? null : ")
-			}
+
+			dst.Tab(7).Code("onUpdate:modelValue={($event: (number | string | Date) | (number | string | Date)[] | null) => model.").Code(fieldName).Code(" = ")
+
 			if isArray {
-				dst.Import("hbuf_ts", "* as h")
-				if "datetime" == formTag {
-					dst.Code("h.convertArray($event, (e) => _ctx.$timeToUtc(e))")
-				} else if "month" == formTag {
-					dst.Code("h.convertArray([($event! as Date[])[0] as Date, new Date((($event! as Date[])[1] as Date).getFullYear(), (($event! as Date[])[1] as Date).getMonth() + 1, 0, 23, 59, 59, 999)], (e) => _ctx.$timeToUtc(e))")
-				} else if "dates" == formTag {
-					dst.Code("h.convertArray($event, (e) => _ctx.$timeToUtc(e))")
-				} else if "year" == formTag {
-					dst.Code("h.convertArray($event, (e) => _ctx.$timeToUtc(e))")
-				} else {
-					dst.Code("h.convertArray([($event! as Date[])[0] as Date, new Date((($event! as Date[])[1] as Date).setHours(23,59,59,999))], (e) => _ctx.$timeToUtc(e))")
+				dst.Code("($event as (Date[] | null))")
+				if isNull {
+					dst.Code("?")
 				}
+				dst.Code(".map((v, i)=> i == 0 ? _ctx.$timeToUtc(v) : _ctx.$timeToUtc(")
+
+				switch form.format {
+				case "YYYY":
+					dst.Code("new Date(v.getFullYear(), 12, 31, 23, 59, 59, 999)")
+				case "YYYY/MM":
+					dst.Code("new Date(v.getFullYear(), v.getMonth(), 31, 23, 59, 59, 999)")
+				case "YYYY/MM/DD":
+					dst.Code("new Date(v.getFullYear(), v.getMonth(), v.getDate(), 23, 59, 59, 999)")
+				case "YYYY/MM/DD HH":
+					dst.Code("new Date(v.getFullYear(), v.getMonth(), v.getDate(), v.getHours(), 59, 59, 999)")
+				case "YYYY/MM/DD HH:mm":
+					dst.Code("new Date(v.getFullYear(), v.getMonth(), v.getDate(), v.getHours(), v.getMinutes(), 59, 999)")
+				default:
+					dst.Code("new Date(v.getFullYear(), v.getMonth(), v.getDate(), v.getHours(), v.getMinutes(), v.getSeconds(), 999)")
+				}
+				dst.Code("))")
 			} else {
-				if "datetime" == formTag {
-					dst.Code("_ctx.$timeToUtc($event)")
-				} else if "month" == formTag {
-					dst.Code("_ctx.$timeToUtc($event)")
-				} else if "dates" == formTag {
-					dst.Code("($event?.length ?? 0 == 0) ? null :_ctx.$timeToUtc($event[0])")
-				} else if "year" == formTag {
-					dst.Code("_ctx.$timeToUtc($event)")
-				} else {
-					dst.Code("_ctx.$timeToUtc($event)")
+				if isNull {
+					dst.Code("(!$event) ? null : ")
 				}
+				dst.Code("_ctx.$timeToUtc($event)")
 			}
 			dst.Code("}\n")
+			if isArray {
+				dst.Tab(7).Code("default-time={[new Date(2000, 1, 1, 0, 0, 0, 0), new Date(2000, 1, 1, 23, 59, 59, 999)]}\n")
+			}
 			dst.Tab(7).Code("type=\"")
 			if isArray {
-				if "datetime" == formTag {
-					dst.Code("datetimerange")
-				} else if "month" == formTag {
+				switch form.format {
+				case "YYYY":
+					dst.Code("yearrange")
+				case "YYYY/MM":
 					dst.Code("monthrange")
-				} else if "dates" == formTag {
-					dst.Code("dates")
-				} else if "year" == formTag {
-					dst.Code("years")
-				} else {
+				case "YYYY/MM/DD":
 					dst.Code("daterange")
+				default:
+					dst.Code("datetimerange")
 				}
 			} else {
-				if "datetime" == formTag {
-					dst.Code("datetime")
-				} else if "month" == formTag {
-					dst.Code("month")
-				} else if "dates" == formTag {
-					dst.Code("dates")
-				} else if "year" == formTag {
+				switch form.format {
+				case "YYYY":
 					dst.Code("year")
-				} else {
-					dst.Code("date")
+				case "YYYY/MM":
+					dst.Code("month")
+				case "YYYY/MM/DD":
+					dst.Code("dates")
+				default:
+					dst.Code("datetime")
 				}
 			}
 			dst.Code("\"\n")
-			if form.unlink {
-				dst.Tab(7).Code("unlink-panels\n")
-			}
 			dst.Tab(7).Code("shortcuts={_ctx.$datePackerShortcuts(_ctx.$t)}\n")
 			dst.Tab(7).Code("size={props.size}\n")
 			dst.Tab(7).Code("clearable=")
@@ -564,9 +573,9 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 			dst.Tab(7).Code("modelValue={")
-			b.printGetStringValue(dst, field.Type, "_ctx.model!."+fieldName, isNull, form.digit, form.format)
+			b.printGetStringValue(dst, field.Type, "model."+fieldName, isNull, form.digit, form.format)
 			dst.Code("}\n")
-			dst.Tab(7).Code("onUpdate:modelValue={($event: string[] | string | null) => _ctx.model!.").Code(fieldName).Code(" = ")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: string[] | string | null) => model.").Code(fieldName).Code(" = ")
 			b.printSetStringValue(dst, field.Type, "$event", isNull)
 			dst.Code("}\n")
 
@@ -591,10 +600,10 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 
-			dst.Tab(7).Code("modelValue={_ctx.model!.").Code(fieldName).Code(" ??= false")
+			dst.Tab(7).Code("modelValue={model.").Code(fieldName).Code(" ??= false")
 			dst.Code("}\n")
 
-			dst.Tab(8).Code("onUpdate:modelValue={($event: string) => _ctx.model!.").Code(fieldName).Code(" = $event")
+			dst.Tab(8).Code("onUpdate:modelValue={($event: string) => model.").Code(fieldName).Code(" = $event")
 			dst.Code("}\n")
 
 			if form.onlyRead {
@@ -607,9 +616,9 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 			dst.Tab(7).Code("modelValue={")
-			b.printGetStringValue(dst, field.Type, "_ctx.model!."+fieldName, isNull, form.digit, form.format)
+			b.printGetStringValue(dst, field.Type, "model."+fieldName, isNull, form.digit, form.format)
 			dst.Code("}\n")
-			dst.Tab(7).Code("onUpdate:modelValue={($event: string[] | string | null) => _ctx.model!.").Code(fieldName).Code(" = ")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: string[] | string | null) => model.").Code(fieldName).Code(" = ")
 			b.printSetStringValue(dst, field.Type, "$event", isNull)
 			dst.Code("}\n")
 
@@ -626,9 +635,9 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 			dst.Tab(7).Code("modelValue={")
-			b.printGetStringValue(dst, field.Type, "_ctx.model!."+fieldName, isNull, form.digit, form.format)
+			b.printGetStringValue(dst, field.Type, "model."+fieldName, isNull, form.digit, form.format)
 			dst.Code("}\n")
-			dst.Tab(7).Code("onUpdate:modelValue={($event: string[] | string | null) => _ctx.model!.").Code(fieldName).Code(" = ")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: string[] | string | null) => model.").Code(fieldName).Code(" = ")
 			b.printSetStringValue(dst, field.Type, "$event", isNull)
 			dst.Code("}\n")
 
@@ -645,9 +654,9 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 			dst.Tab(7).Code("modelValue={")
-			b.printGetStringValue(dst, field.Type, "_ctx.model!."+fieldName, isNull, form.digit, form.format)
+			b.printGetStringValue(dst, field.Type, "model."+fieldName, isNull, form.digit, form.format)
 			dst.Code("}\n")
-			dst.Tab(7).Code("onUpdate:modelValue={($event: string | null) => _ctx.model!.").Code(fieldName).Code(" = ")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: string | null) => model.").Code(fieldName).Code(" = ")
 			b.printSetStringValue(dst, field.Type, "$event", isNull)
 			dst.Code("}\n")
 
@@ -671,7 +680,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 
-			dst.Tab(7).Code("v-model={_ctx.model!.").Code(fieldName).Code("}\n")
+			dst.Tab(7).Code("v-model={model.").Code(fieldName).Code("}\n")
 			if isNull {
 				dst.Tab(7).Code("clearable\n")
 			}
@@ -680,15 +689,15 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(7).Code(">\n")
 			dst.Tab(6).Code("</").Code(customTag).Code(">\n")
-		} else if "number" == formTag && isNum {
+		} else if "number" == formTag && (isNum || isEnum) {
 			if len(customTag) == 0 {
 				customTag = "el-input-number"
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 			dst.Tab(7).Code("modelValue={")
-			b.printGetNumberValue(dst, field.Type, "_ctx.model!."+fieldName, isNull)
+			b.printGetNumberValue(dst, field.Type, "model."+fieldName, isNull)
 			dst.Code("}\n")
-			dst.Tab(7).Code("onUpdate:modelValue={($event: number | null) => _ctx.model!.").Code(fieldName).Code(" = ")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: number | null) => model.").Code(fieldName).Code(" = ")
 			b.printSetNumberValue(dst, field.Type, "$event", isNull)
 			dst.Code("}\n")
 
@@ -716,7 +725,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 
-			dst.Tab(7).Code("v-model={_ctx.model!." + fieldName + "}\n")
+			dst.Tab(7).Code("v-model={model." + fieldName + "}\n")
 			dst.Tab(7).Code("size={props.size}\n")
 			dst.Tab(7).Code("show-alpha color-format=\"hex\"\n")
 			if isNull {
@@ -732,9 +741,9 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 			dst.Tab(7).Code("modelValue={")
-			b.printGetStringValue(dst, field.Type, "_ctx.model!."+fieldName, isNull, form.digit, form.format)
+			b.printGetStringValue(dst, field.Type, "model."+fieldName, isNull, form.digit, form.format)
 			dst.Code("}\n")
-			dst.Tab(7).Code("onUpdate:modelValue={($event: string | null) => _ctx.model!.").Code(fieldName).Code(" = ")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: string | null) => model.").Code(fieldName).Code(" = ")
 			b.printSetStringValue(dst, field.Type, "$event", isNull)
 			dst.Code("}\n")
 
@@ -789,9 +798,9 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			//	println("userName")
 			//}
 			dst.Tab(7).Code("modelValue={")
-			b.printGetStringValue(dst, field.Type, "_ctx.model!."+fieldName, isNull, form.digit, form.format)
+			b.printGetStringValue(dst, field.Type, "model."+fieldName, isNull, form.digit, form.format)
 			dst.Code("}\n")
-			dst.Tab(7).Code("onUpdate:modelValue={($event: string | null) => _ctx.model!.").Code(fieldName).Code(" = ")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: string | null) => model.").Code(fieldName).Code(" = ")
 			b.printSetStringValue(dst, field.Type, "$event", isNull)
 			dst.Code("}\n")
 
@@ -1025,7 +1034,7 @@ func (b *Builder) printGetNumberValue(dst *build.Writer, expr ast.Expr, name str
 				if isNull {
 					dst.Code(name).Code(" == null").Code(" ? null : ")
 				}
-				dst.Code(name)
+				dst.Code(name).Code(".value")
 			}
 		} else if build.BaseType(t.Name) == build.Date {
 			if isNull {

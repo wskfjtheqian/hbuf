@@ -242,7 +242,7 @@ func (b *Builder) printType(dst *build.Writer, expr ast.Expr, notEmpty bool, isR
 			if isRecordKey {
 				dst.Code("number")
 			} else {
-				pkg := b.getPackage(dst, expr, "")
+				pkg := b.getPackage(dst, expr, "", false)
 				dst.Code(pkg)
 				dst.Code(".")
 				dst.Code(expr.(*ast.Ident).Name)
@@ -294,7 +294,7 @@ func (b *Builder) printType(dst *build.Writer, expr ast.Expr, notEmpty bool, isR
 	return
 }
 
-func (b *Builder) getPackage(dst *build.Writer, expr ast.Expr, s string) string {
+func (b *Builder) getPackage(dst *build.Writer, expr ast.Expr, s string, typ bool) string {
 	file := (expr.(*ast.Ident)).Obj.Data
 	switch file.(type) {
 	case *ast.File:
@@ -318,8 +318,15 @@ func (b *Builder) getPackage(dst *build.Writer, expr ast.Expr, s string) string 
 		}
 	}
 
-	p := dst.Import("./"+name, "* as $"+strconv.Itoa(len(dst.GetImports())))
-	return p[5:]
+	var p string
+	if typ {
+		p = dst.Import("./"+name, "type * as $"+strconv.Itoa(len(dst.GetImports())))
+		return p[10:]
+	} else {
+		p = dst.Import("./"+name, "* as $"+strconv.Itoa(len(dst.GetImports())))
+		return p[5:]
+	}
+
 }
 
 func (b *Builder) printDefault(dst *build.Writer, expr ast.Expr, notEmpty bool) string {
@@ -328,14 +335,14 @@ func (b *Builder) printDefault(dst *build.Writer, expr ast.Expr, notEmpty bool) 
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
 			if ast.Enum == t.Obj.Kind {
-				pkg := b.getPackage(dst, expr, "")
+				pkg := b.getPackage(dst, expr, "", false)
 				dst.Code(pkg)
 				dst.Code(".")
 				dst.Code(expr.(*ast.Ident).Name)
 				dst.Code(".valueOf(0)")
 			} else {
 				dst.Code("new ")
-				pkg := b.getPackage(dst, expr, "")
+				pkg := b.getPackage(dst, expr, "", false)
 				dst.Code(pkg)
 				dst.Code(".")
 				dst.Code(expr.(*ast.Ident).Name)

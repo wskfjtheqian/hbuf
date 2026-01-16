@@ -6,7 +6,7 @@ import (
 )
 
 func (b *Builder) printServerCode(dst *build.Writer, typ *ast.ServerType) {
-	dst.Import("hbuf_ts", "* as h")
+	dst.Import("hbuf_ts", "type * as h")
 
 	b.printServer(dst, typ)
 	b.printServerImp(dst, typ)
@@ -42,7 +42,7 @@ func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
 			b.printType(dst, method.Param, false, false)
 		}
 
-		dst.Code(", opt?: h.Option): ")
+		dst.Code(", _opt?: h.Option): ")
 		dst.Code("Promise<")
 		if resultType == "void" {
 			dst.Code("void")
@@ -58,7 +58,7 @@ func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
 
 func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 	dst.Code("export class " + build.StringToHumpName(typ.Name.Name) + "Client implements ")
-	dst.Code(b.getPackage(dst, typ.Name, ""))
+	dst.Code(b.getPackage(dst, typ.Name, "", true))
 	dst.Code(".")
 	dst.Code(build.StringToHumpName(typ.Name.Name))
 
@@ -94,7 +94,7 @@ func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 			b.printType(dst, method.Param, false, false)
 		}
 
-		dst.Code(", opt?: h.Option): ")
+		dst.Code(", _opt?: h.Option): ")
 		dst.Code("Promise<")
 		if resultType == "void" {
 			dst.Code("void")

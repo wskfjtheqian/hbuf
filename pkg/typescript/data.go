@@ -36,13 +36,13 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) {
 		return
 	}
 
-	dst.Tab(1).Code("public static fromMap(json: Record<string, any>, tag: string): " + build.StringToHumpName(typ.Name.Name) + "{\n")
+	dst.Tab(1).Code("public static fromMap(_json: Record<string, any>, _tag: string): " + build.StringToHumpName(typ.Name.Name) + "{\n")
 	dst.Tab(2).Code("const ret = new " + build.StringToHumpName(typ.Name.Name) + "()\n")
-	dst.Tab(2).Code("let temp:any\n")
+	dst.Tab(2).Code("let _temp:any\n")
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 		dst.Tab(2).Code("ret." + build.StringToFirstLower(field.Name.Name) + " = ")
 		jsonName := build.StringToUnderlineName(field.Name.Name)
-		b.printFormMap(dst, "(temp = json[\""+jsonName+"\"])", "temp", field.Type, data, false, false)
+		b.printFormMap(dst, "(_temp = _json[\""+jsonName+"\"])", "_temp", field.Type, data, false, false)
 		dst.Code("\n")
 		return nil
 	})
@@ -54,7 +54,7 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) {
 	dst.Tab(1).Code("}\n\n")
 
 	dst.Code("\n")
-	dst.Tab(1).Code("public toMap(tag: string): Record<string, any> {\n")
+	dst.Tab(1).Code("public toMap(_tag: string): Record<string, any> {\n")
 	dst.Tab(2).Code("return {\n")
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 		dst.Tab(3).Code("\"" + build.StringToUnderlineName(field.Name.Name))
@@ -69,7 +69,7 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) {
 	dst.Tab(2).Code("};\n")
 	dst.Tab(1).Code("}\n\n")
 
-	dst.Tab(1).Code("public static fromData(data: ArrayBuffer): " + build.StringToHumpName(typ.Name.Name) + " {\n")
+	dst.Tab(1).Code("public static fromData(_data: ArrayBuffer): " + build.StringToHumpName(typ.Name.Name) + " {\n")
 	dst.Tab(2).Code("const ret = new " + build.StringToHumpName(typ.Name.Name) + "()\n")
 	dst.Tab(2).Code("return ret\n")
 	dst.Tab(1).Code("}\n\n")
@@ -188,7 +188,7 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
-			p := b.getPackage(dst, t, "")
+			p := b.getPackage(dst, t, "", false)
 			if ast.Enum == t.Obj.Kind {
 				if isRecordKey {
 					if empty {
@@ -205,9 +205,9 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 				}
 			} else if ast.Data == t.Obj.Kind {
 				if empty {
-					dst.Code("null == " + name + " ? null : " + p + "." + t.Name + ".fromMap(" + v + ", tag)")
+					dst.Code("null == " + name + " ? null : " + p + "." + t.Name + ".fromMap(" + v + ", _tag)")
 				} else {
-					dst.Code("null == " + name + " ? " + p + "." + t.Name + ".fromMap({}, tag) : " + p + "." + t.Name + ".fromMap(" + v + ", tag)")
+					dst.Code("null == " + name + " ? " + p + "." + t.Name + ".fromMap({}, _tag) : " + p + "." + t.Name + ".fromMap(" + v + ", _tag)")
 				}
 			} else {
 				dst.Code("map[\"" + name + "\"]")
@@ -353,9 +353,9 @@ func (b *Builder) printToMap(dst *build.Writer, key string, name string, expr as
 				}
 			} else if ast.Data == t.Obj.Kind {
 				if empty {
-					dst.Code(name + "?.toMap(tag)")
+					dst.Code(name + "?.toMap(_tag)")
 				} else {
-					dst.Code(name + ".toMap(tag)")
+					dst.Code(name + ".toMap(_tag)")
 				}
 			} else {
 				dst.Code(name)
@@ -437,7 +437,7 @@ func (b *Builder) printExtend(dst *build.Writer, extends []*ast.Extends, start b
 			dst.Code(", ")
 		}
 
-		dst.Code(b.getPackage(dst, v.Name, ""))
+		dst.Code(b.getPackage(dst, v.Name, "", false))
 		dst.Code(".")
 		dst.Code(build.StringToHumpName(v.Name.Name))
 

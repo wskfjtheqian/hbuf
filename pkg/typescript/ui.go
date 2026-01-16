@@ -14,7 +14,7 @@ func (b *Builder) printFormCode(dst *build.Writer, expr ast.Expr) {
 	case *ast.DataType:
 		dst.Import("vue", "{defineComponent, type PropType}")
 		typ := expr.(*ast.DataType)
-		b.getPackage(dst, typ.Name, "")
+		b.getPackage(dst, typ.Name, "", false)
 		b.printDataUi(dst, typ)
 
 	case *ast.ServerType:
@@ -218,12 +218,12 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 
 	dst.Code("export const " + name + "TableColumn = defineComponent({\n")
 	dst.Tab(1).Code("name: '" + name + "TableColumn',\n")
-	dst.Tab(1).Code("props: {\n")
+	dst.Tab(1).Code("_props: {\n")
 	dst.Tab(2).Code("setting: (Function as unknown) as () => ((name: string, lang: string, list: { name: string, val: any }[]) => { name: string, val: any }[]),\n")
-	dst.Tab(2).Code("position: Array<String>,\n")
+	dst.Tab(2).Code("position: Array<string>,\n")
 	dst.Tab(2).Code("filter: (Function as unknown) as () => (item: string) => boolean,\n")
 	dst.Tab(1).Code("},\n")
-	dst.Tab(1).Code("setup(props:any) {\n")
+	dst.Tab(1).Code("setup(_props:any) {\n")
 	dst.Tab(2).Code("return (_ctx: Record<string, any>) => {\n")
 	dst.Tab(3).Code("const maps: Record<string, any> = {\n")
 	langName := build.StringToFirstLower(name)
@@ -262,7 +262,9 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 			custom = table.table[1]
 		}
 		dst.Tab(6).Code("{{\n")
-		dst.Tab(7).Code("default: (scope:any) => (\n")
+		dst.Tab(7).Code("default: (scope:{row: ")
+		b.printType(dst, typ.Name, false, false)
+		dst.Code(" }) => (\n")
 
 		if len(custom) > 0 {
 			dst.Tab(8).Code("<").Code(custom).Code(" value={scope.row.").Code(fieldName).Code("} />\n")
@@ -274,7 +276,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(10).Code("}}\n")
 			dst.Tab(8).Code("</el-popover>\n")
 		} else if "switch" == tag {
-			dst.Tab(8).Code("<el-switch v-model={scope.row!.").Code(fieldName).Code("} disabled />\n")
+			dst.Tab(8).Code("<el-switch v-_model={scope.row!.").Code(fieldName).Code("} disabled />\n")
 		} else if "link" == tag {
 			dst.Tab(8).Code("<el-link href={scope.row!.").Code(fieldName).Code("} target=\"_blank\">{{\n")
 			dst.Tab(9).Code("default: () => scope.row.").Code(fieldName).Code("\n")
@@ -312,8 +314,8 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Code("                }\n")
 	dst.Code("            }\n")
 	dst.Code("            list.sort((a, b) => {\n")
-	dst.Code("                const indexA = props.position?.indexOf(a.name) ?? 0\n")
-	dst.Code("                const indexB = props.position?.indexOf(b.name) ?? 0\n")
+	dst.Code("                const indexA = _props.position?.indexOf(a.name) ?? 0\n")
+	dst.Code("                const indexB = _props.position?.indexOf(b.name) ?? 0\n")
 	dst.Code("                if (indexA < 0 && indexB < 0) {\n")
 	dst.Code("                    return 0\n")
 	dst.Code("                } else if (indexA < 0) {\n")
@@ -325,8 +327,8 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Code("                }\n")
 	dst.Code("            })\n")
 	dst.Code("\n")
-	dst.Code("            if (props.setting) {\n")
-	dst.Code("                list = props.setting(\"").Code(name).Code("\", \"").Code(langName).Code("Lang\", list)\n")
+	dst.Code("            if (_props.setting) {\n")
+	dst.Code("                list = _props.setting(\"").Code(name).Code("\", \"").Code(langName).Code("Lang\", list)\n")
 	dst.Code("            }\n")
 	dst.Code("            return list.map((it) => it.val())\n")
 	dst.Code("\n")
@@ -347,7 +349,7 @@ func (b *Builder) printTableString(dst *build.Writer, name string, expr ast.Expr
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
-			b.getPackage(dst, expr, "")
+			b.getPackage(dst, expr, "", false)
 			b.printTableString(dst, name, t.Obj.Decl.(*ast.TypeSpec).Type, empty, digit, format, val, isDigit)
 		} else {
 			switch build.BaseType(t.Name) {
@@ -374,7 +376,6 @@ func (b *Builder) printTableString(dst *build.Writer, name string, expr ast.Expr
 				if empty {
 					dst.Code("null == ").Code(name).Code(" ? \"\" : ")
 				}
-				dst.Import("hbuf_ts", "* as h")
 				if 0 == len(format) {
 					format = "YYYY/MM/DD HH:mm:ss"
 				}
@@ -417,20 +418,20 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 
 	dst.Code("export const " + name + "FormItems = defineComponent({\n")
 	dst.Tab(1).Code("name: '" + name + "FormItems',\n")
-	dst.Tab(1).Code("props: {\n")
+	dst.Tab(1).Code("_props: {\n")
 	dst.Tab(2).Code("size: String as PropType<\"large\" | \"default\" | \"small\">,\n")
 	dst.Tab(2).Code("isAdd: Boolean,\n")
-	dst.Tab(2).Code("position: Array<String>,\n")
+	dst.Tab(2).Code("position: Array<string>,\n")
 	dst.Tab(2).Code("filter: (Function as unknown) as () => (item: string) => boolean,\n")
-	dst.Tab(2).Code("model: ")
+	dst.Tab(2).Code("_model: ")
 	b.printType(dst, typ.Name, false, false)
 	dst.Tab(1).Code("\n")
 	dst.Tab(1).Code("},\n")
-	dst.Tab(1).Code("setup(props: Record<string, any>) {\n")
+	dst.Tab(1).Code("setup(_props: Record<string, any>) {\n")
 	dst.Import("element-plus", "{useLocale}")
-	dst.Tab(2).Code("const locale = useLocale()\n")
+	dst.Tab(2).Code("const _locale = useLocale()\n")
 	dst.Tab(2).Code("return (_ctx: Record<string, any>) => {\n")
-	dst.Tab(3).Code("const model = _ctx.model! as ")
+	dst.Tab(3).Code("const _model = _ctx._model! as ")
 	b.printType(dst, typ.Name, false, false)
 	dst.Code("\n")
 	dst.Tab(3).Code("const maps: Record<string, any> = {\n")
@@ -470,8 +471,8 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		dst.Tab(5).Code("<el-form-item class=\"").Code(className).Code("\" prop=\"").Code(fieldName).Code("\"")
 		dst.Code(" label={_ctx.$t(\"").Code(langName).Code("Lang.").Code(fieldName).Code("\")}")
 		if verify {
-			pName := b.getPackage(dst, typ.Name, "verify")
-			dst.Code(" rules={[{validator: ").Code(pName).Code(".verify").Code(name).Code("_").Code(build.StringToHumpName(field.Name.Name)).Code("(locale), trigger: 'blur'}]}")
+			pName := b.getPackage(dst, typ.Name, "verify", false)
+			dst.Code(" rules={[{validator: ").Code(pName).Code(".verify").Code(name).Code("_").Code(build.StringToHumpName(field.Name.Name)).Code("(_locale), trigger: 'blur'}]}")
 		}
 		dst.Code(">\n")
 
@@ -488,13 +489,13 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(7).Code("modelValue={")
 			if isArray {
 				dst.Import("hbuf_ts", "* as h")
-				dst.Code(" h.convertArray(model.").Code(fieldName).Code(", (e) => _ctx.$timeToLocal(e))")
+				dst.Code(" h.convertArray(_model.").Code(fieldName).Code(", (e) => _ctx.$timeToLocal(e))")
 			} else {
-				dst.Code("_ctx.$timeToLocal(model.").Code(fieldName).Code(")")
+				dst.Code("_ctx.$timeToLocal(_model.").Code(fieldName).Code(")")
 			}
 			dst.Code("}\n")
 
-			dst.Tab(7).Code("onUpdate:modelValue={($event: (number | string | Date) | (number | string | Date)[] | null) => model.").Code(fieldName).Code(" = (")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: (number | string | Date) | (number | string | Date)[] | null) => _model.").Code(fieldName).Code(" = (")
 
 			if isArray {
 				dst.Code("($event as (Date[] | null))")
@@ -560,7 +561,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Code("\"\n")
 			dst.Tab(7).Code("shortcuts={_ctx.$datePackerShortcuts(_ctx.$t)}\n")
-			dst.Tab(7).Code("size={props.size}\n")
+			dst.Tab(7).Code("size={_props.size}\n")
 			dst.Tab(7).Code("clearable=")
 			if isNull {
 				dst.Code("{true}\n")
@@ -577,14 +578,14 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 			dst.Tab(7).Code("modelValue={")
-			b.printGetStringValue(dst, field.Type, "model."+fieldName, isNull, form.digit, form.format)
+			b.printGetStringValue(dst, field.Type, "_model."+fieldName, isNull, form.digit, form.format)
 			dst.Code("}\n")
-			dst.Tab(7).Code("onUpdate:modelValue={($event: string[] | string | null) => model.").Code(fieldName).Code(" = ")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: string[] | string | null) => _model.").Code(fieldName).Code(" = ")
 			b.printSetStringValue(dst, field.Type, "$event", isNull)
 			dst.Code("}\n")
 
 			dst.Tab(7).Code("style={\"min-width:180px\"}\n")
-			dst.Tab(7).Code("size={props.size}\n")
+			dst.Tab(7).Code("size={_props.size}\n")
 			dst.Tab(7).Code("filterable\n")
 			if isNull {
 				dst.Tab(7).Code("clearable\n")
@@ -604,10 +605,10 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 
-			dst.Tab(7).Code("modelValue={model.").Code(fieldName).Code(" ??= false")
+			dst.Tab(7).Code("modelValue={_model.").Code(fieldName).Code(" ??= false")
 			dst.Code("}\n")
 
-			dst.Tab(8).Code("onUpdate:modelValue={($event: boolean) => model.").Code(fieldName).Code(" = $event")
+			dst.Tab(8).Code("onUpdate:modelValue={($event: boolean) => _model.").Code(fieldName).Code(" = $event")
 			dst.Code("}\n")
 
 			if form.onlyRead {
@@ -620,13 +621,13 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 			dst.Tab(7).Code("modelValue={")
-			b.printGetStringValue(dst, field.Type, "model."+fieldName, isNull, form.digit, form.format)
+			b.printGetStringValue(dst, field.Type, "_model."+fieldName, isNull, form.digit, form.format)
 			dst.Code("}\n")
-			dst.Tab(7).Code("onUpdate:modelValue={($event: string[] | string | null) => model.").Code(fieldName).Code(" = ")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: string[] | string | null) => _model.").Code(fieldName).Code(" = ")
 			b.printSetStringValue(dst, field.Type, "$event", isNull)
 			dst.Code("}\n")
 
-			dst.Tab(7).Code("size={props.size}\n")
+			dst.Tab(7).Code("size={_props.size}\n")
 			if form.onlyRead {
 				dst.Tab(7).Code("disabled\n")
 			}
@@ -639,13 +640,13 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 			dst.Tab(7).Code("modelValue={")
-			b.printGetStringValue(dst, field.Type, "model."+fieldName, isNull, form.digit, form.format)
+			b.printGetStringValue(dst, field.Type, "_model."+fieldName, isNull, form.digit, form.format)
 			dst.Code("}\n")
-			dst.Tab(7).Code("onUpdate:modelValue={($event: string[] | string | null) => model.").Code(fieldName).Code(" = ")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: string[] | string | null) => _model.").Code(fieldName).Code(" = ")
 			b.printSetStringValue(dst, field.Type, "$event", isNull)
 			dst.Code("}\n")
 
-			dst.Tab(7).Code("size={props.size}\n")
+			dst.Tab(7).Code("size={_props.size}\n")
 			if form.onlyRead {
 				dst.Tab(7).Code("disabled\n")
 			}
@@ -658,13 +659,13 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 			dst.Tab(7).Code("modelValue={")
-			b.printGetStringValue(dst, field.Type, "model."+fieldName, isNull, form.digit, form.format)
+			b.printGetStringValue(dst, field.Type, "_model."+fieldName, isNull, form.digit, form.format)
 			dst.Code("}\n")
-			dst.Tab(7).Code("onUpdate:modelValue={($event: string | null) => model.").Code(fieldName).Code(" = ")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: string | null) => _model.").Code(fieldName).Code(" = ")
 			b.printSetStringValue(dst, field.Type, "$event", isNull)
 			dst.Code("}\n")
 
-			dst.Tab(7).Code("size={props.size}\n")
+			dst.Tab(7).Code("size={_props.size}\n")
 			dst.Tab(7).Code("type=\"password\"\n")
 			dst.Tab(7).Code("show-password\n")
 			if isNull {
@@ -684,7 +685,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 
-			dst.Tab(7).Code("v-model={model.").Code(fieldName).Code("}\n")
+			dst.Tab(7).Code("v-_model={_model.").Code(fieldName).Code("}\n")
 			if isNull {
 				dst.Tab(7).Code("clearable\n")
 			}
@@ -699,13 +700,13 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 			dst.Tab(7).Code("modelValue={")
-			b.printGetNumberValue(dst, field.Type, "model."+fieldName, isNull)
+			b.printGetNumberValue(dst, field.Type, "_model."+fieldName, isNull)
 			dst.Code("}\n")
-			dst.Tab(7).Code("onUpdate:modelValue={($event: number | null) => model.").Code(fieldName).Code(" = ")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: number | null) => _model.").Code(fieldName).Code(" = ")
 			b.printSetNumberValue(dst, field.Type, "$event", isNull)
 			dst.Code("}\n")
 
-			dst.Tab(7).Code("size={props.size}\n")
+			dst.Tab(7).Code("size={_props.size}\n")
 			if isNull {
 				dst.Tab(7).Code("clearable\n")
 			}
@@ -729,8 +730,8 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 
-			dst.Tab(7).Code("v-model={model." + fieldName + "}\n")
-			dst.Tab(7).Code("size={props.size}\n")
+			dst.Tab(7).Code("v-_model={_model." + fieldName + "}\n")
+			dst.Tab(7).Code("size={_props.size}\n")
 			dst.Tab(7).Code("show-alpha color-format=\"hex\"\n")
 			if isNull {
 				dst.Tab(7).Code("clearable\n")
@@ -745,13 +746,13 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 			dst.Tab(7).Code("modelValue={")
-			b.printGetStringValue(dst, field.Type, "model."+fieldName, isNull, form.digit, form.format)
+			b.printGetStringValue(dst, field.Type, "_model."+fieldName, isNull, form.digit, form.format)
 			dst.Code("}\n")
-			dst.Tab(7).Code("onUpdate:modelValue={($event: string | null) => model.").Code(fieldName).Code(" = ")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: string | null) => _model.").Code(fieldName).Code(" = ")
 			b.printSetStringValue(dst, field.Type, "$event", isNull)
 			dst.Code("}\n")
 
-			dst.Tab(7).Code("size={props.size}\n")
+			dst.Tab(7).Code("size={_props.size}\n")
 			if isNull {
 				dst.Tab(7).Code("clearable\n")
 			}
@@ -802,13 +803,13 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			//	println("userName")
 			//}
 			dst.Tab(7).Code("modelValue={")
-			b.printGetStringValue(dst, field.Type, "model."+fieldName, isNull, form.digit, form.format)
+			b.printGetStringValue(dst, field.Type, "_model."+fieldName, isNull, form.digit, form.format)
 			dst.Code("}\n")
-			dst.Tab(7).Code("onUpdate:modelValue={($event: string | null) => model.").Code(fieldName).Code(" = ")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: string | null) => _model.").Code(fieldName).Code(" = ")
 			b.printSetStringValue(dst, field.Type, "$event", isNull)
 			dst.Code("}\n")
 
-			dst.Tab(7).Code("size={props.size}\n")
+			dst.Tab(7).Code("size={_props.size}\n")
 			if isNull {
 				dst.Tab(7).Code("clearable\n")
 			}
@@ -864,7 +865,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Tab(3).Code("}\n")
 	if len(disabled) > 0 {
 		dst.Tab(3).Code("const disabled = [").Code(strings.Join(disabled, ", ")).Code("]\n")
-		dst.Tab(3).Code("return list.filter((it) => !props.isAdd || !disabled.includes(it)).map((it) => maps[it]())\n")
+		dst.Tab(3).Code("return list.filter((it) => !_props.isAdd || !disabled.includes(it)).map((it) => maps[it]())\n")
 	} else {
 		dst.Tab(3).Code("return list.map((it) => maps[it]())\n")
 	}
@@ -877,7 +878,7 @@ func (b *Builder) printMenuItem(dst *build.Writer, expr ast.Expr, empty bool, op
 	switch expr.(type) {
 	case *ast.EnumType:
 		t := expr.(*ast.EnumType)
-		pkg := b.getPackage(dst, t.Name, "")
+		pkg := b.getPackage(dst, t.Name, "", false)
 		name := build.StringToHumpName(t.Name.Name)
 		dst.Tab(6 + 1).Code("{").Code(pkg).Code(".").Code(name).Code(".values.map((val) => {\n")
 		dst.Tab(7 + 1).Code("return <" + option + " key={val.name}\n")
@@ -888,7 +889,7 @@ func (b *Builder) printMenuItem(dst *build.Writer, expr ast.Expr, empty bool, op
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
-			b.getPackage(dst, expr, "")
+			b.getPackage(dst, expr, "", false)
 			b.printMenuItem(dst, t.Obj.Decl.(*ast.TypeSpec).Type, empty, option)
 		}
 	case *ast.ArrayType:
@@ -926,7 +927,6 @@ func (b *Builder) printGetStringValue(dst *build.Writer, expr ast.Expr, name str
 			if isNull {
 				dst.Code(name).Code(" == null").Code(" ? \"\" : ")
 			}
-			dst.Import("hbuf_ts", "* as h")
 			if 0 == len(format) {
 				format = "YYYY/MM/DD HH:mm:ss"
 			}
@@ -985,7 +985,7 @@ func (b *Builder) printSetStringValue(dst *build.Writer, expr ast.Expr, name str
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
 			if ast.Enum == t.Obj.Kind {
-				pkg := b.getPackage(dst, t, "")
+				pkg := b.getPackage(dst, t, "", false)
 				dst.Code("((").Code(name).Code("?.length ?? 0) == 0 ? ")
 				if isNull {
 					dst.Code("null")
@@ -1062,10 +1062,7 @@ func (b *Builder) printSetStringValue(dst *build.Writer, expr ast.Expr, name str
 
 	case *ast.ArrayType:
 		ar := expr.(*ast.ArrayType)
-		dst.Code("(").Code(name).Code(" as (string[] | null))")
-		if isNull {
-			dst.Code("?")
-		}
+		dst.Code("(").Code(name).Code(" as (string[] | null))?")
 		dst.Code(".map((item: string)=> ")
 		b.printSetStringValue(dst, ar.Type(), "item", ar.IsEmpty())
 		dst.Code(")")
@@ -1146,7 +1143,7 @@ func (b *Builder) printSetNumberValue(dst *build.Writer, expr ast.Expr, name str
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
 			if ast.Enum == t.Obj.Kind {
-				pkg := b.getPackage(dst, t, "")
+				pkg := b.getPackage(dst, t, "", false)
 				dst.Code("(").Code(name).Code(" == null ? ")
 				if isNull {
 					dst.Code("null")
@@ -1221,10 +1218,7 @@ func (b *Builder) printSetNumberValue(dst *build.Writer, expr ast.Expr, name str
 
 	case *ast.ArrayType:
 		ar := expr.(*ast.ArrayType)
-		dst.Code("(").Code(name).Code(" as (number[] | null))")
-		if isNull {
-			dst.Code("?")
-		}
+		dst.Code("(").Code(name).Code(" as (number[] | null))?")
 		dst.Code(".map((item: number)=> ")
 		b.printSetNumberValue(dst, ar.Type(), "item", ar.IsEmpty())
 		dst.Code(")")

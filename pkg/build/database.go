@@ -56,7 +56,7 @@ func GetDB(n string, tag []*ast.Tag) []*DB {
 			}
 			if nil != val.KV {
 				for _, item := range val.KV {
-					if "Name" == item.Name.Name {
+					if "name" == item.Name.Name {
 						db.Name = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 					} else if "converter" == item.Name.Name {
 						db.Converter = item.Values[0].Value[1 : len(item.Values[0].Value)-1]

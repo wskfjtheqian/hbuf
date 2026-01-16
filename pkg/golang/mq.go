@@ -11,10 +11,10 @@ func (b *Builder) printMqCode(dst *build.Writer, data *ast.DataType) error {
 	if !ok {
 		return nil
 	}
-	dst.Import("context", "")
-	dst.Import("github.com/nats-io/nats.go", "")
-	dst.Import("github.com/nats-io/nats.go/jetstream", "")
-	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hmq", "")
+	dst.Import("context", "", 0)
+	dst.Import("github.com/nats-io/nats.go", "", 0)
+	dst.Import("github.com/nats-io/nats.go/jetstream", "", 0)
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hmq", "", 0)
 
 	err := b.printPublishCode(dst, data, tag)
 	if err != nil {

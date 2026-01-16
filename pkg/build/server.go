@@ -15,7 +15,7 @@ func (b *Builder) checkServer(file *ast.File, server *ast.ServerType, index int)
 	if _, ok := _keys[BaseType(name)]; ok {
 		return scanner.Error{
 			Pos: b.fset.Position(server.Name.Pos()),
-			Msg: "Invalid name: " + name,
+			Msg: "Invalid Name: " + name,
 		}
 	}
 
@@ -58,7 +58,7 @@ func (b *Builder) checkServerItem(file *ast.File, server *ast.ServerType) error 
 		if _, ok := _keys[BaseType(item.Name.Name)]; ok {
 			return scanner.Error{
 				Pos: b.fset.Position(item.Name.Pos()),
-				Msg: "Invalid name: " + item.Name.Name,
+				Msg: "Invalid Name: " + item.Name.Name,
 			}
 		}
 
@@ -80,7 +80,7 @@ func (b *Builder) checkServerItem(file *ast.File, server *ast.ServerType) error 
 		if _, ok := _keys[BaseType(item.ParamName.Name)]; ok {
 			return scanner.Error{
 				Pos: b.fset.Position(item.ParamName.Pos()),
-				Msg: "Invalid name: " + item.ParamName.Name,
+				Msg: "Invalid Name: " + item.ParamName.Name,
 			}
 		}
 
@@ -171,7 +171,7 @@ func (b *Builder) checkServerExtends(file *ast.File, server *ast.ServerType, ind
 		if _, ok := _keys[BaseType(item.Name.Name)]; ok {
 			return scanner.Error{
 				Pos: b.fset.Position(server.Name.Pos()),
-				Msg: "Invalid name: " + item.Name.Name,
+				Msg: "Invalid Name: " + item.Name.Name,
 			}
 		}
 		if b.checkServerDuplicateExtends(server, i, item.Name.Name) {

@@ -35,7 +35,7 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 		if nil == verify {
 			return nil
 		}
-		dst.Import("element-plus", "type {LocaleContext}")
+		dst.Import("element-plus", "type {LocaleContext}", 0)
 		dst.Code("export const verify").Code(dName).Code("_").Code(fName).Code(" = (locale: LocaleContext) => (rule: any, value: any, callback: any): any => {\n")
 		dst.Tab(1).Code("value = '' + value\n")
 		isNull := build.IsNil(field.Type)
@@ -158,7 +158,7 @@ func (b *Builder) verifyNum(dst *build.Writer, pName string, val *build.VerifyEn
 	b.printVerifyError(dst, pName, val)
 	dst.Tab(1).Code("}\n")
 	dst.Tab(1).Code("try {\n")
-	dst.Import("decimal.js", "* as d")
+	dst.Import("decimal.js", "* as d", 0)
 	dst.Tab(2).Code("const val = new d.Decimal(value!);\n")
 
 	if 0 < len(min) {
@@ -185,7 +185,7 @@ func (b *Builder) verifyNum(dst *build.Writer, pName string, val *build.VerifyEn
 		dst.Tab(1).Tab(1).Code("}\n")
 	}
 
-	dst.Tab(1).Code("} catch (e){\n")
+	dst.Tab(1).Code("} catch {\n")
 	b.printVerifyError(dst, pName, val)
 	dst.Tab(1).Code("}\n")
 }

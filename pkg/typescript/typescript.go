@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 )
 
 var _types = map[build.BaseType]string{
@@ -179,7 +180,7 @@ func writerFile(data *build.Writer, out string) error {
 		}
 		sort.Strings(imps)
 		for _, val := range imps {
-			_, _ = fc.WriteString("import " + temp[val] + " from \"" + val + "\"\n")
+			_, _ = fc.WriteString("import " + temp[val].Name + " from \"" + val + "\"\n")
 		}
 	}
 	_, _ = fc.WriteString("\n")
@@ -260,7 +261,7 @@ func (b *Builder) printType(dst *build.Writer, expr ast.Expr, notEmpty bool, isR
 				}
 			} else {
 				if build.Decimal == build.BaseType((expr.(*ast.Ident).Name)) {
-					dst.Import("decimal.js", "* as d")
+					dst.Import("decimal.js", "* as d", 0)
 				} else if build.Int64 == build.BaseType((expr.(*ast.Ident).Name)) || build.Uint64 == build.BaseType((expr.(*ast.Ident).Name)) {
 				}
 				dst.Code(_types[build.BaseType((expr.(*ast.Ident).Name))])
@@ -318,14 +319,18 @@ func (b *Builder) getPackage(dst *build.Writer, expr ast.Expr, s string, typ boo
 		}
 	}
 
+	id := "$" + strconv.Itoa(len(dst.GetImports()))
+	imp := dst.GetImport("./" + name)
+	if imp != nil {
+		id = imp.Name[strings.Index(imp.Name, "$"):]
+	}
 	var p string
 	if typ {
-		p = dst.Import("./"+name, "type * as $"+strconv.Itoa(len(dst.GetImports())))
-		return p[10:]
+		p = dst.Import("./"+name, "type * as "+id, 0)
 	} else {
-		p = dst.Import("./"+name, "* as $"+strconv.Itoa(len(dst.GetImports())))
-		return p[5:]
+		p = dst.Import("./"+name, "* as  "+id, 1)
 	}
+	return p[strings.Index(p, "$"):]
 
 }
 
@@ -350,7 +355,7 @@ func (b *Builder) printDefault(dst *build.Writer, expr ast.Expr, notEmpty bool) 
 			}
 		} else {
 			if build.Decimal == build.BaseType((expr.(*ast.Ident).Name)) {
-				dst.Import("decimal.js", "* as d")
+				dst.Import("decimal.js", "* as d", 0)
 			} else if build.Int64 == build.BaseType((expr.(*ast.Ident).Name)) || build.Uint64 == build.BaseType((expr.(*ast.Ident).Name)) {
 			}
 			dst.Code(_typesValue[build.BaseType((expr.(*ast.Ident).Name))])

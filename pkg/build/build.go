@@ -238,7 +238,7 @@ func (b *Builder) registerServer(file *ast.File, enum *ast.ServerType) error {
 	if _, ok := _keys[BaseType(name)]; ok {
 		return scanner.Error{
 			Pos: b.fset.Position(enum.Name.Pos()),
-			Msg: "Invalid name: " + name,
+			Msg: "Invalid Name: " + name,
 		}
 	}
 	if obj := file.Scope.Lookup(name); nil != obj {

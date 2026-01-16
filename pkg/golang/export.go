@@ -89,7 +89,7 @@ func (b *Builder) printExportDataCode(dst *build.Writer, data *ast.DataType, key
 
 	for _, item := range lists {
 		if build.GetBaseType(item.Type.Type()) == build.Date {
-			dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hutl", "hutl")
+			dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hutl", "hutl", 0)
 			dst.Tab(1).Code("loc := hutl.ZoneByOffset(zoneOffset)\n")
 			break
 		}
@@ -132,7 +132,7 @@ func (b *Builder) printExportDataItemCode(dst *build.Writer, i int, item *ast.Fi
 	}
 
 	if build.IsArray(item.Type) || build.IsMap(item.Type) {
-		dst.Import("encoding/json", "")
+		dst.Import("encoding/json", "", 0)
 		dst.Tab(tab).Code("bytes, err := json.Marshal(g.Get").Code(name).Code("())\n")
 		dst.Tab(tab).Code("if err!= nil {\n")
 		dst.Tab(tab + 1).Code("return nil, err\n")

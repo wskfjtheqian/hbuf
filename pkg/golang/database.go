@@ -47,8 +47,8 @@ func getCache(name string, tags []*ast.Tag) *cache {
 }
 
 func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error {
-	dst.Import("context", "")
-	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db")
+	dst.Import("context", "", 0)
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db", 0)
 
 	dbs, wFields, key, err := b.getDBField(typ)
 	if 0 == len(dbs) || nil != err {
@@ -449,7 +449,7 @@ func (b *Builder) printParam(buf *build.Writer, text string, self *build.DBField
 				}
 				if 0 == len(field.Dbs[0].Converter) && build.IsArray(field.Field.Type) && 0 == len(temp) {
 					buf.Code(".L(\",\", ")
-					buf.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hutl", "utl")
+					buf.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hutl", "utl", 0)
 					buf.Code("utl.ToAnyList(g." + build.StringToHumpName(field.Field.Name.Name) + ")...")
 				} else {
 					buf.Code(".V(")
@@ -497,14 +497,14 @@ func (b *Builder) printListData(dst *build.Writer, typ *ast.DataType, key string
 	tab := 0
 	if nil != c {
 		tab = 1
-		dst.Import("math/rand", "")
-		dst.Import("time", "")
+		dst.Import("math/rand", "", 0)
+		dst.Import("time", "", 0)
 
 		dst.Tab(1).Code("err := db.SaveCache(ctx, tableName, s, &ret, time.Duration(rand.Intn(").Code(strconv.Itoa(c.max))
 		dst.Code("-").Code(strconv.Itoa(c.min)).Code(")+").Code(strconv.Itoa(c.min)).Code(")*time.Second,")
 		dst.Code("func(ctx context.Context) (any, error) {\n")
 	}
-	dst.Import("database/sql", "")
+	dst.Import("database/sql", "", 0)
 	dst.Tab(tab + 1).Code("_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
 	dst.Tab(tab + 2).Code("var val " + dName + "\n")
 	dst.Tab(tab + 2).Code("err := rows.Scan(" + scan.String() + ")\n")
@@ -542,7 +542,7 @@ func (b *Builder) printListAsyncData(dst *build.Writer, typ *ast.DataType, key s
 	dst.Code(w.GetCode().String())
 
 	tab := 0
-	dst.Import("database/sql", "")
+	dst.Import("database/sql", "", 0)
 	dst.Tab(tab + 1).Code("_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
 	dst.Tab(tab + 2).Code("var val " + dName + "\n")
 	dst.Tab(tab + 2).Code("err := rows.Scan(" + scan.String() + ")\n")
@@ -585,14 +585,14 @@ func (b *Builder) printMapData(dst *build.Writer, key string, typ *ast.DataType,
 	tab := 0
 	if nil != c {
 		tab = 1
-		dst.Import("math/rand", "")
-		dst.Import("time", "")
+		dst.Import("math/rand", "", 0)
+		dst.Import("time", "", 0)
 
 		dst.Tab(1).Code("err := db.SaveCache(ctx, tableName, s, &ret, time.Duration(rand.Intn(").Code(strconv.Itoa(c.max))
 		dst.Code("-").Code(strconv.Itoa(c.min)).Code(")+").Code(strconv.Itoa(c.min)).Code(")*time.Second,")
 		dst.Code(" func(ctx context.Context,) (any, error) {\n")
 	}
-	dst.Import("database/sql", "")
+	dst.Import("database/sql", "", 0)
 	dst.Tab(tab + 1).Code("ret = make(map[" + kType.String() + "]" + dName + ")\n")
 	dst.Tab(tab + 1).Code("_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
 	dst.Tab(tab + 2).Code("var val " + dName + "\n")
@@ -627,14 +627,14 @@ func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build
 	tab := 0
 	if nil != c {
 		tab = 1
-		dst.Import("math/rand", "")
-		dst.Import("time", "")
+		dst.Import("math/rand", "", 0)
+		dst.Import("time", "", 0)
 
 		dst.Tab(1).Code("err := db.SaveCache(ctx, tableName, s, &val, time.Duration(rand.Intn(").Code(strconv.Itoa(c.max))
 		dst.Code("-").Code(strconv.Itoa(c.min)).Code(")+").Code(strconv.Itoa(c.min)).Code(")*time.Second,")
 		dst.Code(" func(ctx context.Context) (any, error) {\n")
 	}
-	dst.Import("database/sql", "")
+	dst.Import("database/sql", "", 0)
 	dst.Tab(tab + 1).Code("_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
 	dst.Tab(tab + 2).Code("return false, rows.Scan(&val)\n")
 	dst.Tab(tab + 1).Code("})\n")
@@ -656,7 +656,7 @@ func (b *Builder) printDeleteData(dst *build.Writer, db *build.DB, wFields []*bu
 	dst.Code("func (g " + fName + ") DbDel(ctx context.Context) (int64, int64, error) {\n")
 	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
 	dst.Tab(1).Code("s := db.NewBuilder()\n")
-	dst.Import("time", "")
+	dst.Import("time", "", 0)
 	dst.Tab(1).Code("s.T(\"UPDATE \").T(tableName).T(\" SET is_deleted = 1, delete_time = \").V(time.Now()).T(\" WHERE is_deleted = 0\")\n")
 	dst.Code(w.GetCode().String())
 
@@ -862,14 +862,14 @@ func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, key string,
 	tab := 0
 	if nil != c {
 		tab = 1
-		dst.Import("math/rand", "")
-		dst.Import("time", "")
+		dst.Import("math/rand", "", 0)
+		dst.Import("time", "", 0)
 
 		dst.Tab(1).Code("err := db.SaveCache(ctx, tableName, s, &val, time.Duration(rand.Intn(").Code(strconv.Itoa(c.max))
 		dst.Code("-").Code(strconv.Itoa(c.min)).Code(")+").Code(strconv.Itoa(c.min)).Code(")*time.Second,")
 		dst.Code(" func(ctx context.Context) (any, error) {\n")
 	}
-	dst.Import("database/sql", "")
+	dst.Import("database/sql", "", 0)
 	dst.Tab(tab + 1).Code("_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
 	dst.Tab(tab + 2).Code("val = new(").Code(dName).Code(")\n")
 	dst.Tab(tab + 2).Code("return false, rows.Scan(" + scan.String() + ")\n")

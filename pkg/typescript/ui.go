@@ -12,7 +12,7 @@ func (b *Builder) printFormCode(dst *build.Writer, expr ast.Expr) {
 
 	switch expr.(type) {
 	case *ast.DataType:
-		dst.Import("vue", "{defineComponent, type PropType}")
+		dst.Import("vue", "{defineComponent, type PropType}", 0)
 		typ := expr.(*ast.DataType)
 		b.getPackage(dst, typ.Name, "", false)
 		b.printDataUi(dst, typ)
@@ -428,7 +428,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Tab(1).Code("\n")
 	dst.Tab(1).Code("},\n")
 	dst.Tab(1).Code("setup(_props: Record<string, any>) {\n")
-	dst.Import("element-plus", "{useLocale}")
+	dst.Import("element-plus", "{useLocale}", 0)
 	dst.Tab(2).Code("const _locale = useLocale()\n")
 	dst.Tab(2).Code("return (_ctx: Record<string, any>) => {\n")
 	dst.Tab(3).Code("const _model = _ctx._model! as ")
@@ -488,7 +488,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 			dst.Tab(7).Code("modelValue={")
 			if isArray {
-				dst.Import("hbuf_ts", "* as h")
+				dst.Import("hbuf_ts", "* as h", 0)
 				dst.Code(" h.convertArray(_model.").Code(fieldName).Code(", (e) => _ctx.$timeToLocal(e))")
 			} else {
 				dst.Code("_ctx.$timeToLocal(_model.").Code(fieldName).Code(")")
@@ -1040,7 +1040,7 @@ func (b *Builder) printSetStringValue(dst *build.Writer, expr ast.Expr, name str
 				}
 				dst.Code(" : (new Date(").Code(name).Code("! as string)))")
 			case build.Decimal:
-				dst.Import("decimal.js", "* as d")
+				dst.Import("decimal.js", "* as d", 0)
 				dst.Code("((").Code(name).Code("?.length ?? 0) == 0 ? ")
 				if isNull {
 					dst.Code("null")
@@ -1196,7 +1196,7 @@ func (b *Builder) printSetNumberValue(dst *build.Writer, expr ast.Expr, name str
 				}
 				dst.Code(" : (new Date(").Code(name).Code("! as number)))")
 			case build.Decimal:
-				dst.Import("decimal.js", "* as d")
+				dst.Import("decimal.js", "* as d", 0)
 				dst.Code("(").Code(name).Code(" == null ? ")
 				if isNull {
 					dst.Code("null")

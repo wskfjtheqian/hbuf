@@ -10,7 +10,7 @@ func (b *Builder) checkEnum(file *ast.File, enum *ast.EnumType, index int) error
 	if _, ok := _keys[BaseType(name)]; ok {
 		return scanner.Error{
 			Pos: b.fset.Position(enum.Name.Pos()),
-			Msg: "Invalid name: " + name,
+			Msg: "Invalid Name: " + name,
 		}
 	}
 
@@ -39,7 +39,7 @@ func (b *Builder) checkEnumItem(file *ast.File, enum *ast.EnumType) error {
 		if _, ok := _keys[BaseType(item.Name.Name)]; ok {
 			return scanner.Error{
 				Pos: b.fset.Position(enum.Name.Pos()),
-				Msg: "Invalid name: " + item.Name.Name,
+				Msg: "Invalid Name: " + item.Name.Name,
 			}
 		}
 		if b.checkEnumDuplicateItem(enum, index, item.Name.Name) {

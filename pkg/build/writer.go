@@ -5,8 +5,13 @@ import (
 	"strings"
 )
 
+type ImportLevel struct {
+	level int
+	Name  string
+}
+
 type Writer struct {
-	imp      map[string]string
+	imp      map[string]*ImportLevel
 	code     *strings.Builder
 	File     *ast.File
 	Packages string
@@ -23,12 +28,22 @@ func (w *Writer) GetValue(key string) (interface{}, bool) {
 	return val, ok
 }
 
-func (w *Writer) Import(text string, s string) string {
-	if as, ok := w.imp[text]; ok {
-		return as
+func (w *Writer) GetImport(pkg string) *ImportLevel {
+	return w.imp[pkg]
+}
+
+func (w *Writer) Import(pkg string, name string, level int) string {
+	if as, ok := w.imp[pkg]; ok {
+		if level > as.level {
+			as.Name = name
+		}
+		return as.Name
 	}
-	w.imp[text] = s
-	return s
+	w.imp[pkg] = &ImportLevel{
+		level: level,
+		Name:  name,
+	}
+	return name
 }
 
 func (w *Writer) Code(text string) *Writer {
@@ -63,11 +78,11 @@ func (w *Writer) GetCode() *strings.Builder {
 
 }
 
-func (w *Writer) GetImports() map[string]string {
+func (w *Writer) GetImports() map[string]*ImportLevel {
 	return w.imp
 }
 
-func (w *Writer) AddImports(imp map[string]string) {
+func (w *Writer) AddImports(imp map[string]*ImportLevel) {
 	for key, val := range imp {
 		w.imp[key] = val
 	}
@@ -88,7 +103,7 @@ func (w *Writer) GetLangs() map[string]*Language {
 
 func NewWriter() *Writer {
 	return &Writer{
-		imp:  map[string]string{},
+		imp:  map[string]*ImportLevel{},
 		code: &strings.Builder{},
 		lang: map[string]*Language{},
 		maps: map[string]interface{}{},

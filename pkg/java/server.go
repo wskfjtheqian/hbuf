@@ -6,9 +6,9 @@ import (
 )
 
 func (b *Builder) printServerCode(dst *build.Writer, typ *ast.ServerType) {
-	dst.Import("java.util.concurrent.CompletableFuture", "")
-	dst.Import("com.hbuf.java.Data", "")
-	dst.Import("com.hbuf.java.Server", "")
+	dst.Import("java.util.concurrent.CompletableFuture", "", 0)
+	dst.Import("com.hbuf.java.Data", "", 0)
+	dst.Import("com.hbuf.java.Server", "", 0)
 
 	b.printServer(dst, typ)
 	b.printServerClient(dst, typ)

@@ -14,9 +14,9 @@ func printEnumCode(dst *build.Writer, typ *ast.EnumType) {
 	maxLen := 0
 	dst.Code("type " + name + " int32\n\n")
 
-	dst.Import("strconv", "")
-	dst.Import("strings", "")
-	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/herror", "")
+	dst.Import("strconv", "", 0)
+	dst.Import("strings", "", 0)
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/herror", "", 0)
 
 	dst.Code("func (t ").Code(name).Code(") MarshalJSON() ([]byte, error) {\n")
 	dst.Tab(1).Code("return []byte(strconv.FormatInt(int64(t), 10)), nil\n")

@@ -42,7 +42,7 @@ func (b *Builder) checkData(file *ast.File, data *ast.DataType, index int) error
 	if _, ok := _keys[BaseType(name)]; ok {
 		return scanner.Error{
 			Pos: b.fset.Position(data.Name.Pos()),
-			Msg: "Invalid name: " + name,
+			Msg: "Invalid Name: " + name,
 		}
 	}
 
@@ -72,7 +72,7 @@ func (b *Builder) checkDataExtends(file *ast.File, data *ast.DataType, index int
 		if _, ok := _keys[BaseType(item.Name.Name)]; ok {
 			return scanner.Error{
 				Pos: b.fset.Position(data.Name.Pos()),
-				Msg: "Invalid name: " + item.Name.Name,
+				Msg: "Invalid Name: " + item.Name.Name,
 			}
 		}
 		if b.checkDataDuplicateExtends(data, i, item.Name.Name) {
@@ -188,7 +188,7 @@ func (b *Builder) checkDataItemType(file *ast.File, typ ast.Type) error {
 		}
 		return scanner.Error{
 			Pos: b.fset.Position(ident.Pos()),
-			Msg: "Invalid name: " + ident.Name,
+			Msg: "Invalid Name: " + ident.Name,
 		}
 	}
 
@@ -229,7 +229,7 @@ func (b *Builder) checkDataItem(file *ast.File, data *ast.DataType) error {
 		if _, ok := _keys[BaseType(item.Name.Name)]; ok {
 			return scanner.Error{
 				Pos: b.fset.Position(item.Name.Pos()),
-				Msg: "Invalid name: " + item.Name.Name,
+				Msg: "Invalid Name: " + item.Name.Name,
 			}
 		}
 		if b.checkDataDuplicateItem(data, index, item.Name.Name) {

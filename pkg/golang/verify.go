@@ -8,7 +8,7 @@ import (
 )
 
 func (b *Builder) printVerifyCode(dst *build.Writer, data *ast.DataType) error {
-	dst.Import("context", "")
+	dst.Import("context", "", 0)
 	err := b.printVerifyFieldCode(dst, data)
 	if err != nil {
 		return err
@@ -88,8 +88,8 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 			pack := b.getPackage(dst, val.Enum.Name) + build.StringToHumpName(val.Enum.Name.Name) + build.StringToHumpName(val.Item.Name.Name)
 
 			if build.IsNil(field.Type) && 0 == i {
-				dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "")
-				dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc", "")
+				dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "", 0)
+				dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc", "", 0)
 				if !f.Null {
 					dst.Tab(1).Code("if nil == i." + fName)
 					if build.GetBaseType(field.Type) == build.String {
@@ -109,8 +109,8 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 				}
 			}
 			if build.IsEnum(field.Type) {
-				dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "")
-				dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc", "")
+				dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "", 0)
+				dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc", "", 0)
 				dst.Tab(1).Code("if 0 == len(i.Get" + fName + "().ToName()) {\n")
 				dst.Tab(2).Code("return hrpc.NewResult[hbuf.Data](int32(").Code(pack).Code("), ").Code(pack).Code(".ToName(), nil)\n")
 				dst.Tab(1).Code("}\n")
@@ -123,8 +123,8 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 				switch t {
 				case build.Int8, build.Int16, build.Int32, build.Uint8, build.Uint16, build.Uint32, build.Float, build.Double:
 					if 0 < len(f.Min) || 0 < len(f.Max) {
-						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "")
-						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc", "")
+						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "", 0)
+						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc", "", 0)
 						dst.Tab(1).Code("if ")
 						if 0 < len(f.Min) {
 							dst.Code(f.Min + " > i.Get" + fName + "() ")
@@ -141,8 +141,8 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 					}
 				case build.Uint64, build.Int64:
 					if 0 < len(f.Min) || 0 < len(f.Max) {
-						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "")
-						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc", "")
+						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "", 0)
+						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc", "", 0)
 						dst.Tab(1).Code("if ")
 						if 0 < len(f.Min) {
 							dst.Code(f.Min + " > i.Get" + fName + "().Val ")
@@ -159,8 +159,8 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 					}
 				case build.Date:
 					if 0 < len(f.Min) || 0 < len(f.Max) {
-						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "")
-						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc", "")
+						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "", 0)
+						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc", "", 0)
 						dst.Tab(1).Code("if ")
 						if 0 < len(f.Min) {
 							parse, err := time.Parse("2006-01-02T15:04:05Z", f.Min)
@@ -185,8 +185,8 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 					}
 				case build.Decimal:
 					if 0 < len(f.Min) || 0 < len(f.Max) {
-						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "")
-						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc", "")
+						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "", 0)
+						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc", "", 0)
 						dst.Tab(1).Code("if ")
 						if 0 < len(f.Min) {
 							dst.Code("decimal.NewFromFloat(" + f.Min + ").GreaterThan(i.Get" + fName + "()) ")
@@ -202,20 +202,20 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 						dst.Tab(1).Code("}\n")
 					}
 				case build.String:
-					dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "")
-					dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc", "")
+					dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "", 0)
+					dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc", "", 0)
 					pack := b.getPackage(dst, val.Enum.Name) + build.StringToHumpName(val.Enum.Name.Name) + build.StringToHumpName(val.Item.Name.Name)
 					if 0 < len(f.Min) || 0 < len(f.Max) {
 						dst.Tab(1).Code("if ")
 						if 0 < len(f.Min) {
-							dst.Import("unicode/utf8", "")
+							dst.Import("unicode/utf8", "", 0)
 							dst.Code(f.Min + " > utf8.RuneCountInString(i.Get" + fName + "()) ")
 						}
 						if 0 < len(f.Max) {
 							if 0 < len(f.Min) {
 								dst.Code("|| ")
 							}
-							dst.Import("unicode/utf8", "")
+							dst.Import("unicode/utf8", "", 0)
 							dst.Code(f.Max + " < utf8.RuneCountInString(i.Get" + fName + "()) ")
 						}
 						dst.Code("{\n")
@@ -227,7 +227,7 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 						if first {
 							dst.Code(":")
 						}
-						dst.Import("regexp", "")
+						dst.Import("regexp", "", 0)
 						dst.Code("= regexp.MatchString(\"" + f.Reg + "\", i.Get" + fName + "())\n")
 						dst.Tab(1).Code("if err != nil {\n")
 						dst.Tab(2).Code("return err\n")

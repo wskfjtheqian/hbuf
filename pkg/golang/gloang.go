@@ -194,10 +194,10 @@ func (b *Builder) writerFile(data *build.Writer, packages string, out string, i 
 		}
 		sort.Strings(imps)
 		for _, val := range imps {
-			key := data.GetImports()[val]
+			name := data.GetImports()[val].Name
 			_, _ = fc.WriteString("\t")
-			if 0 < len(key) {
-				_, _ = fc.WriteString(key + " ")
+			if 0 < len(name) {
+				_, _ = fc.WriteString(name + " ")
 			}
 			_, _ = fc.WriteString("\"" + val + "\"\n")
 		}
@@ -285,9 +285,9 @@ func (b *Builder) printType(dst *build.Writer, expr ast.Expr, b2 bool) {
 			dst.Code(pack + (expr.(*ast.Ident)).Name)
 		} else {
 			if build.Date == build.BaseType((expr.(*ast.Ident)).Name) {
-				dst.Import("time", "")
+				dst.Import("time", "", 0)
 			} else if build.Decimal == build.BaseType((expr.(*ast.Ident)).Name) {
-				dst.Import("github.com/shopspring/decimal", "")
+				dst.Import("github.com/shopspring/decimal", "", 0)
 			}
 			dst.Code(_types[build.BaseType((expr.(*ast.Ident)).Name)])
 		}
@@ -336,7 +336,7 @@ func (b *Builder) getPackage(dst *build.Writer, expr ast.Expr) string {
 	packs := strings.Split(pack, ".")
 	pack = packs[len(packs)-1]
 
-	dst.Import(b.packages+pack, "")
+	dst.Import(b.packages+pack, "", 0)
 	return pack + "."
 }
 

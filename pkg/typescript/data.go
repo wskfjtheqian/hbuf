@@ -6,7 +6,7 @@ import (
 )
 
 func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
-	dst.Import("hbuf_ts", "* as h")
+	dst.Import("hbuf_ts", "type * as h", 0)
 
 	b.printData(dst, typ)
 }
@@ -147,6 +147,7 @@ func (b *Builder) printCopy(dst *build.Writer, self, name string, expr ast.Expr,
 	case *ast.ArrayType:
 		t := expr.(*ast.ArrayType)
 		empty = t.IsEmpty()
+		dst.Import("hbuf_ts", "* as h", 1)
 		if empty {
 			dst.Code(self).Code(name).Code(" == null ? null : ")
 			dst.Code("(h.convertArray(").Code(self).Code(name).Code(", (item) => ")
@@ -161,6 +162,7 @@ func (b *Builder) printCopy(dst *build.Writer, self, name string, expr ast.Expr,
 	case *ast.MapType:
 		t := expr.(*ast.MapType)
 		empty = t.IsEmpty()
+		dst.Import("hbuf_ts", "* as h", 1)
 		if empty {
 			dst.Code(self).Code(name).Code(" == null ? null : ")
 			dst.Code("(h.convertRecord(").Code(self).Code(name).Code(", (key, value) => new h.RecordEntry(")
@@ -282,7 +284,7 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 						dst.Code("null == " + name + " ? \"\" : " + v + ".toString()")
 					}
 				} else {
-					dst.Import("decimal.js", "* as d")
+					dst.Import("decimal.js", "* as d", 0)
 					if empty {
 						dst.Code("null == " + name + " ? null : new d.Decimal(" + v + " as string )")
 					} else {
@@ -296,6 +298,7 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 	case *ast.ArrayType:
 		t := expr.(*ast.ArrayType)
 		empty = t.IsEmpty()
+		dst.Import("hbuf_ts", "* as h", 1)
 		if empty {
 			dst.Code("null == " + name + " ? null : (")
 			dst.Code("!h.isArray(" + v + ") ? null : ")
@@ -312,6 +315,7 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 	case *ast.MapType:
 		t := expr.(*ast.MapType)
 		empty = t.IsEmpty()
+		dst.Import("hbuf_ts", "* as h", 1)
 		if empty {
 			dst.Code("null == " + name + " ? null : (")
 			dst.Code("!h.isRecord(" + v + ") ? null : ")
@@ -399,6 +403,7 @@ func (b *Builder) printToMap(dst *build.Writer, key string, name string, expr as
 	case *ast.ArrayType:
 		t := expr.(*ast.ArrayType)
 		empty = t.IsEmpty()
+		dst.Import("hbuf_ts", "* as h", 1)
 		if empty {
 			dst.Code("h.convertArray(" + key + name + ",(e) => ")
 			b.printToMap(dst, "", "e", t.VType, data, empty, false)
@@ -437,7 +442,7 @@ func (b *Builder) printExtend(dst *build.Writer, extends []*ast.Extends, start b
 			dst.Code(", ")
 		}
 
-		dst.Code(b.getPackage(dst, v.Name, "", false))
+		dst.Code(b.getPackage(dst, v.Name, "", true))
 		dst.Code(".")
 		dst.Code(build.StringToHumpName(v.Name.Name))
 

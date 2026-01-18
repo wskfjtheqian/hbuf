@@ -11,11 +11,13 @@ func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
 	b.printData(dst, typ)
 }
 
-func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) {
+func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) error {
 	if nil != typ.Doc && 0 < len(typ.Doc.Text()) {
 		dst.Code("///" + typ.Doc.Text())
 	}
-	dst.Code("export class " + build.StringToHumpName(typ.Name.Name) + " implements h.Data")
+	uName := build.StringToHumpName(typ.Name.Name)
+
+	dst.Code("export class " + uName + " implements h.Data")
 	if nil != typ.Extends {
 		b.printExtend(dst, typ.Extends, true)
 	}
@@ -33,11 +35,11 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) {
 		return nil
 	})
 	if err != nil {
-		return
+		return err
 	}
 
-	dst.Tab(1).Code("public static fromMap(_json: Record<string, any>, _tag: string): " + build.StringToHumpName(typ.Name.Name) + "{\n")
-	dst.Tab(2).Code("const ret = new " + build.StringToHumpName(typ.Name.Name) + "()\n")
+	dst.Tab(1).Code("public static fromMap(_json: Record<string, any>, _tag: string): " + uName + "{\n")
+	dst.Tab(2).Code("const ret = new " + uName + "()\n")
 	dst.Tab(2).Code("let _temp:any\n")
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 		dst.Tab(2).Code("ret." + build.StringToFirstLower(field.Name.Name) + " = ")
@@ -47,7 +49,7 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) {
 		return nil
 	})
 	if err != nil {
-		return
+		return err
 	}
 
 	dst.Tab(2).Code("return ret\n")
@@ -64,13 +66,13 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) {
 		return nil
 	})
 	if err != nil {
-		return
+		return err
 	}
 	dst.Tab(2).Code("};\n")
 	dst.Tab(1).Code("}\n\n")
 
-	dst.Tab(1).Code("public static fromData(_data: ArrayBuffer): " + build.StringToHumpName(typ.Name.Name) + " {\n")
-	dst.Tab(2).Code("const ret = new " + build.StringToHumpName(typ.Name.Name) + "()\n")
+	dst.Tab(1).Code("public static fromData(_data: ArrayBuffer): " + uName + " {\n")
+	dst.Tab(2).Code("const ret = new " + uName + "()\n")
 	dst.Tab(2).Code("return ret\n")
 	dst.Tab(1).Code("}\n\n")
 
@@ -78,8 +80,8 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) {
 	dst.Tab(2).Code("return new ArrayBuffer(0)\n")
 	dst.Tab(1).Code("}\n\n")
 
-	dst.Tab(1).Code("public clone(): ").Code(build.StringToHumpName(typ.Name.Name)).Code(" {\n")
-	dst.Tab(2).Code("const ret = new ").Code(build.StringToHumpName(typ.Name.Name)).Code("()\n")
+	dst.Tab(1).Code("public clone(): ").Code(uName).Code(" {\n")
+	dst.Tab(2).Code("const ret = new ").Code(uName).Code("()\n")
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 		dst.Tab(2).Code("ret.").Code(build.StringToFirstLower(field.Name.Name))
 		dst.Code(" = ")
@@ -87,9 +89,58 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) {
 		dst.Code("\n")
 		return nil
 	})
+	if err != nil {
+		return err
+	}
 	dst.Tab(2).Code("return ret\n")
-	dst.Tab(1).Code("}\n")
+	dst.Tab(1).Code("}\n\n")
+
+	dst.Tab(1).Code("public $getChangeField(val: ").Code(uName).Code(", _tag: string, ignore: string[] = []): {\n")
+	dst.Tab(2).Code("change : ").Code(uName).Code(",\n")
+	dst.Tab(2).Code("fields: string[],\n")
+	dst.Tab(1).Code("} {\n")
+	dst.Tab(2).Code("const ret: ")
+	dst.Code("{ change : ").Code(uName).Code(" , fields: string[] } = {\n")
+	dst.Tab(3).Code("change: this,\n")
+	//dst.Tab(3).Code("change: new ").Code(uName).Code("(),\n")
+	dst.Tab(3).Code("fields: [],\n")
+	dst.Tab(2).Code("}\n")
+
+	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
+		lName := build.StringToFirstLower(field.Name.Name)
+		dst.Tab(2).Code("if (ignore.includes(\"").Code(lName).Code("\") || ")
+		if build.IsEnum(field.Type) {
+			dst.Code("this.").Code(lName).Code("?.value != val.").Code(lName).Code("?.value) {\n")
+		} else if build.IsDate(field.Type) {
+			dst.Code("this.").Code(lName).Code("?.getTime() != val.").Code(lName).Code("?.getTime()) {\n")
+		} else {
+			dst.Code("this.").Code(lName).Code(" != val.").Code(lName).Code(") {\n")
+		}
+		dst.Tab(3).Code("ret.fields.push(\"").Code(field.Name.Name).Code("\")\n")
+		dst.Tab(3).Code("ret.change.").Code(lName)
+		dst.Code(" = this.").Code(lName).Code("\n")
+		dst.Tab(2).Code("}\n")
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	dst.Tab(2).Code("return ret\n")
+	dst.Tab(1).Code("}\n\n")
+	//public $getChangeField(val: AreasInfo, _tag: string): { change: AreasInfo, fields: string[] } {
+	//const ret: { change: AreasInfo, fields: string[] } = {
+	//change: new AreasInfo(),
+	//fields: [],
+	//}
+	//if (this.areasId != val.areasId) {
+	//ret.fields.push("areas_id")
+	//ret.change.areasId = this.areasId
+	//}
+	//return ret
+	//}
 	dst.Code("}\n\n")
+	return nil
 }
 
 func (b *Builder) printCopy(dst *build.Writer, self, name string, expr ast.Expr, data *ast.DataType, empty bool, isRecordKey bool) {

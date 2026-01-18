@@ -173,19 +173,35 @@ func (b *Builder) printDescriptor(dst *build.Writer, expr ast.Expr, isNull bool,
 }
 
 func (b *Builder) printDataStruct(dst *build.Writer, typ *ast.DataType) error {
+	dbs, _, _, err := b.getDBField(typ)
+	if err != nil {
+		return err
+	}
 	name := build.StringToHumpName(typ.Name.Name)
 	if nil != typ.Doc && 0 < len(typ.Doc.Text()) {
 		dst.Code("// " + name + " " + typ.Doc.Text())
 	}
-	dst.Code("type " + name + " struct")
-	dst.Code(" {\n")
+	dst.Code("type " + name + " struct {\n")
 
 	length := 0
 	nameLen := 0
 	typLen := 0
 	tagLen := 0
-	fields := make([]dataField, len(typ.Fields.List))
-	for i, field := range typ.Fields.List {
+
+	fields := make([]dataField, 0, len(typ.Fields.List)+1)
+	if len(dbs) > 0 {
+		val := strings.ToLower(dbs[0].Change)
+		if "self" == val || "parent" == val {
+			nameLen = len("changeFields")
+			typLen = len("[]bool")
+			fields = append(fields, dataField{
+				name: "changeFields",
+				typ:  "[]bool",
+			})
+		}
+	}
+
+	for _, field := range typ.Fields.List {
 		temp := build.NewWriter()
 		temp.Packages = dst.Packages
 		b.printType(temp, field.Type, true)
@@ -214,11 +230,12 @@ func (b *Builder) printDataStruct(dst *build.Writer, typ *ast.DataType) error {
 			inOut = ",filter:" + inOut
 		}
 
-		fields[i] = dataField{
+		fields = append(fields, dataField{
 			name: build.StringToHumpName(field.Name.Name),
 			typ:  temp.String(),
 			tag:  "`json:\"" + build.StringToUnderlineName(field.Name.Name) + ",omitempty" + inOut + "\" hbuf:\"" + field.Id.Value + "\"` ",
-		}
+		})
+		i := len(fields) - 1
 
 		if nil != field.Doc && 0 < len(field.Doc.Text()) {
 			fields[i].comment = field.Doc.Text()
@@ -241,7 +258,7 @@ func (b *Builder) printDataStruct(dst *build.Writer, typ *ast.DataType) error {
 	isFast := true
 	b.printDataExtend(dst, typ.Extends, &isFast)
 	for _, field := range fields {
-		dst.Tab(1).Code("")
+		dst.Tab(1)
 		dst.Code(build.StringFillRight(field.name, ' ', nameLen+1))
 		dst.Code(build.StringFillRight(field.typ, ' ', typLen+1))
 		dst.Code(build.StringFillRight(field.tag, ' ', tagLen))

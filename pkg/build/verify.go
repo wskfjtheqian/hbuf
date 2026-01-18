@@ -13,10 +13,14 @@ type VerifyEnum struct {
 
 type Verify struct {
 	format []*VerifyEnum
+	fields string
 }
 
 func (v *Verify) GetFormat() []*VerifyEnum {
 	return v.format
+}
+func (v *Verify) GetFields() string {
+	return v.fields
 }
 
 func GetVerify(tags []*ast.Tag, file *ast.File, getType func(file *ast.File, name string) *ast.Object) (*Verify, error) {
@@ -64,6 +68,8 @@ func GetVerify(tags []*ast.Tag, file *ast.File, getType func(file *ast.File, nam
 					Name: item.Name.Name,
 				})
 			}
+		} else if "fields" == item.Name.Name {
+			v.fields = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 		}
 	}
 	return v, nil

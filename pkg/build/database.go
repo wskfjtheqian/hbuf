@@ -31,6 +31,7 @@ type DB struct {
 	Order     string
 	Converter string
 	Group     string
+	Change    string
 }
 
 type DBField struct {
@@ -82,6 +83,8 @@ func GetDB(n string, tag []*ast.Tag) []*DB {
 						db.Inserts = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 					} else if "update" == item.Name.Name {
 						db.Update = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
+					} else if "change" == item.Name.Name {
+						db.Change = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 					} else if "group" == item.Name.Name {
 						db.Group = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 					} else if "del" == item.Name.Name {

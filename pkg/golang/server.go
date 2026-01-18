@@ -142,7 +142,11 @@ func (b *Builder) printBinding(dst *build.Writer, method *ast.FuncType, bind *bu
 		return err
 	}
 	if nil != verify {
-		dst.Tab(1).Code("if err := req.Verify(ctx); err != nil {\n")
+		dst.Tab(1).Code("if err := req.Verify(ctx")
+		if len(verify.GetFields()) > 0 {
+			dst.Code(", req.Get").Code(build.StringToHumpName(verify.GetFields())).Code("()...")
+		}
+		dst.Code("); err != nil {\n")
 		dst.Tab(2).Code("return nil, err\n")
 		dst.Tab(1).Code("}\n")
 	}

@@ -76,7 +76,7 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 			return nil
 		}
 
-		dst.Code("func (i *" + dName + ") Verify" + fName + "(ctx context.Context) error {\n")
+		dst.Code("func (i *" + dName + ") Verify" + fName + "(ctx context.Context, fields ...string) error {\n")
 
 		first := true
 		for i, val := range verify.GetFormat() {
@@ -252,31 +252,44 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 }
 
 func (b *Builder) printVerifyDataCode(dst *build.Writer, data *ast.DataType) error {
-	dName := build.StringToHumpName(data.Name.Name)
+	uName := build.StringToHumpName(data.Name.Name)
+	lName := build.StringToFirstLower(data.Name.Name)
 	b.getPackage(dst, data.Name)
 
-	dst.Code("func (i *" + dName + ") Verify(ctx context.Context) error {\n")
-
-	isErr := true
+	dst.Code("var ").Code(lName).Code("VerifyMaps = map[string]func(ctx context.Context, i *")
+	dst.Code(uName).Code(" ,fields ...string) error {")
 	err := build.EnumField(data, func(field *ast.Field, data *ast.DataType) error {
-		fName := build.StringToHumpName(field.Name.Name)
 		_, ok := build.GetTag(field.Tags, "verify")
 		if ok {
-			if isErr {
-				dst.Tab(1).Code("var err error\n")
-				isErr = false
-			}
-			dst.Tab(1).Code("err = i.Verify" + fName + "(ctx)\n")
-			dst.Tab(1).Code("if err != nil {\n")
-			dst.Tab(2).Code("return err\n")
-			dst.Tab(1).Code("}\n")
+			dst.Tab(1).Code("\n\"").Code(field.Name.Name).Code("\": func(ctx context.Context, i *")
+			dst.Code(uName).Code(" ,fields ...string) error {\n")
+			dst.Tab(2).Code("return i.Verify").Code(build.StringToHumpName(field.Name.Name)).Code("(ctx, fields...)\n")
+			dst.Tab(1).Code("},\n")
 		}
 		return nil
 	})
 	if err != nil {
 		return err
 	}
-	dst.Tab(1).Code("return nil\n")
 	dst.Code("}\n\n")
+
+	dst.Tab(0).Code("func (i *").Code(uName).Code(") Verify(ctx context.Context, fields ...string) error {\n")
+	dst.Tab(1).Code("if len(fields) == 0 {\n")
+	dst.Tab(2).Code("for _, val := range ").Code(lName).Code("VerifyMaps {\n")
+	dst.Tab(3).Code("if err := val(ctx, i); err == nil {\n")
+	dst.Tab(4).Code("return err\n")
+	dst.Tab(3).Code("}\n")
+	dst.Tab(2).Code("}\n")
+	dst.Tab(2).Code("return nil\n")
+	dst.Tab(1).Code("}\n")
+	dst.Tab(1).Code("for _, field := range fields {\n")
+	dst.Tab(2).Code("if val, ok := ").Code(lName).Code("VerifyMaps[field]; ok {\n")
+	dst.Tab(3).Code("if err := val(ctx, i); err == nil {\n")
+	dst.Tab(4).Code("return err\n")
+	dst.Tab(3).Code("}\n")
+	dst.Tab(2).Code("}\n")
+	dst.Tab(1).Code("}\n")
+	dst.Tab(1).Code("return nil\n")
+	dst.Tab(0).Code("}\n")
 	return nil
 }

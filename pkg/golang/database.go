@@ -252,31 +252,31 @@ func (b *Builder) getDBField(typ *ast.DataType) ([]*build.DB, []*build.DBField, 
 }
 
 func (b *Builder) printField(dst *build.Writer, typ *ast.DataType, fields []*build.DBField) {
-	name := build.StringToHumpName(typ.Name.Name)
+	uName := build.StringToHumpName(typ.Name.Name)
 	lName := build.StringToFirstLower(typ.Name.Name)
 	dst.Code("const ").Code(lName).Code("FieldCount uint = ").Code(strconv.Itoa(len(fields))).Code("\n\n")
-	dst.Code("type ").Code(name).Code("Field uint\n\n")
+	dst.Code("type ").Code(uName).Code("Field uint\n\n")
 	dst.Code("const (\n")
 	for i, field := range fields {
-		dst.Tab(1.).Code(name).Code("Field_").Code(build.StringToHumpName(field.Field.Name.Name))
+		dst.Tab(1.).Code(uName).Code("Field_").Code(build.StringToHumpName(field.Field.Name.Name))
 		if i == 0 {
-			dst.Code(" ").Code(name).Code("Field = iota")
+			dst.Code(" ").Code(uName).Code("Field = iota")
 		}
 		dst.Code("\n")
 	}
 	dst.Code(")\n\n")
 
 	dst.Code("var ").Code(lName).Code("FieldPointers = [")
-	dst.Code(strconv.Itoa(len(fields))).Code("]func(*").Code(name).Code(") any{\n")
+	dst.Code(strconv.Itoa(len(fields))).Code("]func(*").Code(uName).Code(") any{\n")
 	for _, field := range fields {
-		dst.Tab(1).Code("func(v *").Code(name).Code(") any { return &v.").Code(build.StringToHumpName(field.Field.Name.Name)).Code(" },\n")
+		dst.Tab(1).Code("func(v *").Code(uName).Code(") any { return &v.").Code(build.StringToHumpName(field.Field.Name.Name)).Code(" },\n")
 	}
 	dst.Code("}\n\n")
 
 	dst.Code("var ").Code(lName).Code("FieldNames = [")
 	dst.Code(strconv.Itoa(len(fields))).Code("]string {\n")
 	for _, field := range fields {
-		dst.Tab(1).Code("\"").Code(field.Field.Name.Name).Code("\",\n")
+		dst.Tab(1).Code("\"").Code(field.Dbs[0].Name).Code("\",\n")
 	}
 	dst.Code("}\n\n")
 
@@ -299,11 +299,21 @@ func (b *Builder) printField(dst *build.Writer, typ *ast.DataType, fields []*bui
 	}
 
 	dst.Code("var ").Code(lName).Code("FieldMaps = map[string]")
-	dst.Code(name).Code("Field{\n")
+	dst.Code(uName).Code("Field{\n")
 	for _, item := range list {
 		dst.Tab(1).Code("\"").Code(item.name).Code("\": ")
-		dst.Code(strings.Repeat(" ", length-len(item.name))).Code(name).Code("Field_").Code(item.text).Code(",\n")
+		dst.Code(strings.Repeat(" ", length-len(item.name))).Code(uName).Code("Field_").Code(item.text).Code(",\n")
 	}
+	dst.Code("}\n\n")
+
+	dst.Code("func ").Code(uName).Code("FieldsByString(fields ...string) []").Code(uName).Code("Field {\n")
+	dst.Tab(1).Code("list := make([]").Code(uName).Code("Field, 0, ").Code(lName).Code("FieldCount)\n")
+	dst.Tab(1).Code("for _, item := range fields {\n")
+	dst.Tab(2).Code("if val, ok := ").Code(lName).Code("FieldMaps[item]; ok {\n")
+	dst.Tab(3).Code("list = append(list, val)\n")
+	dst.Tab(2).Code("}\n")
+	dst.Tab(1).Code("}\n")
+	dst.Tab(1).Code("return list\n")
 	dst.Code("}\n\n")
 
 }
@@ -908,14 +918,14 @@ func (b *Builder) printSetData(dst *build.Writer, typ *ast.DataType, key string,
 }
 
 func (b *Builder) printUpdateChange(dst *build.Writer, typ *ast.DataType, key string, db *build.DB, wFields []*build.DBField, fields []*build.DBField, fType *ast.DataType, c *cache) {
-	fName := build.StringToHumpName(fType.Name.Name)
+	uName := build.StringToHumpName(fType.Name.Name)
 	if typ != fType {
 		key = "parent"
 	}
 	w := b.getParamWhere(dst, wFields, false, false, false)
 	dst.AddImports(w.GetImports())
 
-	dst.Code("func (g " + fName + ") DbUpdateChange(ctx context.Context) (int64, int64, error) {\n")
+	dst.Code("func (g " + uName + ") DbUpdateChange(ctx context.Context) (int64, int64, error) {\n")
 	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
 	dst.Tab(1).Code("s := db.NewBuilder()\n")
 	dst.Tab(1).Code("s.T(\"UPDATE \").T(tableName).T(\" SET \").Del(\",\")\n")
@@ -934,24 +944,21 @@ func (b *Builder) printUpdateChange(dst *build.Writer, typ *ast.DataType, key st
 	dst.Code("}\n\n")
 
 	lName := build.StringToFirstLower(fType.Name.Name)
-	dst.Code("func (g *" + fName + ") DbSetChangeFields(fields ...string) int {\n")
+	dst.Code("func (g *" + uName + ") DbSetChangeFields(fields ...").Code(uName).Code("Field) {\n")
 	dst.Tab(1).Code("g.changeFields = make([]bool, ").Code(lName).Code("FieldCount)\n")
 	dst.Tab(1).Code("for _, item := range fields {\n")
-	dst.Tab(2).Code("if val, ok := ").Code(lName).Code("FieldMaps[item]; ok {\n")
-	dst.Tab(3).Code("g.changeFields[val] = true\n")
-	dst.Tab(2).Code("}\n")
+	dst.Tab(2).Code("g.changeFields[item] = true\n")
 	dst.Tab(1).Code("}\n")
-	dst.Tab(1).Code("return len(g.changeFields)\n")
 	dst.Code("}\n\n")
 
-	dst.Code("func (g *" + fName + ") DbAllChangeFields() {\n")
+	dst.Code("func (g *" + uName + ") DbAllChangeFields() {\n")
 	dst.Tab(1).Code("g.changeFields = make([]bool, ").Code(lName).Code("FieldCount)\n")
 	dst.Tab(1).Code("for i := 0; i < int(").Code(lName).Code("FieldCount); i++ {\n")
 	dst.Tab(2).Code("g.changeFields[i] = true\n")
 	dst.Tab(1).Code("}\n")
 	dst.Code("}\n\n")
 
-	dst.Code("func (g *" + fName + ") DbClearChangeFields() {\n")
+	dst.Code("func (g *" + uName + ") DbClearChangeFields() {\n")
 	dst.Tab(1).Code("g.changeFields = make([]bool, ").Code(lName).Code("FieldCount)\n")
 	dst.Code("}\n\n")
 

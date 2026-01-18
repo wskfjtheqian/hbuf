@@ -128,17 +128,27 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) error {
 
 	dst.Tab(2).Code("return ret\n")
 	dst.Tab(1).Code("}\n\n")
-	//public $getChangeField(val: AreasInfo, _tag: string): { change: AreasInfo, fields: string[] } {
-	//const ret: { change: AreasInfo, fields: string[] } = {
-	//change: new AreasInfo(),
-	//fields: [],
-	//}
-	//if (this.areasId != val.areasId) {
-	//ret.fields.push("areas_id")
-	//ret.change.areasId = this.areasId
-	//}
-	//return ret
-	//}
+
+	dst.Tab(1).Code("private static $fieldMaps: Record<string, string> = {\n")
+	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
+		lName := build.StringToFirstLower(field.Name.Name)
+		dst.Tab(2).Code("\"").Code(lName).Code("\": \"").Code(field.Name.Name).Code("\",\n")
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	dst.Tab(1).Code("}\n\n")
+
+	dst.Tab(1).Code("public static $convertField(fields: string[]): string[] {\n")
+	dst.Tab(2).Code("const list = new Set<string>()\n")
+	dst.Tab(2).Code("for (const field of fields) {\n")
+	dst.Tab(3).Code("if (").Code(uName).Code(".$fieldMaps[field] != null) {\n")
+	dst.Tab(4).Code("list.add(").Code(uName).Code(".$fieldMaps[field])\n")
+	dst.Tab(3).Code("}\n")
+	dst.Tab(2).Code("}\n")
+	dst.Tab(2).Code("return Array.from(list)\n")
+	dst.Tab(1).Code("}\n\n")
 	dst.Code("}\n\n")
 	return nil
 }

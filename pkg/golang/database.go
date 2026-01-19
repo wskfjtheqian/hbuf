@@ -1025,11 +1025,11 @@ func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, key string,
 	w := b.getParamWhere(dst, wFields, false, true, true)
 	dst.AddImports(w.GetImports())
 
-	dst.Code("func (g " + fName + ") DbGet(ctx context.Context, columns ...").Code(dName).Code("Field) (*" + dName + ", error) {\n")
+	dst.Code("func (g ").Code(fName).Code(") DbGet(ctx context.Context, columns ...").Code(dName).Code("Field) (*").Code(dName).Code(", error) {\n")
 	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
 	dst.Tab(1).Code("s := db.NewBuilder()\n")
 	dst.Import("strings", "", 0)
-	dst.Tab(1).Code("var val " + dName + "\n")
+	dst.Tab(1).Code("var val *").Code(dName).Code("\n")
 
 	dst.Tab(1).Code("s.T(\"SELECT \").T(strings.Join(val.DbScanNames(columns...), \", \")).T(\" FROM \").T(tableName).T(\" WHERE is_deleted = 0\")\n")
 	dst.Code(w.GetCode().String())
@@ -1047,14 +1047,14 @@ func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, key string,
 	}
 	dst.Import("database/sql", "", 0)
 	dst.Tab(tab + 1).Code("_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
-	dst.Tab(tab + 2).Code("val = ").Code(dName).Code("{}\n")
+	dst.Tab(tab + 2).Code("val = &").Code(dName).Code("{}\n")
 	dst.Tab(tab + 2).Code("return false, rows.Scan(val.DbScanColumns(columns...)...)\n")
 	dst.Tab(tab + 1).Code("})\n")
 	if nil != c {
 		dst.Tab(tab + 1).Code("return val, err\n")
 		dst.Tab(1).Code("})\n")
 	}
-	dst.Tab(1).Code("return &val, err\n")
+	dst.Tab(1).Code("return val, err\n")
 	dst.Code("}\n")
 	dst.Code("\n")
 

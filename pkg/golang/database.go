@@ -686,11 +686,12 @@ func (b *Builder) printMapData(dst *build.Writer, key string, typ *ast.DataType,
 	dst.AddImports(kType.GetImports())
 	dst.AddImports(KName.GetImports())
 
-	item, scan, _ := b.getItemAndValue(fields, key)
-	dst.Code("func (g " + fName + ") DbMap(ctx context.Context) (map[" + kType.String() + "]" + dName + ", error) {\n")
+	dst.Code("func (g " + fName + ") DbMap(ctx context.Context, columns ...").Code(dName).Code("Field) (map[" + kType.String() + "]" + dName + ", error) {\n")
 	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
 	dst.Tab(1).Code("s := db.NewBuilder()\n")
-	dst.Tab(1).Code("s.T(\"SELECT " + strings.Join(item, ", ") + " FROM \").T(tableName).T(\" WHERE is_deleted = 0\")\n")
+
+	dst.Tab(1).Code("var val " + dName + "\n")
+	dst.Tab(1).Code("s.T(\"SELECT \").T(strings.Join(val.DbScanNames(columns...), \", \")).T(\" FROM \").T(tableName).T(\" WHERE is_deleted = 0\")\n")
 	dst.Code(w.GetCode().String())
 
 	dst.Tab(1).Code("var ret map[" + kType.String() + "]" + dName + "\n")
@@ -708,7 +709,7 @@ func (b *Builder) printMapData(dst *build.Writer, key string, typ *ast.DataType,
 	dst.Tab(tab + 1).Code("ret = make(map[" + kType.String() + "]" + dName + ")\n")
 	dst.Tab(tab + 1).Code("_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
 	dst.Tab(tab + 2).Code("var val " + dName + "\n")
-	dst.Tab(tab + 2).Code("err := rows.Scan(" + scan.String() + ")\n")
+	dst.Tab(tab + 2).Code("err := rows.Scan(val.DbScanColumns(columns...)...)\n")
 	dst.Tab(tab + 2).Code("if err == nil {\n")
 	dst.Tab(tab + 3).Code("ret[val.Get" + build.StringToHumpName(KName.String()) + "()] = val\n")
 	dst.Tab(tab + 2).Code("}\n")

@@ -1021,7 +1021,7 @@ func (b *Builder) printSetStringValue(dst *build.Writer, expr ast.Expr, name str
 				} else {
 					dst.Code("0")
 				}
-				dst.Code(" : (Number.parseFloat(").Code(name).Code("! as string))")
+				dst.Code(" : (Number.parseFloat(").Code(name).Code("! as string)))")
 
 			case build.Bool:
 				dst.Code("((").Code(name).Code("?.length ?? 0) == 0 ? ")

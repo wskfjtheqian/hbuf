@@ -101,8 +101,8 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) error {
 	dst.Tab(1).Code("} {\n")
 	dst.Tab(2).Code("const ret: ")
 	dst.Code("{ change : ").Code(uName).Code(" , fields: string[] } = {\n")
-	dst.Tab(3).Code("change: this,\n")
-	//dst.Tab(3).Code("change: new ").Code(uName).Code("(),\n")
+	//dst.Tab(3).Code("change: this,\n")
+	dst.Tab(3).Code("change: new ").Code(uName).Code("(),\n")
 	dst.Tab(3).Code("fields: [],\n")
 	dst.Tab(2).Code("}\n")
 

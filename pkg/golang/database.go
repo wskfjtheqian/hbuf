@@ -269,7 +269,8 @@ func (b *Builder) printField(dst *build.Writer, typ *ast.DataType, fields []*bui
 	dst.Code("var ").Code(lName).Code("FieldPointers = [")
 	dst.Code(strconv.Itoa(len(fields))).Code("]func(*").Code(uName).Code(") any{\n")
 	for _, field := range fields {
-		dst.Tab(1).Code("func(v *").Code(uName).Code(") any { return &v.").Code(build.StringToHumpName(field.Field.Name.Name)).Code(" },\n")
+		dst.Tab(1).Code("func(v *").Code(uName).Code(") any { return ").Code(b.converter(field, "v")).Code(" },\n")
+
 	}
 	dst.Code("}\n\n")
 

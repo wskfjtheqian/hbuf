@@ -162,7 +162,7 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 		if "self" == val {
 			f = wFields
 		}
-		b.printInsertListData(dst, typ, dbs[0], f, key, nil != c)
+		b.printInsertBatchData(dst, typ, dbs[0], f, key, nil != c)
 	}
 
 	val = strings.ToLower(fDbs[0].Update)
@@ -811,12 +811,40 @@ func (b *Builder) printInsertData(dst *build.Writer, typ *ast.DataType, val stri
 	dst.Code("func (g " + fName + ") DbInsert(ctx context.Context) (int64, int64, error) {\n")
 	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
 	dst.Tab(1).Code("s := db.NewBuilder()\n")
-	dst.Tab(1).Code("s.T(\"INSERT INTO \").T(tableName).T(\" SET \").Del(\",\")\n")
+	dst.Tab(1).Code("v := db.NewBuilder()\n")
+	dst.Tab(1).Code("s.T(\"INSERT INTO \").T(tableName).T(\" (\").Del(\",\")\n")
+	dst.Tab(1).Code("v.T(\"VALUES(\").Del(\",\")\n")
 
-	set := b.printSet(typ, fields, val, SetWhereNot)
-	dst.AddImports(set.GetImports())
-	dst.Code(set.String())
+	for _, field := range fields {
+		set := ""
+		if 0 < len(field.Dbs[0].Set) {
+			set = field.Dbs[0].Set
+		} else if "self" == val {
+			set = "?"
+		} else {
+			continue
+		}
 
+		tag := 0
+		name := build.StringToHumpName(field.Field.Name.Name)
+		if build.IsNil(field.Field.Type) && !field.Dbs[0].Force {
+			dst.Tab(1).Code("if nil != g.")
+			dst.Code(name)
+			dst.Code(" {\n")
+			tag = 1
+		}
+
+		dst.Tab(tag + 1).Code("s.T(\",\").T(\"").Code(field.Dbs[0].Name).Code("\")\n")
+		dst.Tab(tag + 1).Code("v.T(\",\")")
+		_ = b.printParam(dst, set, field, fields, "", "")
+		if tag > 0 {
+			dst.Tab(1).Code("}\n")
+		}
+		dst.Code("\n")
+	}
+	dst.Tab(1).Code("s.T(\") \")\n")
+	dst.Tab(1).Code("v.T(\") \")\n")
+	dst.Tab(1).Code("s.Join(v)\n")
 	if nil != c {
 		dst.Tab(1).Code("_ = db.ClearCache(ctx, tableName)\n")
 	}
@@ -824,16 +852,21 @@ func (b *Builder) printInsertData(dst *build.Writer, typ *ast.DataType, val stri
 	dst.Code("}\n\n")
 }
 
-func (b *Builder) printInsertListData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField, isCache bool) {
+func (b *Builder) printInsertBatchData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField, isCache bool) {
 	name := build.StringToHumpName(typ.Name.Name)
-	dst.Code("func (g " + name + ") DbInsertList(ctx context.Context, val []*" + name + ") (int64, int64, error) {\n")
-	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
-	dst.Tab(1).Code("if nil == val || 0 == len(val) {\n")
+	dst.Code("func (g " + name + ") DbInsertBatch(ctx context.Context, list ...*" + name + ") (int64, int64, error) {\n")
+	dst.Tab(1).Code("if nil == list || 0 == len(list) {\n")
 	dst.Tab(2).Code("return 0, 0, nil\n")
-	dst.Tab(1).Code("}\n")
+	dst.Tab(1).Code("}\n\n")
 
-	dst.Tab(1).Code("s := db.NewBuilder()\n")
-	dst.Tab(1).Code("s.T(\"INSERT INTO \").T(tableName).T(\" (")
+	dst.Tab(1).Code("var total int64\n")
+	dst.Tab(1).Code("var lastId int64\n")
+	dst.Tab(1).Code("limit := int(db.BatchLimit(ctx))\n")
+	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n\n")
+
+	dst.Tab(1).Code("for j := 0; j < len(list); j += limit {\n")
+	dst.Tab(2).Code("s := db.NewBuilder()\n")
+	dst.Tab(2).Code("s.T(\"INSERT INTO \").T(tableName).T(\" (")
 	isFist := true
 	for _, field := range fields {
 		if !isFist {
@@ -843,11 +876,12 @@ func (b *Builder) printInsertListData(dst *build.Writer, typ *ast.DataType, db *
 		dst.Code(field.Dbs[0].Name)
 	}
 	dst.Code(") VALUES\")\n")
-	dst.Tab(1).Code("for i, val := range val {\n")
-	dst.Tab(2).Code("if 0 != i {\n")
-	dst.Tab(3).Code("s.T(\",\")\n")
-	dst.Tab(2).Code("}\n")
-	dst.Tab(2).Code("s.T(\"(\").L(\",\", ")
+	dst.Tab(2).Code("end := min(j+limit, len(list))\n")
+	dst.Tab(2).Code("for i, val := range list[j:end] {\n")
+	dst.Tab(3).Code("if 0 != i {\n")
+	dst.Tab(4).Code("s.T(\",\")\n")
+	dst.Tab(3).Code("}\n")
+	dst.Tab(3).Code("s.T(\"(\").L(\",\", ")
 	isFist = true
 	for _, field := range fields {
 		if !isFist {
@@ -857,11 +891,20 @@ func (b *Builder) printInsertListData(dst *build.Writer, typ *ast.DataType, db *
 		dst.Code(b.converter(field, "val"))
 	}
 	dst.Code(").T(\")\")\n")
+	dst.Tab(2).Code("}\n")
+	dst.Tab(2).Code("count, id, err := s.Exec(ctx)\n")
+	dst.Tab(2).Code("if err != nil {\n")
+	dst.Tab(3).Code("return 0, 0, err\n")
+	dst.Tab(2).Code("}\n")
+	dst.Tab(2).Code("total += count\n")
+	dst.Tab(2).Code("lastId = id\n")
+
 	dst.Tab(1).Code("}\n")
+
 	if isCache {
 		dst.Tab(1).Code("_ = db.ClearCache(ctx, tableName)\n")
 	}
-	dst.Tab(1).Code("return s.Exec(ctx)\n")
+	dst.Tab(1).Code("return total, lastId, nil\n")
 	dst.Code("}\n\n")
 }
 
@@ -974,8 +1017,8 @@ const (
 	SetWhereChange = 2
 )
 
-func (b *Builder) printSet(fType *ast.DataType, fields []*build.DBField, key string, where SetWhere) *build.Writer {
-	fName := build.StringToHumpName(fType.Name.Name)
+func (b *Builder) printSet(typ *ast.DataType, fields []*build.DBField, key string, where SetWhere) *build.Writer {
+	uName := build.StringToHumpName(typ.Name.Name)
 	dst := build.NewWriter()
 	for _, field := range fields {
 		set := ""
@@ -991,7 +1034,7 @@ func (b *Builder) printSet(fType *ast.DataType, fields []*build.DBField, key str
 		name := build.StringToHumpName(field.Field.Name.Name)
 		if where == SetWhereChange {
 			isWhere = true
-			dst.Tab(1).Code("if g.changeFields[").Code(fName).Code("Field_").Code(name).Code("] {\n")
+			dst.Tab(1).Code("if g.changeFields[").Code(uName).Code("Field_").Code(name).Code("] {\n")
 			dst.Tab(1)
 		} else if where == SetWhereNil && build.IsNil(field.Field.Type) && !field.Dbs[0].Force {
 			isWhere = true

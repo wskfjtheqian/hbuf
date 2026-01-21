@@ -177,28 +177,33 @@ func (b *Builder) printDataStruct(dst *build.Writer, typ *ast.DataType) error {
 	if err != nil {
 		return err
 	}
-	name := build.StringToHumpName(typ.Name.Name)
+	uName := build.StringToHumpName(typ.Name.Name)
 	if nil != typ.Doc && 0 < len(typ.Doc.Text()) {
-		dst.Code("// " + name + " " + typ.Doc.Text())
+		dst.Code("// ").Code(uName).Code(" ").Code(typ.Doc.Text())
 	}
-	dst.Code("type " + name + " struct {\n")
+	dst.Code("type ").Code(uName).Code(" struct {\n")
 
 	length := 0
 	nameLen := 0
 	typLen := 0
 	tagLen := 0
 
-	fields := make([]dataField, 0, len(typ.Fields.List)+1)
+	isChange := false
 	if len(dbs) > 0 {
 		val := strings.ToLower(dbs[0].Change)
 		if "self" == val || "parent" == val {
-			nameLen = len("changeFields")
-			typLen = len("[]bool")
-			fields = append(fields, dataField{
-				name: "changeFields",
-				typ:  "[]bool",
-			})
+			isChange = true
 		}
+	}
+
+	fields := make([]dataField, 0, len(typ.Fields.List)+1)
+	if isChange {
+		nameLen = len("changeFields")
+		typLen = len("[]bool")
+		fields = append(fields, dataField{
+			name: "changeFields",
+			typ:  "[]bool",
+		})
 	}
 
 	for _, field := range typ.Fields.List {
@@ -266,40 +271,44 @@ func (b *Builder) printDataStruct(dst *build.Writer, typ *ast.DataType) error {
 	}
 	dst.Code("}\n\n")
 
-	dst.Code("func (g *" + build.StringToHumpName(typ.Name.Name) + ") Descriptors() hbuf.Descriptor {\n")
+	dst.Code("func (g *").Code(uName).Code(") Descriptors() hbuf.Descriptor {\n")
 	dst.Tab(1).Code("return ").Code(build.StringToFirstLower(typ.Name.Name)).Code("Descriptor.Desc()\n")
 	dst.Code("}\n\n")
 
 	for _, field := range typ.Fields.List {
+		uFieldName := build.StringToHumpName(field.Name.Name)
 		if nil != field.Doc && 0 < len(field.Doc.Text()) {
-			dst.Code("// Get" + build.StringToHumpName(field.Name.Name) + " Get " + field.Doc.Text())
+			dst.Code("// Get").Code(uFieldName).Code(" Get ").Code(field.Doc.Text())
 		}
-		dst.Code("func (g *" + build.StringToHumpName(typ.Name.Name) + ") Get" + build.StringToHumpName(field.Name.Name) + "() ")
+		dst.Code("func (g *").Code(uName).Code(") Get").Code(uFieldName).Code("() ")
 		b.printType(dst, field.Type, false)
 		dst.Code(" {\n")
 		if field.Type.IsEmpty() && !build.IsArray(field.Type) && !build.IsMap(field.Type) {
-			dst.Tab(1).Code("if nil == g." + build.StringToHumpName(field.Name.Name) + " {\n")
+			dst.Tab(1).Code("if nil == g.").Code(uFieldName).Code(" {\n")
 			dst.Tab(2).Code("return ")
 			b.printDefault(dst, field.Type)
 			dst.Code("\n")
 			dst.Tab(1).Code("}\n")
-			dst.Tab(1).Code("return *g." + build.StringToHumpName(field.Name.Name) + "\n")
+			dst.Tab(1).Code("return *g.").Code(uFieldName).Code("\n")
 		} else {
-			dst.Tab(1).Code("return g." + build.StringToHumpName(field.Name.Name) + "\n")
+			dst.Tab(1).Code("return g.").Code(uFieldName).Code("\n")
 		}
 		dst.Code("}\n\n")
 
 		if nil != field.Doc && 0 < len(field.Doc.Text()) {
-			dst.Code("// Set" + build.StringToHumpName(field.Name.Name) + " Set " + field.Doc.Text())
+			dst.Code("// Set").Code(uFieldName).Code(" Set ").Code(field.Doc.Text())
 		}
-		dst.Code("func (g *" + build.StringToHumpName(typ.Name.Name) + ") Set" + build.StringToHumpName(field.Name.Name) + "(val ")
+		dst.Code("func (g *").Code(uName).Code(") Set").Code(uFieldName).Code("(val ")
 		b.printType(dst, field.Type, false)
 		dst.Code(") {\n")
-		dst.Tab(1).Code("g." + build.StringToHumpName(field.Name.Name) + " = ")
+		dst.Tab(1).Code("g.").Code(uFieldName).Code(" = ")
 		if field.Type.IsEmpty() && !build.IsArray(field.Type) && !build.IsMap(field.Type) {
 			dst.Code("&val\n")
 		} else {
 			dst.Code("val\n")
+		}
+		if isChange {
+			dst.Tab(1).Code("g.changeFields[int(").Code(uName).Code("Field_").Code(uFieldName).Code(")] = true\n")
 		}
 		dst.Code("}\n\n")
 	}

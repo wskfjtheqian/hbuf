@@ -255,11 +255,12 @@ func (b *Builder) printField(dst *build.Writer, typ *ast.DataType, fields []*bui
 	uName := build.StringToHumpName(typ.Name.Name)
 	lName := build.StringToFirstLower(typ.Name.Name)
 	dst.Code("const ").Code(lName).Code("FieldCount uint = ").Code(strconv.Itoa(len(fields))).Code("\n\n")
+
+	dst.Code("type ").Code(uName).Code("Field uint\n\n")
 	dst.Code("func (f  ").Code(uName).Code("Field) String() string {\n")
 	dst.Tab(1).Code("return ").Code(lName).Code("FieldNames[f]\n")
 	dst.Code("}\n\n")
 
-	dst.Code("type ").Code(uName).Code("Field uint\n\n")
 	dst.Code("const (\n")
 	for i, field := range fields {
 		dst.Tab(1.).Code(uName).Code("Field_").Code(build.StringToHumpName(field.Field.Name.Name))
@@ -270,48 +271,38 @@ func (b *Builder) printField(dst *build.Writer, typ *ast.DataType, fields []*bui
 	}
 	dst.Code(")\n\n")
 
-	dst.Code("var ").Code(lName).Code("FieldPointers = [")
-	dst.Code(strconv.Itoa(len(fields))).Code("]func(*").Code(uName).Code(") any{\n")
+	dst.Code("var ").Code(lName).Code("FieldDbPointers = [")
+	dst.Code(lName).Code("FieldCount").Code("]func(*").Code(uName).Code(") any{\n")
 	for _, field := range fields {
 		dst.Tab(1).Code("func(v *").Code(uName).Code(") any { return ").Code(b.converter(field, "v")).Code(" },\n")
 
 	}
 	dst.Code("}\n\n")
 
-	dst.Code("var ").Code(lName).Code("FieldNames = [")
-	dst.Code(strconv.Itoa(len(fields))).Code("]string {\n")
+	dst.Code("var ").Code(lName).Code("FieldDbNames = [")
+	dst.Code(lName).Code("FieldCount").Code("]string {\n")
 	for _, field := range fields {
 		dst.Tab(1).Code("\"").Code(field.Dbs[0].Name).Code("\",\n")
 	}
 	dst.Code("}\n\n")
 
-	type Field struct {
-		name string
-		text string
-	}
-
-	list := make([]*Field, len(fields))
-	length := 0
-	for i, field := range fields {
-		item := &Field{
-			name: field.Field.Name.Name,
-			text: build.StringToHumpName(field.Field.Name.Name),
-		}
-		list[i] = item
-		if length < len(item.name) {
-			length = len(item.name)
-		}
-	}
-
-	dst.Code("var ").Code(lName).Code("FieldMaps = map[string]")
-	dst.Code(uName).Code("Field{\n")
-	for _, item := range list {
-		dst.Tab(1).Code("\"").Code(item.name).Code("\": ")
-		dst.Code(strings.Repeat(" ", length-len(item.name))).Code(uName).Code("Field_").Code(item.text).Code(",\n")
+	dst.Code("var ").Code(lName).Code("FieldNames = [")
+	dst.Code(lName).Code("FieldCount").Code("]string {\n")
+	for _, field := range fields {
+		dst.Tab(1).Code("\"").Code(field.Field.Name.Name).Code("\",\n")
 	}
 	dst.Code("}\n\n")
+	dst.Code("var ").Code(lName).Code("FieldMaps = map[string]").Code(uName).Code("Field {}\n\n")
+	dst.Code("var ").Code(lName).Code("FieldOnce = sync.Once{}\n\n")
 
 	dst.Code("func ").Code(uName).Code("FieldsByString(fields ...string) []").Code(uName).Code("Field {\n")
+	dst.Import("sync", "", 0)
+	dst.Tab(1).Code(lName).Code("FieldOnce.Do(func() {\n")
+	dst.Tab(2).Code("for i, name := range ").Code(lName).Code("FieldNames {\n")
+	dst.Tab(3).Code(lName).Code("FieldMaps[name] = ").Code(uName).Code("Field(i)\n")
+	dst.Tab(2).Code("}\n")
+	dst.Tab(1).Code("})\n")
+
 	dst.Tab(1).Code("list := make([]").Code(uName).Code("Field, 0, ").Code(lName).Code("FieldCount)\n")
 	dst.Tab(1).Code("for _, item := range fields {\n")
 	dst.Tab(2).Code("if val, ok := ").Code(lName).Code("FieldMaps[item]; ok {\n")
@@ -333,8 +324,8 @@ func (b *Builder) printScanData(dst *build.Writer, typ *ast.DataType, db *build.
 
 	dst.Tab(1).Code("result := make([]interface{}, 0, len(columns))\n")
 	dst.Tab(1).Code("for _, field := range columns {\n")
-	dst.Tab(2).Code("if int(field) < len(").Code(build.StringToFirstLower(typ.Name.Name)).Code("FieldPointers) {\n")
-	dst.Tab(3).Code("result = append(result, ").Code(build.StringToFirstLower(typ.Name.Name)).Code("FieldPointers[field](val))\n")
+	dst.Tab(2).Code("if int(field) < len(").Code(build.StringToFirstLower(typ.Name.Name)).Code("FieldDbPointers) {\n")
+	dst.Tab(3).Code("result = append(result, ").Code(build.StringToFirstLower(typ.Name.Name)).Code("FieldDbPointers[field](val))\n")
 	dst.Tab(2).Code("}\n")
 	dst.Tab(1).Code("}\n")
 	dst.Tab(1).Code("return result\n")
@@ -349,8 +340,8 @@ func (b *Builder) printScanData(dst *build.Writer, typ *ast.DataType, db *build.
 
 	dst.Tab(1).Code("result := make([]string, 0, len(columns))\n")
 	dst.Tab(1).Code("for _, field := range columns {\n")
-	dst.Tab(2).Code("if int(field) < len(").Code(build.StringToFirstLower(typ.Name.Name)).Code("FieldNames) {\n")
-	dst.Tab(3).Code("result = append(result, ").Code(build.StringToFirstLower(typ.Name.Name)).Code("FieldNames[field])\n")
+	dst.Tab(2).Code("if int(field) < len(").Code(build.StringToFirstLower(typ.Name.Name)).Code("FieldDbNames) {\n")
+	dst.Tab(3).Code("result = append(result, ").Code(build.StringToFirstLower(typ.Name.Name)).Code("FieldDbNames[field])\n")
 	dst.Tab(2).Code("}\n")
 	dst.Tab(1).Code("}\n")
 	dst.Tab(1).Code("return result\n")

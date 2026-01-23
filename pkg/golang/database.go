@@ -255,6 +255,10 @@ func (b *Builder) printField(dst *build.Writer, typ *ast.DataType, fields []*bui
 	uName := build.StringToHumpName(typ.Name.Name)
 	lName := build.StringToFirstLower(typ.Name.Name)
 	dst.Code("const ").Code(lName).Code("FieldCount uint = ").Code(strconv.Itoa(len(fields))).Code("\n\n")
+	dst.Code("func (f  ").Code(uName).Code("Field) String() string {\n")
+	dst.Tab(1).Code("return ").Code(lName).Code("FieldNames[f]\n")
+	dst.Code("}\n\n")
+
 	dst.Code("type ").Code(uName).Code("Field uint\n\n")
 	dst.Code("const (\n")
 	for i, field := range fields {

@@ -5,6 +5,31 @@ import (
 	"hbuf/pkg/scanner"
 )
 
+type UiEnum struct {
+	Typ   string
+	Class []string
+}
+
+func GetUiEnum(tags []*ast.Tag) *UiEnum {
+	val, ok := GetTag(tags, "ui")
+	if !ok {
+		return nil
+	}
+	f := &UiEnum{}
+	if nil != val.KV {
+		for _, item := range val.KV {
+			if "class" == item.Name.Name {
+				for _, value := range item.Values {
+					f.Class = append(f.Class, value.Value[1:len(value.Value)-1])
+				}
+			} else if "type" == item.Name.Name {
+				f.Typ = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
+			}
+		}
+	}
+	return f
+}
+
 func (b *Builder) checkEnum(file *ast.File, enum *ast.EnumType, index int) error {
 	name := enum.Name.Name
 	if _, ok := _keys[BaseType(name)]; ok {

@@ -289,11 +289,12 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 		} else if "tag" == tag {
 			dst.Tab(8).Code("<el-tag  ")
 			if isBool {
-				dst.Code("type={scope.row.").Code(fieldName).Code(" ? \"success\" : \"danger\"")
+				dst.Code("type={scope.row.").Code(fieldName).Code(" ? \"success\" : \"danger\"}")
 			} else if isEnum {
-				dst.Code("class={'el-tag--' + scope.row.").Code(fieldName).Code("?.cssClass")
+				dst.Code("type={scope.row.").Code(fieldName).Code("?.type}")
+				dst.Code("class={scope.row.").Code(fieldName).Code("?.cssClass }")
 			}
-			dst.Code("}>{{\n")
+			dst.Code(">{{\n")
 
 			dst.Tab(9).Code("default: () =>")
 			b.printTableString(dst, "scope.row."+fieldName, field.Type, false, table.digit, table.format, " || \"\"", true)

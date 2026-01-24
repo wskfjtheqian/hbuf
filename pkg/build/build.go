@@ -570,6 +570,18 @@ func IsNumber(expr ast.Expr) bool {
 	return false
 }
 
+func IsBool(expr ast.Expr) bool {
+	if t, ok := expr.(*ast.VarType); ok {
+		if t, ok := t.TypeExpr.(*ast.Ident); ok {
+			switch BaseType(t.Name) {
+			case Bool:
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func IsDate(expr ast.Expr) bool {
 	if t, ok := expr.(*ast.VarType); ok {
 		if t, ok := t.TypeExpr.(*ast.Ident); ok {

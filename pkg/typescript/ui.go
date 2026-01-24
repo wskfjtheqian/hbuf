@@ -235,9 +235,10 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 			return nil
 		}
 
-		//isEnum := build.IsEnum(field.Type)
+		isEnum := build.IsEnum(field.Type)
 		//isArray := build.IsArray(field.Type)
 		//isNull := build.IsNil(field.Type)
+		isBool := build.IsBool(field.Type)
 		//i++
 		//index := i
 		if nil != table.index {
@@ -285,6 +286,20 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(8).Code("<el-tag color={scope.row!.").Code(fieldName).Code("} effect=\"dark\">{{\n")
 			dst.Tab(9).Code("default: () => scope.row.").Code(fieldName).Code("\n")
 			dst.Tab(8).Code("}}</el-tag>\n")
+		} else if "tag" == tag {
+			dst.Tab(8).Code("<el-tag  ")
+			if isBool {
+				dst.Code("type={scope.row.").Code(fieldName).Code(" ? \"success\" : \"danger\"")
+			} else if isEnum {
+				dst.Code("class={'el-tag--' + scope.row.").Code(fieldName).Code("?.cssClass")
+			}
+			dst.Code("}>{{\n")
+
+			dst.Tab(9).Code("default: () =>")
+			b.printTableString(dst, "scope.row."+fieldName, field.Type, false, table.digit, table.format, " || \"\"", true)
+			dst.Code("\n")
+			dst.Tab(8).Code("}}</el-tag>\n")
+
 		} else {
 			dst.Tab(8)
 			b.printTableString(dst, "scope.row."+fieldName, field.Type, false, table.digit, table.format, " || \"\"", true)

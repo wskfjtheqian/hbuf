@@ -897,7 +897,7 @@ func (b *Builder) printMenuItem(dst *build.Writer, expr ast.Expr, empty bool, op
 		pkg := b.getPackage(dst, t.Name, "", false)
 		name := build.StringToHumpName(t.Name.Name)
 		dst.Tab(6 + 1).Code("{").Code(pkg).Code(".").Code(name).Code(".values.map((val) => {\n")
-		dst.Tab(7 + 1).Code("return <" + option + " key={val.name}\n")
+		dst.Tab(7 + 1).Code("return <" + option + " key={val.name} class={ 'el-option--' + val.type + ' ' + val.cssClass}\n")
 		dst.Tab(8 + 1).Code("label={ctx.$t(val.toString())}\n")
 		dst.Tab(8 + 1).Code("value={val.name}\n")
 		dst.Tab(7 + 1).Code("/>\n")

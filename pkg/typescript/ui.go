@@ -56,7 +56,8 @@ type ui struct {
 	unlink     bool
 	textarea   bool
 	maxLine    *int64
-	maxCount   *int64
+	maxLen     *int64
+	minLen     *int64
 	step       *float64
 	min        *float64
 	max        *float64
@@ -150,13 +151,20 @@ func (b *Builder) getUI(tags []*ast.Tag) *ui {
 					return nil
 				}
 				form.maxLine = &atoi
-			} else if "maxCount" == item.Name.Name {
+			} else if "maxLen" == item.Name.Name {
 				atoi, err := strconv.ParseInt(item.Values[0].Value[1:len(item.Values[0].Value)-1], 10, 64)
 				if err != nil {
 					println(err.Error())
 					return nil
 				}
-				form.maxCount = &atoi
+				form.maxLen = &atoi
+			} else if "minLen" == item.Name.Name {
+				atoi, err := strconv.ParseInt(item.Values[0].Value[1:len(item.Values[0].Value)-1], 10, 64)
+				if err != nil {
+					println(err.Error())
+					return nil
+				}
+				form.minLen = &atoi
 			} else if "clip" == item.Name.Name {
 				form.clip = "true" == item.Values[0].Value[1:len(item.Values[0].Value)-1]
 			} else if "toNull" == item.Name.Name {
@@ -839,12 +847,18 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			if form.onlyRead {
 				dst.Tab(7).Code("disabled\n")
 			}
-			if form.maxCount != nil && !isNum && form.textarea {
-				dst.Tab(7).Code("maxlength = {").Code(strconv.FormatInt(*form.maxCount, 10)).Code("}\n")
+			if form.maxLen != nil && !isNum && form.textarea {
 				dst.Tab(7).Code("show-word-limit\n")
 			}
+			if form.maxLen != nil {
+				dst.Tab(7).Code("maxlength={").Code(strconv.FormatInt(*form.maxLen, 10)).Code("}\n")
+			}
+			if form.minLen != nil {
+				dst.Tab(7).Code("minlength={").Code(strconv.FormatInt(*form.minLen, 10)).Code("}\n")
+			}
+
 			if form.maxLine != nil && !isNum && form.textarea {
-				dst.Tab(7).Code("rows = {").Code(strconv.FormatInt(*form.maxLine, 10)).Code("}\n")
+				dst.Tab(7).Code("rows={").Code(strconv.FormatInt(*form.maxLine, 10)).Code("}\n")
 			}
 
 			dst.Tab(7).Code("precision={").Code(strconv.Itoa(form.digit)).Code("}\n")

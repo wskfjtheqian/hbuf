@@ -186,15 +186,16 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 				case build.Decimal:
 					if 0 < len(f.Min) || 0 < len(f.Max) {
 						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "", 0)
-						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc", "", 0)
 						dst.Tab(1).Code("if ")
 						if 0 < len(f.Min) {
+							dst.Import("github.com/shopspring/decimal", "", 0)
 							dst.Code("decimal.NewFromFloat(" + f.Min + ").GreaterThan(i.Get" + fName + "()) ")
 						}
 						if 0 < len(f.Max) {
 							if 0 < len(f.Min) {
 								dst.Code("|| ")
 							}
+							dst.Import("github.com/shopspring/decimal", "", 0)
 							dst.Code("decimal.NewFromFloat(" + f.Min + ").LessThan(i.Get" + fName + "()) ")
 						}
 						dst.Code("{\n")

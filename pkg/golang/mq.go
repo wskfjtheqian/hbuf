@@ -51,6 +51,7 @@ func (b *Builder) printStreamSubject(dst *build.Writer, data *ast.DataType, tag 
 
 	dst.Tab(0).Code("const (\n")
 	dst.Tab(1).Code(name).Code("Stream").Code("  = \"stream_").Code(stream).Code("\"\n")
+	dst.Tab(1).Code(name).Code("StreamSubject").Code(" = \"stream.").Code(subject).Code(".\"\n")
 	dst.Tab(1).Code(name).Code("Subject").Code(" = \"").Code(subject).Code(".\"\n")
 	dst.Tab(0).Code(")\n\n")
 	return nil
@@ -76,7 +77,7 @@ func (b *Builder) printSubscribeCode(dst *build.Writer, data *ast.DataType, tag 
 func (b *Builder) printJetStreamPublishCode(dst *build.Writer, data *ast.DataType, tag *ast.Tag) error {
 	name := build.StringToHumpName(data.Name.Name)
 	dst.Tab(0).Code("func (g ").Code(name).Code(") JsPublish(ctx context.Context, subject string, options ...hmq.PublishOption) (*jetstream.PubAck, error) {\n")
-	dst.Tab(1).Code("return hmq.JetStreamPublish(ctx, ").Code(name).Code("Stream, ").Code(name).Code("Subject +subject, &g, options...)\n")
+	dst.Tab(1).Code("return hmq.JetStreamPublish(ctx, ").Code(name).Code("Stream, ").Code(name).Code("StreamSubject+subject, &g, options...)\n")
 	dst.Tab(0).Code("}\n\n")
 	return nil
 }
@@ -84,7 +85,7 @@ func (b *Builder) printJetStreamPublishCode(dst *build.Writer, data *ast.DataTyp
 func (b *Builder) printJetStreamSubscribeCode(dst *build.Writer, data *ast.DataType, tag *ast.Tag) error {
 	name := build.StringToHumpName(data.Name.Name)
 	dst.Tab(0).Code("func (g ").Code(name).Code(") JsSubscribe(ctx context.Context, subject string, durable string, handler func(ctx context.Context, subject, msgId string, msg *").Code(name).Code(") error, options ...hmq.SubscribeOption) error {\n")
-	dst.Tab(1).Code("return hmq.JetStreamSubscribe(ctx, ").Code(name).Code("Stream, ").Code(name).Code("Subject+subject, durable, handler, options...)\n")
+	dst.Tab(1).Code("return hmq.JetStreamSubscribe(ctx, ").Code(name).Code("Stream, ").Code(name).Code("StreamSubject+subject, durable, handler, options...)\n")
 	dst.Tab(0).Code("}\n\n")
 	return nil
 }

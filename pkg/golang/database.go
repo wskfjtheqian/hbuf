@@ -645,11 +645,12 @@ func (b *Builder) printListAsyncData(dst *build.Writer, typ *ast.DataType, key s
 	w := b.getParamWhere(dst, wFields, true, true, true)
 	dst.AddImports(w.GetImports())
 
-	item, scan, _ := b.getItemAndValue(fields, key)
-	dst.Code("func (g " + fName + ") DbListAsync(ctx context.Context, fn func(ctx context.Context, ret *" + dName + ") (bool, error)) (error) {\n")
+	dst.Code("func (g " + fName + ") DbListAsync(ctx context.Context, fn func(ctx context.Context, ret *" + dName + ") (bool, error), columns ...").Code(dName).Code("Field) (error) {\n")
 	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
 	dst.Tab(1).Code("s := db.NewBuilder()\n")
-	dst.Tab(1).Code("s.T(\"SELECT " + strings.Join(item, ", ") + " FROM \").T(tableName).T(\" WHERE is_deleted = 0\")\n")
+
+	dst.Tab(1).Code("var val " + dName + "\n")
+	dst.Tab(1).Code("s.T(\"SELECT \").T(strings.Join(val.DbScanNames(columns...), \", \")).T(\" FROM \").T(tableName).T(\" WHERE is_deleted = 0\")\n")
 	dst.Code(w.GetCode().String())
 
 	tab := 0
@@ -659,7 +660,7 @@ func (b *Builder) printListAsyncData(dst *build.Writer, typ *ast.DataType, key s
 	if db.Change == "self" || db.Change == "parent" {
 		dst.Tab(tab + 2).Code("val.DbClearChangeFields()\n")
 	}
-	dst.Tab(tab + 2).Code("err := rows.Scan(" + scan.String() + ")\n")
+	dst.Tab(tab + 2).Code("err := rows.Scan(val.DbScanColumns(columns...)...)\n")
 	dst.Tab(tab + 2).Code("if err != nil {\n")
 	dst.Tab(tab + 3).Code("return false, err\n")
 	dst.Tab(tab + 2).Code("}\n")

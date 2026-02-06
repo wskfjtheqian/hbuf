@@ -308,7 +308,10 @@ func (b *Builder) printDataStruct(dst *build.Writer, typ *ast.DataType) error {
 			dst.Code("val\n")
 		}
 		if isChange {
-			dst.Tab(1).Code("g.changeFields[int(").Code(uName).Code("Field_").Code(uFieldName).Code(")] = true\n")
+			temp := build.GetDB(field.Name.Name, field.Tags)
+			if len(temp) > 0 {
+				dst.Tab(1).Code("g.changeFields[int(").Code(uName).Code("Field_").Code(uFieldName).Code(")] = true\n")
+			}
 		}
 		dst.Code("}\n\n")
 	}

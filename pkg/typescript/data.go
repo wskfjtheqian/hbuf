@@ -113,6 +113,8 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) error {
 			dst.Code("this.").Code(lName).Code("?.value != val.").Code(lName).Code("?.value) {\n")
 		} else if build.IsDate(field.Type) {
 			dst.Code("this.").Code(lName).Code("?.getTime() != val.").Code(lName).Code("?.getTime()) {\n")
+		} else if build.IsDecimal(field.Type) {
+			dst.Code("this.").Code(lName).Code("?.toString() != val.").Code(lName).Code("?.toString()) {\n")
 		} else {
 			dst.Code("this.").Code(lName).Code(" != val.").Code(lName).Code(") {\n")
 		}

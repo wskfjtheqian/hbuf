@@ -594,6 +594,18 @@ func IsDate(expr ast.Expr) bool {
 	return false
 }
 
+func IsDecimal(expr ast.Expr) bool {
+	if t, ok := expr.(*ast.VarType); ok {
+		if t, ok := t.TypeExpr.(*ast.Ident); ok {
+			switch BaseType(t.Name) {
+			case Decimal:
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func IsNil(expr ast.Expr) bool {
 	switch expr.(type) {
 	case *ast.VarType:

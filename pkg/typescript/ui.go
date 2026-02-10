@@ -273,7 +273,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 		dst.Tab(6).Code("{{\n")
 		dst.Tab(7).Code("default: (scope:{row: ")
 		b.printType(dst, typ.Name, false, false)
-		dst.Code(" }) => (\n")
+		dst.Code(" }) => !scope.row.").Code(fieldName).Code(" ? \"\" : (\n")
 
 		if len(custom) > 0 {
 			dst.Tab(8).Code("<").Code(custom).Code(" value={scope.row.").Code(fieldName).Code("} />\n")
@@ -701,7 +701,6 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			if form.onlyRead {
 				dst.Tab(7).Code("disabled\n")
 			}
-			dst.Tab(7).Code("precision={").Code(strconv.Itoa(form.digit)).Code("}\n")
 			dst.Tab(6).Code("/>\n")
 		} else if isArray {
 			if len(customTag) == 0 {
@@ -815,8 +814,6 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			if form.onlyRead {
 				dst.Tab(7).Code("disabled\n")
 			}
-
-			dst.Tab(7).Code("precision={").Code(strconv.Itoa(form.digit)).Code("}\n")
 			dst.Tab(6).Code("/>\n")
 		} else {
 			if len(customTag) == 0 {
@@ -861,7 +858,6 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				dst.Tab(7).Code("rows={").Code(strconv.FormatInt(*form.maxLine, 10)).Code("}\n")
 			}
 
-			dst.Tab(7).Code("precision={").Code(strconv.Itoa(form.digit)).Code("}\n")
 			dst.Tab(6).Code("/>\n")
 		}
 		lang.Add(fieldName, field.Tags)
@@ -1145,7 +1141,7 @@ func (b *Builder) printGetNumberValue(dst *build.Writer, expr ast.Expr, name str
 			case build.Bool:
 				dst.Code("Number(").Code(name).Code(" == \"true\" ? 1 : 0")
 			case build.Decimal:
-				dst.Code(name)
+				dst.Code(name).Code("?.toNumber()")
 			default:
 				dst.Code(name)
 			}

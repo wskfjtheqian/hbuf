@@ -273,7 +273,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 		dst.Tab(6).Code("{{\n")
 		dst.Tab(7).Code("default: (scope:{row: ")
 		b.printType(dst, typ.Name, false, false)
-		dst.Code(" }) => !scope.row.").Code(fieldName).Code(" ? \"\" : (\n")
+		dst.Code(" }) => (null == scope.row.").Code(fieldName).Code(" || undefined == scope.row.").Code(fieldName).Code(") ? \"\" : (\n")
 
 		if len(custom) > 0 {
 			dst.Tab(8).Code("<").Code(custom).Code(" value={scope.row.").Code(fieldName).Code("} />\n")

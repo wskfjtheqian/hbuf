@@ -792,7 +792,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 
 			if len(form.outSize) > 1 {
-				dst.Tab(7).Code("outHeight={").Code(strconv.Itoa(form.outSize[0])).Code("}\n")
+				dst.Tab(7).Code("outHeight={").Code(strconv.Itoa(form.outSize[1])).Code("}\n")
 			}
 
 			if len(form.outType) > 0 {

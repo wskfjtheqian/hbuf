@@ -980,6 +980,7 @@ func (b *Builder) printUpdateChange(dst *build.Writer, typ *ast.DataType, key st
 	dst.Tab(1).Code("s := db.NewBuilder()\n")
 	dst.Tab(1).Code("s.T(\"UPDATE \").T(tableName).T(\" SET \").Del(\",\")\n")
 
+	dst.Tab(1).Code("isChange := false\n")
 	set := b.printSet(typ, fields, key, SetWhereChange)
 	dst.AddImports(set.GetImports())
 	dst.Code(set.String())
@@ -987,6 +988,9 @@ func (b *Builder) printUpdateChange(dst *build.Writer, typ *ast.DataType, key st
 	dst.Tab(1).Code("s.T(\"WHERE 1 = 1 \")\n")
 	dst.Code(w.String())
 	dst.Code("\n")
+	dst.Tab(1).Code("if !isChange {\n")
+	dst.Tab(2).Code("return 0, 0, nil\n")
+	dst.Tab(1).Code("}\n")
 	if nil != c {
 		dst.Tab(1).Code("_ = db.ClearCache(ctx, tableName)\n")
 	}
@@ -995,6 +999,7 @@ func (b *Builder) printUpdateChange(dst *build.Writer, typ *ast.DataType, key st
 
 	lName := build.StringToFirstLower(fType.Name.Name)
 	dst.Code("func (g *" + uName + ") DbSetChangeFields(fields ...").Code(uName).Code("Field) {\n")
+
 	dst.Tab(1).Code("g.changeFields = make([]bool, ").Code(lName).Code("FieldCount)\n")
 	dst.Tab(1).Code("for _, item := range fields {\n")
 	dst.Tab(2).Code("g.changeFields[item] = true\n")
@@ -1040,6 +1045,7 @@ func (b *Builder) printSet(typ *ast.DataType, fields []*build.DBField, key strin
 		if where == SetWhereChange {
 			isWhere = true
 			dst.Tab(1).Code("if g.changeFields[").Code(uName).Code("Field_").Code(name).Code("] {\n")
+			dst.Tab(2).Code("isChange = true\n")
 			dst.Tab(1)
 		} else if where == SetWhereNil && build.IsNil(field.Field.Type) && !field.Dbs[0].Force {
 			isWhere = true

@@ -133,9 +133,21 @@ func Build(out string, in string, typ string, pack string) error {
 		return err
 	}
 
+	fileHash := NewFileHash(out)
+	err = fileHash.Read()
+	if err != nil {
+		return err
+	}
 	for path, file := range build.pkg.Files {
 		_, name := filepath.Split(path)
-		err := build.build(file, build.fset, &Param{
+		check, err := fileHash.Check(path)
+		if err != nil {
+			return err
+		}
+		if check {
+			continue
+		}
+		err = build.build(file, build.fset, &Param{
 			out:   filepath.Join(build.param.out, name),
 			pkg:   build.pkg,
 			pack:  build.param.pack,
@@ -145,7 +157,8 @@ func Build(out string, in string, typ string, pack string) error {
 			return err
 		}
 	}
-	return nil
+
+	return fileHash.Save()
 }
 
 func (b *Builder) checkFiles() error {

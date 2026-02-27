@@ -139,14 +139,15 @@ func Build(out string, in string, typ string, pack string) error {
 		return err
 	}
 	for path, file := range build.pkg.Files {
-		_, name := filepath.Split(path)
-		check, err := fileHash.Check(path)
+		check, err := fileHash.CheckChange(path, build.pkg.Files)
 		if err != nil {
 			return err
 		}
 		if check {
 			continue
 		}
+
+		_, name := filepath.Split(path)
 		err = build.build(file, build.fset, &Param{
 			out:   filepath.Join(build.param.out, name),
 			pkg:   build.pkg,

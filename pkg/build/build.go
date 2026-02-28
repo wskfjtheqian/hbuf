@@ -138,12 +138,18 @@ func Build(out string, in string, typ string, pack string) error {
 	if err != nil {
 		return err
 	}
+
+	err = fileHash.Init(build.pkg.Files)
+	if err != nil {
+		return err
+	}
+
 	for path, file := range build.pkg.Files {
 		check, err := fileHash.CheckChange(path, build.pkg.Files)
 		if err != nil {
 			return err
 		}
-		if check {
+		if !check {
 			continue
 		}
 

@@ -153,7 +153,7 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 		if "self" == val {
 			f = wFields
 		}
-		b.printInsertData(dst, typ, val, dbs[0], w, f, fType, key, c)
+		b.printInsertOrReplaceData(dst, "Insert", typ, val, dbs[0], w, f, fType, key, c)
 	}
 
 	val = strings.ToLower(fDbs[0].Inserts)
@@ -162,7 +162,26 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 		if "self" == val {
 			f = wFields
 		}
-		b.printInsertBatchData(dst, typ, dbs[0], f, key, nil != c)
+		b.printInsertOrReplaceBatchData(dst, "Insert", typ, dbs[0], f, key, nil != c)
+	}
+
+	val = strings.ToLower(fDbs[0].Replace)
+	if "self" == val || "parent" == val {
+		w := wFields
+		f := fields
+		if "self" == val {
+			f = wFields
+		}
+		b.printInsertOrReplaceData(dst, "Replace", typ, val, dbs[0], w, f, fType, key, c)
+	}
+
+	val = strings.ToLower(fDbs[0].Replaces)
+	if "self" == val || "parent" == val {
+		f := fields
+		if "self" == val {
+			f = wFields
+		}
+		b.printInsertOrReplaceBatchData(dst, "Replace", typ, dbs[0], f, key, nil != c)
 	}
 
 	val = strings.ToLower(fDbs[0].Update)
@@ -808,7 +827,7 @@ func (b *Builder) printRemoveData(dst *build.Writer, db *build.DB, wFields []*bu
 	dst.Code("}\n\n")
 }
 
-func (b *Builder) printInsertData(dst *build.Writer, typ *ast.DataType, val string, db *build.DB, wFields []*build.DBField, fields []*build.DBField, fType *ast.DataType, key *build.DBField, c *cache) {
+func (b *Builder) printInsertOrReplaceData(dst *build.Writer, s string, typ *ast.DataType, val string, db *build.DB, wFields []*build.DBField, fields []*build.DBField, fType *ast.DataType, key *build.DBField, c *cache) {
 	fName := build.StringToHumpName(fType.Name.Name)
 	if typ != fType {
 		val = "parent"
@@ -816,11 +835,11 @@ func (b *Builder) printInsertData(dst *build.Writer, typ *ast.DataType, val stri
 	w := b.getParamWhere(dst, wFields, false, false, false)
 	dst.AddImports(w.GetImports())
 
-	dst.Code("func (g " + fName + ") DbInsert(ctx context.Context) (int64, int64, error) {\n")
+	dst.Code("func (g " + fName + ") Db").Code(s).Code("(ctx context.Context) (int64, int64, error) {\n")
 	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
 	dst.Tab(1).Code("s := db.NewBuilder()\n")
 	dst.Tab(1).Code("v := db.NewBuilder()\n")
-	dst.Tab(1).Code("s.T(\"INSERT INTO \").T(tableName).T(\" (\").Del(\",\")\n")
+	dst.Tab(1).Code("s.T(\"").Code(strings.ToUpper(s)).Code(" INTO \").T(tableName).T(\" (\").Del(\",\")\n")
 	dst.Tab(1).Code("v.T(\"VALUES(\").Del(\",\")\n")
 
 	for _, field := range fields {
@@ -860,9 +879,9 @@ func (b *Builder) printInsertData(dst *build.Writer, typ *ast.DataType, val stri
 	dst.Code("}\n\n")
 }
 
-func (b *Builder) printInsertBatchData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField, isCache bool) {
+func (b *Builder) printInsertOrReplaceBatchData(dst *build.Writer, s string, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField, isCache bool) {
 	name := build.StringToHumpName(typ.Name.Name)
-	dst.Code("func (g " + name + ") DbInsertBatch(ctx context.Context, list ...*" + name + ") (int64, int64, error) {\n")
+	dst.Code("func (g " + name + ") Db").Code(s).Code("Batch(ctx context.Context, list ...*" + name + ") (int64, int64, error) {\n")
 	dst.Tab(1).Code("if nil == list || 0 == len(list) {\n")
 	dst.Tab(2).Code("return 0, 0, nil\n")
 	dst.Tab(1).Code("}\n\n")
@@ -874,7 +893,7 @@ func (b *Builder) printInsertBatchData(dst *build.Writer, typ *ast.DataType, db 
 
 	dst.Tab(1).Code("for j := 0; j < len(list); j += limit {\n")
 	dst.Tab(2).Code("s := db.NewBuilder()\n")
-	dst.Tab(2).Code("s.T(\"INSERT INTO \").T(tableName).T(\" (")
+	dst.Tab(2).Code("s.T(\"").Code(strings.ToUpper(s)).Code(" INTO \").T(tableName).T(\" (")
 	isFist := true
 	for _, field := range fields {
 		if !isFist {

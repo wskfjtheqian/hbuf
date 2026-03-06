@@ -15,6 +15,8 @@ type DB struct {
 	typ       string
 	Insert    string
 	Inserts   string
+	Replace   string
+	Replaces  string
 	Update    string
 	Set       string
 	Del       bool
@@ -81,6 +83,10 @@ func GetDB(n string, tag []*ast.Tag) []*DB {
 						db.Insert = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 					} else if "inserts" == item.Name.Name {
 						db.Inserts = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
+					} else if "replace" == item.Name.Name {
+						db.Replace = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
+					} else if "replaces" == item.Name.Name {
+						db.Replaces = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 					} else if "update" == item.Name.Name {
 						db.Update = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 					} else if "change" == item.Name.Name {

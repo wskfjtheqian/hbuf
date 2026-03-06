@@ -578,7 +578,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				case "YYYY/MM":
 					dst.Code("month")
 				case "YYYY/MM/DD":
-					dst.Code("dates")
+					dst.Code("date")
 				default:
 					dst.Code("datetime")
 				}

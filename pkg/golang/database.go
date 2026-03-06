@@ -327,7 +327,7 @@ func (b *Builder) printScanData(dst *build.Writer, typ *ast.DataType, db *build.
 	for _, field := range fields {
 		fieldName := build.StringToHumpName(field.Field.Name.Name)
 		dst.Tab(2).Code("case ").Code(name).Code("Field_").Code(fieldName).Code(":\n")
-		dst.Tab(3).Code("result = append(result, &val.").Code(fieldName).Code(")\n")
+		dst.Tab(3).Code("result = append(result, ").Code(b.converter(field, "val")).Code(")\n")
 	}
 
 	dst.Tab(2).Code("default:\n")
@@ -349,6 +349,7 @@ func (b *Builder) printScanData(dst *build.Writer, typ *ast.DataType, db *build.
 	dst.Tab(1).Code("for _, field := range columns {\n")
 	dst.Tab(2).Code("if int(field) < len(").Code(build.StringToFirstLower(typ.Name.Name)).Code("FieldDbNames) {\n")
 	dst.Tab(3).Code("result = append(result, ").Code(build.StringToFirstLower(typ.Name.Name)).Code("FieldDbNames[field])\n")
+
 	dst.Tab(2).Code("}\n")
 	dst.Tab(1).Code("}\n")
 	dst.Tab(1).Code("return result\n")

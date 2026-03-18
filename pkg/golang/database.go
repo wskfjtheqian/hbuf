@@ -308,6 +308,17 @@ func (b *Builder) printField(dst *build.Writer, typ *ast.DataType, fields []*bui
 	}
 	dst.Code("}\n\n")
 
+	dst.Code("var ").Code(lName).Code("FieldDbGets = [")
+	dst.Code(lName).Code("FieldCount").Code("]string {\n")
+	for _, field := range fields {
+		get := field.Dbs[0].Get
+		if len(get) == 0 {
+			get = field.Dbs[0].Name
+		}
+		dst.Tab(1).Code("\"").Code(get).Code("\",\n")
+	}
+	dst.Code("}\n\n")
+
 	dst.Code("func ").Code(uName).Code("FieldsByDbName(fields ...string) []").Code(uName).Code("Field {\n")
 	dst.Tab(1).Code("list := make([]").Code(uName).Code("Field, 0, ").Code(lName).Code("FieldCount)\n")
 	dst.Tab(1).Code("for _, item := range fields {\n")
@@ -338,7 +349,7 @@ func (b *Builder) printField(dst *build.Writer, typ *ast.DataType, fields []*bui
 
 func (b *Builder) printScanData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField) {
 	name := build.StringToHumpName(typ.Name.Name)
-	item, scan, _ := b.getItemAndValue(fields, "self")
+	_, scan, _ := b.getItemAndValue(fields, "self")
 	dst.Code("func (val *").Code(name).Code(") DbScanColumns(columns ...").Code(name).Code("Field) []any {\n")
 	dst.Tab(1).Code("if len(columns) == 0 {\n")
 	dst.Tab(2).Code("return []any{" + scan.String() + "}\n")
@@ -361,17 +372,15 @@ func (b *Builder) printScanData(dst *build.Writer, typ *ast.DataType, db *build.
 	dst.Code("}\n")
 	dst.Code("\n")
 
-	dst.Code("var ").Code(build.StringToFirstLower(name)).Code("DbNames = []string{\"" + strings.Join(item, "\", \"") + "\"}\n\n")
-
 	dst.Code("func (val *").Code(name).Code(") DbScanNames(columns ...").Code(name).Code("Field) []string {\n")
 	dst.Tab(1).Code("if len(columns) == 0 {\n")
-	dst.Tab(2).Code("return ").Code(build.StringToFirstLower(name)).Code("DbNames\n")
+	dst.Tab(2).Code("return ").Code(build.StringToFirstLower(name)).Code("FieldDbGets[:]\n")
 	dst.Tab(1).Code("}\n")
 
 	dst.Tab(1).Code("result := make([]string, 0, len(columns))\n")
 	dst.Tab(1).Code("for _, field := range columns {\n")
 	dst.Tab(2).Code("if int(field) < len(").Code(build.StringToFirstLower(typ.Name.Name)).Code("FieldDbNames) {\n")
-	dst.Tab(3).Code("result = append(result, ").Code(build.StringToFirstLower(typ.Name.Name)).Code("FieldDbNames[field])\n")
+	dst.Tab(3).Code("result = append(result, ").Code(build.StringToFirstLower(typ.Name.Name)).Code("FieldDbGets[field])\n")
 
 	dst.Tab(2).Code("}\n")
 	dst.Tab(1).Code("}\n")

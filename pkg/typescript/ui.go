@@ -445,6 +445,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Tab(1).Code("props: {\n")
 	dst.Tab(2).Code("size: String as PropType<\"large\" | \"default\" | \"small\">,\n")
 	dst.Tab(2).Code("isAdd: Boolean,\n")
+	dst.Tab(2).Code("prop: String,\n")
 	dst.Tab(2).Code("position: Array<string>,\n")
 	dst.Tab(2).Code("filter: (Function as unknown) as () => (item: string) => boolean,\n")
 	dst.Tab(2).Code("model: ")
@@ -454,6 +455,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Tab(1).Code("setup(props: Record<string, any>) {\n")
 	dst.Import("element-plus", "{useLocale}", 0)
 	dst.Tab(2).Code("const _locale = useLocale()\n")
+	dst.Tab(2).Code("const prop = props.prop ?? \"\"\n")
 	dst.Tab(2).Code("return (ctx: Record<string, any>) => {\n")
 	dst.Tab(3).Code("const model = ctx.model! as ")
 	b.printType(dst, typ.Name, false, false)
@@ -492,7 +494,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		className := build.StringToMiddleLine(field.Name.Name)
 
 		dst.Tab(4).Code("\"").Code(fieldName).Code("\": () =>(\n")
-		dst.Tab(5).Code("<el-form-item class=\"").Code(className).Code("\" prop=\"").Code(fieldName).Code("\"")
+		dst.Tab(5).Code("<el-form-item class=\"").Code(className).Code("\" prop={prop + \"").Code(fieldName).Code("\"}")
 		dst.Code(" label={ctx.$t(\"").Code(langName).Code("Lang.").Code(fieldName).Code("\")}")
 		if verify {
 			pName := b.getPackage(dst, typ.Name, "verify", false)

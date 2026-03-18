@@ -276,8 +276,12 @@ func (b *Builder) printField(dst *build.Writer, typ *ast.DataType, fields []*bui
 	dst.Code("const ").Code(lName).Code("FieldCount uint = ").Code(strconv.Itoa(len(fields))).Code("\n\n")
 
 	dst.Code("type ").Code(uName).Code("Field uint16\n\n")
-	dst.Code("func (f  ").Code(uName).Code("Field) String() string {\n")
+	dst.Code("func (f  ").Code(uName).Code("Field) Name() string {\n")
 	dst.Tab(1).Code("return ").Code(lName).Code("FieldNames[f]\n")
+	dst.Code("}\n\n")
+
+	dst.Code("func (f  ").Code(uName).Code("Field) DbName() string {\n")
+	dst.Tab(1).Code("return ").Code(lName).Code("FieldDbNames[f]\n")
 	dst.Code("}\n\n")
 
 	dst.Code("const (\n")

@@ -301,7 +301,7 @@ func (b *Builder) printField(dst *build.Writer, typ *ast.DataType, fields []*bui
 	}
 	dst.Code("}\n\n")
 
-	dst.Code("var ").Code(lName).Code("FieldNames = [")
+	dst.Code("var ").Code(lName).Code("FieldDbGets = [")
 	dst.Code(lName).Code("FieldCount").Code("]string {\n")
 	for _, field := range fields {
 		dst.Tab(1).Code("\"").Code(field.Field.Name.Name).Code("\",\n")

@@ -301,7 +301,7 @@ func (b *Builder) printField(dst *build.Writer, typ *ast.DataType, fields []*bui
 	}
 	dst.Code("}\n\n")
 
-	dst.Code("var ").Code(lName).Code("FieldDbGets = [")
+	dst.Code("var ").Code(lName).Code("FieldNames = [")
 	dst.Code(lName).Code("FieldCount").Code("]string {\n")
 	for _, field := range fields {
 		dst.Tab(1).Code("\"").Code(field.Field.Name.Name).Code("\",\n")
@@ -379,7 +379,7 @@ func (b *Builder) printScanData(dst *build.Writer, typ *ast.DataType, db *build.
 
 	dst.Tab(1).Code("result := make([]string, 0, len(columns))\n")
 	dst.Tab(1).Code("for _, field := range columns {\n")
-	dst.Tab(2).Code("if int(field) < len(").Code(build.StringToFirstLower(typ.Name.Name)).Code("FieldDbNames) {\n")
+	dst.Tab(2).Code("if int(field) < len(").Code(build.StringToFirstLower(typ.Name.Name)).Code("FieldNames) {\n")
 	dst.Tab(3).Code("result = append(result, ").Code(build.StringToFirstLower(typ.Name.Name)).Code("FieldDbGets[field])\n")
 
 	dst.Tab(2).Code("}\n")

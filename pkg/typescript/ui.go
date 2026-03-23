@@ -273,7 +273,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 		dst.Tab(6).Code("{{\n")
 		dst.Tab(7).Code("default: (scope:{row: ")
 		b.printType(dst, typ.Name, false, false)
-		dst.Code(" }) => (null == scope.row.").Code(fieldName).Code(" || undefined == scope.row.").Code(fieldName).Code(") ? \"\" : (\n")
+		dst.Code(" }) => (null == scope.row.").Code(fieldName).Code(") ? \"\" : (\n")
 
 		if len(custom) > 0 {
 			dst.Tab(8).Code("<").Code(custom).Code(" value={scope.row.").Code(fieldName).Code("} />\n")
@@ -305,13 +305,13 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Code(">{{\n")
 
 			dst.Tab(9).Code("default: () =>")
-			b.printTableString(dst, "scope.row."+fieldName, field.Type, false, table.digit, table.format, " || \"\"", true)
+			b.printTableString(dst, "scope.row."+fieldName, field.Type, false, table.digit, table.format, " || \"\"", true, false)
 			dst.Code("\n")
 			dst.Tab(8).Code("}}</el-tag>\n")
 
 		} else {
 			dst.Tab(8)
-			b.printTableString(dst, "scope.row."+fieldName, field.Type, false, table.digit, table.format, " || \"\"", true)
+			b.printTableString(dst, "scope.row."+fieldName, field.Type, false, table.digit, table.format, " || \"\"", true, false)
 			dst.Code("\n")
 		}
 
@@ -363,10 +363,10 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 
 }
 
-func (b *Builder) printTableString(dst *build.Writer, name string, expr ast.Expr, empty bool, digit int, format string, val string, isDigit bool) {
+func (b *Builder) printTableString(dst *build.Writer, name string, expr ast.Expr, empty bool, digit int, format string, val string, isDigit bool, checkIsNull bool) {
 	switch expr.(type) {
 	case *ast.EnumType:
-		if empty {
+		if empty && checkIsNull {
 			dst.Code("null == ").Code(name).Code(" ? \"\" : ")
 		}
 		dst.Code("ctx.$t(").Code(name).Code("?.toString()").Code(")")
@@ -374,16 +374,16 @@ func (b *Builder) printTableString(dst *build.Writer, name string, expr ast.Expr
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
 			b.getPackage(dst, expr, "", false)
-			b.printTableString(dst, name, t.Obj.Decl.(*ast.TypeSpec).Type, empty, digit, format, val, isDigit)
+			b.printTableString(dst, name, t.Obj.Decl.(*ast.TypeSpec).Type, empty, digit, format, val, isDigit, checkIsNull)
 		} else {
 			switch build.BaseType(t.Name) {
 			case build.Int8, build.Int16, build.Int32, build.Int64, build.Uint8, build.Uint16, build.Uint32, build.Uint64:
-				if empty {
+				if empty && checkIsNull {
 					dst.Code("null == ").Code(name).Code(" ? \"\" : ")
 				}
 				dst.Code(name).Code("!.toString()")
 			case build.Float, build.Double:
-				if empty {
+				if empty && checkIsNull {
 					dst.Code("null == ").Code(name).Code(" ? \"\" : ")
 				}
 				if isDigit {
@@ -392,12 +392,12 @@ func (b *Builder) printTableString(dst *build.Writer, name string, expr ast.Expr
 					dst.Code(name).Code("!.toString()")
 				}
 			case build.Bool:
-				if empty {
+				if empty && checkIsNull {
 					dst.Code("null == ").Code(name).Code(" ? \"\" : ")
 				}
 				dst.Code("ctx.$t(").Code(name).Code("?.toString())")
 			case build.Date:
-				if empty {
+				if empty && checkIsNull {
 					dst.Code("null == ").Code(name).Code(" ? \"\" : ")
 				}
 				if 0 == len(format) {
@@ -405,7 +405,7 @@ func (b *Builder) printTableString(dst *build.Writer, name string, expr ast.Expr
 				}
 				dst.Code("ctx.$fd(").Code(name).Code(",\"").Code(format).Code("\")")
 			case build.Decimal:
-				if empty {
+				if empty && checkIsNull {
 					dst.Code("null == ").Code(name).Code(" ? \"\" : ")
 				}
 				if isDigit {
@@ -421,13 +421,13 @@ func (b *Builder) printTableString(dst *build.Writer, name string, expr ast.Expr
 		//default: (scope:any) => scope.row.platform?.map((e: $4.PlatformType) => ctx.$t(e.toString())) || ""
 		ar := expr.(*ast.ArrayType)
 		dst.Code(name).Code("?.map((e:any)=>")
-		b.printTableString(dst, "e", ar.Type(), false, digit, format, val, isDigit)
+		b.printTableString(dst, "e", ar.Type(), false, digit, format, val, isDigit, true)
 		dst.Code(")?.join(\",\") || \"\"")
 	case *ast.MapType:
 		dst.Code("\"\"+").Code(name)
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
-		b.printTableString(dst, name, t.Type(), t.Empty, digit, format, val, isDigit)
+		b.printTableString(dst, name, t.Type(), t.Empty, digit, format, val, isDigit, checkIsNull)
 		if t.Empty {
 			dst.Code(val)
 		}

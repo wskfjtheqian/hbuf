@@ -5,10 +5,10 @@ import (
 	"hbuf/pkg/build"
 )
 
-func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
+func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) error {
 	dst.Import("hbuf_ts", "type * as h", 0)
 
-	b.printData(dst, typ)
+	return b.printData(dst, typ)
 }
 
 func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) error {
@@ -203,6 +203,17 @@ func (b *Builder) printCopy(dst *build.Writer, self, name string, expr ast.Expr,
 						dst.Code("new Date(").Code(self).Code(name).Code("!.getTime())")
 					}
 				}
+			case build.Bytes:
+				if isRecordKey {
+					dst.Code(self).Code(name)
+				} else {
+					if empty {
+						dst.Code(self).Code(name).Code(" == null ? null : new Uint8Array(").Code(self).Code(name).Code("!)")
+					} else {
+						dst.Code("new Uint8Array(").Code(self).Code(name).Code("!)")
+					}
+				}
+
 			default:
 				dst.Code(self).Code(name)
 			}
@@ -257,105 +268,119 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 			if ast.Enum == t.Obj.Kind {
 				if isRecordKey {
 					if empty {
-						dst.Code("null == " + name + " ? null : Number(" + v + ").valueOf()")
+						dst.Code("null == ").Code(name).Code(" ? null : Number(" + v + ").valueOf()")
 					} else {
-						dst.Code("null == " + name + " ? 0 : (Number(" + v + ").valueOf() ?? 0)")
+						dst.Code("null == ").Code(name).Code(" ? 0 : (Number(" + v + ").valueOf() ?? 0)")
 					}
 				} else {
 					if empty {
-						dst.Code("null == " + name + " ? null : " + p + "." + t.Name + ".valueOf(Number(" + v + ").valueOf())")
+						dst.Code("null == ").Code(name).Code(" ? null : " + p + "." + t.Name + ".valueOf(Number(" + v + ").valueOf())")
 					} else {
-						dst.Code("null == " + name + " ? " + p + "." + t.Name + ".valueOf(0) : " + p + "." + t.Name + ".valueOf(Number(" + v + ").valueOf())")
+						dst.Code("null == ").Code(name).Code(" ? " + p + "." + t.Name + ".valueOf(0) : " + p + "." + t.Name + ".valueOf(Number(" + v + ").valueOf())")
 					}
 				}
 			} else if ast.Data == t.Obj.Kind {
 				if empty {
-					dst.Code("null == " + name + " ? null : " + p + "." + t.Name + ".fromMap(" + v + ", _tag)")
+					dst.Code("null == ").Code(name).Code(" ? null : " + p + "." + t.Name + ".fromMap(" + v + ", _tag)")
 				} else {
-					dst.Code("null == " + name + " ? " + p + "." + t.Name + ".fromMap({}, _tag) : " + p + "." + t.Name + ".fromMap(" + v + ", _tag)")
+					dst.Code("null == ").Code(name).Code(" ? " + p + "." + t.Name + ".fromMap({}, _tag) : " + p + "." + t.Name + ".fromMap(" + v + ", _tag)")
 				}
 			} else {
-				dst.Code("map[\"" + name + "\"]")
+				dst.Code("map[\"").Code(name).Code("\"]")
 			}
 		} else {
 			switch build.BaseType(expr.(*ast.Ident).Name) {
 			case build.Int8, build.Int16, build.Int32, build.Uint8, build.Uint16, build.Uint32:
 				if empty {
-					dst.Code("null == " + name + " ? null : Number(" + v + ").valueOf()")
+					dst.Code("null == ").Code(name).Code(" ? null : Number(" + v + ").valueOf()")
 				} else {
-					dst.Code("null == " + name + " ? 0 : (Number(" + v + ").valueOf() ?? 0)")
+					dst.Code("null == ").Code(name).Code(" ? 0 : (Number(" + v + ").valueOf() ?? 0)")
 				}
 			case build.Int64, build.Uint64:
 				if isRecordKey {
 					if empty {
-						dst.Code("null == " + name + " ? null : " + v + ".toString()")
+						dst.Code("null == ").Code(name).Code(" ? null : " + v + ".toString()")
 					} else {
-						dst.Code("null == " + name + " ? \"\" : " + v + ".toString()")
+						dst.Code("null == ").Code(name).Code(" ? \"\" : " + v + ".toString()")
 					}
 				} else {
 					if empty {
-						dst.Code("null == " + name + " ? null : BigInt(" + v + " as string).valueOf()")
+						dst.Code("null == ").Code(name).Code(" ? null : BigInt(" + v + " as string).valueOf()")
 					} else {
-						dst.Code("null == " + name + " ? BigInt(0) : (BigInt(" + v + " as string).valueOf() ?? BigInt(0))")
+						dst.Code("null == ").Code(name).Code(" ? BigInt(0) : (BigInt(" + v + " as string).valueOf() ?? BigInt(0))")
 					}
 				}
 			case build.Float, build.Double:
 				if empty {
-					dst.Code("null == " + name + " ? null : Number(" + v + ").valueOf()")
+					dst.Code("null == ").Code(name).Code(" ? null : Number(" + v + ").valueOf()")
 				} else {
-					dst.Code("null == " + name + " ? 0 : (Number(" + v + ").valueOf() ?? 0)")
+					dst.Code("null == ").Code(name).Code(" ? 0 : (Number(" + v + ").valueOf() ?? 0)")
 				}
 			case build.String:
 				if empty {
-					dst.Code("null == " + name + " ? null : " + v + ".toString()")
+					dst.Code("null == ").Code(name).Code(" ? null : " + v + ".toString()")
 				} else {
-					dst.Code("null == " + name + " ? \"\" : " + v + ".toString()")
+					dst.Code("null == ").Code(name).Code(" ? \"\" : " + v + ".toString()")
 				}
 			case build.Date:
 				if isRecordKey {
 					if empty {
-						dst.Code("null == " + name + " ? null : Number(" + v + ").valueOf()")
+						dst.Code("null == ").Code(name).Code(" ? null : Number(" + v + ").valueOf()")
 					} else {
-						dst.Code("null == " + name + " ? 0 : (Number(" + v + ").valueOf() ?? 0)")
+						dst.Code("null == ").Code(name).Code(" ? 0 : (Number(" + v + ").valueOf() ?? 0)")
 					}
 				} else {
 					if empty {
-						dst.Code("null == " + name + " ? null : new Date(Number(" + v + ").valueOf())")
+						dst.Code("null == ").Code(name).Code(" ? null : new Date(Number(" + v + ").valueOf())")
 					} else {
-						dst.Code("null == " + name + " ? new Date(0): new Date(Number(" + v + ").valueOf())")
+						dst.Code("null == ").Code(name).Code(" ? new Date(0): new Date(Number(" + v + ").valueOf())")
 					}
 				}
 			case build.Bool:
 				if isRecordKey {
 					if empty {
-						dst.Code("null == " + name + " ? null : " + v + ".toString()")
+						dst.Code("null == ").Code(name).Code(" ? null : " + v + ".toString()")
 					} else {
-						dst.Code("null == " + name + " ? \"\" : " + v + ".toString()")
+						dst.Code("null == ").Code(name).Code(" ? \"\" : " + v + ".toString()")
 					}
 				} else {
 					if empty {
-						dst.Code("null == " + name + " ? null : (\"true\" === " + v + " ? true : Boolean(" + v + "))")
+						dst.Code("null == ").Code(name).Code(" ? null : (\"true\" === " + v + " ? true : Boolean(" + v + "))")
 					} else {
-						dst.Code("null == " + name + " ? false : (\"true\" === " + v + " ? true : Boolean(" + v + "))")
+						dst.Code("null == ").Code(name).Code(" ? false : (\"true\" === " + v + " ? true : Boolean(" + v + "))")
 					}
 				}
 			case build.Decimal:
 				if isRecordKey {
 					if empty {
-						dst.Code("null == " + name + " ? null : " + v + ".toString()")
+						dst.Code("null == ").Code(name).Code(" ? null : " + v + ".toString()")
 					} else {
-						dst.Code("null == " + name + " ? \"\" : " + v + ".toString()")
+						dst.Code("null == ").Code(name).Code(" ? \"\" : " + v + ".toString()")
 					}
 				} else {
 					dst.Import("decimal.js", "* as d", 0)
 					if empty {
-						dst.Code("null == " + name + " ? null : new d.Decimal(" + v + " as string )")
+						dst.Code("null == ").Code(name).Code(" ? null : new d.Decimal(" + v + " as string )")
 					} else {
-						dst.Code("null == " + name + " ? new d.Decimal(0) : new d.Decimal(" + v + " as string ) ")
+						dst.Code("null == ").Code(name).Code(" ? new d.Decimal(0) : new d.Decimal(" + v + " as string ) ")
+					}
+				}
+			case build.Bytes:
+				if isRecordKey {
+					if empty {
+						dst.Code("null == ").Code(name).Code(" ? null : " + v + ".toString()")
+					} else {
+						dst.Code("null == ").Code(name).Code(" ? \"\" : " + v + ".toString()")
+					}
+				} else {
+					if empty {
+						dst.Code("null == ").Code(name).Code(" ? null : new Uint8Array([...atob(").Code(name).Code(")].map(c => c.charCodeAt(0)))")
+					} else {
+						dst.Code("null == ").Code(name).Code(" ? new Uint8Array() : new Uint8Array([...atob(").Code(name).Code(")].map(c => c.charCodeAt(0)))")
 					}
 				}
 			default:
-				dst.Code("map[\"" + name + "\"]")
+				dst.Code("map[\"").Code(name).Code("\"]")
 			}
 		}
 	case *ast.ArrayType:
@@ -363,13 +388,13 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 		empty = t.IsEmpty()
 		dst.Import("hbuf_ts", "* as h", 1)
 		if empty {
-			dst.Code("null == " + name + " ? null : (")
+			dst.Code("null == ").Code(name).Code(" ? null : (")
 			dst.Code("!h.isArray(" + v + ") ? null : ")
 			dst.Code("(h.convertArray(" + v + ", (item) => ")
 			b.printFormMap(dst, "item", "item", t.VType, data, empty, false)
 			dst.Code(")))")
 		} else {
-			dst.Code("null == " + name + " ? [] : (")
+			dst.Code("null == ").Code(name).Code(" ? [] : (")
 			dst.Code("!h.isArray(" + v + ") ? [] : ")
 			dst.Code("(h.convertArray(" + v + ", (item) => ")
 			b.printFormMap(dst, "item", "item", t.VType, data, empty, false)
@@ -380,7 +405,7 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 		empty = t.IsEmpty()
 		dst.Import("hbuf_ts", "* as h", 1)
 		if empty {
-			dst.Code("null == " + name + " ? null : (")
+			dst.Code("null == ").Code(name).Code(" ? null : (")
 			dst.Code("!h.isRecord(" + v + ") ? null : ")
 			dst.Code("(h.convertRecord(" + v + ", (key, value) => new h.RecordEntry(")
 			b.printFormMap(dst, "key", "key", t.Key, data, empty, true)
@@ -388,7 +413,7 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 			b.printFormMap(dst, "value", "value", t.VType, data, empty, false)
 			dst.Code("))))")
 		} else {
-			dst.Code("null == " + name + " ? {} : (")
+			dst.Code("null == ").Code(name).Code(" ? {} : (")
 			dst.Code("!h.isRecord(" + v + ") ? {} : ")
 			dst.Code("(h.convertRecord(" + v + ", (key, value) => new h.RecordEntry(")
 			b.printFormMap(dst, "key", "key", t.Key, data, empty, true)
@@ -409,6 +434,7 @@ func (b *Builder) printToMap(dst *build.Writer, key string, name string, expr as
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
 			if ast.Enum == t.Obj.Kind {
+				dst.Code(key)
 				if isRecordKey {
 					dst.Code(name)
 				} else {
@@ -419,6 +445,7 @@ func (b *Builder) printToMap(dst *build.Writer, key string, name string, expr as
 					}
 				}
 			} else if ast.Data == t.Obj.Kind {
+				dst.Code(key)
 				if empty {
 					dst.Code(name + "?.toMap(_tag)")
 				} else {
@@ -430,8 +457,10 @@ func (b *Builder) printToMap(dst *build.Writer, key string, name string, expr as
 		} else {
 			switch build.BaseType(expr.(*ast.Ident).Name) {
 			case build.Int8, build.Int16, build.Int32, build.Uint32, build.Uint8, build.Uint16, build.Float, build.Double, build.String, build.Bool:
+				dst.Code(key)
 				dst.Code(name)
 			case build.Uint64, build.Int64:
+				dst.Code(key)
 				if isRecordKey {
 					dst.Code(name)
 				} else {
@@ -443,6 +472,7 @@ func (b *Builder) printToMap(dst *build.Writer, key string, name string, expr as
 				}
 
 			case build.Date:
+				dst.Code(key)
 				if isRecordKey {
 					dst.Code(name)
 				} else {
@@ -454,11 +484,18 @@ func (b *Builder) printToMap(dst *build.Writer, key string, name string, expr as
 				}
 
 			case build.Decimal:
+				dst.Code(key)
 				if empty {
 					dst.Code(name + "?.toString()")
 				} else {
 					dst.Code(name + ".toString()")
 				}
+
+			case build.Bytes:
+				if empty {
+					dst.Code(key).Code(name).Code("==null?null:")
+				}
+				dst.Code("btoa(String.fromCharCode(...").Code(key).Code(name).Code("))")
 			default:
 				dst.Code(name)
 			}
@@ -494,8 +531,7 @@ func (b *Builder) printToMap(dst *build.Writer, key string, name string, expr as
 		}
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
-		dst.Code(key)
-		b.printToMap(dst, "", name, t.Type(), data, t.Empty, isRecordKey)
+		b.printToMap(dst, key, name, t.Type(), data, t.Empty, isRecordKey)
 	}
 }
 

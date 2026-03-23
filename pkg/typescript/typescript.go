@@ -15,13 +15,13 @@ import (
 var _types = map[build.BaseType]string{
 	build.Int8: "number", build.Int16: "number", build.Int32: "number", build.Int64: "bigint", build.Uint8: "number",
 	build.Uint16: "number", build.Uint32: "number", build.Uint64: "bigint", build.Bool: "boolean", build.Float: "number",
-	build.Double: "number", build.String: "string", build.Date: "Date", build.Decimal: "d.Decimal",
+	build.Double: "number", build.String: "string", build.Date: "Date", build.Decimal: "d.Decimal", build.Bytes: "Uint8Array",
 }
 
 var _typesValue = map[build.BaseType]string{
 	build.Int8: "0", build.Int16: "0", build.Int32: "0", build.Int64: "BigInt(0)", build.Uint8: "0",
 	build.Uint16: "0", build.Uint32: "0", build.Uint64: "BigInt(0)", build.Bool: "false", build.Float: "0.0",
-	build.Double: "0.0", build.String: "\"\"", build.Date: "new Date()", build.Decimal: "new d.Decimal(0)",
+	build.Double: "0.0", build.String: "\"\"", build.Date: "new Date()", build.Decimal: "new d.Decimal(0)", build.Bytes: "new Uint8Array()",
 }
 
 type DartWriter struct {
@@ -219,9 +219,13 @@ func (b *Builder) Node(dst *DartWriter, fset *token.FileSet, node interface{}) e
 func (b *Builder) printTypeSpec(dst *DartWriter, expr ast.Expr) error {
 	switch expr.(type) {
 	case *ast.DataType:
-		b.printDataCode(dst.data, expr.(*ast.DataType))
+		err := b.printDataCode(dst.data, expr.(*ast.DataType))
+		if err != nil {
+			return err
+		}
 		b.printFormCode(dst.ui, expr)
-		err := b.printVerifyCode(dst.verify, expr.(*ast.DataType))
+
+		err = b.printVerifyCode(dst.verify, expr.(*ast.DataType))
 		if err != nil {
 			return err
 		}

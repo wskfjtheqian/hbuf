@@ -258,11 +258,11 @@ func (b *Builder) printVerifyDataCode(dst *build.Writer, data *ast.DataType) err
 	b.getPackage(dst, data.Name)
 
 	dst.Code("var ").Code(lName).Code("VerifyMaps = map[string]func(ctx context.Context, i *")
-	dst.Code(uName).Code(" ,fields ...string) error {")
+	dst.Code(uName).Code(" ,fields ...string) error {\n")
 	err := build.EnumField(data, func(field *ast.Field, data *ast.DataType) error {
 		_, ok := build.GetTag(field.Tags, "verify")
 		if ok {
-			dst.Tab(1).Code("\n\"").Code(field.Name.Name).Code("\": func(ctx context.Context, i *")
+			dst.Tab(1).Code("\"").Code(field.Name.Name).Code("\": func(ctx context.Context, i *")
 			dst.Code(uName).Code(" ,fields ...string) error {\n")
 			dst.Tab(2).Code("return i.Verify").Code(build.StringToHumpName(field.Name.Name)).Code("(ctx, fields...)\n")
 			dst.Tab(1).Code("},\n")

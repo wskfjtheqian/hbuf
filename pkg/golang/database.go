@@ -654,9 +654,6 @@ func (b *Builder) printListData(dst *build.Writer, typ *ast.DataType, key string
 	dst.Tab(tab + 1).Code("var ret []").Code(dName).Code("\n")
 	dst.Tab(tab + 1).Code("_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
 	dst.Tab(tab + 2).Code("var val ").Code(dName).Code("\n")
-	if db.Change == "self" || db.Change == "parent" {
-		dst.Tab(tab + 2).Code("val.DbClearChangeFields()\n")
-	}
 	dst.Tab(tab + 2).Code("err := rows.Scan(val.DbScanColumns(columns...)...)\n")
 	dst.Tab(tab + 2).Code("if err == nil {\n")
 	dst.Tab(tab + 3).Code("ret = append(ret, val)\n")
@@ -695,9 +692,6 @@ func (b *Builder) printListAsyncData(dst *build.Writer, typ *ast.DataType, key s
 	dst.Import("database/sql", "", 0)
 	dst.Tab(tab + 1).Code("_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
 	dst.Tab(tab + 2).Code("var val ").Code(dName).Code("\n")
-	if db.Change == "self" || db.Change == "parent" {
-		dst.Tab(tab + 2).Code("val.DbClearChangeFields()\n")
-	}
 	dst.Tab(tab + 2).Code("err := rows.Scan(val.DbScanColumns(columns...)...)\n")
 	dst.Tab(tab + 2).Code("if err != nil {\n")
 	dst.Tab(tab + 3).Code("return false, err\n")
@@ -749,9 +743,6 @@ func (b *Builder) printMapData(dst *build.Writer, key string, typ *ast.DataType,
 	dst.Tab(tab + 1).Code("ret := make(map[" + kType.String() + "]*").Code(dName).Code(")\n")
 	dst.Tab(tab + 1).Code("_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
 	dst.Tab(tab + 2).Code("var val ").Code(dName).Code("\n")
-	if db.Change == "self" || db.Change == "parent" {
-		dst.Tab(tab + 2).Code("val.DbClearChangeFields()\n")
-	}
 	dst.Tab(tab + 2).Code("err := rows.Scan(val.DbScanColumns(columns...)...)\n")
 	dst.Tab(tab + 2).Code("if err == nil {\n")
 	dst.Tab(tab + 3).Code("ret[val.Get" + build.StringToHumpName(KName.String()) + "()] = &val\n")
@@ -1138,9 +1129,6 @@ func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, key string,
 	dst.Import("database/sql", "", 0)
 	dst.Tab(tab + 1).Code("_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
 	dst.Tab(tab + 2).Code("val = &").Code(dName).Code("{}\n")
-	if db.Change == "self" || db.Change == "parent" {
-		dst.Tab(tab + 2).Code("val.DbClearChangeFields()\n")
-	}
 	dst.Tab(tab + 2).Code("return false, rows.Scan(val.DbScanColumns(columns...)...)\n")
 	dst.Tab(tab + 1).Code("})\n")
 	dst.Tab(tab + 1).Code("return val, err\n")

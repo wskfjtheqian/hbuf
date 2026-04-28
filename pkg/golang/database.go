@@ -801,8 +801,8 @@ func (b *Builder) printDeleteData(dst *build.Writer, db *build.DB, wFields []*bu
 	dst.Code("func (g " + fName + ") DbDel(ctx context.Context) (int64, int64, error) {\n")
 	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
 	dst.Tab(1).Code("s := db.NewBuilder()\n")
-	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hutl", "utl", 0)
-	dst.Tab(1).Code("s.T(\"UPDATE \").T(tableName).T(\" SET is_deleted = 1, delete_time = \").V(utl.NowTime()).T(\" WHERE is_deleted = 0\")\n")
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/htime", "htime", 0)
+	dst.Tab(1).Code("s.T(\"UPDATE \").T(tableName).T(\" SET is_deleted = 1, delete_time = \").V(htime.NowTime()).T(\" WHERE is_deleted = 0\")\n")
 	dst.Code(w.GetCode().String())
 
 	if c {

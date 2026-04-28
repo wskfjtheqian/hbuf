@@ -89,8 +89,8 @@ func (b *Builder) printExportDataCode(dst *build.Writer, data *ast.DataType, key
 
 	for _, item := range lists {
 		if build.GetBaseType(item.Type.Type()) == build.Date {
-			dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hutl", "hutl", 0)
-			dst.Tab(1).Code("loc := hutl.ZoneByOffset(zoneOffset)\n")
+			dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/htime", "htime", 0)
+			dst.Tab(1).Code("loc := htime.ZoneByOffset(zoneOffset)\n")
 			break
 		}
 	}

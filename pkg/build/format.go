@@ -10,13 +10,13 @@ type Operator int
 
 // ，， ，， ，，，
 const (
-	OperatorGt    Operator = 1 << iota //大于 >
-	OperatorLt                         // 小于 <
-	OperatorEq                         // 等于 ==
-	OperatorGte                        // 大于等于 >=
-	OperatorLte                        // 小于等于 <=
-	OperatorNeq                        // 不等于 !=
-	OperatorMatch                      // 匹配 =~
+	OperatorGt    Operator = 1 + iota //大于 >
+	OperatorLt                        // 小于 <
+	OperatorEq                        // 等于 ==
+	OperatorGte                       // 大于等于 >=
+	OperatorLte                       // 小于等于 <=
+	OperatorNeq                       // 不等于 !=
+	OperatorMatch                     // 匹配 =~
 )
 
 // 表达式
@@ -76,13 +76,15 @@ func GetFormat(tags []*ast.Tag) *Format {
 
 // 解析Expr
 func parseExpr(values []*ast.BasicLit) ([]Expr, error) {
-	val := make([]Expr, len(values))
+	val := make([]Expr, 0)
 	for _, value := range values {
 		v, err := parseExprItem(value.Value[1 : len(value.Value)-1])
 		if err != nil {
 			return nil, err
 		}
-		val = append(val, v)
+		if v.Op > 0 {
+			val = append(val, v)
+		}
 	}
 	return val, nil
 }

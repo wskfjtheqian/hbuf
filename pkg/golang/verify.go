@@ -98,14 +98,6 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 					dst.Code(" {\n")
 					dst.Tab(2).Code("return hrpc.NewResult[hbuf.Data](int32(").Code(pack).Code("), ").Code(pack).Code(".ToName(), nil)\n")
 					dst.Tab(1).Code("}\n")
-				} else {
-					dst.Tab(1).Code("if nil == i." + fName)
-					if build.GetBaseType(field.Type) == build.String {
-						dst.Code(" || len(i.Get" + fName + "()) == 0")
-					}
-					dst.Code(" {\n")
-					dst.Tab(2).Code("return nil\n")
-					dst.Tab(1).Code("}\n")
 				}
 			}
 			if build.IsEnum(field.Type) {
@@ -120,7 +112,7 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 				for _, item := range f.Len {
 					dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "", 0)
 					dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc", "", 0)
-					dst.Tab(1).Code("if ").Code("len(i.").Code(fName).Code(") ").Code(b.getLenOp(item.Op)).Code(item.Val).Code("{\n")
+					dst.Tab(1).Code("if ").Code("len(i.").Code(fName).Code(") ").Code(b.getLenOp(item.Op)).Code(" ").Code(item.Val).Code(" {\n")
 					dst.Tab(2).Code("return hrpc.NewResult[hbuf.Data](int32(").Code(pack).Code("), ").Code(pack).Code(".ToName(), nil)\n")
 					dst.Tab(1).Code("}\n")
 				}
@@ -283,7 +275,7 @@ func (b *Builder) printVerifyDataCode(dst *build.Writer, data *ast.DataType) err
 	dst.Tab(0).Code("func (i *").Code(uName).Code(") Verify(ctx context.Context, fields ...string) error {\n")
 	dst.Tab(1).Code("if len(fields) == 0 {\n")
 	dst.Tab(2).Code("for _, val := range ").Code(lName).Code("VerifyMaps {\n")
-	dst.Tab(3).Code("if err := val(ctx, i); err == nil {\n")
+	dst.Tab(3).Code("if err := val(ctx, i); err != nil {\n")
 	dst.Tab(4).Code("return err\n")
 	dst.Tab(3).Code("}\n")
 	dst.Tab(2).Code("}\n")
@@ -291,7 +283,7 @@ func (b *Builder) printVerifyDataCode(dst *build.Writer, data *ast.DataType) err
 	dst.Tab(1).Code("}\n")
 	dst.Tab(1).Code("for _, field := range fields {\n")
 	dst.Tab(2).Code("if val, ok := ").Code(lName).Code("VerifyMaps[field]; ok {\n")
-	dst.Tab(3).Code("if err := val(ctx, i); err == nil {\n")
+	dst.Tab(3).Code("if err := val(ctx, i); err != nil {\n")
 	dst.Tab(4).Code("return err\n")
 	dst.Tab(3).Code("}\n")
 	dst.Tab(2).Code("}\n")

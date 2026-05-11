@@ -61,7 +61,11 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 			} else if build.IsMap(field.Type) {
 
 			} else if build.IsArray(field.Type) {
-
+				for _, item := range f.Len {
+					dst.Tab(1).Code("if ").Code("(value.length ").Code(b.getLenOp(item.Op)).Code(" ").Code(item.Val).Code(") {\n")
+					b.printVerifyError(dst.Tab(1), pName, val)
+					dst.Tab(1).Code("}\n")
+				}
 			} else {
 				t := build.GetBaseType(field.Type)
 				switch t {
@@ -193,4 +197,23 @@ func (b *Builder) printVerifyError(dst *build.Writer, pName string, val *build.V
 	dst.Tab(2).Code("return callback(new Error(locale.t(").Code(pName).Code(".")
 	dst.Code(build.StringToHumpName(val.Enum.Name.Name)).Code(".")
 	dst.Code(build.StringToAllUpper(val.Item.Name.Name)).Code(".toString())))\n")
+}
+
+func (b *Builder) getLenOp(op build.Operator) string {
+	if build.OperatorGt == op {
+		return "=="
+	} else if build.OperatorLt == op {
+		return "=="
+	} else if build.OperatorGte == op {
+		return ">="
+	} else if build.OperatorLte == op {
+		return "<="
+	} else if build.OperatorEq == op {
+		return "=="
+	} else if build.OperatorNeq == op {
+		return "!="
+	} else {
+		//TODO 处理错误
+	}
+	return ""
 }

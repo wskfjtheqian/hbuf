@@ -117,7 +117,13 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 			} else if build.IsMap(field.Type) {
 
 			} else if build.IsArray(field.Type) {
-
+				for _, item := range f.Len {
+					dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "", 0)
+					dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc", "", 0)
+					dst.Tab(1).Code("if ").Code("len(i.").Code(fName).Code(") ").Code(b.getLenOp(item.Op)).Code(item.Val).Code("{\n")
+					dst.Tab(2).Code("return hrpc.NewResult[hbuf.Data](int32(").Code(pack).Code("), ").Code(pack).Code(".ToName(), nil)\n")
+					dst.Tab(1).Code("}\n")
+				}
 			} else {
 				t := build.GetBaseType(field.Type)
 				switch t {

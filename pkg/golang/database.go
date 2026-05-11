@@ -83,10 +83,13 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 		return nil
 	}
 
-	if 0 == len(fDbs[0].Table) {
-		b.printField(dst, typ, wFields)
-		b.printScanData(dst, typ, dbs[0], wFields, key)
-		b.printNameData(dst, typ)
+	if 0 == len(fDbs[0].Table) || (0 != len(fDbs[0].Table) && (strings.ToLower(fDbs[0].Get) == "self" ||
+		strings.ToLower(fDbs[0].Map) == "self" ||
+		strings.ToLower(fDbs[0].List) == "self" ||
+		strings.ToLower(fDbs[0].ListAsync) == "self")) {
+		b.printField(dst, fType, wFields)
+		b.printScanData(dst, fType, dbs[0], wFields, key)
+		b.printNameData(dst, fType)
 	}
 
 	val := strings.ToLower(fDbs[0].List)

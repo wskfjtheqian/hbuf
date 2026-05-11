@@ -49,6 +49,7 @@ func (h *FileHash) Read() error {
 }
 
 func (h *FileHash) CheckChange(path string, files map[string]*ast.File, parents ...string) (bool, error) {
+
 	for _, item := range parents {
 		if item == path {
 			return false, nil

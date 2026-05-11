@@ -24,6 +24,7 @@ func main() {
 	var typ = flag.String("t", "", "out type")
 	var pack = flag.String("p", "", "package path")
 	var showVersion = flag.Bool("v", false, "show version")
+	var all = flag.Bool("a", false, "build all change file")
 
 	flag.Parse()
 
@@ -49,7 +50,7 @@ func main() {
 		return
 	}
 
-	err := build.Build(*out, *in, *typ, *pack)
+	err := build.Build(*out, *in, *typ, *pack, *all)
 	if err != nil {
 		fmt.Println(fmt.Errorf("Build error: %s", err))
 		return

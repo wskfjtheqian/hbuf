@@ -111,7 +111,7 @@ func NewBuilder(build Function, param *Param) *Builder {
 	}
 }
 
-func Build(out string, in string, typ string, pack string) error {
+func Build(out string, in string, typ string, pack string, all bool) error {
 	in = filepath.Clean(in)
 	path := filepath.Dir(in)
 	name := in[len(path)+1:]
@@ -145,12 +145,14 @@ func Build(out string, in string, typ string, pack string) error {
 	}
 
 	for path, file := range build.pkg.Files {
-		check, err := fileHash.CheckChange(path, build.pkg.Files)
-		if err != nil {
-			return err
-		}
-		if !check {
-			continue
+		if !all {
+			check, err := fileHash.CheckChange(path, build.pkg.Files)
+			if err != nil {
+				return err
+			}
+			if !check {
+				continue
+			}
 		}
 
 		_, name := filepath.Split(path)

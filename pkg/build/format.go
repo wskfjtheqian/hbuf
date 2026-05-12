@@ -10,13 +10,14 @@ type Operator int
 
 // ，， ，， ，，，
 const (
-	OperatorGt    Operator = 1 + iota //大于 >
-	OperatorLt                        // 小于 <
-	OperatorEq                        // 等于 ==
-	OperatorGte                       // 大于等于 >=
-	OperatorLte                       // 小于等于 <=
-	OperatorNeq                       // 不等于 !=
-	OperatorMatch                     // 匹配 =~
+	OperatorGt       Operator = 1 + iota //大于 >
+	OperatorLt                           // 小于 <
+	OperatorEq                           // 等于 ==
+	OperatorGte                          // 大于等于 >=
+	OperatorLte                          // 小于等于 <=
+	OperatorNeq                          // 不等于 !=
+	OperatorMatch                        // 匹配 =~
+	OperatorNotMatch                     // 匹配 !~
 )
 
 // 表达式
@@ -30,12 +31,8 @@ type Expr struct {
 
 type Format struct {
 	Null bool
-	Reg  string
-	Min  string
-	Max  string
-
-	Val []Expr
-	Len []Expr
+	Val  []Expr
+	Len  []Expr
 }
 
 func GetFormat(tags []*ast.Tag) *Format {
@@ -51,12 +48,6 @@ func GetFormat(tags []*ast.Tag) *Format {
 		for _, item := range val.KV {
 			if "null" == item.Name.Name {
 				f.Null = "true" == item.Values[0].Value[1:len(item.Values[0].Value)-1]
-			} else if "reg" == item.Name.Name {
-				f.Reg = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
-			} else if "min" == item.Name.Name {
-				f.Min = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
-			} else if "max" == item.Name.Name {
-				f.Max = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 			} else if "val" == item.Name.Name {
 				f.Val, err = parseExpr(item.Values)
 				if err != nil {
@@ -68,7 +59,6 @@ func GetFormat(tags []*ast.Tag) *Format {
 					return f
 				}
 			}
-
 		}
 	}
 	return f
@@ -102,6 +92,7 @@ func parseExprItem(value string) (Expr, error) {
 		e.Val = value[3:]
 	} else if strings.HasPrefix(value, ">= ") {
 		e.Op = OperatorGte
+		e.Val = value[3:]
 	} else if strings.HasPrefix(value, "<= ") {
 		e.Op = OperatorLte
 		e.Val = value[3:]
@@ -110,6 +101,9 @@ func parseExprItem(value string) (Expr, error) {
 		e.Val = value[3:]
 	} else if strings.HasPrefix(value, "=~ ") {
 		e.Op = OperatorMatch
+		e.Val = value[3:]
+	} else if strings.HasPrefix(value, "!~ ") {
+		e.Op = OperatorNotMatch
 		e.Val = value[3:]
 	} else {
 		return e, nil

@@ -389,22 +389,3 @@ func (b *Builder) converter(field *build.DBField, name string) string {
 
 	return "&" + name + "." + fName
 }
-
-func (b *Builder) getLenOp(op build.Operator) string {
-	if build.OperatorGt == op {
-		return "=="
-	} else if build.OperatorLt == op {
-		return "=="
-	} else if build.OperatorGte == op {
-		return ">="
-	} else if build.OperatorLte == op {
-		return "<="
-	} else if build.OperatorEq == op {
-		return "=="
-	} else if build.OperatorNeq == op {
-		return "!="
-	} else {
-		//TODO 处理错误
-	}
-	return ""
-}

@@ -62,7 +62,7 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 
 			} else if build.IsArray(field.Type) {
 				for _, item := range f.Len {
-					dst.Tab(1).Code("if ").Code("(value.length ").Code(b.getLenOp(item.Op)).Code(" ").Code(item.Val).Code(") {\n")
+					dst.Tab(1).Code("if ").Code("(!(value.length ").Code(b.getOperator(item.Op)).Code(" ").Code(item.Val).Code(")) {\n")
 					b.printVerifyError(dst.Tab(1), pName, val)
 					dst.Tab(1).Code("}\n")
 				}
@@ -94,50 +94,40 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 					dst.Tab(1).Code("if (null == val) {\n")
 					b.printVerifyError(dst, pName, val)
 					dst.Tab(1).Code("}\n")
-					if 0 < len(f.Min) || 0 < len(f.Max) {
-						dst.Tab(1).Code("if (")
-						if 0 < len(f.Min) {
-							parse, err := time.Parse("2006-01-02T15:04:05Z", f.Min)
-							if err != nil {
-								return err
-							}
-							dst.Code(strconv.FormatInt(parse.UnixMilli(), 10) + " > val.millisecondsSinceEpoch")
+
+					for _, item := range f.Val {
+						parse, err := time.Parse("2006-01-02T15:04:05Z", item.Val)
+						if err != nil {
+							return err
 						}
-						if 0 < len(f.Max) {
-							if 0 < len(f.Min) {
-								dst.Code(" || ")
-							}
-							parse, err := time.Parse("2006-01-02T15:04:05Z", f.Max)
-							if err != nil {
-								return err
-							}
-							dst.Code(strconv.FormatInt(parse.UnixMilli(), 10) + " < val.millisecondsSinceEpoch")
-						}
-						dst.Code(") {\n")
-						b.printVerifyError(dst, pName, val)
-						b.printVerifyError(dst, pName, val)
+
+						dst.Tab(1).Code("if ").Code("(!(val.millisecondsSinceEpoch ").Code(b.getOperator(item.Op)).Code(" ").Code(strconv.FormatInt(parse.UnixMilli(), 10)).Code(")) {\n")
+						b.printVerifyError(dst.Tab(1), pName, val)
 						dst.Tab(1).Code("}\n")
 					}
 				case build.String:
-					if 0 < len(f.Min) || 0 < len(f.Max) {
-						dst.Tab(1).Code("if (")
-						if 0 < len(f.Min) {
-							dst.Code(f.Min + " > (value?.length ?? 0)")
-						}
-						if 0 < len(f.Max) {
-							if 0 < len(f.Min) {
-								dst.Code(" || ")
-							}
-							dst.Code(f.Max + " < (value?.length ?? 0)")
-						}
-						dst.Code(") {\n")
-						b.printVerifyError(dst, pName, val)
+					for _, item := range f.Len {
+						dst.Tab(1).Code("if ").Code("(!(value.length ").Code(b.getOperator(item.Op)).Code(" ").Code(item.Val).Code(")) {\n")
+						b.printVerifyError(dst.Tab(1), pName, val)
 						dst.Tab(1).Code("}\n")
 					}
-					if len(f.Reg) > 0 {
-						dst.Tab(1).Code("if (!new RegExp(\"" + f.Reg + "\").test(value!)) {\n")
-						b.printVerifyError(dst, pName, val)
-						dst.Tab(1).Code("}\n")
+
+					for _, item := range f.Val {
+						if item.Op == build.OperatorMatch || item.Op == build.OperatorNotMatch {
+							dst.Tab(1).Code("if (")
+							if item.Op == build.OperatorMatch {
+								dst.Code("!new RegExp(\"").Code(item.Val).Code("\").test(value!)")
+							} else {
+								dst.Code("new RegExp(\"").Code(item.Val).Code("\").test(value!)")
+							}
+							dst.Code(") {\n")
+							b.printVerifyError(dst, pName, val)
+							dst.Tab(1).Code("}\n")
+						} else {
+							dst.Tab(1).Code("if ").Code("(!(value").Code(b.getOperator(item.Op)).Code(" ").Code(item.Val).Code(")) {\n")
+							b.printVerifyError(dst, pName, val)
+							dst.Tab(1).Code("}\n")
+						}
 					}
 				}
 			}
@@ -172,38 +162,46 @@ func (b *Builder) verifyNum(dst *build.Writer, pName string, val *build.VerifyEn
 		dst.Tab(2).Code("}\n")
 	}
 
-	if 0 < len(f.Min) || 0 < len(f.Max) {
-		dst.Tab(2).Code("if (")
-		if 0 < len(f.Min) {
-			dst.Code("new d.Decimal(").Code(f.Min).Code(").greaterThan(val)")
-		}
-		if 0 < len(f.Max) {
-			if 0 < len(f.Min) {
-				dst.Code(" || ")
-			}
-			dst.Code("new d.Decimal(").Code(f.Max).Code(").lessThan(val)")
-		}
-		dst.Code(") {\n")
-		b.printVerifyError(dst.Tab(1), pName, val)
+	for _, item := range f.Val {
+		dst.Tab(2).Code("if ").Code("(")
 
-		dst.Tab(1).Tab(1).Code("}\n")
+		if build.OperatorGt == item.Op {
+			dst.Code("!val.").Code("gt")
+		} else if build.OperatorLt == item.Op {
+			dst.Code("!val.").Code("lt")
+		} else if build.OperatorGte == item.Op {
+			dst.Code("!val.").Code("gte")
+		} else if build.OperatorLte == item.Op {
+			dst.Code("!val.").Code("lte")
+		} else if build.OperatorEq == item.Op {
+			dst.Code("!val.").Code("eq")
+		} else if build.OperatorNeq == item.Op {
+			dst.Code("val.").Code("eq")
+		} else {
+			//TODO
+		}
+		dst.Code("(").Code("new d.Decimal(").Code(item.Val).Code("))) {\n")
+
+		b.printVerifyError(dst.Tab(1), pName, val)
+		dst.Tab(2).Code("}\n")
 	}
 
 	dst.Tab(1).Code("} catch {\n")
 	b.printVerifyError(dst, pName, val)
 	dst.Tab(1).Code("}\n")
 }
+
 func (b *Builder) printVerifyError(dst *build.Writer, pName string, val *build.VerifyEnum) {
 	dst.Tab(2).Code("return callback(new Error(locale.t(").Code(pName).Code(".")
 	dst.Code(build.StringToHumpName(val.Enum.Name.Name)).Code(".")
 	dst.Code(build.StringToAllUpper(val.Item.Name.Name)).Code(".toString())))\n")
 }
 
-func (b *Builder) getLenOp(op build.Operator) string {
+func (b *Builder) getOperator(op build.Operator) string {
 	if build.OperatorGt == op {
-		return "=="
+		return ">"
 	} else if build.OperatorLt == op {
-		return "=="
+		return "<"
 	} else if build.OperatorGte == op {
 		return ">="
 	} else if build.OperatorLte == op {

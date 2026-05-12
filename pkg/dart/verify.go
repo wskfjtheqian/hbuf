@@ -3,9 +3,6 @@ package dart
 import (
 	"hbuf/pkg/ast"
 	"hbuf/pkg/build"
-	"strconv"
-	"strings"
-	"time"
 )
 
 func (b *Builder) printVerifyCode(dst *build.Writer, data *ast.DataType) error {
@@ -92,86 +89,86 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 					dst.Tab(1).Code("if (null == val) {\n")
 					dst.Tab(2).Code("return " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
 					dst.Tab(1).Code("}\n")
-					if 0 < len(f.Min) || 0 < len(f.Max) {
-						dst.Tab(1).Code("if (")
-						if 0 < len(f.Min) {
-							parse, err := time.Parse("2006-01-02T15:04:05Z", f.Min)
-							if err != nil {
-								return err
-							}
-							dst.Code(strconv.FormatInt(parse.UnixMilli(), 10) + " > val.millisecondsSinceEpoch")
-						}
-						if 0 < len(f.Max) {
-							if 0 < len(f.Min) {
-								dst.Code(" || ")
-							}
-							parse, err := time.Parse("2006-01-02T15:04:05Z", f.Max)
-							if err != nil {
-								return err
-							}
-							dst.Code(strconv.FormatInt(parse.UnixMilli(), 10) + " < val.millisecondsSinceEpoch")
-						}
-						dst.Code(") {\n")
-						dst.Tab(2).Code("return " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
-						dst.Tab(1).Code("}\n")
-					}
+					//if 0 < len(f.Min) || 0 < len(f.Max) {
+					//	dst.Tab(1).Code("if (")
+					//	if 0 < len(f.Min) {
+					//		parse, err := time.Parse("2006-01-02T15:04:05Z", f.Min)
+					//		if err != nil {
+					//			return err
+					//		}
+					//		dst.Code(strconv.FormatInt(parse.UnixMilli(), 10) + " > val.millisecondsSinceEpoch")
+					//	}
+					//	if 0 < len(f.Max) {
+					//		if 0 < len(f.Min) {
+					//			dst.Code(" || ")
+					//		}
+					//		parse, err := time.Parse("2006-01-02T15:04:05Z", f.Max)
+					//		if err != nil {
+					//			return err
+					//		}
+					//		dst.Code(strconv.FormatInt(parse.UnixMilli(), 10) + " < val.millisecondsSinceEpoch")
+					//	}
+					//	dst.Code(") {\n")
+					//	dst.Tab(2).Code("return " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
+					//	dst.Tab(1).Code("}\n")
+					//}
 				case build.Decimal:
-					if 0 < len(f.Reg) {
-						dst.Tab(1).Code("if (!RegExp(\"" + strings.ReplaceAll(f.Reg, "$", "\\$") + "\").hasMatch(text!)) {\n")
-						dst.Tab(2).Code("return " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
-						dst.Tab(1).Code("}\n")
-					}
-					if i == len(verify.GetFormat())-1 {
-						dst.Tab(1).Code("if (!RegExp(\"-?[0-9]\\\\d*.\\\\d*|0.\\\\d*[0-9]\\\\d*\").hasMatch(text")
-						if build.IsNil(field.Type) {
-							dst.Code("!")
-						}
-						dst.Code(")) {\n")
-						dst.Tab(2).Code("return " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
-						dst.Tab(1).Code("}\n")
-
-						dst.Import("package:decimal/decimal.dart", "", 0)
-						dst.Tab(1).Code("Decimal? val = Decimal.tryParse(text!);\n")
-						dst.Tab(1).Code("if (null == val) {\n")
-						dst.Tab(2).Code("return " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
-						dst.Tab(1).Code("}\n")
-						if 0 < len(f.Min) || 0 < len(f.Max) {
-							dst.Tab(1).Code("if (")
-							if 0 < len(f.Min) {
-								dst.Code("1 == val.compareTo(Decimal.fromInt(" + f.Min + "))")
-							}
-							if 0 < len(f.Max) {
-								if 0 < len(f.Min) {
-									dst.Code(" || ")
-								}
-								dst.Code("-1 == val.compareTo(Decimal.fromInt(" + f.Max + "))")
-							}
-							dst.Code(") {\n")
-							dst.Tab(2).Code("return " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
-							dst.Tab(1).Code("}\n")
-						}
-					}
+					//if 0 < len(f.Reg) {
+					//	dst.Tab(1).Code("if (!RegExp(\"" + strings.ReplaceAll(f.Reg, "$", "\\$") + "\").hasMatch(text!)) {\n")
+					//	dst.Tab(2).Code("return " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
+					//	dst.Tab(1).Code("}\n")
+					//}
+					//if i == len(verify.GetFormat())-1 {
+					//	dst.Tab(1).Code("if (!RegExp(\"-?[0-9]\\\\d*.\\\\d*|0.\\\\d*[0-9]\\\\d*\").hasMatch(text")
+					//	if build.IsNil(field.Type) {
+					//		dst.Code("!")
+					//	}
+					//	dst.Code(")) {\n")
+					//	dst.Tab(2).Code("return " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
+					//	dst.Tab(1).Code("}\n")
+					//
+					//	dst.Import("package:decimal/decimal.dart", "", 0)
+					//	dst.Tab(1).Code("Decimal? val = Decimal.tryParse(text!);\n")
+					//	dst.Tab(1).Code("if (null == val) {\n")
+					//	dst.Tab(2).Code("return " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
+					//	dst.Tab(1).Code("}\n")
+					//	if 0 < len(f.Min) || 0 < len(f.Max) {
+					//		dst.Tab(1).Code("if (")
+					//		if 0 < len(f.Min) {
+					//			dst.Code("1 == val.compareTo(Decimal.fromInt(" + f.Min + "))")
+					//		}
+					//		if 0 < len(f.Max) {
+					//			if 0 < len(f.Min) {
+					//				dst.Code(" || ")
+					//			}
+					//			dst.Code("-1 == val.compareTo(Decimal.fromInt(" + f.Max + "))")
+					//		}
+					//		dst.Code(") {\n")
+					//		dst.Tab(2).Code("return " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
+					//		dst.Tab(1).Code("}\n")
+					//	}
+					//}
 				case build.String:
-					if 0 < len(f.Min) || 0 < len(f.Max) {
-						dst.Tab(1).Code("if (")
-						if 0 < len(f.Min) {
-							dst.Code(f.Min + " > (text?.length ?? 0)")
-						}
-						if 0 < len(f.Max) {
-							if 0 < len(f.Min) {
-								dst.Code(" || ")
-							}
-							dst.Code(f.Max + " < (text?.length ?? 0)")
-						}
-						dst.Code(") {\n")
-						dst.Tab(2).Code("return " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
-						dst.Tab(1).Code("}\n")
-					}
-					if len(f.Reg) > 0 {
-						dst.Tab(1).Code("if (!RegExp(\"" + strings.ReplaceAll(f.Reg, "$", "\\$") + "\").hasMatch(text!)) {\n")
-						dst.Tab(2).Code("return " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
-						dst.Tab(1).Code("}\n")
-					}
+					//if 0 < len(f.Min) || 0 < len(f.Max) {
+					//	dst.Tab(1).Code("if (")
+					//	if 0 < len(f.Min) {
+					//		dst.Code(f.Min + " > (text?.length ?? 0)")
+					//	}
+					//	if 0 < len(f.Max) {
+					//		if 0 < len(f.Min) {
+					//			dst.Code(" || ")
+					//		}
+					//		dst.Code(f.Max + " < (text?.length ?? 0)")
+					//	}
+					//	dst.Code(") {\n")
+					//	dst.Tab(2).Code("return " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
+					//	dst.Tab(1).Code("}\n")
+					//}
+					//if len(f.Reg) > 0 {
+					//	dst.Tab(1).Code("if (!RegExp(\"" + strings.ReplaceAll(f.Reg, "$", "\\$") + "\").hasMatch(text!)) {\n")
+					//	dst.Tab(2).Code("return " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
+					//	dst.Tab(1).Code("}\n")
+					//}
 				}
 			}
 		}
@@ -206,19 +203,19 @@ func (b *Builder) verifyNum(dst *build.Writer, val *build.VerifyEnum, f *build.F
 		dst.Tab(1).Code("}\n")
 	}
 
-	if 0 < len(f.Min) || 0 < len(f.Max) {
-		dst.Tab(1).Code("if (")
-		if 0 < len(f.Min) {
-			dst.Code("Decimal.tryParse(" + f.Min + ") > val")
-		}
-		if 0 < len(f.Max) {
-			if 0 < len(f.Min) {
-				dst.Code(" || ")
-			}
-			dst.Code("Decimal.tryParse(" + f.Max + ") < val")
-		}
-		dst.Code(") {\n")
-		dst.Tab(2).Code("return " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
-		dst.Tab(1).Code("}\n")
-	}
+	//if 0 < len(f.Min) || 0 < len(f.Max) {
+	//	dst.Tab(1).Code("if (")
+	//	if 0 < len(f.Min) {
+	//		dst.Code("Decimal.tryParse(" + f.Min + ") > val")
+	//	}
+	//	if 0 < len(f.Max) {
+	//		if 0 < len(f.Min) {
+	//			dst.Code(" || ")
+	//		}
+	//		dst.Code("Decimal.tryParse(" + f.Max + ") < val")
+	//	}
+	//	dst.Code(") {\n")
+	//	dst.Tab(2).Code("return " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
+	//	dst.Tab(1).Code("}\n")
+	//}
 }

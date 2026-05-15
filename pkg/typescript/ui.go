@@ -562,31 +562,32 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				dst.Tab(7).Code("default-time={[new Date(2000, 1, 1, 0, 0, 0, 0), new Date(2000, 1, 1, 23, 59, 59, 999)]}\n")
 			}
 			dst.Tab(7).Code("type=\"")
+			dateType := ""
 			if isArray {
 				switch form.format {
 				case "YYYY":
-					dst.Code("yearrange")
+					dateType = "yearrange"
 				case "YYYY/MM":
-					dst.Code("monthrange")
+					dateType = "monthrange"
 				case "YYYY/MM/DD":
-					dst.Code("daterange")
+					dateType = "daterange"
 				default:
-					dst.Code("datetimerange")
+					dateType = "datetimerange"
 				}
 			} else {
 				switch form.format {
 				case "YYYY":
-					dst.Code("year")
+					dateType = "year"
 				case "YYYY/MM":
-					dst.Code("month")
+					dateType = "month"
 				case "YYYY/MM/DD":
-					dst.Code("date")
+					dateType = "date"
 				default:
-					dst.Code("datetime")
+					dateType = "datetime"
 				}
 			}
-			dst.Code("\"\n")
-			dst.Tab(7).Code("shortcuts={ctx.$datePackerShortcuts(ctx.$t)}\n")
+			dst.Code(dateType).Code("\"\n")
+			dst.Tab(7).Code("shortcuts={ctx.$datePackerShortcuts(\"").Code(dateType).Code("\", ctx.$t)}\n")
 			dst.Tab(7).Code("size={props.size}\n")
 			dst.Tab(7).Code("clearable=")
 			if isNull {

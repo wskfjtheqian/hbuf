@@ -470,7 +470,7 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 			group := field.Dbs[0].Group
 			if 0 < len(group) {
 				if build.IsNil(field.Field.Type) {
-					where.Tab(1).Code("if nil != g." + build.StringToHumpName(field.Field.Name.Name) + " {\t")
+					where.Tab(1).Code("if nil != g." + build.StringToHumpName(field.Field.Name.Name) + " {\n")
 				}
 				if isFist {
 					where.Tab(1).Code("s.T(\" GROUP BY \")")

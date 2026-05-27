@@ -73,7 +73,7 @@ data 服务名:父服务 = ID {
 }
 
 ```hbuf
-data GetBaseReps = 0 {
+data GetBaseResp = 0 {
     Base info = 0
 }
 
@@ -82,10 +82,10 @@ data GetBaseReq = 1 {
 }
 
 server BaseServer = 0 {
-    GetBaseReps GetBase(GetBaseReq req) = 0
+    GetBaseResp GetBase(GetBaseReq req) = 0
 }
 
-data GetClassReps = 2 {
+data GetClassResp = 2 {
     Class info = 0
 }
 
@@ -100,7 +100,7 @@ data MessageReq = 4 {
 }
 
 server StudentServer:BaseServer = 0 {
-    GetClassReps GetClass(GetClassReq req) = 0
+    GetClassResp GetClass(GetClassReq req) = 0
     
     SendMessage(MessageReq req) = 1
 }

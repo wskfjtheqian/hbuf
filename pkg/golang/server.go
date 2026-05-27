@@ -152,7 +152,7 @@ func (b *Builder) printBinding(dst *build.Writer, method *ast.FuncType, bind *bu
 	}
 	pack := b.getPackage(dst, bind.Server.Name)
 	if !isSub {
-		dst.Tab(1).Code("reps, err := ")
+		dst.Tab(1).Code("resp, err := ")
 	} else {
 		dst.Tab(1).Code("err := ")
 	}
@@ -172,7 +172,7 @@ func (b *Builder) printBinding(dst *build.Writer, method *ast.FuncType, bind *bu
 		b.printType(dst, method.Result.Type(), true)
 		dst.Code("{")
 		b.printType(dst, bind.Method.Result.Type(), true)
-		dst.Code(": *reps}, ")
+		dst.Code(": *resp}, ")
 	}
 	dst.Code("nil\n")
 	return nil

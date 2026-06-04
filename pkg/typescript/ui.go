@@ -445,7 +445,6 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Tab(1).Code("props: {\n")
 	dst.Tab(2).Code("size: String as PropType<\"large\" | \"default\" | \"small\">,\n")
 	dst.Tab(2).Code("isAdd: Boolean,\n")
-	dst.Tab(2).Code("prop: String,\n")
 	dst.Tab(2).Code("position: Array<string>,\n")
 	dst.Tab(2).Code("filter: (Function as unknown) as () => (item: string) => boolean,\n")
 	dst.Tab(2).Code("model: ")
@@ -494,11 +493,12 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		className := build.StringToMiddleLine(field.Name.Name)
 
 		dst.Tab(4).Code("\"").Code(fieldName).Code("\": () =>(\n")
-		dst.Tab(5).Code("<el-form-item class=\"").Code(className).Code("\" prop={prop + \"").Code(fieldName).Code("\"}")
+		dst.Tab(5).Code("<el-form-item class=\"").Code(className).Code("\" prop=\"").Code(fieldName).Code("\"")
 		dst.Code(" label={ctx.$t(\"").Code(langName).Code("Lang.").Code(fieldName).Code("\")}")
 		if verify {
 			pName := b.getPackage(dst, typ.Name, "verify", false)
-			dst.Code(" rules={[{validator: ").Code(pName).Code(".verify").Code(name).Code("_").Code(build.StringToHumpName(field.Name.Name)).Code("(_locale), trigger: 'blur'}]}")
+			dst.Code(" rules={[{validator: ").Code(pName).Code(".verify").Code(name).Code("_").Code(build.StringToHumpName(field.Name.Name))
+			dst.Code("(_locale, model.").Code(fieldName).Code("), trigger: 'blur'}]}")
 		}
 		dst.Code(">\n")
 
@@ -635,7 +635,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(7).Code("modelValue={model.").Code(fieldName).Code(" ??= false")
 			dst.Code("}\n")
 
-			dst.Tab(8).Code("onUpdate:modelValue={($event: boolean) => model.").Code(fieldName).Code(" = $event")
+			dst.Tab(7).Code("onUpdate:modelValue={($event: boolean) => model.").Code(fieldName).Code(" = $event")
 			dst.Code("}\n")
 
 			if form.onlyRead {

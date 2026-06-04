@@ -36,7 +36,7 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 			return nil
 		}
 		dst.Import("element-plus", "type {LocaleContext}", 0)
-		dst.Code("export const verify").Code(dName).Code("_").Code(fName).Code(" = (locale: LocaleContext) => (rule: any, value: any, callback: any): any => {\n")
+		dst.Code("export const verify").Code(dName).Code("_").Code(fName).Code(" = (locale: LocaleContext, value: any) => (rule: any, _: any, callback: any): any => {\n")
 		dst.Tab(1).Code("value = '' + value\n")
 		isNull := build.IsNil(field.Type)
 		for i, val := range verify.GetFormat() {

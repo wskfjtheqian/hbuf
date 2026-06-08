@@ -56,16 +56,18 @@ func NewGoWriter() *DartWriter {
 }
 
 type Builder struct {
-	lang map[string]struct{}
-	pkg  *ast.Package
-	fSet *token.FileSet
+	lang   map[string]struct{}
+	pkg    *ast.Package
+	fSet   *token.FileSet
+	outMap map[string]bool
 }
 
 func Build(file *ast.File, fSet *token.FileSet, param *build.Param) error {
 	b := Builder{
-		fSet: fSet,
-		lang: map[string]struct{}{},
-		pkg:  param.GetPkg(),
+		fSet:   fSet,
+		lang:   map[string]struct{}{},
+		pkg:    param.GetPkg(),
+		outMap: param.GetOutMap(),
 	}
 	dst := NewGoWriter()
 	err := b.Node(dst, fSet, file)
@@ -223,18 +225,26 @@ func (b *Builder) printTypeSpec(dst *DartWriter, expr ast.Expr) error {
 		if err != nil {
 			return err
 		}
-		b.printFormCode(dst.ui, expr)
 
-		err = b.printVerifyCode(dst.verify, expr.(*ast.DataType))
-		if err != nil {
-			return err
+		if len(b.outMap) == 0 || b.outMap["U"] {
+			b.printFormCode(dst.ui, expr)
+		}
+
+		if len(b.outMap) == 0 || b.outMap["V"] {
+			err = b.printVerifyCode(dst.verify, expr.(*ast.DataType))
+			if err != nil {
+				return err
+			}
 		}
 	case *ast.ServerType:
-		b.printServerCode(dst.server, expr.(*ast.ServerType))
-
+		if len(b.outMap) == 0 || b.outMap["S"] {
+			b.printServerCode(dst.server, expr.(*ast.ServerType))
+		}
 	case *ast.EnumType:
 		b.printEnumCode(dst.enum, expr.(*ast.EnumType))
-		b.printFormCode(dst.ui, expr)
+		if len(b.outMap) == 0 || b.outMap["U"] {
+			b.printFormCode(dst.ui, expr)
+		}
 	}
 	return nil
 }

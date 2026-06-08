@@ -73,10 +73,15 @@ func CheckType(typ string) bool {
 }
 
 type Param struct {
-	out   string
-	pack  string
-	build *Builder
-	pkg   *ast.Package
+	out    string
+	pack   string
+	build  *Builder
+	pkg    *ast.Package
+	outMap map[string]bool
+}
+
+func (p *Param) GetOutMap() map[string]bool {
+	return p.outMap
 }
 
 func (p *Param) GetOut() string {
@@ -111,7 +116,7 @@ func NewBuilder(build Function, param *Param) *Builder {
 	}
 }
 
-func Build(out string, in string, typ string, pack string, all bool) error {
+func Build(out string, in string, typ string, pack string, all bool, list string) error {
 	in = filepath.Clean(in)
 	path := filepath.Dir(in)
 	name := in[len(path)+1:]
@@ -120,9 +125,15 @@ func Build(out string, in string, typ string, pack string, all bool) error {
 		return err
 	}
 
+	var outMap = make(map[string]bool)
+	for i, _ := range list {
+		outMap[list[i:i+1]] = true
+	}
+
 	build := NewBuilder(buildInits[typ], &Param{
-		out:  out,
-		pack: pack,
+		out:    out,
+		pack:   pack,
+		outMap: outMap,
 	})
 	err = parser.ParseDir(build.fset, build.pkg, path, reg)
 	if err != nil {
@@ -157,10 +168,11 @@ func Build(out string, in string, typ string, pack string, all bool) error {
 
 		_, name := filepath.Split(path)
 		err = build.build(file, build.fset, &Param{
-			out:   filepath.Join(build.param.out, name),
-			pkg:   build.pkg,
-			pack:  build.param.pack,
-			build: build,
+			out:    filepath.Join(build.param.out, name),
+			pkg:    build.pkg,
+			pack:   build.param.pack,
+			outMap: build.param.outMap,
+			build:  build,
 		})
 		if err != nil {
 			return err

@@ -128,7 +128,6 @@ func TestBuild(t *testing.T) {
 		copyFile(t, "./bin/hbuf.exe", "E:\\develop\\hanber\\hbuf.exe")
 		copyFile(t, "./bin/hbuf.darwin", "E:\\develop\\hanber\\hbuf.darwin")
 		copyFile(t, "./bin/hbuf.linux", "E:\\develop\\hanber\\hbuf.linux")
-
 	})
 }
 

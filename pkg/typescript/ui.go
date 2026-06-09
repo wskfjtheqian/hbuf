@@ -818,6 +818,22 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				dst.Tab(7).Code("disabled\n")
 			}
 			dst.Tab(6).Code("/>\n")
+
+		} else if "object" == formTag {
+			if fieldName == "dynamicCondition" {
+				println(fieldName)
+			}
+			if len(customTag) > 0 {
+				dst.Tab(6).Code("<").Code(customTag).Code("\n")
+				dst.Tab(7).Code("modelValue={")
+				b.printGetStringValue(dst, field.Type, "model."+fieldName, isNull, form.digit, form.format)
+				dst.Code("}\n")
+				dst.Tab(7).Code("onUpdate:modelValue={($event: ")
+				b.printType(dst, field.Type, false, false)
+				dst.Code(") => model.").Code(fieldName).Code(" = $event")
+				dst.Code("}\n")
+				dst.Tab(6).Code("/>\n")
+			}
 		} else {
 			if len(customTag) == 0 {
 				customTag = "el-input"
@@ -827,6 +843,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			//	println("userName")
 			//}
 			dst.Tab(7).Code("modelValue={")
+
 			b.printGetStringValue(dst, field.Type, "model."+fieldName, isNull, form.digit, form.format)
 			dst.Code("}\n")
 			dst.Tab(7).Code("onUpdate:modelValue={($event: string | null) => model.").Code(fieldName).Code(" = ")
@@ -951,6 +968,8 @@ func (b *Builder) printGetStringValue(dst *build.Writer, expr ast.Expr, name str
 					dst.Code("?")
 				}
 				dst.Code(".name")
+			} else if ast.Data == t.Obj.Kind {
+				dst.Code(name)
 			}
 		} else if build.BaseType(t.Name) == build.Date {
 			if isNull {

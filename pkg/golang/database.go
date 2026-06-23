@@ -470,10 +470,10 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 			group := field.Dbs[0].Group
 			if 0 < len(group) {
 				if build.IsNil(field.Field.Type) {
-					where.Tab(1).Code("if nil != g." + build.StringToHumpName(field.Field.Name.Name) + " {\n")
+					where.Tab(1).Code("if nil != g." + build.StringToHumpName(field.Field.Name.Name) + " {\n").Tab(1)
 				}
 				if isFist {
-					where.Tab(1).Code("s.T(\" GROUP BY \")")
+					where.Code("s.T(\"GROUP BY \")")
 				} else {
 					where.Tab(1).Code("s.T(\", \")")
 				}
@@ -481,24 +481,29 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 				if build.IsNil(field.Field.Type) {
 					where.Tab(1).Code("}\n")
 				}
+				isFist = false
 			}
 		}
 	}
 
 	if orderBy {
-
+		isFist := true
 		for _, field := range fields {
 			order := field.Dbs[0].Order
 			if 0 < len(order) {
-				where.Tab(1).Code("if ")
 				if build.IsNil(field.Field.Type) {
-					where.Code("nil != g." + build.StringToHumpName(field.Field.Name.Name)).Code(" && ")
+					where.Tab(1).Code("if nil != g." + build.StringToHumpName(field.Field.Name.Name)).Code(" {\n").Tab(1)
 				}
-				where.Code("len(").Code(dName).Code("FieldsByName(g.Get").Code(build.StringToHumpName(field.Field.Name.Name)).Code("())) > 0")
-				where.Code(" {\n")
-				where.Tab(2).Code("s.T(\" ORDER BY \").T(").Code(dName).Code("FieldsByName(g.Get").Code(build.StringToHumpName(field.Field.Name.Name)).Code("())[0].DbName()).T(\"").Code(order).Code("\")\n")
-
-				where.Tab(1).Code("}\n")
+				if isFist {
+					where.Tab(1).Code("s.T(\"ORDER BY \")")
+				} else {
+					where.Tab(1).Code("s.T(\", \")")
+				}
+				_ = b.printParam(where, order, field, fields, "", "")
+				if build.IsNil(field.Field.Type) {
+					where.Tab(1).Code("}\n")
+				}
+				isFist = false
 			}
 		}
 	}

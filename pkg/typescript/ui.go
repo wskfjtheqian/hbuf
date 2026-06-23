@@ -820,9 +820,6 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(6).Code("/>\n")
 
 		} else if "object" == formTag {
-			if fieldName == "dynamicCondition" {
-				println(fieldName)
-			}
 			if len(customTag) > 0 {
 				dst.Tab(6).Code("<").Code(customTag).Code("\n")
 				dst.Tab(7).Code("modelValue={")

@@ -473,7 +473,7 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 					where.Tab(1).Code("if nil != g." + build.StringToHumpName(field.Field.Name.Name) + " {\n").Tab(1)
 				}
 				if isFist {
-					where.Code("s.T(\"GROUP BY \")")
+					where.Tab(1).Code("s.T(\"GROUP BY \")")
 				} else {
 					where.Tab(1).Code("s.T(\", \")")
 				}

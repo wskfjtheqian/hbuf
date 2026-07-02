@@ -1,7 +1,6 @@
 package golang
 
 import (
-	"errors"
 	"hbuf/pkg/ast"
 	"hbuf/pkg/build"
 	"hbuf/pkg/scanner"
@@ -128,7 +127,7 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 		}
 	}
 
-	if len(fDbs[0].Count) > 0 {
+	if fDbs[0].Count != nil {
 		b.printCountData(dst, typ, dbs[0], wFields, fType, fields, c, fDbs[0].Count)
 	}
 
@@ -761,7 +760,7 @@ func (b *Builder) printMapData(dst *build.Writer, key string, typ *ast.DataType,
 	dst.Code("\n")
 }
 
-func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build.DB, wFields []*build.DBField, fType *ast.DataType, fFields []*build.DBField, c *cache, count string) {
+func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build.DB, wFields []*build.DBField, fType *ast.DataType, fFields []*build.DBField, c *cache, count *ast.BasicLit) {
 	fName := build.StringToHumpName(fType.Name.Name)
 
 	w := b.getParamWhere(dst, wFields, false, false, true, "")
@@ -800,7 +799,8 @@ func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build
 
 var countRex = regexp.MustCompile(`(\${\w+})`)
 
-func (b *Builder) printCount(buf *build.Writer, text string, fields []*build.DBField, array, tab string) error {
+func (b *Builder) printCount(buf *build.Writer, count *ast.BasicLit, fields []*build.DBField, array, tab string) error {
+	text := strings.Trim(count.Value, "\"")
 	match := paramRex.FindAllStringSubmatchIndex(text, -1)
 	buf.Code(tab)
 	if nil != match {
@@ -815,7 +815,8 @@ func (b *Builder) printCount(buf *build.Writer, text string, fields []*build.DBF
 			if 2 < len(t) && "${" == t[0:2] {
 				field := b.findField(fields, t[2:len(t)-1])
 				if nil == field {
-					return errors.New("字段不存在")
+
+					return build.NewError(count.Pos()+1, "Not find field: "+text)
 				}
 				buf.Code(".T(").Code("g.Get").Code(build.StringToHumpName(field.Field.Name.Name)).Code("())")
 

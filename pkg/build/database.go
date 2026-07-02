@@ -24,7 +24,7 @@ type DB struct {
 	List      string
 	ListAsync string
 	Map       string
-	Count     string
+	Count     *ast.BasicLit
 	Table     string
 	Remove    bool
 	Where     []string
@@ -108,7 +108,7 @@ func GetDB(n string, tag []*ast.Tag) []*DB {
 					} else if "set" == item.Name.Name {
 						db.Set = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 					} else if "count" == item.Name.Name {
-						db.Count = strings.ToLower(item.Values[0].Value[1 : len(item.Values[0].Value)-1])
+						db.Count = item.Values[0]
 					} else if "force" == item.Name.Name {
 						db.Force = "true" == strings.ToLower(item.Values[0].Value[1:len(item.Values[0].Value)-1])
 					} else if "rm" == item.Name.Name {

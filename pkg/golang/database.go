@@ -1,6 +1,7 @@
 package golang
 
 import (
+	"errors"
 	"hbuf/pkg/ast"
 	"hbuf/pkg/build"
 	"hbuf/pkg/scanner"
@@ -127,8 +128,8 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 		}
 	}
 
-	if fDbs[0].Count {
-		b.printCountData(dst, typ, dbs[0], wFields, fType, fields, c)
+	if len(fDbs[0].Count) > 0 {
+		b.printCountData(dst, typ, dbs[0], wFields, fType, fields, c, fDbs[0].Count)
 	}
 
 	if fDbs[0].Del {
@@ -760,7 +761,7 @@ func (b *Builder) printMapData(dst *build.Writer, key string, typ *ast.DataType,
 	dst.Code("\n")
 }
 
-func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build.DB, wFields []*build.DBField, fType *ast.DataType, fFields []*build.DBField, c *cache) {
+func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build.DB, wFields []*build.DBField, fType *ast.DataType, fFields []*build.DBField, c *cache, count string) {
 	fName := build.StringToHumpName(fType.Name.Name)
 
 	w := b.getParamWhere(dst, wFields, false, false, true, "")
@@ -769,7 +770,9 @@ func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build
 	dst.Code("func (g " + fName + ") DbCount(ctx context.Context) (int64, error) {\n")
 	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
 	dst.Tab(1).Code("s := db.NewBuilder()\n")
-	dst.Tab(1).Code("s.T(\"SELECT COUNT(1) FROM \").T(tableName).T(\" WHERE is_deleted = 0\")\n")
+	dst.Tab(1).Code("s.T(\"SELECT COUNT(\")")
+	b.printCount(dst, count, wFields, "", "")
+	dst.Code(".T(\") FROM \").T(tableName).T(\" WHERE is_deleted = 0\")\n")
 	dst.Code(w.GetCode().String())
 
 	tab := 0
@@ -793,6 +796,43 @@ func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build
 	}
 	dst.Code("}\n")
 	dst.Code("\n")
+}
+
+var countRex = regexp.MustCompile(`(\${\w+})`)
+
+func (b *Builder) printCount(buf *build.Writer, text string, fields []*build.DBField, array, tab string) error {
+	match := paramRex.FindAllStringSubmatchIndex(text, -1)
+	buf.Code(tab)
+	if nil != match {
+		var index = 0
+		for _, item := range match {
+			if 0 < item[0] {
+				buf.Code(".T(\"")
+				buf.Code(text[index:item[0]])
+				buf.Code("\")")
+			}
+			t := text[item[0]:item[1]]
+			if 2 < len(t) && "${" == t[0:2] {
+				field := b.findField(fields, t[2:len(t)-1])
+				if nil == field {
+					return errors.New("字段不存在")
+				}
+				buf.Code(".T(").Code("g.Get").Code(build.StringToHumpName(field.Field.Name.Name)).Code("())")
+
+			}
+			index = item[1]
+		}
+		if index < len(text) {
+			buf.Code(".T(\"")
+			buf.Code(text[index:])
+			buf.Code("\")")
+		}
+	} else {
+		buf.Code(".T(\"")
+		buf.Code(text)
+		buf.Code("\")")
+	}
+	return nil
 }
 
 func (b *Builder) printDeleteData(dst *build.Writer, db *build.DB, wFields []*build.DBField, fType *ast.DataType, c bool) {

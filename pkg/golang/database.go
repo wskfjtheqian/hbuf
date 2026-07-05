@@ -189,6 +189,9 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 
 	val = strings.ToLower(fDbs[0].Update)
 	if "self" == val || "parent" == val {
+		if "parent" == val {
+			println("TODO")
+		}
 		w := wFields
 		f := fields
 		if "self" == val {
@@ -442,10 +445,10 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 			if 1 == len(text) || !build.IsArray(field.Field.Type) {
 				if build.IsNil(field.Field.Type) {
 					where.Tab(1).Code("if nil != g." + fieldName + " {\n")
-					_ = b.printParam(where, item, field, fields, "", "\t\ts")
+					_ = b.printParam(where, item, field, fields, "", "\t\ts", "g")
 					where.Tab(1).Code("}\n")
 				} else {
-					_ = b.printParam(where, item, field, fields, "", "\ts")
+					_ = b.printParam(where, item, field, fields, "", "\ts", "g")
 				}
 			} else {
 				if build.IsNil(field.Field.Type) {
@@ -455,10 +458,10 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 						where.Code(" && nil != g." + fieldName + "[" + strconv.Itoa(i) + "]")
 					}
 					where.Code(" {\n")
-					_ = b.printParam(where, item, field, fields, "["+strconv.Itoa(i)+"]", "\t\ts")
+					_ = b.printParam(where, item, field, fields, "["+strconv.Itoa(i)+"]", "\t\ts", "g")
 					where.Tab(1).Code("}\n")
 				} else {
-					_ = b.printParam(where, item, field, fields, "["+strconv.Itoa(i)+"]", "\ts")
+					_ = b.printParam(where, item, field, fields, "["+strconv.Itoa(i)+"]", "\ts", "g")
 				}
 			}
 		}
@@ -477,7 +480,7 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 				} else {
 					where.Tab(1).Code("s.T(\", \")")
 				}
-				_ = b.printParam(where, group, field, fields, "", "")
+				_ = b.printParam(where, group, field, fields, "", "", "g")
 				if build.IsNil(field.Field.Type) {
 					where.Tab(1).Code("}\n")
 				}
@@ -499,7 +502,7 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 				} else {
 					where.Tab(1).Code("s.T(\", \")")
 				}
-				_ = b.printParam(where, order, field, fields, "", "")
+				_ = b.printParam(where, order, field, fields, "", "", "g")
 				if build.IsNil(field.Field.Type) {
 					where.Tab(1).Code("}\n")
 				}
@@ -557,7 +560,7 @@ func (b *Builder) findField(fields []*build.DBField, name string) *build.DBField
 
 var paramRex = regexp.MustCompile(`(\?{\w+})|(\${\w+})|\$|\?`)
 
-func (b *Builder) printParam(buf *build.Writer, text string, self *build.DBField, fields []*build.DBField, array, tab string) error {
+func (b *Builder) printParam(buf *build.Writer, text string, self *build.DBField, fields []*build.DBField, array, tab, object string) error {
 	match := paramRex.FindAllStringSubmatchIndex(text, -1)
 	buf.Code(tab)
 	if nil != match {
@@ -577,9 +580,9 @@ func (b *Builder) printParam(buf *build.Writer, text string, self *build.DBField
 
 				buf.Code(".T(")
 				if build.IsNil(field.Field.Type) {
-					buf.Code("*g.")
+					buf.Code("*").Code(object).Code(".")
 				} else {
-					buf.Code("g.")
+					buf.Code(object).Code(".")
 				}
 				buf.Code(build.StringToHumpName(field.Field.Name.Name))
 				buf.Code(")")
@@ -600,10 +603,10 @@ func (b *Builder) printParam(buf *build.Writer, text string, self *build.DBField
 				if 0 == len(field.Dbs[0].Converter) && build.IsArray(field.Field.Type) && 0 == len(temp) {
 					buf.Code(".L(\",\", ")
 					buf.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hutl", "utl", 0)
-					buf.Code("utl.ToAnyList(g." + build.StringToHumpName(field.Field.Name.Name) + ")...")
+					buf.Code("utl.ToAnyList(").Code(object).Code("." + build.StringToHumpName(field.Field.Name.Name) + ")...")
 				} else {
 					buf.Code(".V(")
-					buf.Code(b.converter(field, "g"))
+					buf.Code(b.converter(field, object))
 					buf.Code(temp)
 				}
 				buf.Code(")")
@@ -801,7 +804,7 @@ var countRex = regexp.MustCompile(`(\${\w+})`)
 
 func (b *Builder) printCount(buf *build.Writer, count *ast.BasicLit, fields []*build.DBField, array, tab string) error {
 	text := strings.Trim(count.Value, "\"")
-	match := paramRex.FindAllStringSubmatchIndex(text, -1)
+	match := countRex.FindAllStringSubmatchIndex(text, -1)
 	buf.Code(tab)
 	if nil != match {
 		var index = 0
@@ -911,7 +914,7 @@ func (b *Builder) printInsertOrReplaceData(dst *build.Writer, s string, typ *ast
 
 		dst.Tab(tag + 1).Code("s.T(\",\").T(\"").Code(field.Dbs[0].Name).Code("\")\n")
 		dst.Tab(tag + 1).Code("v.T(\",\")")
-		_ = b.printParam(dst, set, field, fields, "", "")
+		_ = b.printParam(dst, set, field, fields, "", "", "g")
 		if tag > 0 {
 			dst.Tab(1).Code("}\n")
 		}
@@ -985,18 +988,21 @@ func (b *Builder) printInsertOrReplaceBatchData(dst *build.Writer, s string, typ
 
 func (b *Builder) printUpdateData(dst *build.Writer, typ *ast.DataType, key string, db *build.DB, wFields []*build.DBField, fields []*build.DBField, fType *ast.DataType, c *cache) {
 	fName := build.StringToHumpName(fType.Name.Name)
-	if typ != fType {
-		key = "parent"
-	}
-	w := b.getParamWhere(dst, fields, false, false, false, "")
+	object := "g"
+	w := b.getParamWhere(dst, wFields, false, false, false, "")
 	dst.AddImports(w.GetImports())
 
-	dst.Code("func (g " + fName + ") DbUpdate(ctx context.Context) (int64, int64, error) {\n")
+	dst.Code("func (g " + fName + ") DbUpdate(ctx context.Context")
+	if key == "parent" {
+		object = "d"
+		dst.Code(", d *").Code(build.StringToHumpName(typ.Name.Name))
+	}
+	dst.Code(") (int64, int64, error) {\n")
 	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
 	dst.Tab(1).Code("s := db.NewBuilder()\n")
 	dst.Tab(1).Code("s.T(\"UPDATE \").T(tableName).T(\" SET \").Del(\",\")\n")
 
-	set := b.printSet(typ, fields, key, SetWhereNil)
+	set := b.printSet(typ, fields, typ == fType || key == "parent", SetWhereNil, object)
 	dst.AddImports(set.GetImports())
 	dst.Code(set.String())
 
@@ -1012,18 +1018,21 @@ func (b *Builder) printUpdateData(dst *build.Writer, typ *ast.DataType, key stri
 
 func (b *Builder) printSetData(dst *build.Writer, typ *ast.DataType, key string, db *build.DB, wFields []*build.DBField, fields []*build.DBField, fType *ast.DataType, c *cache) {
 	fName := build.StringToHumpName(fType.Name.Name)
-	if typ != fType {
-		key = "parent"
-	}
 	w := b.getParamWhere(dst, wFields, false, false, false, "")
 	dst.AddImports(w.GetImports())
 
-	dst.Code("func (g " + fName + ") DbSet(ctx context.Context) (int64, int64, error) {\n")
+	object := "g"
+	dst.Code("func (g " + fName + ") DbSet(ctx context.Context")
+	if key == "parent" {
+		object = "d"
+		dst.Code(", d *").Code(build.StringToHumpName(typ.Name.Name))
+	}
+	dst.Code(") (int64, int64, error) {\n")
 	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
 	dst.Tab(1).Code("s := db.NewBuilder()\n")
 	dst.Tab(1).Code("s.T(\"UPDATE \").T(tableName).T(\" SET \").Del(\",\")\n")
 
-	set := b.printSet(typ, fields, key, SetWhereNot)
+	set := b.printSet(typ, fields, typ == fType || key == "parent", SetWhereNot, object)
 	dst.AddImports(set.GetImports())
 	dst.Code(set.String())
 
@@ -1039,19 +1048,22 @@ func (b *Builder) printSetData(dst *build.Writer, typ *ast.DataType, key string,
 
 func (b *Builder) printUpdateChange(dst *build.Writer, typ *ast.DataType, key string, db *build.DB, wFields []*build.DBField, fields []*build.DBField, fType *ast.DataType, c *cache) {
 	uName := build.StringToHumpName(fType.Name.Name)
-	if typ != fType {
-		key = "parent"
-	}
 	w := b.getParamWhere(dst, wFields, false, false, false, "")
 	dst.AddImports(w.GetImports())
 
-	dst.Code("func (g " + uName + ") DbUpdateChange(ctx context.Context) (int64, int64, error) {\n")
+	object := "g"
+	dst.Code("func (g " + uName + ") DbUpdateChange(ctx context.Context")
+	if key == "parent" {
+		object = "d"
+		dst.Code(", d *").Code(build.StringToHumpName(typ.Name.Name))
+	}
+	dst.Code(") (int64, int64, error) {\n")
 	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
 	dst.Tab(1).Code("s := db.NewBuilder()\n")
 	dst.Tab(1).Code("s.T(\"UPDATE \").T(tableName).T(\" SET \").Del(\",\")\n")
 
 	dst.Tab(1).Code("isChange := false\n")
-	set := b.printSet(typ, fields, key, SetWhereChange)
+	set := b.printSet(typ, fields, typ == fType || key == "parent", SetWhereChange, object)
 	dst.AddImports(set.GetImports())
 	dst.Code(set.String())
 
@@ -1067,26 +1079,27 @@ func (b *Builder) printUpdateChange(dst *build.Writer, typ *ast.DataType, key st
 	dst.Tab(1).Code("return s.Exec(ctx)\n")
 	dst.Code("}\n\n")
 
-	lName := build.StringToFirstLower(fType.Name.Name)
-	dst.Code("func (g *" + uName + ") DbSetChangeFields(fields ...").Code(uName).Code("Field) {\n")
+	if typ == fType {
+		lName := build.StringToFirstLower(fType.Name.Name)
+		dst.Code("func (g *" + uName + ") DbSetChangeFields(fields ...").Code(uName).Code("Field) {\n")
 
-	dst.Tab(1).Code("g.changeFields = make([]bool, ").Code(lName).Code("FieldCount)\n")
-	dst.Tab(1).Code("for _, item := range fields {\n")
-	dst.Tab(2).Code("g.changeFields[item] = true\n")
-	dst.Tab(1).Code("}\n")
-	dst.Code("}\n\n")
+		dst.Tab(1).Code("g.changeFields = make([]bool, ").Code(lName).Code("FieldCount)\n")
+		dst.Tab(1).Code("for _, item := range fields {\n")
+		dst.Tab(2).Code("g.changeFields[item] = true\n")
+		dst.Tab(1).Code("}\n")
+		dst.Code("}\n\n")
 
-	dst.Code("func (g *" + uName + ") DbAllChangeFields() {\n")
-	dst.Tab(1).Code("g.changeFields = make([]bool, ").Code(lName).Code("FieldCount)\n")
-	dst.Tab(1).Code("for i := 0; i < int(").Code(lName).Code("FieldCount); i++ {\n")
-	dst.Tab(2).Code("g.changeFields[i] = true\n")
-	dst.Tab(1).Code("}\n")
-	dst.Code("}\n\n")
+		dst.Code("func (g *" + uName + ") DbAllChangeFields() {\n")
+		dst.Tab(1).Code("g.changeFields = make([]bool, ").Code(lName).Code("FieldCount)\n")
+		dst.Tab(1).Code("for i := 0; i < int(").Code(lName).Code("FieldCount); i++ {\n")
+		dst.Tab(2).Code("g.changeFields[i] = true\n")
+		dst.Tab(1).Code("}\n")
+		dst.Code("}\n\n")
 
-	dst.Code("func (g *" + uName + ") DbClearChangeFields() {\n")
-	dst.Tab(1).Code("g.changeFields = make([]bool, ").Code(lName).Code("FieldCount)\n")
-	dst.Code("}\n\n")
-
+		dst.Code("func (g *" + uName + ") DbClearChangeFields() {\n")
+		dst.Tab(1).Code("g.changeFields = make([]bool, ").Code(lName).Code("FieldCount)\n")
+		dst.Code("}\n\n")
+	}
 }
 
 type SetWhere int
@@ -1097,14 +1110,14 @@ const (
 	SetWhereChange = 2
 )
 
-func (b *Builder) printSet(typ *ast.DataType, fields []*build.DBField, key string, where SetWhere) *build.Writer {
+func (b *Builder) printSet(typ *ast.DataType, fields []*build.DBField, allSet bool, where SetWhere, object string) *build.Writer {
 	uName := build.StringToHumpName(typ.Name.Name)
 	dst := build.NewWriter()
 	for _, field := range fields {
 		set := ""
 		if 0 < len(field.Dbs[0].Set) {
 			set = field.Dbs[0].Name + " = " + field.Dbs[0].Set
-		} else if "self" == key {
+		} else if allSet {
 			set = field.Dbs[0].Name + " = ?"
 		} else {
 			continue
@@ -1114,19 +1127,19 @@ func (b *Builder) printSet(typ *ast.DataType, fields []*build.DBField, key strin
 		name := build.StringToHumpName(field.Field.Name.Name)
 		if where == SetWhereChange {
 			isWhere = true
-			dst.Tab(1).Code("if g.changeFields[").Code(uName).Code("Field_").Code(name).Code("] {\n")
+			dst.Tab(1).Code("if ").Code(object).Code(".changeFields[").Code(uName).Code("Field_").Code(name).Code("] {\n")
 			dst.Tab(2).Code("isChange = true\n")
 			dst.Tab(1)
 		} else if where == SetWhereNil && build.IsNil(field.Field.Type) && !field.Dbs[0].Force {
 			isWhere = true
-			dst.Tab(1).Code("if nil != g.")
+			dst.Tab(1).Code("if nil != ").Code(object).Code(".")
 			dst.Code(name)
 			dst.Code(" {\n")
 			dst.Tab(1)
 		}
 
 		dst.Tab(1).Code("s.T(\",\")")
-		_ = b.printParam(dst, set, field, fields, "", "")
+		_ = b.printParam(dst, set, field, fields, "", "", object)
 
 		if isWhere {
 			dst.Tab(1).Code("}\n")

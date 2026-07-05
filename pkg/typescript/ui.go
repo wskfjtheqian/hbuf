@@ -76,8 +76,6 @@ func (b *Builder) getUI(tags []*ast.Tag) *ui {
 		return nil
 	}
 	form := ui{
-		width:      160,
-		height:     160,
 		extensions: []string{},
 	}
 	if nil != val.KV {
@@ -218,6 +216,12 @@ func (b *Builder) printDataUi(dst *build.Writer, typ *ast.DataType) {
 		b.printForm(dst, typ, u)
 	}
 	if len(u.table) > 0 && u.table[0] == "true" {
+		if u.width == 0 {
+			u.width = 160
+		}
+		if u.height == 0 {
+			u.height = 160
+		}
 		b.printTable(dst, typ, u)
 	}
 
@@ -265,7 +269,11 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Code(" sortable")
 		}
 		dst.Code(" show-overflow-tooltip")
-		dst.Code(" min-width=\"").Code(strconv.FormatFloat(table.width, 'g', -1, 64)).Code("\"")
+		width := table.width
+		if width == 0 {
+			width = u.width
+		}
+		dst.Code(" min-width=\"").Code(strconv.FormatFloat(width, 'g', -1, 64)).Code("\"")
 		dst.Code(">\n")
 
 		tag := ""

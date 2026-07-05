@@ -55,6 +55,7 @@ type ui struct {
 	clip       bool
 	unlink     bool
 	textarea   bool
+	sortable   bool
 	maxLine    *int64
 	maxLen     *int64
 	minLen     *int64
@@ -173,6 +174,8 @@ func (b *Builder) getUI(tags []*ast.Tag) *ui {
 				form.unlink = "true" == item.Values[0].Value[1:len(item.Values[0].Value)-1]
 			} else if "textarea" == item.Name.Name {
 				form.textarea = "true" == item.Values[0].Value[1:len(item.Values[0].Value)-1]
+			} else if "sort" == item.Name.Name {
+				form.sortable = "true" == item.Values[0].Value[1:len(item.Values[0].Value)-1]
 			} else if "extensions" == item.Name.Name {
 				for _, value := range item.Values {
 					form.extensions = append(form.extensions, value.Value[1:len(value.Value)-1])
@@ -258,6 +261,9 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 
 		dst.Tab(5).Code("<el-table-column prop=\"").Code(fieldName).Code("\"")
 		dst.Code(" label={ctx.$t(\"").Code(langName).Code("Lang.").Code(fieldName).Code("\")}")
+		if table.sortable {
+			dst.Code(" sortable")
+		}
 		dst.Code(" show-overflow-tooltip")
 		dst.Code(" min-width=\"").Code(strconv.FormatFloat(table.width, 'g', -1, 64)).Code("\"")
 		dst.Code(">\n")

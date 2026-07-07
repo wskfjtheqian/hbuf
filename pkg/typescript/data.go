@@ -264,7 +264,7 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
-			p := b.getPackage(dst, t, "", false)
+			p := b.getPackage(dst, t, "", false, false)
 			if ast.Enum == t.Obj.Kind {
 				if isRecordKey {
 					if empty {
@@ -541,7 +541,7 @@ func (b *Builder) printExtend(dst *build.Writer, extends []*ast.Extends, start b
 			dst.Code(", ")
 		}
 
-		dst.Code(b.getPackage(dst, v.Name, "", true))
+		dst.Code(b.getPackage(dst, v.Name, "", true, false))
 		dst.Code(".")
 		dst.Code(build.StringToHumpName(v.Name.Name))
 

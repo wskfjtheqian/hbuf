@@ -58,7 +58,7 @@ func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
 
 func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 	dst.Code("export class " + build.StringToHumpName(typ.Name.Name) + "Client implements ")
-	dst.Code(b.getPackage(dst, typ.Name, "", true))
+	dst.Code(b.getPackage(dst, typ.Name, "", true, false))
 	dst.Code(".")
 	dst.Code(build.StringToHumpName(typ.Name.Name))
 

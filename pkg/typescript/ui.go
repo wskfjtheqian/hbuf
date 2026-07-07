@@ -14,7 +14,7 @@ func (b *Builder) printFormCode(dst *build.Writer, expr ast.Expr) {
 	case *ast.DataType:
 		dst.Import("vue", "{defineComponent, type PropType}", 0)
 		typ := expr.(*ast.DataType)
-		b.getPackage(dst, typ.Name, "", false)
+		b.getPackage(dst, typ.Name, "", false, false)
 		b.printDataUi(dst, typ)
 
 	case *ast.ServerType:
@@ -387,7 +387,7 @@ func (b *Builder) printTableString(dst *build.Writer, name string, expr ast.Expr
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
-			b.getPackage(dst, expr, "", false)
+			b.getPackage(dst, expr, "", false, false)
 			b.printTableString(dst, name, t.Obj.Decl.(*ast.TypeSpec).Type, empty, digit, format, val, isDigit, checkIsNull)
 		} else {
 			switch build.BaseType(t.Name) {
@@ -507,17 +507,16 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		className := build.StringToMiddleLine(field.Name.Name)
 
 		dst.Tab(4).Code("\"").Code(fieldName).Code("\": () =>(\n")
-		dst.Tab(5).Code("<el-form-item class=\"").Code(className).Code("\" prop=\"").Code(fieldName).Code("\"")
-		dst.Code(" label={ctx.$t(\"").Code(langName).Code("Lang.").Code(fieldName).Code("\")}")
-		if verify {
-			pName := b.getPackage(dst, typ.Name, "verify", false)
-			dst.Code(" rules={[{validator: ").Code(pName).Code(".verify").Code(name).Code("_").Code(build.StringToHumpName(field.Name.Name))
-			dst.Code("(_locale, model.").Code(fieldName).Code("), trigger: 'blur'}]}")
-		}
-		dst.Code(">\n")
 
-		if field.Name.Name == "channel_ids_bbb" {
-			println(fieldName)
+		if "object" != formTag || len(customTag) > 0 {
+			dst.Tab(5).Code("<el-form-item class=\"").Code(className).Code("\" prop=\"").Code(fieldName).Code("\"")
+			dst.Code(" label={ctx.$t(\"").Code(langName).Code("Lang.").Code(fieldName).Code("\")}")
+			if verify {
+				pName := b.getPackage(dst, typ.Name, "verify", false, false)
+				dst.Code(" rules={[{validator: ").Code(pName).Code(".verify").Code(name).Code("_").Code(build.StringToHumpName(field.Name.Name))
+				dst.Code("(_locale, model.").Code(fieldName).Code("), trigger: 'blur'}]}")
+			}
+			dst.Code(">\n")
 		}
 
 		if "date" == formTag {
@@ -844,6 +843,17 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				dst.Code(") => model.").Code(fieldName).Code(" = $event")
 				dst.Code("}\n")
 				dst.Tab(6).Code("/>\n")
+			} else {
+				dst.Tab(5).Code("<>\n")
+				dst.Tab(6).Code("<el-form-item class=\"").Code(className).Code("\" prop=\"").Code(fieldName).Code("\"")
+				dst.Code(" label={ctx.$t(\"").Code(langName).Code("Lang.").Code(fieldName).Code("\")}")
+				dst.Code("/>\n")
+				ty := field.Type.Type().(*ast.Ident)
+				pkg := b.getPackage(dst, ty, "", false, true)
+				dst.Tab(6).Code("<").Code(pkg).Code(".").Code(build.StringToHumpName(ty.Name)).Code("FormItems\n")
+				dst.Tab(7).Code("model={model." + fieldName + "}\n")
+				dst.Tab(6).Code("/>\n")
+				dst.Tab(5).Code("</>")
 			}
 		} else {
 			if len(customTag) == 0 {
@@ -891,8 +901,11 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 
 			dst.Tab(6).Code("/>\n")
 		}
+
 		lang.Add(fieldName, field.Tags)
-		dst.Tab(5).Code("</el-form-item>\n")
+		if "object" != formTag || len(customTag) > 0 {
+			dst.Tab(5).Code("</el-form-item>\n")
+		}
 		dst.Tab(4).Code("),\n")
 
 		if form.onlyRead {
@@ -935,7 +948,7 @@ func (b *Builder) printMenuItem(dst *build.Writer, expr ast.Expr, empty bool, op
 	switch expr.(type) {
 	case *ast.EnumType:
 		t := expr.(*ast.EnumType)
-		pkg := b.getPackage(dst, t.Name, "", false)
+		pkg := b.getPackage(dst, t.Name, "", false, false)
 		name := build.StringToHumpName(t.Name.Name)
 		dst.Tab(6 + 1).Code("{").Code(pkg).Code(".").Code(name).Code(".values.map((val) => {\n")
 		dst.Tab(7 + 1).Code("return <" + option + " key={val.name} class={ 'el-option--' + val.type + ' ' + val.cssClass}\n")
@@ -946,7 +959,7 @@ func (b *Builder) printMenuItem(dst *build.Writer, expr ast.Expr, empty bool, op
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
-			b.getPackage(dst, expr, "", false)
+			b.getPackage(dst, expr, "", false, false)
 			b.printMenuItem(dst, t.Obj.Decl.(*ast.TypeSpec).Type, empty, option)
 		}
 	case *ast.ArrayType:
@@ -1044,7 +1057,7 @@ func (b *Builder) printSetStringValue(dst *build.Writer, expr ast.Expr, name str
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
 			if ast.Enum == t.Obj.Kind {
-				pkg := b.getPackage(dst, t, "", false)
+				pkg := b.getPackage(dst, t, "", false, false)
 				dst.Code("((").Code(name).Code("?.length ?? 0) == 0 ? ")
 				if isNull {
 					dst.Code("null")
@@ -1202,7 +1215,7 @@ func (b *Builder) printSetNumberValue(dst *build.Writer, expr ast.Expr, name str
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
 			if ast.Enum == t.Obj.Kind {
-				pkg := b.getPackage(dst, t, "", false)
+				pkg := b.getPackage(dst, t, "", false, false)
 				dst.Code("(").Code(name).Code(" == null ? ")
 				if isNull {
 					dst.Code("null")

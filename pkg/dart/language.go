@@ -5,11 +5,11 @@ import (
 	"sort"
 )
 
-func printLanguge(dst *build.Writer) {
-	langsKeys := build.GetKeysByMap(dst.GetLangs())
-	sort.Strings(langsKeys)
-	for _, langsKey := range langsKeys {
-		l := dst.GetLangs()[langsKey]
+func printLanguage(dst *build.Writer) {
+	langKeys := build.GetKeysByMap(dst.GetLangMap())
+	sort.Strings(langKeys)
+	for _, langKey := range langKeys {
+		l := dst.GetLangMap()[langKey]
 		if 0 >= len(l.Lang) {
 			continue
 		}

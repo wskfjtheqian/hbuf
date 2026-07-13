@@ -105,7 +105,7 @@ func Build(file *ast.File, fSet *token.FileSet, param *build.Param) error {
 			return err
 		}
 	}
-	printLanguge(dst.ui.GetLangs(), dst.lang)
+	printLanguage(dst.ui.GetLangMap(), dst.lang)
 	if 0 < dst.lang.GetCode().Len() {
 		err = writerFile(dst.lang, filepath.Join(dir, name+".lang.ts"))
 		if err != nil {

@@ -212,6 +212,8 @@ func (b *Builder) printDataUi(dst *build.Writer, typ *ast.DataType) {
 		return
 	}
 
+	b.printLang(dst, typ, u)
+
 	if len(u.form) > 0 && u.form[0] == "true" {
 		b.printForm(dst, typ, u)
 	}
@@ -225,6 +227,21 @@ func (b *Builder) printDataUi(dst *build.Writer, typ *ast.DataType) {
 		b.printTable(dst, typ, u)
 	}
 
+}
+
+func (b *Builder) printLang(dst *build.Writer, typ *ast.DataType, u *ui) error {
+	name := build.StringToHumpName(typ.Name.Name)
+	lang := dst.GetLang(name)
+
+	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
+		fieldName := build.StringToFirstLower(field.Name.Name)
+		lang.Add(fieldName, field.Tags)
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {

@@ -97,7 +97,7 @@ func (w *Writer) GetLang(name string) *Language {
 	return lang
 }
 
-func (w *Writer) GetLangs() map[string]*Language {
+func (w *Writer) GetLangMap() map[string]*Language {
 	return w.lang
 }
 

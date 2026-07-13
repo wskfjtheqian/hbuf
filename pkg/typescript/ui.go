@@ -637,7 +637,12 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				dst.Tab(7).Code("multiple\n")
 			}
 			dst.Tab(7).Code(">\n")
-			b.printMenuItem(dst, field.Type, false, "el-option")
+			if build.IsBool(field.Type) {
+				dst.Tab(8).Code("<el-option label={ctx.$t('true')} value={'true'}/>\n")
+				dst.Tab(8).Code("<el-option label={ctx.$t('false')} value={'false'}/>\n")
+			} else {
+				b.printMenuItem(dst, field.Type, false, "el-option")
+			}
 			dst.Tab(6).Code("</").Code(customTag).Code(">\n")
 		} else if "switch" == formTag {
 			if len(customTag) == 0 {

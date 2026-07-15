@@ -3,6 +3,7 @@ package ts
 import (
 	"hbuf/pkg/build"
 	"sort"
+	"strconv"
 )
 
 func printLanguage(lang map[string]*build.Language, dst *build.Writer) {
@@ -24,7 +25,14 @@ func printLanguage(lang map[string]*build.Language, dst *build.Writer) {
 			names := build.GetMapKeys(l.Lang)
 			sort.Strings(names)
 			for _, name := range names {
-				dst.Tab(2).Code(name).Code(": ").Code("\"").Code(l.Lang[name][key]).Code("\",\n")
+				for i, item := range l.Lang[name][key] {
+					if i == 0 {
+						dst.Tab(2).Code(name).Code(": ").Code("\"").Code(item).Code("\",\n")
+					} else {
+						dst.Tab(2).Code(name).Code(strconv.Itoa(i)).Code(": ").Code("\"").Code(item).Code("\",\n")
+					}
+
+				}
 			}
 			dst.Tab(1).Code("},\n")
 		}

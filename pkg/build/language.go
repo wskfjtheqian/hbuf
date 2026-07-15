@@ -9,14 +9,14 @@ import (
 type Language struct {
 	Name string
 	Key  map[string]struct{}
-	Lang map[string]map[string]string
+	Lang map[string]map[string][]string
 }
 
 func NewLanguage(name string) *Language {
 	return &Language{
 		Name: name,
 		Key:  map[string]struct{}{},
-		Lang: map[string]map[string]string{},
+		Lang: map[string]map[string][]string{},
 	}
 }
 
@@ -30,25 +30,29 @@ func (l *Language) Add(field string, tags []*ast.Tag) {
 	}
 }
 
-func getLanguage(tags []*ast.Tag) map[string]string {
+func getLanguage(tags []*ast.Tag) map[string][]string {
 	val, ok := GetTag(tags, "lang")
 	if !ok {
 		return nil
 	}
 
-	lang := make(map[string]string, 0)
+	lang := make(map[string][]string, 0)
 	if nil != val.KV {
 		for _, item := range val.KV {
-			lang[StringToFirstLower(item.Name.Name)] = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
+			langList := make([]string, len(item.Values))
+			for i, value := range item.Values {
+				langList[i] = value.Value[1 : len(value.Value)-1]
+			}
+			lang[StringToFirstLower(item.Name.Name)] = langList
 		}
 	}
 	return lang
 }
 
-func GetLang(val string, key string, lanMap map[string]string) string {
+func GetLang(val string, key string, lanMap map[string][]string) string {
 	if nil != lanMap {
 		if text, ok := lanMap[key]; ok {
-			return text
+			return text[0]
 		}
 	}
 

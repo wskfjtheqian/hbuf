@@ -287,7 +287,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 		dst.Tab(5).Code("<el-table-column prop=\"").Code(fieldName).Code("\"")
 
 		if table.sortable {
-			dst.Code(" sortable")
+			dst.Code("sortable=\"custom\"")
 		}
 		dst.Code(" show-overflow-tooltip")
 		width := table.width

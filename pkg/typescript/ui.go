@@ -13,6 +13,7 @@ func (b *Builder) printFormCode(dst *build.Writer, expr ast.Expr) {
 	switch expr.(type) {
 	case *ast.DataType:
 		dst.Import("vue", "{defineComponent, type PropType}", 0)
+
 		typ := expr.(*ast.DataType)
 		b.getPackage(dst, typ.Name, "", false, false)
 		b.printDataUi(dst, typ)
@@ -306,14 +307,15 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 		}
 		dst.Tab(6).Code("{{\n")
 		dst.Tab(7).Code("header: (scope:any) =>  (\n")
-		dst.Tab(8).Code("<>\n")
+		dst.Tab(8).Code("<span class=\"table-header\">\n")
 		dst.Tab(9).Code("<span>{{ default: () => ctx.$t(\"").Code(langName).Code("Lang.").Code(fieldName).Code("\") }}</span>\n")
 		if b.langValueLen(fl) > 1 {
+			dst.Import("@element-plus/icons-vue", "{QuestionFilled}", 0)
 			dst.Tab(9).Code("<el-tooltip  effect=\"dark\" content={ ctx.$t(\"").Code(langName).Code("Lang.").Code(fieldName).Code("1\")}>\n")
 			dst.Tab(10).Code("<el-icon class=\"table-header__tip-icon\"><QuestionFilled /></el-icon>\n")
 			dst.Tab(9).Code("</el-tooltip>\n")
 		}
-		dst.Tab(8).Code("</>\n")
+		dst.Tab(8).Code("</span>\n")
 		dst.Tab(7).Code("),\n")
 		dst.Tab(7).Code("default: (scope:{row: ")
 		b.printType(dst, typ.Name, false, false)

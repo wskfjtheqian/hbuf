@@ -41,27 +41,28 @@ func (b *Builder) printEnumUi(dst *build.Writer, typ *ast.EnumType) {
 }
 
 type ui struct {
-	form       []string
-	table      []string
-	suffix     string
-	onlyRead   bool
-	toNull     bool
-	format     string
-	digit      int
-	index      *int
-	width      float64
-	height     float64
-	extensions []string
-	clip       bool
-	unlink     bool
-	textarea   bool
-	sortable   bool
-	maxLine    *int64
-	maxLen     *int64
-	minLen     *int64
-	step       *float64
-	min        *float64
-	max        *float64
+	form         []string
+	table        []string
+	suffix       string
+	onlyRead     bool
+	toNull       bool
+	format       string
+	defaultValue string
+	digit        int
+	index        *int
+	width        float64
+	height       float64
+	extensions   []string
+	clip         bool
+	unlink       bool
+	textarea     bool
+	sortable     bool
+	maxLine      *int64
+	maxLen       *int64
+	minLen       *int64
+	step         *float64
+	min          *float64
+	max          *float64
 
 	outType string
 	outSize []int
@@ -129,6 +130,8 @@ func (b *Builder) getUI(tags []*ast.Tag) *ui {
 				form.index = &atoi
 			} else if "format" == item.Name.Name {
 				form.format = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
+			} else if "default" == item.Name.Name {
+				form.defaultValue = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 			} else if "width" == item.Name.Name {
 				atoi, err := strconv.ParseFloat(item.Values[0].Value[1:len(item.Values[0].Value)-1], 10)
 				if err != nil {
@@ -261,7 +264,6 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 	langName := build.StringToFirstLower(name)
 	//i := 0
 	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
-
 		table := b.getUI(field.Tags)
 		if nil == table || 0 == len(table.table) {
 			return nil
@@ -304,7 +306,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 		dst.Tab(6).Code("{{\n")
 		dst.Tab(7).Code("default: (scope:{row: ")
 		b.printType(dst, typ.Name, false, false)
-		dst.Code(" }) => (null == scope.row.").Code(fieldName).Code(") ? \"\" : (\n")
+		dst.Code(" }) => (null == scope.row.").Code(fieldName).Code(") ? \"").Code(u.defaultValue).Code("\" : (\n")
 
 		if len(custom) > 0 {
 			dst.Tab(8).Code("<").Code(custom).Code(" value={scope.row.").Code(fieldName).Code("} />\n")

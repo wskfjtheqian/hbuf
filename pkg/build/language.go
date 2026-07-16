@@ -20,7 +20,7 @@ func NewLanguage(name string) *Language {
 	}
 }
 
-func (l *Language) Add(field string, tags []*ast.Tag) {
+func (l *Language) Add(field string, tags []*ast.Tag) map[string][]string {
 	lang := getLanguage(tags)
 	l.Lang[field] = lang
 	l.Key["en"] = struct{}{}
@@ -28,6 +28,7 @@ func (l *Language) Add(field string, tags []*ast.Tag) {
 	for key, _ := range lang {
 		l.Key[key] = struct{}{}
 	}
+	return lang
 }
 
 func getLanguage(tags []*ast.Tag) map[string][]string {

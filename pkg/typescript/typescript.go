@@ -400,3 +400,13 @@ func (b *Builder) printDefault(dst *build.Writer, expr ast.Expr, notEmpty bool) 
 	}
 	return ""
 }
+
+func (b *Builder) langValueLen(fl map[string][]string) int {
+	l := 0
+	for _, val := range fl {
+		if len(val) > l {
+			l = len(val)
+		}
+	}
+	return l
+}

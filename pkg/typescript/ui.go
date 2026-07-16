@@ -281,9 +281,10 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 		//dst.Code("                <el-table-column prop="adminId" label="adminId" width="140"/>\n")
 		fieldName := build.StringToFirstLower(field.Name.Name)
 		dst.Tab(4).Code("\"").Code(fieldName).Code("\": () =>(\n")
+		fl := lang.Add(fieldName, field.Tags)
 
 		dst.Tab(5).Code("<el-table-column prop=\"").Code(fieldName).Code("\"")
-		dst.Code(" label={ctx.$t(\"").Code(langName).Code("Lang.").Code(fieldName).Code("\")}")
+
 		if table.sortable {
 			dst.Code(" sortable")
 		}
@@ -304,6 +305,16 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 			custom = table.table[1]
 		}
 		dst.Tab(6).Code("{{\n")
+		dst.Tab(7).Code("header: (scope:any) =>  (\n")
+		dst.Tab(8).Code("<>\n")
+		dst.Tab(9).Code("<span>{{ default: () => ctx.$t(\"").Code(langName).Code("Lang.").Code(fieldName).Code("\") }}</span>\n")
+		if b.langValueLen(fl) > 1 {
+			dst.Tab(9).Code("<el-tooltip  effect=\"dark\" content={ ctx.$t(\"").Code(langName).Code("Lang.").Code(fieldName).Code("1\")}>\n")
+			dst.Tab(10).Code("<el-icon class=\"table-header__tip-icon\"><QuestionFilled /></el-icon>\n")
+			dst.Tab(9).Code("</el-tooltip>\n")
+		}
+		dst.Tab(8).Code("</>\n")
+		dst.Tab(7).Code("),\n")
 		dst.Tab(7).Code("default: (scope:{row: ")
 		b.printType(dst, typ.Name, false, false)
 		dst.Code(" }) => (null == scope.row.").Code(fieldName).Code(") ? \"").Code(u.defaultValue).Code("\" : (\n")
@@ -352,7 +363,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 		dst.Tab(6).Code("}}\n")
 		dst.Tab(5).Code("</el-table-column>\n")
 		dst.Tab(4).Code("),\n")
-		lang.Add(fieldName, field.Tags)
+
 		return nil
 	})
 	if err != nil {

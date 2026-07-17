@@ -47,9 +47,8 @@ type ui struct {
 	suffix       string
 	onlyRead     bool
 	toNull       bool
-	format       string
+	format       []string
 	defaultValue string
-	digit        int
 	index        *int
 	width        float64
 	height       float64
@@ -98,13 +97,6 @@ func (b *Builder) getUI(tags []*ast.Tag) *ui {
 				form.fit = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 			} else if "type" == item.Name.Name {
 				form.typ = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
-			} else if "digit" == item.Name.Name {
-				atoi, err := strconv.Atoi(item.Values[0].Value[1 : len(item.Values[0].Value)-1])
-				if err != nil {
-					//TODO 添加错误处理
-					return nil
-				}
-				form.digit = atoi
 			} else if "outSize" == item.Name.Name {
 				for _, value := range item.Values {
 					atoi, err := strconv.Atoi(value.Value[1 : len(value.Value)-1])
@@ -130,7 +122,9 @@ func (b *Builder) getUI(tags []*ast.Tag) *ui {
 				}
 				form.index = &atoi
 			} else if "format" == item.Name.Name {
-				form.format = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
+				for _, value := range item.Values {
+					form.format = append(form.format, value.Value[1:len(value.Value)-1])
+				}
 			} else if "default" == item.Name.Name {
 				form.defaultValue = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 			} else if "width" == item.Name.Name {
@@ -287,7 +281,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 		dst.Tab(5).Code("<el-table-column prop=\"").Code(fieldName).Code("\"")
 
 		if table.sortable {
-			dst.Code("sortable=\"custom\"")
+			dst.Code(" sortable=\"custom\"")
 		}
 		dst.Code(" show-overflow-tooltip")
 		width := table.width
@@ -351,13 +345,13 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Code(">{{\n")
 
 			dst.Tab(9).Code("default: () =>")
-			b.printTableString(dst, "scope.row."+fieldName, field.Type, false, table.digit, table.format, " || \"\"", true, false)
+			b.printTableString(dst, "scope.row."+fieldName, field.Type, false, table.format, " || \"\"", true, false)
 			dst.Code("\n")
 			dst.Tab(8).Code("}}</el-tag>\n")
 
 		} else {
 			dst.Tab(8)
-			b.printTableString(dst, "scope.row."+fieldName, field.Type, false, table.digit, table.format, " || \"\"", true, false)
+			b.printTableString(dst, "scope.row."+fieldName, field.Type, false, table.format, " || \"\"", true, false)
 			dst.Code("\n")
 		}
 
@@ -409,7 +403,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 
 }
 
-func (b *Builder) printTableString(dst *build.Writer, name string, expr ast.Expr, empty bool, digit int, format string, val string, isDigit bool, checkIsNull bool) {
+func (b *Builder) printTableString(dst *build.Writer, name string, expr ast.Expr, empty bool, format []string, val string, isDigit bool, checkIsNull bool) {
 	switch expr.(type) {
 	case *ast.EnumType:
 		if empty && checkIsNull {
@@ -420,45 +414,34 @@ func (b *Builder) printTableString(dst *build.Writer, name string, expr ast.Expr
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
 			b.getPackage(dst, expr, "", false, false)
-			b.printTableString(dst, name, t.Obj.Decl.(*ast.TypeSpec).Type, empty, digit, format, val, isDigit, checkIsNull)
+			b.printTableString(dst, name, t.Obj.Decl.(*ast.TypeSpec).Type, empty, format, val, isDigit, checkIsNull)
 		} else {
 			switch build.BaseType(t.Name) {
-			case build.Int8, build.Int16, build.Int32, build.Int64, build.Uint8, build.Uint16, build.Uint32, build.Uint64:
-				if empty && checkIsNull {
-					dst.Code("null == ").Code(name).Code(" ? \"\" : ")
+			case build.Int8, build.Int16, build.Int32, build.Int64, build.Uint8, build.Uint16, build.Uint32, build.Uint64, build.Float, build.Double, build.Decimal:
+				formatName := "fn"
+				formatStr := ""
+				if len(format) > 1 {
+					formatName = format[1]
+					formatStr = format[0]
+				} else if len(format) > 0 {
+					formatStr = format[0]
 				}
-				dst.Code(name).Code("!.toString()")
-			case build.Float, build.Double:
-				if empty && checkIsNull {
-					dst.Code("null == ").Code(name).Code(" ? \"\" : ")
-				}
-				if isDigit {
-					dst.Code(name).Code("!.toFixed(" + strconv.Itoa(digit) + ")")
-				} else {
-					dst.Code(name).Code("!.toString()")
-				}
+				dst.Code("ctx.$").Code(formatName).Code("(").Code(name).Code(", \"").Code(formatStr).Code("\")")
 			case build.Bool:
 				if empty && checkIsNull {
 					dst.Code("null == ").Code(name).Code(" ? \"\" : ")
 				}
 				dst.Code("ctx.$t(").Code(name).Code("?.toString())")
 			case build.Date:
-				if empty && checkIsNull {
-					dst.Code("null == ").Code(name).Code(" ? \"\" : ")
+				formatName := "fd"
+				formatStr := "YYYY/MM/DD HH:mm:ss"
+				if len(format) > 1 {
+					formatName = format[1]
+					formatStr = format[0]
+				} else if len(format) > 0 {
+					formatStr = format[0]
 				}
-				if 0 == len(format) {
-					format = "YYYY/MM/DD HH:mm:ss"
-				}
-				dst.Code("ctx.$fd(").Code(name).Code(",\"").Code(format).Code("\")")
-			case build.Decimal:
-				if empty && checkIsNull {
-					dst.Code("null == ").Code(name).Code(" ? \"\" : ")
-				}
-				if isDigit {
-					dst.Code(name).Code("!.toFixed(" + strconv.Itoa(digit) + ")")
-				} else {
-					dst.Code(name).Code("!.toString()")
-				}
+				dst.Code("ctx.$").Code(formatName).Code("(").Code(name).Code(", \"").Code(formatStr).Code("\")")
 			default:
 				dst.Code(name)
 			}
@@ -467,13 +450,13 @@ func (b *Builder) printTableString(dst *build.Writer, name string, expr ast.Expr
 		//default: (scope:any) => scope.row.platform?.map((e: $4.PlatformType) => ctx.$t(e.toString())) || ""
 		ar := expr.(*ast.ArrayType)
 		dst.Code(name).Code("?.map((e:any)=>")
-		b.printTableString(dst, "e", ar.Type(), false, digit, format, val, isDigit, true)
+		b.printTableString(dst, "e", ar.Type(), false, format, val, isDigit, true)
 		dst.Code(")?.join(\",\") || \"\"")
 	case *ast.MapType:
 		dst.Code("\"\"+").Code(name)
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
-		b.printTableString(dst, name, t.Type(), t.Empty, digit, format, val, isDigit, checkIsNull)
+		b.printTableString(dst, name, t.Type(), t.Empty, format, val, isDigit, checkIsNull)
 		if t.Empty {
 			dst.Code(val)
 		}
@@ -572,8 +555,11 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				dst.Code("($event as (Date[] | null))")
 				dst.Code("?")
 				dst.Code(".map((v, i)=> i == 0 ? ctx.$timeToUtc(v) as Date : ctx.$timeToUtc(")
-
-				switch form.format {
+				format := ""
+				if len(form.format) > 0 {
+					format = form.format[0]
+				}
+				switch format {
 				case "YYYY":
 					dst.Code("new Date(v.getFullYear(), 12, 31, 23, 59, 59, 999) as Date")
 				case "YYYY/MM":
@@ -609,7 +595,11 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(7).Code("type=\"")
 			dateType := ""
 			if isArray {
-				switch form.format {
+				format := ""
+				if len(form.format) > 0 {
+					format = form.format[0]
+				}
+				switch format {
 				case "YYYY":
 					dateType = "yearrange"
 				case "YYYY/MM":
@@ -620,7 +610,11 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 					dateType = "datetimerange"
 				}
 			} else {
-				switch form.format {
+				format := ""
+				if len(form.format) > 0 {
+					format = form.format[0]
+				}
+				switch format {
 				case "YYYY":
 					dateType = "year"
 				case "YYYY/MM":
@@ -650,7 +644,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 			dst.Tab(7).Code("modelValue={")
-			b.printGetStringValue(dst, field.Type, "model."+fieldName, isNull, form.digit, form.format)
+			b.printGetStringValue(dst, field.Type, "model."+fieldName, isNull, form.format)
 			dst.Code("}\n")
 			dst.Tab(7).Code("onUpdate:modelValue={($event: string[] | string | null) => model.").Code(fieldName).Code(" = ")
 			b.printSetStringValue(dst, field.Type, "$event", isNull)
@@ -698,7 +692,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 			dst.Tab(7).Code("modelValue={")
-			b.printGetStringValue(dst, field.Type, "model."+fieldName, isNull, form.digit, form.format)
+			b.printGetStringValue(dst, field.Type, "model."+fieldName, isNull, form.format)
 			dst.Code("}\n")
 			dst.Tab(7).Code("onUpdate:modelValue={($event: string[] | string | null) => model.").Code(fieldName).Code(" = ")
 			b.printSetStringValue(dst, field.Type, "$event", isNull)
@@ -717,7 +711,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 			dst.Tab(7).Code("modelValue={")
-			b.printGetStringValue(dst, field.Type, "model."+fieldName, isNull, form.digit, form.format)
+			b.printGetStringValue(dst, field.Type, "model."+fieldName, isNull, form.format)
 			dst.Code("}\n")
 			dst.Tab(7).Code("onUpdate:modelValue={($event: string[] | string | null) => model.").Code(fieldName).Code(" = ")
 			b.printSetStringValue(dst, field.Type, "$event", isNull)
@@ -736,7 +730,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 			dst.Tab(7).Code("modelValue={")
-			b.printGetStringValue(dst, field.Type, "model."+fieldName, isNull, form.digit, form.format)
+			b.printGetStringValue(dst, field.Type, "model."+fieldName, isNull, form.format)
 			dst.Code("}\n")
 			dst.Tab(7).Code("onUpdate:modelValue={($event: string | null) => model.").Code(fieldName).Code(" = ")
 			b.printSetStringValue(dst, field.Type, "$event", isNull)
@@ -789,7 +783,12 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			if form.onlyRead {
 				dst.Tab(7).Code("disabled\n")
 			}
-			dst.Tab(7).Code("precision={").Code(strconv.Itoa(form.digit)).Code("}\n")
+			digit := 0
+			if len(form.format) > 0 {
+				index := strings.Index(form.format[0], ".")
+				digit = len(form.format[0]) - index - 1
+			}
+			dst.Tab(7).Code("precision={").Code(strconv.Itoa(digit)).Code("}\n")
 			if form.min != nil {
 				dst.Tab(7).Code("min={").Code(strconv.FormatFloat(*form.min, 'f', -1, 64)).Code("}\n")
 			}
@@ -822,7 +821,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 			dst.Tab(7).Code("modelValue={")
-			b.printGetStringValue(dst, field.Type, "model."+fieldName, isNull, form.digit, form.format)
+			b.printGetStringValue(dst, field.Type, "model."+fieldName, isNull, form.format)
 			dst.Code("}\n")
 			dst.Tab(7).Code("onUpdate:modelValue={($event: string | null) => model.").Code(fieldName).Code(" = ")
 			b.printSetStringValue(dst, field.Type, "$event", isNull)
@@ -873,7 +872,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			if len(customTag) > 0 {
 				dst.Tab(6).Code("<").Code(customTag).Code("\n")
 				dst.Tab(7).Code("modelValue={")
-				b.printGetStringValue(dst, field.Type, "model."+fieldName, isNull, form.digit, form.format)
+				b.printGetStringValue(dst, field.Type, "model."+fieldName, isNull, form.format)
 				dst.Code("}\n")
 				dst.Tab(7).Code("onUpdate:modelValue={($event: ")
 				b.printType(dst, field.Type, false, false)
@@ -902,7 +901,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			//}
 			dst.Tab(7).Code("modelValue={")
 
-			b.printGetStringValue(dst, field.Type, "model."+fieldName, isNull, form.digit, form.format)
+			b.printGetStringValue(dst, field.Type, "model."+fieldName, isNull, form.format)
 			dst.Code("}\n")
 			dst.Tab(7).Code("onUpdate:modelValue={($event: string | null) => model.").Code(fieldName).Code(" = ")
 			b.printSetStringValue(dst, field.Type, "$event", isNull)
@@ -1018,7 +1017,7 @@ func (b *Builder) printMenuItem(dst *build.Writer, expr ast.Expr, empty bool, op
 	}
 }
 
-func (b *Builder) printGetStringValue(dst *build.Writer, expr ast.Expr, name string, isNull bool, digit int, format string) {
+func (b *Builder) printGetStringValue(dst *build.Writer, expr ast.Expr, name string, isNull bool, format []string) {
 	switch expr.(type) {
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
@@ -1036,26 +1035,26 @@ func (b *Builder) printGetStringValue(dst *build.Writer, expr ast.Expr, name str
 			if isNull {
 				dst.Code(name).Code(" == null").Code(" ? \"\" : ")
 			}
-			if 0 == len(format) {
-				format = "YYYY/MM/DD HH:mm:ss"
+			formatName := "fd"
+			formatStr := "YYYY/MM/DD HH:mm:ss"
+			if len(format) > 1 {
+				formatName = format[1]
+				formatStr = format[0]
+			} else if len(format) > 0 {
+				formatStr = format[0]
 			}
-			dst.Code("ctx.$fd(").Code(name).Code(",\"").Code(format).Code("\")")
+			dst.Code("ctx.$").Code(formatName).Code("(").Code(name).Code(", \"").Code(formatStr).Code("\")")
 		} else {
 			dst.Code(name)
 			switch build.BaseType(t.Name) {
-			case build.Int8, build.Int16, build.Int32, build.Uint8, build.Uint16, build.Uint32:
+			case build.Int8, build.Int16, build.Int32, build.Uint8, build.Uint16, build.Uint32, build.Float, build.Double, build.Decimal, build.Int64, build.Uint64:
 				if isNull {
 					dst.Code("?")
 				}
-				dst.Code(".toString()")
-			case build.Int64, build.Uint64:
-				if isNull {
-					dst.Code("?")
-				}
-				dst.Code(".toString()")
-			case build.Float, build.Double:
-				if isNull {
-					dst.Code("?")
+				digit := 0
+				if len(format) > 0 {
+					index := strings.Index(format[0], ".")
+					digit = len(format[0]) - index - 1
 				}
 				dst.Code(".toFixed(").Code(strconv.Itoa(digit)).Code(")")
 			case build.Bool:
@@ -1063,11 +1062,6 @@ func (b *Builder) printGetStringValue(dst *build.Writer, expr ast.Expr, name str
 					dst.Code("?")
 				}
 				dst.Code(".toString()")
-			case build.Decimal:
-				if isNull {
-					dst.Code("?")
-				}
-				dst.Code(".toFixed(").Code(strconv.Itoa(digit)).Code(")")
 			default:
 			}
 		}
@@ -1078,13 +1072,13 @@ func (b *Builder) printGetStringValue(dst *build.Writer, expr ast.Expr, name str
 			dst.Code("?")
 		}
 		dst.Code(".map((item: any)=> ")
-		b.printGetStringValue(dst, ar.Type(), "item", ar.IsEmpty(), digit, format)
+		b.printGetStringValue(dst, ar.Type(), "item", ar.IsEmpty(), format)
 		dst.Code(")")
 	case *ast.MapType:
 		dst.Code("null")
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
-		b.printGetStringValue(dst, t.Type(), name, true, digit, format)
+		b.printGetStringValue(dst, t.Type(), name, true, format)
 	}
 }
 

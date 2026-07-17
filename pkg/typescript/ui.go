@@ -1047,7 +1047,7 @@ func (b *Builder) printGetStringValue(dst *build.Writer, expr ast.Expr, name str
 		} else {
 			dst.Code(name)
 			switch build.BaseType(t.Name) {
-			case build.Int8, build.Int16, build.Int32, build.Uint8, build.Uint16, build.Uint32, build.Float, build.Double, build.Decimal, build.Int64, build.Uint64:
+			case build.Int8, build.Int16, build.Int32, build.Uint8, build.Uint16, build.Uint32, build.Float, build.Double, build.Decimal:
 				if isNull {
 					dst.Code("?")
 				}
@@ -1057,6 +1057,11 @@ func (b *Builder) printGetStringValue(dst *build.Writer, expr ast.Expr, name str
 					digit = len(format[0]) - index - 1
 				}
 				dst.Code(".toFixed(").Code(strconv.Itoa(digit)).Code(")")
+			case build.Int64, build.Uint64:
+				if isNull {
+					dst.Code("?")
+				}
+				dst.Code(".toString()")
 			case build.Bool:
 				if isNull {
 					dst.Code("?")

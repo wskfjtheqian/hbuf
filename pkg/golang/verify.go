@@ -186,6 +186,7 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 						pack := b.getPackage(dst, val.Enum.Name) + build.StringToHumpName(val.Enum.Name.Name) + build.StringToHumpName(val.Item.Name.Name)
 						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "", 0)
 						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc", "", 0)
+						dst.Import("unicode/utf8", "", 0)
 						dst.Tab(1).Code("if !").Code("(utf8.RuneCountInString(i.Get").Code(fName).Code("()) ").Code(b.getOperator(item.Op)).Code(" ").Code(item.Val).Code(") {\n")
 						dst.Tab(2).Code("return hrpc.NewResult[hbuf.Data](int32(").Code(pack).Code("), ").Code(pack).Code(".ToName(), nil)\n")
 						dst.Tab(1).Code("}\n")

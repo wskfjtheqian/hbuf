@@ -47,16 +47,9 @@ func getCache(name string, tags []*ast.Tag) *cache {
 }
 
 func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error {
-	dst.Import("context", "", 0)
-	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db", 0)
-
 	dbs, wFields, key, err := b.getDBField(typ)
 	if 0 == len(dbs) || nil != err {
 		return nil
-	}
-
-	if "ConfigInfo" == typ.Name.Name {
-		println("")
 	}
 
 	c := getCache(typ.Name.Name, typ.Tags)
@@ -189,9 +182,6 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 
 	val = strings.ToLower(fDbs[0].Update)
 	if "self" == val || "parent" == val {
-		if "parent" == val {
-			println("TODO")
-		}
 		w := wFields
 		f := fields
 		if "self" == val {
@@ -628,6 +618,9 @@ func (b *Builder) printParam(buf *build.Writer, text string, self *build.DBField
 }
 
 func (b *Builder) printListData(dst *build.Writer, typ *ast.DataType, key string, db *build.DB, wFields []*build.DBField, fields []*build.DBField, fType *ast.DataType, c *cache) {
+	dst.Import("context", "", 0)
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db", 0)
+
 	fName := build.StringToHumpName(fType.Name.Name)
 	dName := build.StringToHumpName(typ.Name.Name)
 	if typ != fType {
@@ -676,6 +669,9 @@ func (b *Builder) printListData(dst *build.Writer, typ *ast.DataType, key string
 }
 
 func (b *Builder) printListAsyncData(dst *build.Writer, typ *ast.DataType, key string, db *build.DB, wFields []*build.DBField, fields []*build.DBField, fType *ast.DataType, c *cache) {
+	dst.Import("context", "", 0)
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db", 0)
+
 	fName := build.StringToHumpName(fType.Name.Name)
 	dName := build.StringToHumpName(typ.Name.Name)
 	if typ != fType {
@@ -711,6 +707,9 @@ func (b *Builder) printListAsyncData(dst *build.Writer, typ *ast.DataType, key s
 }
 
 func (b *Builder) printMapData(dst *build.Writer, key string, typ *ast.DataType, db *build.DB, wFields []*build.DBField, fields []*build.DBField, fType *ast.DataType, keyName string, c *cache) {
+	dst.Import("context", "", 0)
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db", 0)
+
 	kType, KName, ok := b.getKey(dst, fields, keyName)
 	if !ok {
 		return
@@ -764,6 +763,9 @@ func (b *Builder) printMapData(dst *build.Writer, key string, typ *ast.DataType,
 }
 
 func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build.DB, wFields []*build.DBField, fType *ast.DataType, fFields []*build.DBField, c *cache, count *ast.BasicLit) {
+	dst.Import("context", "", 0)
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db", 0)
+
 	fName := build.StringToHumpName(fType.Name.Name)
 
 	w := b.getParamWhere(dst, wFields, false, false, true, "")
@@ -840,6 +842,9 @@ func (b *Builder) printCount(buf *build.Writer, count *ast.BasicLit, fields []*b
 }
 
 func (b *Builder) printDeleteData(dst *build.Writer, db *build.DB, wFields []*build.DBField, fType *ast.DataType, c bool) {
+	dst.Import("context", "", 0)
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db", 0)
+
 	fName := build.StringToHumpName(fType.Name.Name)
 
 	w := b.getParamWhere(dst, wFields, false, false, false, "")
@@ -860,6 +865,9 @@ func (b *Builder) printDeleteData(dst *build.Writer, db *build.DB, wFields []*bu
 }
 
 func (b *Builder) printRemoveData(dst *build.Writer, db *build.DB, wFields []*build.DBField, fType *ast.DataType, c bool) {
+	dst.Import("context", "", 0)
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db", 0)
+
 	fName := build.StringToHumpName(fType.Name.Name)
 
 	w := b.getParamWhere(dst, wFields, false, false, false, "")
@@ -879,6 +887,9 @@ func (b *Builder) printRemoveData(dst *build.Writer, db *build.DB, wFields []*bu
 }
 
 func (b *Builder) printInsertOrReplaceData(dst *build.Writer, s string, typ *ast.DataType, val string, db *build.DB, wFields []*build.DBField, fields []*build.DBField, fType *ast.DataType, key *build.DBField, c *cache) {
+	dst.Import("context", "", 0)
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db", 0)
+
 	fName := build.StringToHumpName(fType.Name.Name)
 	if typ != fType {
 		val = "parent"
@@ -931,6 +942,9 @@ func (b *Builder) printInsertOrReplaceData(dst *build.Writer, s string, typ *ast
 }
 
 func (b *Builder) printInsertOrReplaceBatchData(dst *build.Writer, s string, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField, isCache bool) {
+	dst.Import("context", "", 0)
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db", 0)
+
 	name := build.StringToHumpName(typ.Name.Name)
 	dst.Code("func (g " + name + ") Db").Code(s).Code("Batch(ctx context.Context, list ...*" + name + ") (int64, int64, error) {\n")
 	dst.Tab(1).Code("if nil == list || 0 == len(list) {\n")
@@ -987,6 +1001,9 @@ func (b *Builder) printInsertOrReplaceBatchData(dst *build.Writer, s string, typ
 }
 
 func (b *Builder) printUpdateData(dst *build.Writer, typ *ast.DataType, key string, db *build.DB, wFields []*build.DBField, fields []*build.DBField, fType *ast.DataType, c *cache) {
+	dst.Import("context", "", 0)
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db", 0)
+
 	fName := build.StringToHumpName(fType.Name.Name)
 	object := "g"
 	w := b.getParamWhere(dst, wFields, false, false, false, "")
@@ -1017,6 +1034,9 @@ func (b *Builder) printUpdateData(dst *build.Writer, typ *ast.DataType, key stri
 }
 
 func (b *Builder) printSetData(dst *build.Writer, typ *ast.DataType, key string, db *build.DB, wFields []*build.DBField, fields []*build.DBField, fType *ast.DataType, c *cache) {
+	dst.Import("context", "", 0)
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db", 0)
+
 	fName := build.StringToHumpName(fType.Name.Name)
 	w := b.getParamWhere(dst, wFields, false, false, false, "")
 	dst.AddImports(w.GetImports())
@@ -1047,6 +1067,9 @@ func (b *Builder) printSetData(dst *build.Writer, typ *ast.DataType, key string,
 }
 
 func (b *Builder) printUpdateChange(dst *build.Writer, typ *ast.DataType, key string, db *build.DB, wFields []*build.DBField, fields []*build.DBField, fType *ast.DataType, c *cache) {
+	dst.Import("context", "", 0)
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db", 0)
+
 	uName := build.StringToHumpName(fType.Name.Name)
 	w := b.getParamWhere(dst, wFields, false, false, false, "")
 	dst.AddImports(w.GetImports())
@@ -1150,6 +1173,9 @@ func (b *Builder) printSet(typ *ast.DataType, fields []*build.DBField, allSet bo
 }
 
 func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, key string, db *build.DB, wFields []*build.DBField, fields []*build.DBField, fType *ast.DataType, c *cache) {
+	dst.Import("context", "", 0)
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db", 0)
+
 	fName := build.StringToHumpName(fType.Name.Name)
 	dName := build.StringToHumpName(typ.Name.Name)
 	if typ == fType {

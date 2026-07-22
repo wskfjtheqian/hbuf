@@ -46,7 +46,6 @@ type ui struct {
 	table        []string
 	suffix       string
 	onlyRead     bool
-	toNull       bool
 	format       []string
 	defaultValue string
 	index        *int
@@ -164,8 +163,6 @@ func (b *Builder) getUI(tags []*ast.Tag) *ui {
 				form.minLen = &atoi
 			} else if "clip" == item.Name.Name {
 				form.clip = "true" == item.Values[0].Value[1:len(item.Values[0].Value)-1]
-			} else if "toNull" == item.Name.Name {
-				form.toNull = "true" == item.Values[0].Value[1:len(item.Values[0].Value)-1]
 			} else if "unlink" == item.Name.Name {
 				form.unlink = "true" == item.Values[0].Value[1:len(item.Values[0].Value)-1]
 			} else if "textarea" == item.Name.Name {
@@ -1170,7 +1167,10 @@ func (b *Builder) printSetStringValue(dst *build.Writer, expr ast.Expr, name str
 
 	case *ast.ArrayType:
 		ar := expr.(*ast.ArrayType)
-		dst.Code("(").Code(name).Code(" as (string[] | null))?")
+		if isNull {
+			dst.Code("((").Code(name).Code(" as (string[] | null))?.length ?? 0) == 0 ? null :")
+		}
+		dst.Code("((").Code(name).Code(" as (string[] | null))?")
 		dst.Code(".map((item: string)=> ")
 		b.printSetStringValue(dst, ar.Type(), "item", ar.IsEmpty())
 		dst.Code(")")
@@ -1179,6 +1179,7 @@ func (b *Builder) printSetStringValue(dst *build.Writer, expr ast.Expr, name str
 		} else {
 			dst.Code(" ?? []")
 		}
+		dst.Code(" )")
 	case *ast.MapType:
 		if isNull {
 			dst.Code("null")

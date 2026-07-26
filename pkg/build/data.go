@@ -4,11 +4,36 @@ import (
 	"hbuf/pkg/ast"
 	"hbuf/pkg/scanner"
 	"strconv"
+	"strings"
 )
 
 type Marshal struct {
 	In  []string
 	Out []string
+}
+
+func GetFieldTag(tag []*ast.Tag) map[string][]string {
+	val, ok := GetTag(tag, "tag")
+	if !ok {
+		return nil
+	}
+
+	ret := make(map[string][]string)
+	if nil != val.KV {
+		for _, item := range val.KV {
+			name := strings.ToLower(item.Name.Name)
+			if name == "hbuf" {
+				continue
+			}
+			for _, value := range item.Values {
+				v := strings.Trim(value.Value[1:len(value.Value)-1], "")
+				if len(v) > 0 {
+					ret[name] = append(ret[name], v)
+				}
+			}
+		}
+	}
+	return ret
 }
 
 func GetMarshal(tag []*ast.Tag) *Marshal {

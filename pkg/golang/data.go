@@ -3,6 +3,7 @@ package golang
 import (
 	"hbuf/pkg/ast"
 	"hbuf/pkg/build"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -215,6 +216,7 @@ func (b *Builder) printDataStruct(dst *build.Writer, typ *ast.DataType) error {
 		marshal := build.GetMarshal(field.Tags)
 
 		inOut := ""
+
 		if marshal != nil {
 			for i, in := range marshal.In {
 				if len(in) > 0 {
@@ -235,10 +237,38 @@ func (b *Builder) printDataStruct(dst *build.Writer, typ *ast.DataType) error {
 			inOut = ",filter:" + inOut
 		}
 
+		tag := strings.Builder{}
+		tag.WriteString("`")
+		tags := build.GetFieldTag(field.Tags)
+		if len(tags) > 0 {
+			if _, ok := tags["json"]; !ok {
+				tag.WriteString("json:\"" + build.StringToUnderlineName(field.Name.Name) + ",omitempty" + inOut + "\"")
+			}
+			keys := make([]string, 0)
+			for key, _ := range tags {
+				keys = append(keys, key)
+			}
+			sort.Strings(keys)
+
+			for _, key := range keys {
+				if val, ok := tags[key]; ok {
+					if tag.Len() > 0 {
+						tag.WriteString(" ")
+					}
+					tag.WriteString(key + ":\"" + strings.Join(val, ",") + "\"")
+				}
+			}
+		} else {
+			tag.WriteString("json:\"" + build.StringToUnderlineName(field.Name.Name) + ",omitempty\"")
+		}
+
+		tag.WriteString(" hbuf:\"" + field.Id.Value + "\"")
+		tag.WriteString("`")
+
 		fields = append(fields, dataField{
 			name: build.StringToHumpName(field.Name.Name),
 			typ:  temp.String(),
-			tag:  "`json:\"" + build.StringToUnderlineName(field.Name.Name) + ",omitempty" + inOut + "\" hbuf:\"" + field.Id.Value + "\"` ",
+			tag:  tag.String(),
 		})
 		i := len(fields) - 1
 

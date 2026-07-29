@@ -185,22 +185,36 @@ func (b *Builder) writerFile(data *build.Writer, packages string, out string, i 
 
 	if 0 < len(data.GetImports()) {
 		_, _ = fc.WriteString("import (\n")
-		imps := make([]string, len(data.GetImports()))
-
-		i := 0
-		for key, _ := range data.GetImports() {
-			imps[i] = key
-			i++
-		}
-		sort.Strings(imps)
-		for _, val := range imps {
-			name := data.GetImports()[val].Name
-			_, _ = fc.WriteString("\t")
-			if 0 < len(name) {
-				_, _ = fc.WriteString(name + " ")
+		imps1 := make([]string, 0, len(data.GetImports()))
+		imps2 := make([]string, 0, len(data.GetImports()))
+		for key, val := range data.GetImports() {
+			if val.Name == "" {
+				imps1 = append(imps1, key)
+			} else {
+				imps2 = append(imps2, val.Name)
 			}
-			_, _ = fc.WriteString("\"" + val + "\"\n")
 		}
+		if len(imps1) > 0 {
+			sort.Strings(imps1)
+			for _, val := range imps1 {
+				_, _ = fc.WriteString("\t\"" + val + "\"\n")
+			}
+		}
+
+		if len(imps2) > 0 {
+			sort.Strings(imps2)
+			_, _ = fc.WriteString("\n")
+			keys := map[string]string{}
+			for key, val := range data.GetImports() {
+				keys[val.Name] = key
+			}
+			for _, item := range imps2 {
+				if val, ok := keys[item]; ok {
+					_, _ = fc.WriteString("\t" + item + " \"" + val + "\"\n")
+				}
+			}
+		}
+
 		_, _ = fc.WriteString(")\n\n")
 	}
 	code := data.GetCode().String()

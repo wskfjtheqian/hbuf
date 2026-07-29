@@ -262,7 +262,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 		}
 
 		isEnum := build.IsEnum(field.Type)
-		//isArray := build.IsArray(field.Type)
+		isArray := build.IsArray(field.Type)
 		//isNull := build.IsNil(field.Type)
 		isBool := build.IsBool(field.Type)
 		//i++
@@ -332,23 +332,83 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(9).Code("default: () => scope.row.").Code(fieldName).Code("\n")
 			dst.Tab(8).Code("}}</el-tag>\n")
 		} else if "tag" == tag {
-			dst.Tab(8).Code("<el-tag  ")
-			if isBool {
-				dst.Code("type={scope.row.").Code(fieldName).Code(" ? \"success\" : \"danger\"}")
-			} else if isEnum {
-				dst.Code("type={scope.row.").Code(fieldName).Code("?.type}")
-				dst.Code("class={scope.row.").Code(fieldName).Code("?.cssClass }")
+			if !isArray {
+				dst.Tab(8).Code("<el-tag ")
+				if isBool {
+					dst.Code("type={scope.row.").Code(fieldName).Code(" ? \"success\" : \"danger\"}")
+				} else if isEnum {
+					dst.Code("type={scope.row.").Code(fieldName).Code("?.type}")
+					dst.Code("class={scope.row.").Code(fieldName).Code("?.cssClass }")
+				}
+				dst.Code(">{{\n")
+				dst.Tab(9).Code("default: () =>")
+				b.printTableString(dst, "scope.row."+fieldName, field.Type, false, table.format, " || \"\"", true, false, true)
+				dst.Code("\n")
+				dst.Tab(8).Code("}}</el-tag>\n")
+			} else {
+				dst.Tab(8).Code("scope.row.").Code(fieldName).Code(".length < 2 ? (\n")
+				dst.Tab(9).Code("<el-tag ")
+				if isBool {
+					dst.Code("type={scope.row.").Code(fieldName).Code(" ? \"success\" : \"danger\"}")
+				} else if isEnum {
+					dst.Code("type={scope.row.").Code(fieldName).Code("?.type}")
+					dst.Code("class={scope.row.").Code(fieldName).Code("?.cssClass }")
+				}
+				dst.Code(">\n")
+				dst.Tab(10).Code("{{")
+				dst.Code("default: () =>")
+				b.printTableString(dst, "scope.row."+fieldName, field.Type, false, table.format, " || \"\"", true, false, true)
+				dst.Code("}}\n")
+				dst.Tab(9).Code("</el-tag>\n")
+				dst.Tab(8).Code(") : (\n")
+				dst.Tab(9).Code("<div>\n")
+				dst.Tab(10).Code("<el-tag")
+				if isBool {
+					dst.Code(" type={scope.row.").Code(fieldName).Code("![0] ? \"success\" : \"danger\"}")
+				} else if isEnum {
+					dst.Code(" type={scope.row.").Code(fieldName).Code("![0]?.type}")
+					dst.Code(" class={scope.row.").Code(fieldName).Code("![0]?.cssClass }")
+				}
+				dst.Code(">\n")
+				dst.Tab(11).Code("{{")
+				dst.Code("default: () =>")
+				b.printTableString(dst, "scope.row."+fieldName+"![0]", field.Type, false, table.format, " || \"\"", true, false, false)
+				dst.Code("}}\n")
+				dst.Tab(10).Code("</el-tag>\n")
+				dst.Tab(10).Code("<el-popover width={200}>{{\n")
+				dst.Tab(11).Code("reference:()=>(\n")
+				dst.Tab(12).Code("<span style={{ marginLeft: '6px' }}>\n")
+				dst.Tab(13).Code("<el-tag effect=\"dark\" type=\"warning\">\n")
+				dst.Import("@element-plus/icons-vue", "{MoreFilled}", 0)
+				dst.Tab(14).Code("<el-icon><MoreFilled /></el-icon>\n")
+				dst.Tab(13).Code("</el-tag>\n")
+				dst.Tab(12).Code("</span>\n")
+				dst.Tab(11).Code("),\n")
+				dst.Tab(11).Code("default:()=>(").Code("scope.row.").Code(fieldName).Code("!.slice(1).map((item, index) => (\n")
+				dst.Tab(12).Code("<el-tag")
+				dst.Code(" key={index}")
+				dst.Code(" style={{ marginLeft: '6px', marginBottom: '4px' }}")
+				if isBool {
+					dst.Code(" type={scope.row.").Code(fieldName).Code(" ? \"success\" : \"danger\"}")
+				} else if isEnum {
+					dst.Code(" type={scope.row.").Code(fieldName).Code("?.type}")
+					dst.Code(" class={scope.row.").Code(fieldName).Code("?.cssClass }")
+				}
+				dst.Code(">\n")
+				dst.Tab(13).Code("{{")
+				dst.Code("default: () =>")
+				b.printTableString(dst, "item", field.Type, false, table.format, " || \"\"", true, false, false)
+				dst.Code("}}\n")
+				dst.Tab(12).Code("</el-tag>\n")
+				dst.Tab(11).Code(")))\n")
+				dst.Tab(10).Code("}}</el-popover>\n")
+				dst.Tab(9).Code("</div>\n")
+				dst.Tab(8).Code(")\n")
 			}
-			dst.Code(">{{\n")
-
-			dst.Tab(9).Code("default: () =>")
-			b.printTableString(dst, "scope.row."+fieldName, field.Type, false, table.format, " || \"\"", true, false)
-			dst.Code("\n")
-			dst.Tab(8).Code("}}</el-tag>\n")
 
 		} else {
 			dst.Tab(8)
-			b.printTableString(dst, "scope.row."+fieldName, field.Type, false, table.format, " || \"\"", true, false)
+			b.printTableString(dst, "scope.row."+fieldName, field.Type, false, table.format, " || \"\"", true, false, true)
 			dst.Code("\n")
 		}
 
@@ -400,7 +460,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 
 }
 
-func (b *Builder) printTableString(dst *build.Writer, name string, expr ast.Expr, empty bool, format []string, val string, isDigit bool, checkIsNull bool) {
+func (b *Builder) printTableString(dst *build.Writer, name string, expr ast.Expr, empty bool, format []string, val string, isDigit bool, checkIsNull bool, forList bool) {
 	switch expr.(type) {
 	case *ast.EnumType:
 		if empty && checkIsNull {
@@ -411,7 +471,7 @@ func (b *Builder) printTableString(dst *build.Writer, name string, expr ast.Expr
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
 			b.getPackage(dst, expr, "", false, false)
-			b.printTableString(dst, name, t.Obj.Decl.(*ast.TypeSpec).Type, empty, format, val, isDigit, checkIsNull)
+			b.printTableString(dst, name, t.Obj.Decl.(*ast.TypeSpec).Type, empty, format, val, isDigit, checkIsNull, true)
 		} else {
 			switch build.BaseType(t.Name) {
 			case build.Int8, build.Int16, build.Int32, build.Int64, build.Uint8, build.Uint16, build.Uint32, build.Uint64, build.Float, build.Double, build.Decimal:
@@ -444,16 +504,20 @@ func (b *Builder) printTableString(dst *build.Writer, name string, expr ast.Expr
 			}
 		}
 	case *ast.ArrayType:
-		//default: (scope:any) => scope.row.platform?.map((e: $4.PlatformType) => ctx.$t(e.toString())) || ""
 		ar := expr.(*ast.ArrayType)
-		dst.Code(name).Code("?.map((e:any)=>")
-		b.printTableString(dst, "e", ar.Type(), false, format, val, isDigit, true)
-		dst.Code(")?.join(\",\") || \"\"")
+		if forList {
+			dst.Code(name).Code("?.map((e:any)=>")
+			b.printTableString(dst, "e", ar.Type(), false, format, val, isDigit, true, true)
+			dst.Code(")?.join(\",\") || \"\"")
+		} else {
+			b.printTableString(dst, name, ar.Type(), false, format, val, isDigit, true, true)
+			dst.Code(" || \"\"")
+		}
 	case *ast.MapType:
 		dst.Code("\"\"+").Code(name)
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
-		b.printTableString(dst, name, t.Type(), t.Empty, format, val, isDigit, checkIsNull)
+		b.printTableString(dst, name, t.Type(), t.Empty, format, val, isDigit, checkIsNull, true)
 		if t.Empty {
 			dst.Code(val)
 		}

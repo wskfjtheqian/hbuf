@@ -14,6 +14,33 @@ type cache struct {
 	max int
 }
 
+type databaseField struct {
+	text    string
+	typ     string
+	comment string
+}
+
+func printDatabaseField(dst *build.Writer, tab int, list ...databaseField) {
+	txtLen := 0
+	typLen := 0
+	for _, item := range list {
+		if len(item.text) > txtLen {
+			txtLen = len(item.text)
+		}
+		if len(item.typ) > typLen {
+			typLen = len(item.typ)
+		}
+	}
+	for i, item := range list {
+		if i == 0 {
+			dst.Code("\n")
+		}
+		dst.Tab(tab).Code(build.StringFillRight(item.text, ' ', txtLen))
+		dst.Code(build.StringFillRight(item.typ, ' ', typLen+1))
+		dst.Code("//").Code(item.comment).Code("\n")
+	}
+}
+
 func getCache(name string, tags []*ast.Tag) *cache {
 	val, ok := build.GetTag(tags, "cache")
 	if !ok {
@@ -272,47 +299,72 @@ func (b *Builder) printField(dst *build.Writer, typ *ast.DataType, fields []*bui
 	dst.Code("const ").Code(lName).Code("FieldCount uint = ").Code(strconv.Itoa(len(fields))).Code("\n\n")
 
 	dst.Code("type ").Code(uName).Code("Field uint16\n\n")
-	dst.Code("func (f  ").Code(uName).Code("Field) Name() string {\n")
+	dst.Code("func (f ").Code(uName).Code("Field) Name() string {\n")
 	dst.Tab(1).Code("return ").Code(lName).Code("FieldNames[f]\n")
 	dst.Code("}\n\n")
 
-	dst.Code("func (f  ").Code(uName).Code("Field) DbName() string {\n")
+	dst.Code("func (f ").Code(uName).Code("Field) DbName() string {\n")
 	dst.Tab(1).Code("return ").Code(lName).Code("FieldDbNames[f]\n")
 	dst.Code("}\n\n")
 
-	dst.Code("const (\n")
+	list := make([]databaseField, len(fields))
 	for i, field := range fields {
-		dst.Tab(1.).Code(uName).Code("Field_").Code(build.StringToHumpName(field.Field.Name.Name))
-		if i == 0 {
-			dst.Code(" ").Code(uName).Code("Field = iota")
+		item := databaseField{
+			text:    uName + "Field_" + build.StringToHumpName(field.Field.Name.Name) + " ",
+			comment: strings.ReplaceAll(field.Field.Doc.Text(), "\n", ""),
 		}
-		dst.Code("\n")
+		if 0 == i {
+			item.typ = uName + "Field = iota"
+		}
+		list[i] = item
 	}
+
+	dst.Code("const (")
+	printDatabaseField(dst, 1, list...)
 	dst.Code(")\n\n")
 
 	dst.Code("var ").Code(lName).Code("FieldDbNames = [")
-	dst.Code(lName).Code("FieldCount").Code("]string {\n")
-	for _, field := range fields {
-		dst.Tab(1).Code("\"").Code(field.Dbs[0].Name).Code("\",\n")
+	dst.Code(lName).Code("FieldCount").Code("]string{")
+	list = make([]databaseField, len(fields))
+	for i, field := range fields {
+		item := databaseField{
+			text:    "\"" + field.Dbs[0].Name + "\",",
+			comment: strings.ReplaceAll(field.Field.Doc.Text(), "\n", ""),
+		}
+		list[i] = item
 	}
+	printDatabaseField(dst, 1, list...)
 	dst.Code("}\n\n")
 
 	dst.Code("var ").Code(lName).Code("FieldNames = [")
-	dst.Code(lName).Code("FieldCount").Code("]string {\n")
-	for _, field := range fields {
-		dst.Tab(1).Code("\"").Code(field.Field.Name.Name).Code("\",\n")
+	dst.Code(lName).Code("FieldCount").Code("]string{")
+	list = make([]databaseField, len(fields))
+	for i, field := range fields {
+		item := databaseField{
+			text:    "\"" + field.Field.Name.Name + "\",",
+			comment: strings.ReplaceAll(field.Field.Doc.Text(), "\n", ""),
+		}
+		list[i] = item
 	}
+
+	printDatabaseField(dst, 1, list...)
 	dst.Code("}\n\n")
 
 	dst.Code("var ").Code(lName).Code("FieldDbGets = [")
-	dst.Code(lName).Code("FieldCount").Code("]string {\n")
-	for _, field := range fields {
+	dst.Code(lName).Code("FieldCount").Code("]string{")
+	for i, field := range fields {
 		get := field.Dbs[0].Get
 		if len(get) == 0 {
 			get = field.Dbs[0].Name
 		}
-		dst.Tab(1).Code("\"").Code(get).Code("\",\n")
+
+		item := databaseField{
+			text:    "\"" + get + "\",",
+			comment: strings.ReplaceAll(field.Field.Doc.Text(), "\n", ""),
+		}
+		list[i] = item
 	}
+	printDatabaseField(dst, 1, list...)
 	dst.Code("}\n\n")
 
 	dst.Code("func ").Code(uName).Code("FieldsByDbName(fields ...string) []").Code(uName).Code("Field {\n")
@@ -682,7 +734,7 @@ func (b *Builder) printListAsyncData(dst *build.Writer, typ *ast.DataType, key s
 	w := b.getParamWhere(dst, wFields, true, true, true, dName)
 	dst.AddImports(w.GetImports())
 
-	dst.Code("func (g " + fName + ") DbListAsync(ctx context.Context, fn func(ctx context.Context, ret *").Code(dName).Code(") (bool, error), columns ...").Code(dName).Code("Field) (error) {\n")
+	dst.Code("func (g " + fName + ") DbListAsync(ctx context.Context, fn func(ctx context.Context, ret *").Code(dName).Code(") (bool, error), columns ...").Code(dName).Code("Field) error {\n")
 	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
 	dst.Tab(1).Code("s := db.NewBuilder()\n")
 
@@ -742,7 +794,7 @@ func (b *Builder) printMapData(dst *build.Writer, key string, typ *ast.DataType,
 
 		dst.Tab(1).Code("return db.SaveCache(ctx, tableName, s, time.Duration(rand.Intn(").Code(strconv.Itoa(c.max))
 		dst.Code("-").Code(strconv.Itoa(c.min)).Code(")+").Code(strconv.Itoa(c.min)).Code(")*time.Second,")
-		dst.Code(" func(ctx context.Context,) (map[").Code(kType.String()).Code("]*").Code(dName).Code(", error) {\n")
+		dst.Code(" func(ctx context.Context) (map[").Code(kType.String()).Code("]*").Code(dName).Code(", error) {\n")
 	}
 	dst.Import("database/sql", "", 0)
 	dst.Tab(tab + 1).Code("ret := make(map[" + kType.String() + "]*").Code(dName).Code(")\n")

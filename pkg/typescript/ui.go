@@ -783,7 +783,9 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			digit := 0
 			if len(form.format) > 0 {
 				index := strings.Index(form.format[0], ".")
-				digit = len(form.format[0]) - index - 1
+				if index > -1 {
+					digit = len(form.format[0]) - index - 1
+				}
 			}
 			dst.Tab(7).Code("precision={").Code(strconv.Itoa(digit)).Code("}\n")
 			if form.min != nil {

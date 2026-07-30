@@ -829,12 +829,28 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			if len(customTag) == 0 {
 				customTag = "el-input-number"
 			}
+			suffix := ""
+			if len(form.format) > 0 && len(form.format[0]) > 0 {
+				suffix = (form.format[0])[len(form.format[0])-1:]
+				if suffix == "0" || suffix == "." || suffix == "," || suffix == "#" {
+					suffix = ""
+				}
+			}
+			scale := 0
+			if suffix == "%" {
+				scale = 100
+			} else if suffix == "‰" {
+				scale = 1000
+			} else if suffix == "‱" {
+				scale = 10000
+			}
+
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 			dst.Tab(7).Code("modelValue={")
-			b.printGetNumberValue(dst, field.Type, "model."+fieldName, isNull)
+			b.printGetNumberValue(dst, field.Type, "model."+fieldName, isNull, scale)
 			dst.Code("}\n")
 			dst.Tab(7).Code("onUpdate:modelValue={($event: number | null) => model.").Code(fieldName).Code(" = ")
-			b.printSetNumberValue(dst, field.Type, "$event", isNull)
+			b.printSetNumberValue(dst, field.Type, "$event", isNull, scale)
 			dst.Code("}\n")
 
 			dst.Tab(7).Code("size={props.size}\n")
@@ -846,9 +862,11 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			digit := 0
 			if len(form.format) > 0 {
-				index := strings.Index(form.format[0], ".")
+				format := form.format[0]
+				format = format[:len(format)-len(suffix)]
+				index := strings.Index(format, ".")
 				if index > -1 {
-					digit = len(form.format[0]) - index - 1
+					digit = len(format) - index - 1
 				}
 			}
 			dst.Tab(7).Code("precision={").Code(strconv.Itoa(digit)).Code("}\n")
@@ -861,7 +879,11 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			if form.step != nil {
 				dst.Tab(7).Code("step={").Code(strconv.FormatFloat(*form.step, 'f', -1, 64)).Code("}\n")
 			}
-			dst.Tab(6).Code("/>\n")
+			dst.Tab(6).Code(">\n")
+			if len(suffix) > 0 {
+				dst.Tab(7).Code("{{suffix:()=>'").Code(suffix).Code("' }}\n")
+			}
+			dst.Tab(6).Code("</").Code(customTag).Code(">\n")
 		} else if "color" == formTag {
 			if len(customTag) == 0 {
 				customTag = "el-color-picker"
@@ -1259,7 +1281,7 @@ func (b *Builder) printSetStringValue(dst *build.Writer, expr ast.Expr, name str
 
 }
 
-func (b *Builder) printGetNumberValue(dst *build.Writer, expr ast.Expr, name string, isNull bool) {
+func (b *Builder) printGetNumberValue(dst *build.Writer, expr ast.Expr, name string, isNull bool, scale int) {
 	switch expr.(type) {
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
@@ -1294,6 +1316,9 @@ func (b *Builder) printGetNumberValue(dst *build.Writer, expr ast.Expr, name str
 			default:
 				dst.Code(name)
 			}
+			if scale > 0 {
+				dst.Code(" * ").Code(strconv.Itoa(scale))
+			}
 		}
 	case *ast.ArrayType:
 		ar := expr.(*ast.ArrayType)
@@ -1302,17 +1327,17 @@ func (b *Builder) printGetNumberValue(dst *build.Writer, expr ast.Expr, name str
 			dst.Code("?")
 		}
 		dst.Code(".map((item: any)=> ")
-		b.printGetNumberValue(dst, ar.Type(), "item", ar.IsEmpty())
+		b.printGetNumberValue(dst, ar.Type(), "item", ar.IsEmpty(), scale)
 		dst.Code(")")
 	case *ast.MapType:
 		dst.Code("null")
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
-		b.printGetNumberValue(dst, t.Type(), name, t.IsEmpty())
+		b.printGetNumberValue(dst, t.Type(), name, t.IsEmpty(), scale)
 	}
 }
 
-func (b *Builder) printSetNumberValue(dst *build.Writer, expr ast.Expr, name string, isNull bool) {
+func (b *Builder) printSetNumberValue(dst *build.Writer, expr ast.Expr, name string, isNull bool, scale int) {
 	switch expr.(type) {
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
@@ -1337,7 +1362,11 @@ func (b *Builder) printSetNumberValue(dst *build.Writer, expr ast.Expr, name str
 				} else {
 					dst.Code("0")
 				}
-				dst.Code(" : (").Code(name).Code("! as number))")
+				dst.Code(" : (").Code(name).Code("! as number")
+				if scale > 0 {
+					dst.Code(" / ").Code(strconv.Itoa(scale))
+				}
+				dst.Code("))")
 			case build.Int64, build.Uint64:
 				dst.Code("(").Code(name).Code(" == null ? ")
 				if isNull {
@@ -1345,7 +1374,12 @@ func (b *Builder) printSetNumberValue(dst *build.Writer, expr ast.Expr, name str
 				} else {
 					dst.Code("0n")
 				}
-				dst.Code(" : (BigInt(").Code(name).Code("! as number)))")
+				if scale > 0 {
+					dst.Code(" : BigInt(").Code(name).Code("! as number / ").Code(strconv.Itoa(scale))
+				} else {
+					dst.Code(" : BigInt(").Code(name).Code("! as number")
+				}
+				dst.Code("))")
 			case build.Float, build.Double:
 				dst.Code("(").Code(name).Code(" == null ? ")
 				if isNull {
@@ -1353,7 +1387,11 @@ func (b *Builder) printSetNumberValue(dst *build.Writer, expr ast.Expr, name str
 				} else {
 					dst.Code("0")
 				}
-				dst.Code(" : (").Code(name).Code("! as number))")
+				dst.Code(" : (").Code(name).Code("! as number")
+				if scale > 0 {
+					dst.Code(" / ").Code(strconv.Itoa(scale))
+				}
+				dst.Code("))")
 			case build.Bool:
 				dst.Code("(").Code(name).Code(" == null ? ")
 				if isNull {
@@ -1378,8 +1416,12 @@ func (b *Builder) printSetNumberValue(dst *build.Writer, expr ast.Expr, name str
 				} else {
 					dst.Code("d.Decimal(0)")
 				}
-				dst.Code(" : (new d.Decimal(").Code(name).Code("! as number)))")
-
+				if scale > 0 {
+					dst.Code(" : d.Decimal(").Code(name).Code("! as number / ").Code(strconv.Itoa(scale))
+				} else {
+					dst.Code(" : d.Decimal(").Code(name).Code("! as number")
+				}
+				dst.Code("))")
 			default:
 				dst.Code("(").Code(name).Code(" == null ? ")
 				if isNull {
@@ -1387,7 +1429,11 @@ func (b *Builder) printSetNumberValue(dst *build.Writer, expr ast.Expr, name str
 				} else {
 					dst.Code("''")
 				}
-				dst.Code(" : ").Code(name).Code("! as number)")
+				dst.Code(" : (").Code(name).Code("! as number")
+				if scale > 0 {
+					dst.Code(" / ").Code(strconv.Itoa(scale))
+				}
+				dst.Code("))")
 			}
 		}
 
@@ -1395,7 +1441,7 @@ func (b *Builder) printSetNumberValue(dst *build.Writer, expr ast.Expr, name str
 		ar := expr.(*ast.ArrayType)
 		dst.Code("(").Code(name).Code(" as (number[] | null))?")
 		dst.Code(".map((item: number)=> ")
-		b.printSetNumberValue(dst, ar.Type(), "item", ar.IsEmpty())
+		b.printSetNumberValue(dst, ar.Type(), "item", ar.IsEmpty(), scale)
 		dst.Code(")")
 		if isNull {
 			dst.Code(" ?? null")
@@ -1410,6 +1456,6 @@ func (b *Builder) printSetNumberValue(dst *build.Writer, expr ast.Expr, name str
 		}
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
-		b.printSetNumberValue(dst, t.Type(), name, t.IsEmpty())
+		b.printSetNumberValue(dst, t.Type(), name, t.IsEmpty(), scale)
 	}
 }

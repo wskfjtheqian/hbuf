@@ -8,7 +8,7 @@ import (
 )
 
 func (b *Builder) printVerifyCode(dst *build.Writer, data *ast.DataType) error {
-	dst.Import("context", "", 0)
+	dst.Import("context")
 	err := b.printVerifyFieldCode(dst, data)
 	if err != nil {
 		return err
@@ -87,8 +87,8 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 
 			if build.IsNil(field.Type) && 0 == i {
 				pack := b.getPackage(dst, val.Enum.Name) + build.StringToHumpName(val.Enum.Name.Name) + build.StringToHumpName(val.Item.Name.Name)
-				dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "", 0)
-				dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc", "", 0)
+				dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf")
+				dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc")
 				if !f.Null {
 					dst.Tab(1).Code("if nil == i." + fName)
 					if build.GetBaseType(field.Type) == build.String {
@@ -109,8 +109,8 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 			}
 			if build.IsEnum(field.Type) {
 				pack := b.getPackage(dst, val.Enum.Name) + build.StringToHumpName(val.Enum.Name.Name) + build.StringToHumpName(val.Item.Name.Name)
-				dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "", 0)
-				dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc", "", 0)
+				dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf")
+				dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc")
 				dst.Tab(1).Code("if 0 == len(i.Get" + fName + "().ToName()) {\n")
 				dst.Tab(2).Code("return hrpc.NewResult[hbuf.Data](int32(").Code(pack).Code("), ").Code(pack).Code(".ToName(), nil)\n")
 				dst.Tab(1).Code("}\n")
@@ -119,8 +119,8 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 			} else if build.IsArray(field.Type) {
 				for _, item := range f.Len {
 					pack := b.getPackage(dst, val.Enum.Name) + build.StringToHumpName(val.Enum.Name.Name) + build.StringToHumpName(val.Item.Name.Name)
-					dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "", 0)
-					dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc", "", 0)
+					dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf")
+					dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc")
 					dst.Tab(1).Code("if ").Code("!(len(i.").Code(fName).Code(") ").Code(b.getOperator(item.Op)).Code(" ").Code(item.Val).Code(") {\n")
 					dst.Tab(2).Code("return hrpc.NewResult[hbuf.Data](int32(").Code(pack).Code("), ").Code(pack).Code(".ToName(), nil)\n")
 					dst.Tab(1).Code("}\n")
@@ -131,8 +131,8 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 				case build.Int8, build.Int16, build.Int32, build.Uint8, build.Uint16, build.Uint32, build.Float, build.Double, build.Uint64, build.Int64:
 					for _, item := range f.Val {
 						pack := b.getPackage(dst, val.Enum.Name) + build.StringToHumpName(val.Enum.Name.Name) + build.StringToHumpName(val.Item.Name.Name)
-						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "", 0)
-						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc", "", 0)
+						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf")
+						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc")
 
 						dst.Tab(1).Code("if ").Code("!(i.Get").Code(fName).Code("() ").Code(b.getOperator(item.Op)).Code(" ").Code(item.Val).Code(") {\n")
 						dst.Tab(2).Code("return hrpc.NewResult[hbuf.Data](int32(").Code(pack).Code("), ").Code(pack).Code(".ToName(), nil)\n")
@@ -141,8 +141,8 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 				case build.Date:
 					for _, item := range f.Val {
 						pack := b.getPackage(dst, val.Enum.Name) + build.StringToHumpName(val.Enum.Name.Name) + build.StringToHumpName(val.Item.Name.Name)
-						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "", 0)
-						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc", "", 0)
+						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf")
+						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc")
 
 						parse, err := time.Parse("2006-01-02T15:04:05Z", item.Val)
 						if err != nil {
@@ -156,9 +156,9 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 				case build.Decimal:
 					for _, item := range f.Val {
 						pack := b.getPackage(dst, val.Enum.Name) + build.StringToHumpName(val.Enum.Name.Name) + build.StringToHumpName(val.Item.Name.Name)
-						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "", 0)
-						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc", "", 0)
-						dst.Import("github.com/shopspring/decimal", "", 0)
+						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf")
+						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc")
+						dst.Import("github.com/shopspring/decimal")
 
 						dst.Tab(1).Code("if ")
 						if build.OperatorGt == item.Op {
@@ -184,23 +184,23 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 				case build.String:
 					for _, item := range f.Len {
 						pack := b.getPackage(dst, val.Enum.Name) + build.StringToHumpName(val.Enum.Name.Name) + build.StringToHumpName(val.Item.Name.Name)
-						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "", 0)
-						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc", "", 0)
-						dst.Import("unicode/utf8", "", 0)
+						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf")
+						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc")
+						dst.Import("unicode/utf8")
 						dst.Tab(1).Code("if !").Code("(utf8.RuneCountInString(i.Get").Code(fName).Code("()) ").Code(b.getOperator(item.Op)).Code(" ").Code(item.Val).Code(") {\n")
 						dst.Tab(2).Code("return hrpc.NewResult[hbuf.Data](int32(").Code(pack).Code("), ").Code(pack).Code(".ToName(), nil)\n")
 						dst.Tab(1).Code("}\n")
 					}
 					for _, item := range f.Val {
 						pack := b.getPackage(dst, val.Enum.Name) + build.StringToHumpName(val.Enum.Name.Name) + build.StringToHumpName(val.Item.Name.Name)
-						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "", 0)
-						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc", "", 0)
+						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf")
+						dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc")
 						if item.Op == build.OperatorMatch || item.Op == build.OperatorNotMatch {
 							dst.Tab(1).Code("match, err ")
 							if first {
 								dst.Code(":")
 							}
-							dst.Import("regexp", "", 0)
+							dst.Import("regexp")
 							dst.Code("= regexp.MatchString(\"").Code(item.Val).Code("\", i.Get").Code(fName).Code("())\n")
 							dst.Tab(1).Code("if err != nil {\n")
 							dst.Tab(2).Code("return err\n")

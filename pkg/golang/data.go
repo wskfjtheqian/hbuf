@@ -32,9 +32,9 @@ func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) error {
 func (b *Builder) printDataDescriptor(dst *build.Writer, typ *ast.DataType) error {
 
 	name := build.StringToFirstLower(typ.Name.Name)
-	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "", 0)
-	dst.Import("reflect", "", 0)
-	dst.Import("unsafe", "", 0)
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf")
+	dst.Import("reflect")
+	dst.Import("unsafe")
 
 	dst.Code("var ").Code(name).Code("Descriptor = hbuf.NewSyncDescriptor(func() hbuf.Descriptor {\n")
 	dst.Tab(1).Code("var ").Code(name).Code(" ").Code(build.StringToHumpName(typ.Name.Name)).Code("\n")
@@ -363,9 +363,9 @@ func (b *Builder) printDefault(dst *build.Writer, expr ast.Expr) {
 		} else {
 			t := build.BaseType((expr.(*ast.Ident)).Name)
 			if build.Date == t || build.Uint64 == t || build.Int64 == t {
-				dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "", 0)
+				dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf")
 			} else if build.Decimal == t {
-				dst.Import("github.com/shopspring/decimal", "", 0)
+				dst.Import("github.com/shopspring/decimal")
 			}
 			if val, ok := _typesDefaultValue[t]; ok {
 				dst.Code(val)

@@ -6,8 +6,6 @@ import (
 )
 
 func (b *Builder) printServerCode(dst *build.Writer, typ *ast.ServerType) {
-	dst.Import("hbuf_ts", "type * as h", 0)
-
 	b.printServer(dst, typ)
 	b.printServerImp(dst, typ)
 	b.printServerRouter(dst, typ)
@@ -42,7 +40,8 @@ func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
 			b.printType(dst, method.Param, false, false)
 		}
 
-		dst.Code(", _opt?: h.Option): ")
+		dst.Import("hbuf_ts", "type Option")
+		dst.Code(", _opt?: Option): ")
 		dst.Code("Promise<")
 		if resultType == "void" {
 			dst.Code("void")
@@ -58,15 +57,15 @@ func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
 
 func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 	dst.Code("export class " + build.StringToHumpName(typ.Name.Name) + "Client implements ")
-	dst.Code(b.getPackage(dst, typ.Name, "", true, false))
-	dst.Code(".")
+	b.getPackage(dst, typ.Name, "", true, false)
 	dst.Code(build.StringToHumpName(typ.Name.Name))
 
 	dst.Code("{\n\n")
 
-	dst.Tab(1).Code("protected client: h.Client\n\n")
+	dst.Import("hbuf_ts", "type Client")
+	dst.Tab(1).Code("protected client: Client\n\n")
 
-	dst.Tab(1).Code("constructor(client: h.Client){\n")
+	dst.Tab(1).Code("constructor(client: Client){\n")
 	dst.Tab(2).Code("this.client = client\n")
 	dst.Tab(1).Code("}\n")
 
@@ -94,7 +93,8 @@ func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 			b.printType(dst, method.Param, false, false)
 		}
 
-		dst.Code(", _opt?: h.Option): ")
+		dst.Import("hbuf_ts", "type Option")
+		dst.Code(", _opt?: Option): ")
 		dst.Code("Promise<")
 		if resultType == "void" {
 			dst.Code("void")
@@ -138,7 +138,8 @@ func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 
 func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 	serverName := build.StringToHumpName(typ.Name.Name)
-	dst.Code("export function Register").Code(serverName).Code("(r: h.Server, ")
+	dst.Import("hbuf_ts", "type Server")
+	dst.Code("export function Register").Code(serverName).Code("(r: Server, ")
 	dst.Code("server: ").Code(serverName).Code(") {\n")
 	dst.Tab(1).Code("r.register(0, \"").Code(build.StringToUnderlineName(typ.Name.Name)).Code("\", [\n")
 	err := build.EnumMethod(typ, func(method *ast.FuncType, server *ast.ServerType) error {
@@ -147,10 +148,13 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 		dst.Tab(2).Code("{\n")
 		dst.Tab(3).Code("id: 0,\n")
 		dst.Tab(3).Code("name: \"").Code(build.StringToUnderlineName(method.Name.Name)).Code("\",\n")
-		dst.Tab(3).Code("handler: (req: h.RequestType, opt?: h.Option): Promise<h.ResponseType> => {\n")
+
+		dst.Import("hbuf_ts", "type Option", "type RequestType", "type ResponseType")
+		dst.Tab(3).Code("handler: (req: RequestType, opt?: Option): Promise<ResponseType> => {\n")
 		dst.Tab(4).Code("return server.").Code(build.StringToFirstLower(method.Name.Name)).Code("(")
 		if paramType == "stream" {
-			dst.Code("req as h.BufferType,")
+			dst.Import("hbuf_ts", "type BufferType")
+			dst.Code("req as BufferType,")
 		} else if paramType == "void" {
 		} else {
 			dst.Code("req as ")
@@ -159,7 +163,7 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 		}
 		dst.Code("opt)\n")
 		dst.Tab(3).Code("},\n")
-		dst.Tab(3).Code("withContext: (opt?: h.Option): h.Option | undefined => {\n")
+		dst.Tab(3).Code("withContext: (opt?: Option): Option | undefined => {\n")
 		dst.Tab(4).Code("return opt\n")
 		dst.Tab(3).Code("},\n")
 		if paramType == "void" || paramType == "stream" {
@@ -180,7 +184,8 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 	dst.Tab(1).Code("])\n")
 	dst.Code("}\n\n")
 
-	dst.Code("export function UnRegister").Code(serverName).Code("(r: h.Server) {\n")
+	dst.Import("hbuf_ts", "type Server")
+	dst.Code("export function UnRegister").Code(serverName).Code("(r: Server) {\n")
 	dst.Tab(1).Code("r.unRegister(0, \"").Code(build.StringToUnderlineName(typ.Name.Name)).Code("\")\n")
 	dst.Code("}\n\n")
 

@@ -8,20 +8,19 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 )
 
 var _types = map[build.BaseType]string{
 	build.Int8: "number", build.Int16: "number", build.Int32: "number", build.Int64: "bigint", build.Uint8: "number",
 	build.Uint16: "number", build.Uint32: "number", build.Uint64: "bigint", build.Bool: "boolean", build.Float: "number",
-	build.Double: "number", build.String: "string", build.Date: "Date", build.Decimal: "d.Decimal", build.Bytes: "Uint8Array",
+	build.Double: "number", build.String: "string", build.Date: "Date", build.Decimal: "Decimal", build.Bytes: "Uint8Array",
 }
 
 var _typesValue = map[build.BaseType]string{
 	build.Int8: "0", build.Int16: "0", build.Int32: "0", build.Int64: "BigInt(0)", build.Uint8: "0",
 	build.Uint16: "0", build.Uint32: "0", build.Uint64: "BigInt(0)", build.Bool: "false", build.Float: "0.0",
-	build.Double: "0.0", build.String: "\"\"", build.Date: "new Date()", build.Decimal: "new d.Decimal(0)", build.Bytes: "new Uint8Array()",
+	build.Double: "0.0", build.String: "\"\"", build.Date: "new Date()", build.Decimal: "new Decimal(0)", build.Bytes: "new Uint8Array()",
 }
 
 type DartWriter struct {
@@ -182,7 +181,19 @@ func writerFile(data *build.Writer, out string) error {
 		}
 		sort.Strings(imps)
 		for _, val := range imps {
-			_, _ = fc.WriteString("import " + temp[val].Name + " from \"" + val + "\"\n")
+			if strings.LastIndex(out, strings.ReplaceAll(val, "./", "/")) != -1 {
+				continue
+			}
+			_, _ = fc.WriteString("import {")
+			index := 0
+			for key, _ := range temp[val] {
+				if index != 0 {
+					_, _ = fc.WriteString(", ")
+				}
+				_, _ = fc.WriteString(key)
+				index++
+			}
+			_, _ = fc.WriteString("} from \"" + val + "\"\n")
 		}
 	}
 	_, _ = fc.WriteString("\n")
@@ -257,9 +268,7 @@ func (b *Builder) printType(dst *build.Writer, expr ast.Expr, notEmpty bool, isR
 			if isRecordKey {
 				dst.Code("number")
 			} else {
-				pkg := b.getPackage(dst, expr, "", false, false)
-				dst.Code(pkg)
-				dst.Code(".")
+				b.getPackage(dst, expr, "", false, false)
 				dst.Code(expr.(*ast.Ident).Name)
 			}
 		} else {
@@ -275,7 +284,7 @@ func (b *Builder) printType(dst *build.Writer, expr ast.Expr, notEmpty bool, isR
 				}
 			} else {
 				if build.Decimal == build.BaseType((expr.(*ast.Ident).Name)) {
-					dst.Import("decimal.js", "* as d", 0)
+					dst.Import("decimal.js", "Decimal")
 				} else if build.Int64 == build.BaseType((expr.(*ast.Ident).Name)) || build.Uint64 == build.BaseType((expr.(*ast.Ident).Name)) {
 				}
 				dst.Code(_types[build.BaseType((expr.(*ast.Ident).Name))])
@@ -309,13 +318,13 @@ func (b *Builder) printType(dst *build.Writer, expr ast.Expr, notEmpty bool, isR
 	return
 }
 
-func (b *Builder) getPackage(dst *build.Writer, expr ast.Expr, s string, typ bool, ui bool) string {
+func (b *Builder) getPackage(dst *build.Writer, expr ast.Expr, s string, typ bool, ui bool) {
 	file := (expr.(*ast.Ident)).Obj.Data
 	switch file.(type) {
 	case *ast.File:
 		break
 	default:
-		return ""
+		return
 	}
 
 	_, name := filepath.Split(file.(*ast.File).Path)
@@ -334,19 +343,20 @@ func (b *Builder) getPackage(dst *build.Writer, expr ast.Expr, s string, typ boo
 			name = name + ".server"
 		}
 	}
-
-	id := "$" + strconv.Itoa(len(dst.GetImports()))
-	imp := dst.GetImport("./" + name)
-	if imp != nil {
-		id = imp.Name[strings.Index(imp.Name, "$"):]
-	}
-	var p string
-	if typ {
-		p = dst.Import("./"+name, "type * as "+id, 0)
-	} else {
-		p = dst.Import("./"+name, "* as  "+id, 1)
-	}
-	return p[strings.Index(p, "$"):]
+	dst.Import("./"+name, expr.(*ast.Ident).Name)
+	//id := "$" + strconv.Itoa(len(dst.GetImports()))
+	//imp := dst.GetImport("./" + name)
+	//if imp != nil {
+	//	//id = imp.Name[strings.Index(imp.Name, "$"):]
+	//}
+	////var p string
+	//if typ {
+	//	dst.Import( "./"+name, "type * as "+id)
+	//} else {
+	//	dst.Import( "./"+name, "* as  "+id)
+	//}
+	//return p[strings.Index(p, "$"):]
+	return
 
 }
 
@@ -356,22 +366,18 @@ func (b *Builder) printDefault(dst *build.Writer, expr ast.Expr, notEmpty bool) 
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
 			if ast.Enum == t.Obj.Kind {
-				pkg := b.getPackage(dst, expr, "", false, false)
-				dst.Code(pkg)
-				dst.Code(".")
+				b.getPackage(dst, expr, "", false, false)
 				dst.Code(expr.(*ast.Ident).Name)
 				dst.Code(".valueOf(0)")
 			} else {
 				dst.Code("new ")
-				pkg := b.getPackage(dst, expr, "", false, false)
-				dst.Code(pkg)
-				dst.Code(".")
+				b.getPackage(dst, expr, "", false, false)
 				dst.Code(expr.(*ast.Ident).Name)
 				dst.Code("()")
 			}
 		} else {
 			if build.Decimal == build.BaseType((expr.(*ast.Ident).Name)) {
-				dst.Import("decimal.js", "* as d", 0)
+				dst.Import("decimal.js", "Decimal")
 			} else if build.Int64 == build.BaseType((expr.(*ast.Ident).Name)) || build.Uint64 == build.BaseType((expr.(*ast.Ident).Name)) {
 			}
 			dst.Code(_typesValue[build.BaseType((expr.(*ast.Ident).Name))])

@@ -6,7 +6,7 @@ import (
 )
 
 func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
-	dst.Import("com.hbuf.java.Data", "", 0)
+	dst.Import("com.hbuf.java.Data")
 
 	b.printData(dst, typ)
 	b.printDataEntity(dst, typ)

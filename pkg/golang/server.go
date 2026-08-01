@@ -7,9 +7,9 @@ import (
 )
 
 func (b *Builder) printServerCode(dst *build.Writer, typ *ast.ServerType) error {
-	dst.Import("context", "", 0)
+	dst.Import("context")
 
-	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc", "", 0)
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hrpc")
 	b.printServer(dst, typ)
 	b.printClient(dst, typ)
 	b.printServerRouter(dst, typ)
@@ -45,7 +45,7 @@ func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
 		dst.Code("(ctx context.Context, ")
 		dst.Code(build.StringToFirstLower(method.ParamName.Name))
 		if method.Param.Type().(*ast.Ident).Name == "stream" {
-			dst.Import("io", "", 0)
+			dst.Import("io")
 			dst.Code(" io.Reader")
 		} else {
 			dst.Code(" *")
@@ -92,7 +92,7 @@ func (b *Builder) printServerDefault(dst *build.Writer, typ *ast.ServerType) err
 		dst.Code(build.StringToHumpName(method.Name.Name))
 		dst.Code("(ctx context.Context, req")
 		if method.Param.Type().(*ast.Ident).Name == "stream" {
-			dst.Import("io", "", 0)
+			dst.Import("io")
 			dst.Code(" io.Reader")
 		} else {
 			dst.Code(" *")
@@ -123,7 +123,7 @@ func (b *Builder) printServerDefault(dst *build.Writer, typ *ast.ServerType) err
 				dst.Tab(1).Code("return nil,")
 			}
 
-			dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/herror", "", 0)
+			dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/herror")
 			dst.Code(" herror.NewError(\"not find server " + build.StringToUnderlineName(typ.Name.Name) + "\")\n")
 		} else {
 			err := b.printBinding(dst, method, bind, isSub)
@@ -197,7 +197,7 @@ func (b *Builder) printClient(dst *build.Writer, typ *ast.ServerType) {
 		if nil != method.Doc && 0 < len(method.Doc.Text()) {
 			dst.Code("// " + build.StringToHumpName(method.Name.Name) + " " + method.Doc.Text())
 		}
-		dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf", "", 0)
+		dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hbuf")
 
 		resultType := method.Result.Type().(*ast.Ident).Name
 		paramType := method.Param.Type().(*ast.Ident).Name
@@ -207,7 +207,7 @@ func (b *Builder) printClient(dst *build.Writer, typ *ast.ServerType) {
 		dst.Code("(ctx context.Context, ")
 		dst.Code(build.StringToFirstLower(method.ParamName.Name))
 		if paramType == "stream" {
-			dst.Import("io", "", 0)
+			dst.Import("io")
 			dst.Code(" io.Reader")
 		} else {
 			dst.Code(" *")
@@ -254,7 +254,7 @@ func (b *Builder) printClient(dst *build.Writer, typ *ast.ServerType) {
 			dst.Tab(1).Code("}\n")
 			dst.Tab(1).Code("return response.(")
 			if resultType == "stream" {
-				dst.Import("io", "", 0)
+				dst.Import("io")
 				dst.Code("io.ReadCloser")
 			} else {
 				dst.Code("*")
@@ -356,7 +356,7 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 }
 
 func (b *Builder) printGetServerRouter(dst *build.Writer, typ *ast.ServerType) {
-	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hservice", "", 0)
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hservice")
 	serverName := build.StringToHumpName(typ.Name.Name)
 
 	dst.Code("var NotFound" + serverName + " = &Default" + serverName + "{}\n\n")

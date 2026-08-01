@@ -218,9 +218,9 @@ func (b *Builder) printType(dst *build.Writer, expr ast.Expr, notEmpty bool) {
 			dst.Code(expr.(*ast.Ident).Name)
 		} else {
 			if build.Decimal == build.BaseType((expr.(*ast.Ident).Name)) {
-				dst.Import("package:decimal/decimal.dart", "", 0)
+				dst.Import("package:decimal/decimal.dart")
 			} else if build.Int64 == build.BaseType((expr.(*ast.Ident).Name)) || build.Uint64 == build.BaseType((expr.(*ast.Ident).Name)) || build.Uint32 == build.BaseType((expr.(*ast.Ident).Name)) {
-				dst.Import("package:fixnum/fixnum.dart", "", 0)
+				dst.Import("package:fixnum/fixnum.dart")
 			}
 			dst.Code(_types[build.BaseType((expr.(*ast.Ident).Name))])
 		}
@@ -275,6 +275,6 @@ func (b *Builder) getPackage(dst *build.Writer, expr ast.Expr, s string) string 
 		}
 	}
 
-	dst.Import(name, "", 0)
+	dst.Import(name)
 	return ""
 }

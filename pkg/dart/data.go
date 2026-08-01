@@ -6,8 +6,8 @@ import (
 )
 
 func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) {
-	dst.Import("dart:typed_data", "", 0)
-	dst.Import("package:hbuf_dart/hbuf_dart.dart", "", 0)
+	dst.Import("dart:typed_data", "")
+	dst.Import("package:hbuf_dart/hbuf_dart.dart", "")
 
 	b.printData(dst, typ)
 	b.printDataEntity(dst, typ)

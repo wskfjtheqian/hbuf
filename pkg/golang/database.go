@@ -644,7 +644,7 @@ func (b *Builder) printParam(buf *build.Writer, text string, self *build.DBField
 				}
 				if 0 == len(field.Dbs[0].Converter) && build.IsArray(field.Field.Type) && 0 == len(temp) {
 					buf.Code(".L(\",\", ")
-					buf.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hutl", "utl", 0)
+					buf.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hutl", "utl")
 					buf.Code("utl.ToAnyList(").Code(object).Code("." + build.StringToHumpName(field.Field.Name.Name) + ")...")
 				} else {
 					buf.Code(".V(")
@@ -670,8 +670,8 @@ func (b *Builder) printParam(buf *build.Writer, text string, self *build.DBField
 }
 
 func (b *Builder) printListData(dst *build.Writer, typ *ast.DataType, key string, db *build.DB, wFields []*build.DBField, fields []*build.DBField, fType *ast.DataType, c *cache) {
-	dst.Import("context", "", 0)
-	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db", 0)
+	dst.Import("context")
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db")
 
 	fName := build.StringToHumpName(fType.Name.Name)
 	dName := build.StringToHumpName(typ.Name.Name)
@@ -686,7 +686,7 @@ func (b *Builder) printListData(dst *build.Writer, typ *ast.DataType, key string
 	dst.Code("func (g " + fName + ") DbList(ctx context.Context, columns ...").Code(dName).Code("Field) ([]").Code(dName).Code(", error) {\n")
 	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
 	dst.Tab(1).Code("s := db.NewBuilder()\n")
-	dst.Import("strings", "", 0)
+	dst.Import("strings")
 	dst.Tab(1).Code("var val ").Code(dName).Code("\n")
 	dst.Tab(1).Code("s.T(\"SELECT \").T(strings.Join(val.DbScanNames(columns...), \", \")).T(\" FROM \").T(tableName).T(\" WHERE is_deleted = 0\")\n")
 	dst.Code(w.GetCode().String())
@@ -694,14 +694,14 @@ func (b *Builder) printListData(dst *build.Writer, typ *ast.DataType, key string
 	tab := 0
 	if nil != c {
 		tab = 1
-		dst.Import("math/rand", "", 0)
-		dst.Import("time", "", 0)
+		dst.Import("math/rand")
+		dst.Import("time")
 
 		dst.Tab(1).Code("return db.SaveCache(ctx, tableName, s, time.Duration(rand.Intn(").Code(strconv.Itoa(c.max))
 		dst.Code("-").Code(strconv.Itoa(c.min)).Code(")+").Code(strconv.Itoa(c.min)).Code(")*time.Second,")
 		dst.Code("func(ctx context.Context) ([]").Code(dName).Code(", error) {\n")
 	}
-	dst.Import("database/sql", "", 0)
+	dst.Import("database/sql")
 	dst.Tab(tab + 1).Code("var ret []").Code(dName).Code("\n")
 	dst.Tab(tab + 1).Code("_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
 	dst.Tab(tab + 2).Code("var val ").Code(dName).Code("\n")
@@ -721,8 +721,8 @@ func (b *Builder) printListData(dst *build.Writer, typ *ast.DataType, key string
 }
 
 func (b *Builder) printListAsyncData(dst *build.Writer, typ *ast.DataType, key string, db *build.DB, wFields []*build.DBField, fields []*build.DBField, fType *ast.DataType, c *cache) {
-	dst.Import("context", "", 0)
-	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db", 0)
+	dst.Import("context")
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db")
 
 	fName := build.StringToHumpName(fType.Name.Name)
 	dName := build.StringToHumpName(typ.Name.Name)
@@ -743,7 +743,7 @@ func (b *Builder) printListAsyncData(dst *build.Writer, typ *ast.DataType, key s
 	dst.Code(w.GetCode().String())
 
 	tab := 0
-	dst.Import("database/sql", "", 0)
+	dst.Import("database/sql")
 	dst.Tab(tab + 1).Code("_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
 	dst.Tab(tab + 2).Code("var val ").Code(dName).Code("\n")
 	dst.Tab(tab + 2).Code("err := rows.Scan(val.DbScanColumns(columns...)...)\n")
@@ -759,8 +759,8 @@ func (b *Builder) printListAsyncData(dst *build.Writer, typ *ast.DataType, key s
 }
 
 func (b *Builder) printMapData(dst *build.Writer, key string, typ *ast.DataType, db *build.DB, wFields []*build.DBField, fields []*build.DBField, fType *ast.DataType, keyName string, c *cache) {
-	dst.Import("context", "", 0)
-	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db", 0)
+	dst.Import("context")
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db")
 
 	kType, KName, ok := b.getKey(dst, fields, keyName)
 	if !ok {
@@ -789,14 +789,14 @@ func (b *Builder) printMapData(dst *build.Writer, key string, typ *ast.DataType,
 	tab := 0
 	if nil != c {
 		tab = 1
-		dst.Import("math/rand", "", 0)
-		dst.Import("time", "", 0)
+		dst.Import("math/rand")
+		dst.Import("time")
 
 		dst.Tab(1).Code("return db.SaveCache(ctx, tableName, s, time.Duration(rand.Intn(").Code(strconv.Itoa(c.max))
 		dst.Code("-").Code(strconv.Itoa(c.min)).Code(")+").Code(strconv.Itoa(c.min)).Code(")*time.Second,")
 		dst.Code(" func(ctx context.Context) (map[").Code(kType.String()).Code("]*").Code(dName).Code(", error) {\n")
 	}
-	dst.Import("database/sql", "", 0)
+	dst.Import("database/sql")
 	dst.Tab(tab + 1).Code("ret := make(map[" + kType.String() + "]*").Code(dName).Code(")\n")
 	dst.Tab(tab + 1).Code("_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
 	dst.Tab(tab + 2).Code("var val ").Code(dName).Code("\n")
@@ -815,8 +815,8 @@ func (b *Builder) printMapData(dst *build.Writer, key string, typ *ast.DataType,
 }
 
 func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build.DB, wFields []*build.DBField, fType *ast.DataType, fFields []*build.DBField, c *cache, count *ast.BasicLit) {
-	dst.Import("context", "", 0)
-	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db", 0)
+	dst.Import("context")
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db")
 
 	fName := build.StringToHumpName(fType.Name.Name)
 
@@ -834,14 +834,14 @@ func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build
 	tab := 0
 	if nil != c {
 		tab = 1
-		dst.Import("math/rand", "", 0)
-		dst.Import("time", "", 0)
+		dst.Import("math/rand")
+		dst.Import("time")
 
 		dst.Tab(1).Code("return db.SaveCache(ctx, tableName, s, time.Duration(rand.Intn(").Code(strconv.Itoa(c.max))
 		dst.Code("-").Code(strconv.Itoa(c.min)).Code(")+").Code(strconv.Itoa(c.min)).Code(")*time.Second,")
 		dst.Code(" func(ctx context.Context) (int64, error) {\n")
 	}
-	dst.Import("database/sql", "", 0)
+	dst.Import("database/sql")
 	dst.Tab(tab + 1).Code("var val int64\n")
 	dst.Tab(tab + 1).Code("_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
 	dst.Tab(tab + 2).Code("return false, rows.Scan(&val)\n")
@@ -894,8 +894,8 @@ func (b *Builder) printCount(buf *build.Writer, count *ast.BasicLit, fields []*b
 }
 
 func (b *Builder) printDeleteData(dst *build.Writer, db *build.DB, wFields []*build.DBField, fType *ast.DataType, c bool) {
-	dst.Import("context", "", 0)
-	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db", 0)
+	dst.Import("context")
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db")
 
 	fName := build.StringToHumpName(fType.Name.Name)
 
@@ -905,7 +905,7 @@ func (b *Builder) printDeleteData(dst *build.Writer, db *build.DB, wFields []*bu
 	dst.Code("func (g " + fName + ") DbDel(ctx context.Context) (int64, int64, error) {\n")
 	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
 	dst.Tab(1).Code("s := db.NewBuilder()\n")
-	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/htime", "htime", 0)
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/htime", "htime")
 	dst.Tab(1).Code("s.T(\"UPDATE \").T(tableName).T(\" SET is_deleted = 1, delete_time = \").V(htime.NowTime()).T(\" WHERE is_deleted = 0\")\n")
 	dst.Code(w.GetCode().String())
 
@@ -917,8 +917,8 @@ func (b *Builder) printDeleteData(dst *build.Writer, db *build.DB, wFields []*bu
 }
 
 func (b *Builder) printRemoveData(dst *build.Writer, db *build.DB, wFields []*build.DBField, fType *ast.DataType, c bool) {
-	dst.Import("context", "", 0)
-	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db", 0)
+	dst.Import("context")
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db")
 
 	fName := build.StringToHumpName(fType.Name.Name)
 
@@ -939,8 +939,8 @@ func (b *Builder) printRemoveData(dst *build.Writer, db *build.DB, wFields []*bu
 }
 
 func (b *Builder) printInsertOrReplaceData(dst *build.Writer, s string, typ *ast.DataType, val string, db *build.DB, wFields []*build.DBField, fields []*build.DBField, fType *ast.DataType, key *build.DBField, c *cache) {
-	dst.Import("context", "", 0)
-	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db", 0)
+	dst.Import("context")
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db")
 
 	fName := build.StringToHumpName(fType.Name.Name)
 	if typ != fType {
@@ -994,8 +994,8 @@ func (b *Builder) printInsertOrReplaceData(dst *build.Writer, s string, typ *ast
 }
 
 func (b *Builder) printInsertOrReplaceBatchData(dst *build.Writer, s string, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField, isCache bool) {
-	dst.Import("context", "", 0)
-	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db", 0)
+	dst.Import("context")
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db")
 
 	name := build.StringToHumpName(typ.Name.Name)
 	dst.Code("func (g " + name + ") Db").Code(s).Code("Batch(ctx context.Context, list ...*" + name + ") (int64, int64, error) {\n")
@@ -1053,8 +1053,8 @@ func (b *Builder) printInsertOrReplaceBatchData(dst *build.Writer, s string, typ
 }
 
 func (b *Builder) printUpdateData(dst *build.Writer, typ *ast.DataType, key string, db *build.DB, wFields []*build.DBField, fields []*build.DBField, fType *ast.DataType, c *cache) {
-	dst.Import("context", "", 0)
-	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db", 0)
+	dst.Import("context")
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db")
 
 	fName := build.StringToHumpName(fType.Name.Name)
 	object := "g"
@@ -1086,8 +1086,8 @@ func (b *Builder) printUpdateData(dst *build.Writer, typ *ast.DataType, key stri
 }
 
 func (b *Builder) printSetData(dst *build.Writer, typ *ast.DataType, key string, db *build.DB, wFields []*build.DBField, fields []*build.DBField, fType *ast.DataType, c *cache) {
-	dst.Import("context", "", 0)
-	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db", 0)
+	dst.Import("context")
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db")
 
 	fName := build.StringToHumpName(fType.Name.Name)
 	w := b.getParamWhere(dst, wFields, false, false, false, "")
@@ -1119,8 +1119,8 @@ func (b *Builder) printSetData(dst *build.Writer, typ *ast.DataType, key string,
 }
 
 func (b *Builder) printUpdateChange(dst *build.Writer, typ *ast.DataType, key string, db *build.DB, wFields []*build.DBField, fields []*build.DBField, fType *ast.DataType, c *cache) {
-	dst.Import("context", "", 0)
-	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db", 0)
+	dst.Import("context")
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db")
 
 	uName := build.StringToHumpName(fType.Name.Name)
 	w := b.getParamWhere(dst, wFields, false, false, false, "")
@@ -1225,8 +1225,8 @@ func (b *Builder) printSet(typ *ast.DataType, fields []*build.DBField, allSet bo
 }
 
 func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, key string, db *build.DB, wFields []*build.DBField, fields []*build.DBField, fType *ast.DataType, c *cache) {
-	dst.Import("context", "", 0)
-	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db", 0)
+	dst.Import("context")
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db")
 
 	fName := build.StringToHumpName(fType.Name.Name)
 	dName := build.StringToHumpName(typ.Name.Name)
@@ -1244,7 +1244,7 @@ func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, key string,
 	dst.Code("func (g ").Code(fName).Code(") DbGet(ctx context.Context, columns ...").Code(dName).Code("Field) (*").Code(dName).Code(", error) {\n")
 	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
 	dst.Tab(1).Code("s := db.NewBuilder()\n")
-	dst.Import("strings", "", 0)
+	dst.Import("strings")
 	dst.Tab(1).Code("var val *").Code(dName).Code("\n")
 
 	dst.Tab(1).Code("s.T(\"SELECT \").T(strings.Join(val.DbScanNames(columns...), \", \")).T(\" FROM \").T(tableName).T(\" WHERE is_deleted = 0\")\n")
@@ -1254,14 +1254,14 @@ func (b *Builder) printGetData(dst *build.Writer, typ *ast.DataType, key string,
 	tab := 0
 	if nil != c {
 		tab = 1
-		dst.Import("math/rand", "", 0)
-		dst.Import("time", "", 0)
+		dst.Import("math/rand")
+		dst.Import("time")
 
 		dst.Tab(1).Code("return db.SaveCache(ctx, tableName, s, time.Duration(rand.Intn(").Code(strconv.Itoa(c.max))
 		dst.Code("-").Code(strconv.Itoa(c.min)).Code(")+").Code(strconv.Itoa(c.min)).Code(")*time.Second,")
 		dst.Code(" func(ctx context.Context) (*").Code(dName).Code(", error) {\n")
 	}
-	dst.Import("database/sql", "", 0)
+	dst.Import("database/sql")
 	dst.Tab(tab + 1).Code("_, err := s.Query(ctx, func(rows *sql.Rows) (bool, error) {\n")
 	dst.Tab(tab + 2).Code("val = &").Code(dName).Code("{}\n")
 	dst.Tab(tab + 2).Code("return false, rows.Scan(val.DbScanColumns(columns...)...)\n")

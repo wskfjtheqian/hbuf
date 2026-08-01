@@ -227,11 +227,11 @@ func (b *Builder) printType(dst *build.Writer, expr ast.Expr, notEmpty bool) {
 			dst.Code(expr.(*ast.Ident).Name)
 		} else {
 			if build.Decimal == build.BaseType((expr.(*ast.Ident).Name)) {
-				dst.Import("java.math.BigDecimal", "", 0)
+				dst.Import("java.math.BigDecimal")
 			} else if build.Date == build.BaseType((expr.(*ast.Ident).Name)) {
-				dst.Import("java.util.Date", "", 0)
+				dst.Import("java.util.Date")
 			} else if build.Int64 == build.BaseType((expr.(*ast.Ident).Name)) {
-				dst.Import("java.math.BigInteger", "", 0)
+				dst.Import("java.math.BigInteger")
 			}
 			if notEmpty {
 				dst.Code(_types[build.BaseType((expr.(*ast.Ident).Name))])
@@ -240,13 +240,13 @@ func (b *Builder) printType(dst *build.Writer, expr ast.Expr, notEmpty bool) {
 			}
 		}
 	case *ast.ArrayType:
-		dst.Import("java.util.List", "", 0)
+		dst.Import("java.util.List")
 		ar := expr.(*ast.ArrayType)
 		dst.Code("List<")
 		b.printType(dst, ar.VType, false)
 		dst.Code(">")
 	case *ast.MapType:
-		dst.Import("java.util.Map", "", 0)
+		dst.Import("java.util.Map")
 		ma := expr.(*ast.MapType)
 		dst.Code("Map<")
 		b.printType(dst, ma.Key, false)
@@ -283,6 +283,6 @@ func (b *Builder) getPackage(dst *build.Writer, expr ast.Expr, s string) string 
 		}
 	}
 
-	dst.Import(name, "", 0)
+	dst.Import(name, "")
 	return ""
 }

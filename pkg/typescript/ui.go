@@ -12,7 +12,7 @@ func (b *Builder) printFormCode(dst *build.Writer, expr ast.Expr) {
 
 	switch expr.(type) {
 	case *ast.DataType:
-		dst.Import("vue", "{defineComponent, type PropType}", 0)
+		dst.Import("vue", "defineComponent, type PropType")
 
 		typ := expr.(*ast.DataType)
 		b.getPackage(dst, typ.Name, "", false, false)
@@ -301,7 +301,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 		dst.Tab(8).Code("<span class=\"table-header\">\n")
 		dst.Tab(9).Code("<span>{{ default: () => ctx.$t(\"").Code(langName).Code("Lang.").Code(fieldName).Code("\") }}</span>\n")
 		if b.langValueLen(fl) > 1 {
-			dst.Import("@element-plus/icons-vue", "{QuestionFilled}", 0)
+			dst.Import("@element-plus/icons-vue", "QuestionFilled")
 			dst.Tab(9).Code("<el-tooltip  effect=\"dark\" content={ ctx.$t(\"").Code(langName).Code("Lang.").Code(fieldName).Code("1\")}>\n")
 			dst.Tab(10).Code("<el-icon class=\"table-header__tip-icon\"><QuestionFilled /></el-icon>\n")
 			dst.Tab(9).Code("</el-tooltip>\n")
@@ -379,7 +379,7 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 				dst.Tab(11).Code("reference:()=>(\n")
 				dst.Tab(12).Code("<span style={{ marginLeft: '6px' }}>\n")
 				dst.Tab(13).Code("<el-tag effect=\"dark\" type=\"warning\">\n")
-				dst.Import("@element-plus/icons-vue", "{MoreFilled}", 0)
+				dst.Import("@element-plus/icons-vue", "MoreFilled")
 				dst.Tab(14).Code("<el-icon><MoreFilled /></el-icon>\n")
 				dst.Tab(13).Code("</el-tag>\n")
 				dst.Tab(12).Code("</span>\n")
@@ -542,7 +542,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 	dst.Tab(1).Code("\n")
 	dst.Tab(1).Code("},\n")
 	dst.Tab(1).Code("setup(props: Record<string, any>) {\n")
-	dst.Import("element-plus", "{useLocale}", 0)
+	dst.Import("element-plus", "useLocale")
 	dst.Tab(2).Code("const _locale = useLocale()\n")
 	dst.Tab(2).Code("const prop = props.prop ?? \"\"\n")
 	dst.Tab(2).Code("return (ctx: Record<string, any>) => {\n")
@@ -563,6 +563,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		isEnum := build.IsEnum(field.Type)
 		isArray := build.IsArray(field.Type)
 		isNull := build.IsNil(field.Type)
+		isMap := build.IsMap(field.Type)
 		_, verify := build.GetTag(field.Tags, "verify")
 		//i++
 		//index := i
@@ -588,8 +589,8 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(5).Code("<el-form-item class=\"").Code(className).Code("\" prop=\"").Code(fieldName).Code("\"")
 			dst.Code(" label={ctx.$t(\"").Code(langName).Code("Lang.").Code(fieldName).Code("\")}")
 			if verify {
-				pName := b.getPackage(dst, typ.Name, "verify", false, false)
-				dst.Code(" rules={[{validator: ").Code(pName).Code(".verify").Code(name).Code("_").Code(build.StringToHumpName(field.Name.Name))
+				b.getPackage(dst, typ.Name, "verify", false, false)
+				dst.Code(" rules={[{validator: verify").Code(name).Code("_").Code(build.StringToHumpName(field.Name.Name))
 				dst.Code("(_locale, model.").Code(fieldName).Code("), trigger: 'blur'}]}")
 			}
 			dst.Code(">\n")
@@ -603,8 +604,8 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(6).Code("<").Code(customTag).Code("\n")
 			dst.Tab(7).Code("modelValue={")
 			if isArray {
-				dst.Import("hbuf_ts", "* as h", 0)
-				dst.Code(" h.convertArray(model.").Code(fieldName).Code(", (e) => ctx.$timeToLocal(e))")
+				dst.Import("hbuf_ts", "convertArray")
+				dst.Code(" convertArray(model.").Code(fieldName).Code(", (e) => ctx.$timeToLocal(e))")
 			} else {
 				dst.Code("ctx.$timeToLocal(model.").Code(fieldName).Code(")")
 			}
@@ -970,13 +971,13 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				dst.Code(" label={ctx.$t(\"").Code(langName).Code("Lang.").Code(fieldName).Code("\")}")
 				dst.Code("/>\n")
 				ty := field.Type.Type().(*ast.Ident)
-				pkg := b.getPackage(dst, ty, "", false, true)
-				dst.Tab(6).Code("<").Code(pkg).Code(".").Code(build.StringToHumpName(ty.Name)).Code("FormItems\n")
+				b.getPackage(dst, ty, "", false, true)
+				dst.Tab(6).Code("<").Code(build.StringToHumpName(ty.Name)).Code("FormItems\n")
 				dst.Tab(7).Code("model={model." + fieldName + "}\n")
 				dst.Tab(6).Code("/>\n")
 				dst.Tab(5).Code("</>")
 			}
-		} else {
+		} else if "text" == formTag {
 			if len(customTag) == 0 {
 				customTag = "el-input"
 			}
@@ -988,7 +989,13 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 
 			b.printGetStringValue(dst, field.Type, "model."+fieldName, isNull, form.format)
 			dst.Code("}\n")
-			dst.Tab(7).Code("onUpdate:modelValue={($event: string | null) => model.").Code(fieldName).Code(" = ")
+			if isMap {
+				dst.Tab(7).Code("onUpdate:modelValue={($event: ")
+				b.printType(dst, field.Type, false, false)
+				dst.Code(") => model.").Code(fieldName).Code(" = ")
+			} else {
+				dst.Tab(7).Code("onUpdate:modelValue={($event: string | null) => model.").Code(fieldName).Code(" = ")
+			}
 			b.printSetStringValue(dst, field.Type, "$event", isNull)
 			dst.Code("}\n")
 
@@ -1069,9 +1076,9 @@ func (b *Builder) printMenuItem(dst *build.Writer, expr ast.Expr, empty bool, op
 	switch expr.(type) {
 	case *ast.EnumType:
 		t := expr.(*ast.EnumType)
-		pkg := b.getPackage(dst, t.Name, "", false, false)
+		b.getPackage(dst, t.Name, "", false, false)
 		name := build.StringToHumpName(t.Name.Name)
-		dst.Tab(6 + 1).Code("{").Code(pkg).Code(".").Code(name).Code(".values.map((val) => {\n")
+		dst.Tab(6 + 1).Code("{").Code(name).Code(".values.map((val) => {\n")
 		dst.Tab(7 + 1).Code("return <" + option + " key={val.name} class={ 'el-option--' + val.type + ' ' + val.cssClass}\n")
 		dst.Tab(8 + 1).Code("label={ctx.$t(val.toString())}\n")
 		dst.Tab(8 + 1).Code("value={val.name}\n")
@@ -1165,7 +1172,7 @@ func (b *Builder) printGetStringValue(dst *build.Writer, expr ast.Expr, name str
 		b.printGetStringValue(dst, ar.Type(), "item", ar.IsEmpty(), format)
 		dst.Code(")")
 	case *ast.MapType:
-		dst.Code("null")
+		dst.Code(name)
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
 		b.printGetStringValue(dst, t.Type(), name, true, format)
@@ -1178,15 +1185,15 @@ func (b *Builder) printSetStringValue(dst *build.Writer, expr ast.Expr, name str
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
 			if ast.Enum == t.Obj.Kind {
-				pkg := b.getPackage(dst, t, "", false, false)
+				b.getPackage(dst, t, "", false, false)
 				dst.Code("((").Code(name).Code("?.length ?? 0) == 0 ? ")
 				if isNull {
 					dst.Code("null")
 				} else {
-					dst.Code(pkg).Code(".").Code(build.StringToHumpName(t.Name)).Code(".valueOf(0)")
+					dst.Code(build.StringToHumpName(t.Name)).Code(".valueOf(0)")
 				}
 				dst.Code(" : (")
-				dst.Code(pkg).Code(".").Code(build.StringToHumpName(t.Name)).Code(".nameOf(").Code(name).Code("! as string)")
+				dst.Code(build.StringToHumpName(t.Name)).Code(".nameOf(").Code(name).Code("! as string)")
 				dst.Code("))")
 			}
 		} else {
@@ -1233,14 +1240,14 @@ func (b *Builder) printSetStringValue(dst *build.Writer, expr ast.Expr, name str
 				}
 				dst.Code(" : (new Date(").Code(name).Code("! as string)))")
 			case build.Decimal:
-				dst.Import("decimal.js", "* as d", 0)
+				dst.Import("decimal.js", "Decimal")
 				dst.Code("((").Code(name).Code("?.length ?? 0) == 0 ? ")
 				if isNull {
 					dst.Code("null")
 				} else {
-					dst.Code("d.Decimal(0)")
+					dst.Code("Decimal(0)")
 				}
-				dst.Code(" : (new d.Decimal(").Code(name).Code("! as string)))")
+				dst.Code(" : (new Decimal(").Code(name).Code("! as string)))")
 
 			default:
 				dst.Code("((").Code(name).Code("?.length ?? 0) == 0 ? ")
@@ -1269,11 +1276,7 @@ func (b *Builder) printSetStringValue(dst *build.Writer, expr ast.Expr, name str
 		}
 		dst.Code(" )")
 	case *ast.MapType:
-		if isNull {
-			dst.Code("null")
-		} else {
-			dst.Code("{}")
-		}
+		dst.Code(name)
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
 		b.printSetStringValue(dst, t.Type(), name, t.IsEmpty())
@@ -1343,15 +1346,15 @@ func (b *Builder) printSetNumberValue(dst *build.Writer, expr ast.Expr, name str
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
 			if ast.Enum == t.Obj.Kind {
-				pkg := b.getPackage(dst, t, "", false, false)
+				b.getPackage(dst, t, "", false, false)
 				dst.Code("(").Code(name).Code(" == null ? ")
 				if isNull {
 					dst.Code("null")
 				} else {
-					dst.Code(pkg).Code(".").Code(build.StringToHumpName(t.Name)).Code(".valueOf(0)")
+					dst.Code(build.StringToHumpName(t.Name)).Code(".valueOf(0)")
 				}
 				dst.Code(" : (")
-				dst.Code(pkg).Code(".").Code(build.StringToHumpName(t.Name)).Code(".valueOf(").Code(name).Code("! as number)))")
+				dst.Code(build.StringToHumpName(t.Name)).Code(".valueOf(").Code(name).Code("! as number)))")
 			}
 		} else {
 			switch build.BaseType(t.Name) {
@@ -1409,17 +1412,17 @@ func (b *Builder) printSetNumberValue(dst *build.Writer, expr ast.Expr, name str
 				}
 				dst.Code(" : (new Date(").Code(name).Code("! as number)))")
 			case build.Decimal:
-				dst.Import("decimal.js", "* as d", 0)
+				dst.Import("decimal.js", "Decimal")
 				dst.Code("(").Code(name).Code(" == null ? ")
 				if isNull {
 					dst.Code("null")
 				} else {
-					dst.Code("d.Decimal(0)")
+					dst.Code("Decimal(0)")
 				}
 				if scale > 0 {
-					dst.Code(" : d.Decimal(").Code(name).Code("! as number / ").Code(strconv.Itoa(scale))
+					dst.Code(" : Decimal(").Code(name).Code("! as number / ").Code(strconv.Itoa(scale))
 				} else {
-					dst.Code(" : d.Decimal(").Code(name).Code("! as number")
+					dst.Code(" : Decimal(").Code(name).Code("! as number")
 				}
 				dst.Code("))")
 			default:

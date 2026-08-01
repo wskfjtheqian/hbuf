@@ -188,10 +188,13 @@ func (b *Builder) writerFile(data *build.Writer, packages string, out string, i 
 		imps1 := make([]string, 0, len(data.GetImports()))
 		imps2 := make([]string, 0, len(data.GetImports()))
 		for key, val := range data.GetImports() {
-			if val.Name == "" {
+			if len(val) == 0 {
 				imps1 = append(imps1, key)
 			} else {
-				imps2 = append(imps2, val.Name)
+				for name, _ := range val {
+					imps2 = append(imps2, name)
+					break
+				}
 			}
 		}
 		if len(imps1) > 0 {
@@ -206,7 +209,14 @@ func (b *Builder) writerFile(data *build.Writer, packages string, out string, i 
 			_, _ = fc.WriteString("\n")
 			keys := map[string]string{}
 			for key, val := range data.GetImports() {
-				keys[val.Name] = key
+				if len(val) > 0 {
+					var name string
+					for name, _ = range val {
+						imps2 = append(imps2, name)
+						break
+					}
+					keys[name] = key
+				}
 			}
 			for _, item := range imps2 {
 				if val, ok := keys[item]; ok {
@@ -299,9 +309,9 @@ func (b *Builder) printType(dst *build.Writer, expr ast.Expr, b2 bool) {
 			dst.Code(pack + (expr.(*ast.Ident)).Name)
 		} else {
 			if build.Date == build.BaseType((expr.(*ast.Ident)).Name) {
-				dst.Import("time", "", 0)
+				dst.Import("time")
 			} else if build.Decimal == build.BaseType((expr.(*ast.Ident)).Name) {
-				dst.Import("github.com/shopspring/decimal", "", 0)
+				dst.Import("github.com/shopspring/decimal")
 			}
 			dst.Code(_types[build.BaseType((expr.(*ast.Ident)).Name)])
 		}
@@ -350,7 +360,7 @@ func (b *Builder) getPackage(dst *build.Writer, expr ast.Expr) string {
 	packs := strings.Split(pack, ".")
 	pack = packs[len(packs)-1]
 
-	dst.Import(b.packages+pack, "", 0)
+	dst.Import(b.packages+pack, "")
 	return pack + "."
 }
 

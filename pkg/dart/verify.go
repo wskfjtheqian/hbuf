@@ -6,7 +6,7 @@ import (
 )
 
 func (b *Builder) printVerifyCode(dst *build.Writer, data *ast.DataType) error {
-	dst.Import("package:flutter/material.dart", "", 0)
+	dst.Import("package:flutter/material.dart")
 
 	err := b.printVerifyFieldCode(dst, data)
 	if err != nil {
@@ -127,7 +127,7 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 					//	dst.Tab(2).Code("return " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
 					//	dst.Tab(1).Code("}\n")
 					//
-					//	dst.Import("package:decimal/decimal.dart", "", 0)
+					//	dst.Import("package:decimal/decimal.dart")
 					//	dst.Tab(1).Code("Decimal? val = Decimal.tryParse(text!);\n")
 					//	dst.Tab(1).Code("if (null == val) {\n")
 					//	dst.Tab(2).Code("return " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
@@ -191,7 +191,7 @@ func (b *Builder) verifyNum(dst *build.Writer, val *build.VerifyEnum, f *build.F
 	dst.Code(")) {\n")
 	dst.Tab(2).Code("return " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")
 	dst.Tab(1).Code("}\n")
-	dst.Import("package:decimal/decimal.dart", "", 0)
+	dst.Import("package:decimal/decimal.dart", "")
 	dst.Tab(1).Code("var val = Decimal.tryParse(text!);\n")
 	dst.Tab(1).Code("if (null == val) {\n")
 	dst.Tab(2).Code("return " + build.StringToHumpName(val.Enum.Name.Name) + "." + build.StringToAllUpper(val.Item.Name.Name) + ".toText(context);\n")

@@ -35,7 +35,7 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 		if nil == verify {
 			return nil
 		}
-		dst.Import("element-plus", "type {LocaleContext}", 0)
+		dst.Import("element-plus", "type LocaleContext")
 		dst.Code("export const verify").Code(dName).Code("_").Code(fName).Code(" = (locale: LocaleContext, value: any) => (rule: any, _: any, callback: any): any => {\n")
 		dst.Tab(1).Code("value = '' + value\n")
 		isNull := build.IsNil(field.Type)
@@ -44,11 +44,11 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 			if nil == f {
 				continue
 			}
-			pName := b.getPackage(dst, val.Enum.Name, "enum", false, false)
+			b.getPackage(dst, val.Enum.Name, "enum", false, false)
 			if isNull && 0 == i {
 				dst.Tab(1).Code("if (value == '' || value == 'null' || value == 'undefined') {\n")
 				if !f.Null {
-					b.printVerifyError(dst, pName, val)
+					b.printVerifyError(dst, val)
 				} else {
 					dst.Tab(2).Code("return callback();\n")
 				}
@@ -63,36 +63,36 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 			} else if build.IsArray(field.Type) {
 				for _, item := range f.Len {
 					dst.Tab(1).Code("if ").Code("(!(value.length ").Code(b.getOperator(item.Op)).Code(" ").Code(item.Val).Code(")) {\n")
-					b.printVerifyError(dst.Tab(1), pName, val)
+					b.printVerifyError(dst.Tab(1), val)
 					dst.Tab(1).Code("}\n")
 				}
 			} else {
 				t := build.GetBaseType(field.Type)
 				switch t {
 				case build.Int8:
-					b.verifyNum(dst, pName, val, f, "-?[0-9]\\\\d*", field.Type, "–128", "127")
+					b.verifyNum(dst, val, f, "-?[0-9]\\\\d*", field.Type, "–128", "127")
 				case build.Int16:
-					b.verifyNum(dst, pName, val, f, "-?[0-9]\\\\d*", field.Type, "-32768", "32767")
+					b.verifyNum(dst, val, f, "-?[0-9]\\\\d*", field.Type, "-32768", "32767")
 				case build.Int32:
-					b.verifyNum(dst, pName, val, f, "-?[0-9]\\\\d*", field.Type, "-2147483648", "2147483647")
+					b.verifyNum(dst, val, f, "-?[0-9]\\\\d*", field.Type, "-2147483648", "2147483647")
 				case build.Uint8:
-					b.verifyNum(dst, pName, val, f, "[0-9]\\\\d*", field.Type, "0", "255")
+					b.verifyNum(dst, val, f, "[0-9]\\\\d*", field.Type, "0", "255")
 				case build.Uint16:
-					b.verifyNum(dst, pName, val, f, "[0-9]\\\\d*", field.Type, "0", "65535")
+					b.verifyNum(dst, val, f, "[0-9]\\\\d*", field.Type, "0", "65535")
 				case build.Uint32:
-					b.verifyNum(dst, pName, val, f, "[0-9]\\\\d*", field.Type, "0", "4294967295")
+					b.verifyNum(dst, val, f, "[0-9]\\\\d*", field.Type, "0", "4294967295")
 				case build.Float, build.Double:
-					b.verifyNum(dst, pName, val, f, "^[+-]?\\\\d+(\\\\.\\\\d+)?$", field.Type, "", "")
+					b.verifyNum(dst, val, f, "^[+-]?\\\\d+(\\\\.\\\\d+)?$", field.Type, "", "")
 				case build.Int64:
-					b.verifyNum(dst, pName, val, f, "[0-9]\\\\d*", field.Type, "-9223372036854775808", "9223372036854775808")
+					b.verifyNum(dst, val, f, "[0-9]\\\\d*", field.Type, "-9223372036854775808", "9223372036854775808")
 				case build.Uint64:
-					b.verifyNum(dst, pName, val, f, "[0-9]\\\\d*", field.Type, "0", "18446744073709551615615")
+					b.verifyNum(dst, val, f, "[0-9]\\\\d*", field.Type, "0", "18446744073709551615615")
 				case build.Decimal:
-					b.verifyNum(dst, pName, val, f, "^[+-]?\\\\d+(\\\\.\\\\d+)?$", field.Type, "", "")
+					b.verifyNum(dst, val, f, "^[+-]?\\\\d+(\\\\.\\\\d+)?$", field.Type, "", "")
 				case build.Date:
 					dst.Tab(1).Code("const val = DateTime.tryParse(value!);\n")
 					dst.Tab(1).Code("if (null == val) {\n")
-					b.printVerifyError(dst, pName, val)
+					b.printVerifyError(dst, val)
 					dst.Tab(1).Code("}\n")
 
 					for _, item := range f.Val {
@@ -102,13 +102,13 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 						}
 
 						dst.Tab(1).Code("if ").Code("(!(val.millisecondsSinceEpoch ").Code(b.getOperator(item.Op)).Code(" ").Code(strconv.FormatInt(parse.UnixMilli(), 10)).Code(")) {\n")
-						b.printVerifyError(dst.Tab(1), pName, val)
+						b.printVerifyError(dst.Tab(1), val)
 						dst.Tab(1).Code("}\n")
 					}
 				case build.String:
 					for _, item := range f.Len {
 						dst.Tab(1).Code("if ").Code("(!(value.length ").Code(b.getOperator(item.Op)).Code(" ").Code(item.Val).Code(")) {\n")
-						b.printVerifyError(dst.Tab(1), pName, val)
+						b.printVerifyError(dst.Tab(1), val)
 						dst.Tab(1).Code("}\n")
 					}
 
@@ -121,11 +121,11 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 								dst.Code("new RegExp(\"").Code(item.Val).Code("\").test(value!)")
 							}
 							dst.Code(") {\n")
-							b.printVerifyError(dst, pName, val)
+							b.printVerifyError(dst, val)
 							dst.Tab(1).Code("}\n")
 						} else {
 							dst.Tab(1).Code("if ").Code("(!(value").Code(b.getOperator(item.Op)).Code(" ").Code(item.Val).Code(")) {\n")
-							b.printVerifyError(dst, pName, val)
+							b.printVerifyError(dst, val)
 							dst.Tab(1).Code("}\n")
 						}
 					}
@@ -142,23 +142,23 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 	return nil
 }
 
-func (b *Builder) verifyNum(dst *build.Writer, pName string, val *build.VerifyEnum, f *build.Format, reg string, field ast.Type, min, max string) {
+func (b *Builder) verifyNum(dst *build.Writer, val *build.VerifyEnum, f *build.Format, reg string, field ast.Type, min, max string) {
 	dst.Tab(1).Code("if (!new RegExp(\"" + reg + "\").test(value")
 	if build.IsNil(field) {
 		dst.Code("!")
 	}
 
 	dst.Code(")) {\n")
-	b.printVerifyError(dst, pName, val)
+	b.printVerifyError(dst, val)
 	dst.Tab(1).Code("}\n")
 	dst.Tab(1).Code("try {\n")
-	dst.Import("decimal.js", "* as d", 0)
-	dst.Tab(2).Code("const val = new d.Decimal(value!);\n")
+	dst.Import("decimal.js", "Decimal")
+	dst.Tab(2).Code("const val = new Decimal(value!);\n")
 
 	if 0 < len(min) {
-		dst.Tab(2).Code("if (val.lessThan(new d.Decimal(\"").Code(min).Code("\")) || val.greaterThan(new d.Decimal(\"").Code(max).Code("\"))) {\n")
+		dst.Tab(2).Code("if (val.lessThan(new Decimal(\"").Code(min).Code("\")) || val.greaterThan(new Decimal(\"").Code(max).Code("\"))) {\n")
 		dst.Tab(1)
-		b.printVerifyError(dst, pName, val)
+		b.printVerifyError(dst, val)
 		dst.Tab(2).Code("}\n")
 	}
 
@@ -180,19 +180,19 @@ func (b *Builder) verifyNum(dst *build.Writer, pName string, val *build.VerifyEn
 		} else {
 			//TODO
 		}
-		dst.Code("(").Code("new d.Decimal(").Code(item.Val).Code("))) {\n")
+		dst.Code("(").Code("new Decimal(").Code(item.Val).Code("))) {\n")
 
-		b.printVerifyError(dst.Tab(1), pName, val)
+		b.printVerifyError(dst.Tab(1), val)
 		dst.Tab(2).Code("}\n")
 	}
 
 	dst.Tab(1).Code("} catch {\n")
-	b.printVerifyError(dst, pName, val)
+	b.printVerifyError(dst, val)
 	dst.Tab(1).Code("}\n")
 }
 
-func (b *Builder) printVerifyError(dst *build.Writer, pName string, val *build.VerifyEnum) {
-	dst.Tab(2).Code("return callback(new Error(locale.t(").Code(pName).Code(".")
+func (b *Builder) printVerifyError(dst *build.Writer, val *build.VerifyEnum) {
+	dst.Tab(2).Code("return callback(new Error(locale.t(")
 	dst.Code(build.StringToHumpName(val.Enum.Name.Name)).Code(".")
 	dst.Code(build.StringToAllUpper(val.Item.Name.Name)).Code(".toString())))\n")
 }

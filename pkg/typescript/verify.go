@@ -44,7 +44,7 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 			if nil == f {
 				continue
 			}
-			b.getPackage(dst, val.Enum.Name, "enum", false, false)
+			b.getPackage(dst, val.Enum.Name, "enum", false, false, "", "")
 			if isNull && 0 == i {
 				dst.Tab(1).Code("if (value == '' || value == 'null' || value == 'undefined') {\n")
 				if !f.Null {

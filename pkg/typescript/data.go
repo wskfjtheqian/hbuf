@@ -26,7 +26,7 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) error {
 		}
 		dst.Tab(1).Code("")
 		dst.Code(build.StringToFirstLower(field.Name.Name) + ": ")
-		b.printType(dst, field.Type, false, false)
+		b.printType(dst, field.Type, false, false, false)
 		dst.Code(" = ")
 		b.printDefault(dst, field.Type, false)
 		dst.Code(";\n\n")
@@ -262,7 +262,7 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
-			b.getPackage(dst, t, "", false, false)
+			b.getPackage(dst, t, "", false, false, "", "")
 			if ast.Enum == t.Obj.Kind {
 				if isRecordKey {
 					if empty {
@@ -540,7 +540,7 @@ func (b *Builder) printExtend(dst *build.Writer, extends []*ast.Extends, start b
 			dst.Code(", ")
 		}
 
-		b.getPackage(dst, v.Name, "", true, false)
+		b.getPackage(dst, v.Name, "", true, false, "", "")
 		dst.Code(build.StringToHumpName(v.Name.Name))
 	}
 }

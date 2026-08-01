@@ -29,16 +29,32 @@ func (w *Writer) GetImport(pkg string) map[string]uint {
 
 func (w *Writer) Import(pkg string, name ...string) {
 	if as, ok := w.imp[pkg]; ok {
-		//if level > as.level {
 		for _, item := range name {
-			as[item] = 0
+			level := uint(1)
+			if strings.Index(item, "type ") != -1 {
+				level = 0
+				item = strings.Replace(item, "type ", "", -1)
+			}
+
+			if _, ok := as[item]; ok {
+				if as[item] < level {
+					as[item] = level
+				}
+			} else {
+				as[item] = level
+			}
 		}
 		//}
 		return
 	}
 	w.imp[pkg] = map[string]uint{}
 	for _, item := range name {
-		w.imp[pkg][item] = 0
+		level := uint(1)
+		if strings.Index(item, "type ") != -1 {
+			level = 0
+			item = strings.Replace(item, "type ", "", -1)
+		}
+		w.imp[pkg][item] = level
 	}
 }
 

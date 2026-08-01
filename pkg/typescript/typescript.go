@@ -186,14 +186,18 @@ func writerFile(data *build.Writer, out string) error {
 			}
 			_, _ = fc.WriteString("import {")
 			index := 0
-			for key, _ := range temp[val] {
+			for key, level := range temp[val] {
 				if index != 0 {
 					_, _ = fc.WriteString(", ")
+				}
+				_, _ = fc.WriteString("\n    ")
+				if level == 0 {
+					_, _ = fc.WriteString("type ")
 				}
 				_, _ = fc.WriteString(key)
 				index++
 			}
-			_, _ = fc.WriteString("} from \"" + val + "\"\n")
+			_, _ = fc.WriteString("\n} from \"" + val + "\"\n")
 		}
 	}
 	_, _ = fc.WriteString("\n")
@@ -260,7 +264,7 @@ func (b *Builder) printTypeSpec(dst *DartWriter, expr ast.Expr) error {
 	return nil
 }
 
-func (b *Builder) printType(dst *build.Writer, expr ast.Expr, notEmpty bool, isRecordKey bool) {
+func (b *Builder) printType(dst *build.Writer, expr ast.Expr, notEmpty bool, isRecordKey bool, isType bool) {
 	switch expr.(type) {
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
@@ -268,7 +272,7 @@ func (b *Builder) printType(dst *build.Writer, expr ast.Expr, notEmpty bool, isR
 			if isRecordKey {
 				dst.Code("number")
 			} else {
-				b.getPackage(dst, expr, "", false, false)
+				b.getPackage(dst, expr, "", isType, false, "", "")
 				dst.Code(expr.(*ast.Ident).Name)
 			}
 		} else {
@@ -293,7 +297,7 @@ func (b *Builder) printType(dst *build.Writer, expr ast.Expr, notEmpty bool, isR
 	case *ast.ArrayType:
 		ar := expr.(*ast.ArrayType)
 		dst.Code("(")
-		b.printType(dst, ar.VType, false, false)
+		b.printType(dst, ar.VType, false, false, isType)
 		dst.Code(")[]")
 		if ar.Empty && !notEmpty {
 			dst.Code(" | null")
@@ -301,16 +305,16 @@ func (b *Builder) printType(dst *build.Writer, expr ast.Expr, notEmpty bool, isR
 	case *ast.MapType:
 		ma := expr.(*ast.MapType)
 		dst.Code("Record<(")
-		b.printType(dst, ma.Key, false, true)
+		b.printType(dst, ma.Key, false, true, isType)
 		dst.Code("), (")
-		b.printType(dst, ma.VType, false, false)
+		b.printType(dst, ma.VType, false, false, isType)
 		dst.Code(")>")
 		if ma.Empty && !notEmpty {
 			dst.Code(" | null")
 		}
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
-		b.printType(dst, t.Type(), t.Empty, isRecordKey)
+		b.printType(dst, t.Type(), t.Empty, isRecordKey, isType)
 		if t.Empty && !notEmpty {
 			dst.Code(" | null")
 		}
@@ -318,7 +322,7 @@ func (b *Builder) printType(dst *build.Writer, expr ast.Expr, notEmpty bool, isR
 	return
 }
 
-func (b *Builder) getPackage(dst *build.Writer, expr ast.Expr, s string, typ bool, ui bool) {
+func (b *Builder) getPackage(dst *build.Writer, expr ast.Expr, s string, typ bool, ui bool, s2 string, lz string) {
 	file := (expr.(*ast.Ident)).Obj.Data
 	switch file.(type) {
 	case *ast.File:
@@ -343,19 +347,11 @@ func (b *Builder) getPackage(dst *build.Writer, expr ast.Expr, s string, typ boo
 			name = name + ".server"
 		}
 	}
-	dst.Import("./"+name, expr.(*ast.Ident).Name)
-	//id := "$" + strconv.Itoa(len(dst.GetImports()))
-	//imp := dst.GetImport("./" + name)
-	//if imp != nil {
-	//	//id = imp.Name[strings.Index(imp.Name, "$"):]
-	//}
-	////var p string
-	//if typ {
-	//	dst.Import( "./"+name, "type * as "+id)
-	//} else {
-	//	dst.Import( "./"+name, "* as  "+id)
-	//}
-	//return p[strings.Index(p, "$"):]
+	if typ {
+		dst.Import("./"+name, "type "+s2+expr.(*ast.Ident).Name+lz)
+	} else {
+		dst.Import("./"+name, s2+expr.(*ast.Ident).Name+lz)
+	}
 	return
 
 }
@@ -366,12 +362,12 @@ func (b *Builder) printDefault(dst *build.Writer, expr ast.Expr, notEmpty bool) 
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
 			if ast.Enum == t.Obj.Kind {
-				b.getPackage(dst, expr, "", false, false)
+				b.getPackage(dst, expr, "", false, false, "", "")
 				dst.Code(expr.(*ast.Ident).Name)
 				dst.Code(".valueOf(0)")
 			} else {
 				dst.Code("new ")
-				b.getPackage(dst, expr, "", false, false)
+				b.getPackage(dst, expr, "", false, false, "", "")
 				dst.Code(expr.(*ast.Ident).Name)
 				dst.Code("()")
 			}

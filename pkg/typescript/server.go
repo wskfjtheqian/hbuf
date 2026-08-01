@@ -37,7 +37,7 @@ func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
 		if paramType == "stream" {
 			dst.Code("Blob | ArrayBuffer")
 		} else {
-			b.printType(dst, method.Param, false, false)
+			b.printType(dst, method.Param, false, false, true)
 		}
 
 		dst.Import("hbuf_ts", "type Option")
@@ -48,7 +48,7 @@ func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
 		} else if resultType == "stream" {
 			dst.Code("Blob | ArrayBuffer")
 		} else {
-			b.printType(dst, method.Result.Type(), false, false)
+			b.printType(dst, method.Result.Type(), false, false, true)
 		}
 		dst.Code(">\n\n")
 	}
@@ -57,7 +57,7 @@ func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
 
 func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 	dst.Code("export class " + build.StringToHumpName(typ.Name.Name) + "Client implements ")
-	b.getPackage(dst, typ.Name, "", true, false)
+	b.getPackage(dst, typ.Name, "", false, false, "", "")
 	dst.Code(build.StringToHumpName(typ.Name.Name))
 
 	dst.Code("{\n\n")
@@ -90,7 +90,7 @@ func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 		if paramType == "stream" {
 			dst.Code("Blob | ArrayBuffer")
 		} else {
-			b.printType(dst, method.Param, false, false)
+			b.printType(dst, method.Param, false, false, true)
 		}
 
 		dst.Import("hbuf_ts", "type Option")
@@ -101,7 +101,7 @@ func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 		} else if resultType == "stream" {
 			dst.Code("Blob | ArrayBuffer")
 		} else {
-			b.printType(dst, method.Result.Type(), false, false)
+			b.printType(dst, method.Result.Type(), false, false, true)
 		}
 
 		dst.Code("> {\n")
@@ -112,7 +112,7 @@ func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 		} else if resultType == "stream" {
 			dst.Code("Blob | ArrayBuffer")
 		} else {
-			b.printType(dst, method.Result.Type(), false, false)
+			b.printType(dst, method.Result.Type(), false, false, false)
 		}
 		dst.Code(">(this.id << 32 | ")
 		dst.Code(method.Id.Value)
@@ -124,7 +124,7 @@ func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 		if resultType == "void" || resultType == "stream" {
 			dst.Code("undefined)\n")
 		} else {
-			b.printType(dst, method.Result.Type(), false, false)
+			b.printType(dst, method.Result.Type(), false, false, true)
 			dst.Code(".fromMap)\n")
 			//b.printType(dst, method.Result.Type(), false, false)
 			//dst.Code(".fromData)\n")
@@ -158,7 +158,7 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 		} else if paramType == "void" {
 		} else {
 			dst.Code("req as ")
-			b.printType(dst, method.Param.Type(), false, false)
+			b.printType(dst, method.Param.Type(), false, false, true)
 			dst.Code(", ")
 		}
 		dst.Code("opt)\n")
@@ -170,7 +170,7 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 
 		} else {
 			dst.Tab(3).Code("from: ")
-			b.printType(dst, method.Param.Type(), false, false)
+			b.printType(dst, method.Param.Type(), false, false, false)
 			dst.Code(".fromMap,\n")
 		}
 		dst.Tab(3).Code("tag: \"\",\n")
@@ -188,68 +188,4 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 	dst.Code("export function UnRegister").Code(serverName).Code("(r: Server) {\n")
 	dst.Tab(1).Code("r.unRegister(0, \"").Code(build.StringToUnderlineName(typ.Name.Name)).Code("\")\n")
 	dst.Code("}\n\n")
-
-	//dst.Code("export class " + build.StringToHumpName(typ.Name.Name) + "Router  {\n")
-	//dst.Tab(1).Code("readonly server: " + build.StringToHumpName(typ.Name.Name) + "\n")
-	//dst.Code("\n")
-	//dst.Tab(1).Code("invoke: Record<string, h.ServerInvoke>\n")
-	//dst.Code("\n")
-	//dst.Tab(1).Code("getInvoke(): Record<string, h.ServerInvoke> {\n")
-	//dst.Tab(2).Code("return this.invoke\n")
-	//dst.Tab(1).Code("}\n")
-	//dst.Code("\n")
-	//dst.Tab(1).Code("getName(): string {\n")
-	//dst.Tab(2).Code("return \"" + build.StringToUnderlineName(typ.Name.Name) + "\"\n")
-	//dst.Tab(1).Code("}\n")
-	//dst.Code("\n")
-	//dst.Tab(1).Code("getId(): number {\n")
-	//dst.Tab(2).Code("return 0\n")
-	//dst.Tab(1).Code("}\n")
-	//dst.Code("\n")
-	//dst.Tab(1).Code("constructor(server: " + build.StringToHumpName(typ.Name.Name) + ") {\n")
-	//dst.Tab(2).Code("this.server = server\n")
-	//dst.Tab(2).Code("this.invoke = {\n")
-	//err = build.EnumMethod(typ, func(method *ast.FuncType, server *ast.ServerType) error {
-	//
-	//	paramType := method.Param.Type().(*ast.Ident).Name
-	//
-	//	dst.Tab(3).Code("\"" + build.StringToUnderlineName(method.Name.Name) + "\": {\n")
-	//	dst.Tab(4).Code("formData(data: Blob | ArrayBuffer | Record<string, any>):  Blob | ArrayBuffer | h.Data {\n")
-	//	dst.Tab(5).Code("return ")
-	//	if paramType == "void" || paramType == "stream" {
-	//		dst.Code("data as ArrayBuffer |h.Data\n")
-	//	} else {
-	//		b.printType(dst, method.Param.Type(), false, false)
-	//		dst.Code(".fromMap(data as Record<string, any>)\n")
-	//	}
-	//
-	//	dst.Tab(4).Code("},\n")
-	//	dst.Tab(4).Code("toData(data: Blob | ArrayBuffer | h.Data): Blob | ArrayBuffer | Record<string, any> {\n")
-	//	dst.Tab(5).Code("return ")
-	//	if paramType == "void" || paramType == "stream" {
-	//		dst.Code("data as Blob | ArrayBuffer\n")
-	//	} else {
-	//		dst.Code("(data as h.Data).toMap()\n")
-	//	}
-	//
-	//	dst.Tab(4).Code("},\n")
-	//	dst.Tab(4).Code("invoke(data: Blob | ArrayBuffer | h.Data, opt?: h.Option): Promise<h.Data | void> {\n")
-	//	dst.Tab(5).Code("return server." + build.StringToFirstLower(method.Name.Name) + "(data as ")
-	//	if paramType == "void" || paramType == "stream" {
-	//		dst.Code("Blob | ArrayBuffer")
-	//	} else {
-	//		b.printType(dst, method.Param.Type(), false, false)
-	//	}
-	//	dst.Code(", ctx)\n")
-	//	dst.Tab(4).Code("}\n")
-	//	dst.Tab(3).Code("},\n")
-	//	return nil
-	//})
-	//if err != nil {
-	//	return
-	//}
-
-	//dst.Tab(2).Code("}\n")
-	//dst.Tab(1).Code("}\n")
-	//dst.Code("}\n")
 }

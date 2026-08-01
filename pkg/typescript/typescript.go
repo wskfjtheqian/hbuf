@@ -185,17 +185,19 @@ func writerFile(data *build.Writer, out string) error {
 				continue
 			}
 			_, _ = fc.WriteString("import {")
-			index := 0
-			for key, level := range temp[val] {
+
+			maps := temp[val]
+			keys := build.GetMapKeys(maps)
+			sort.Strings(keys)
+			for index, key := range keys {
 				if index != 0 {
 					_, _ = fc.WriteString(", ")
 				}
 				_, _ = fc.WriteString("\n    ")
-				if level == 0 {
+				if maps[key] == 0 {
 					_, _ = fc.WriteString("type ")
 				}
 				_, _ = fc.WriteString(key)
-				index++
 			}
 			_, _ = fc.WriteString("\n} from \"" + val + "\"\n")
 		}

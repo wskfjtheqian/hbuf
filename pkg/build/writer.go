@@ -44,10 +44,13 @@ func (w *Writer) Import(pkg string, name ...string) {
 				as[item] = level
 			}
 		}
-		//}
 		return
 	}
 	w.imp[pkg] = map[string]uint{}
+	if len(name) == 0 {
+		w.imp[pkg][""] = 0
+		return
+	}
 	for _, item := range name {
 		level := uint(1)
 		if strings.Index(item, "type ") != -1 {

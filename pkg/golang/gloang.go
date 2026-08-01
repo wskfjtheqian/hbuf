@@ -185,46 +185,38 @@ func (b *Builder) writerFile(data *build.Writer, packages string, out string, i 
 
 	if 0 < len(data.GetImports()) {
 		_, _ = fc.WriteString("import (\n")
-		imps1 := make([]string, 0, len(data.GetImports()))
-		imps2 := make([]string, 0, len(data.GetImports()))
+		imps1 := make(map[string]string, len(data.GetImports()))
+		imps2 := make(map[string]string, len(data.GetImports()))
 		for key, val := range data.GetImports() {
-			if len(val) == 0 {
-				imps1 = append(imps1, key)
-			} else {
-				for name, _ := range val {
-					imps2 = append(imps2, name)
+			temp := ""
+			for k, _ := range val {
+				if len(k) > 0 {
+					temp = k
 					break
 				}
 			}
-		}
-		if len(imps1) > 0 {
-			sort.Strings(imps1)
-			for _, val := range imps1 {
-				_, _ = fc.WriteString("\t\"" + val + "\"\n")
+			if len(temp) == 0 {
+				imps1[key] = ""
+			} else {
+				imps2[temp] = key
 			}
+		}
+
+		imp1 := build.GetMapKeys(imps1)
+		sort.Strings(imp1)
+		for _, key := range imp1 {
+			_, _ = fc.WriteString("\t\"" + key + "\"\n")
 		}
 
 		if len(imps2) > 0 {
-			sort.Strings(imps2)
 			_, _ = fc.WriteString("\n")
-			keys := map[string]string{}
-			for key, val := range data.GetImports() {
-				if len(val) > 0 {
-					var name string
-					for name, _ = range val {
-						imps2 = append(imps2, name)
-						break
-					}
-					keys[name] = key
-				}
-			}
-			for _, item := range imps2 {
-				if val, ok := keys[item]; ok {
-					_, _ = fc.WriteString("\t" + item + " \"" + val + "\"\n")
-				}
+
+			imp2 := build.GetMapKeys(imps2)
+			sort.Strings(imp2)
+			for _, key := range imp2 {
+				_, _ = fc.WriteString("\t" + key + " \"" + imps2[key] + "\"\n")
 			}
 		}
-
 		_, _ = fc.WriteString(")\n\n")
 	}
 	code := data.GetCode().String()

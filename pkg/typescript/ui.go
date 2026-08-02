@@ -823,7 +823,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(7).Code(">\n")
 			dst.Tab(6).Code("</").Code(customTag).Code(">\n")
-		} else if "number" == formTag && (isNum || isEnum) {
+		} else if ("number" == formTag && (isNum || isEnum)) || ("text" == formTag && isNum) {
 			if len(customTag) == 0 {
 				customTag = "el-input-number"
 			}
@@ -852,6 +852,10 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Code("}\n")
 
 			dst.Tab(7).Code("size={props.size}\n")
+			if "text" == formTag {
+				dst.Tab(7).Code("controls={false}\n")
+			}
+
 			if isNull {
 				dst.Tab(7).Code("clearable\n")
 			}

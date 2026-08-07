@@ -90,8 +90,8 @@ func (b *Builder) printVerifyFieldCode(dst *build.Writer, data *ast.DataType) er
 				case build.Decimal:
 					b.verifyNum(dst, val, f, "^[+-]?\\\\d+(\\\\.\\\\d+)?$", field.Type, "", "")
 				case build.Date:
-					dst.Tab(1).Code("const val = DateTime.tryParse(value!);\n")
-					dst.Tab(1).Code("if (null == val) {\n")
+					dst.Tab(1).Code("const val = new Date(value!);\n")
+					dst.Tab(1).Code("if (isNaN(val.getTime())) {\n")
 					b.printVerifyError(dst, val)
 					dst.Tab(1).Code("}\n")
 

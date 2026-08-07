@@ -51,7 +51,7 @@ type ui struct {
 	extensions   []string
 	clip         bool
 	unlink       bool
-	textarea     bool
+	mode         string
 	sortable     bool
 	maxLine      *int64
 	maxLen       *int64
@@ -162,8 +162,8 @@ func (b *Builder) getUI(tags []*ast.Tag) *ui {
 				form.clip = "true" == item.Values[0].Value[1:len(item.Values[0].Value)-1]
 			} else if "unlink" == item.Name.Name {
 				form.unlink = "true" == item.Values[0].Value[1:len(item.Values[0].Value)-1]
-			} else if "textarea" == item.Name.Name {
-				form.textarea = "true" == item.Values[0].Value[1:len(item.Values[0].Value)-1]
+			} else if "mode" == item.Name.Name {
+				form.mode = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 			} else if "sort" == item.Name.Name {
 				form.sortable = "true" == item.Values[0].Value[1:len(item.Values[0].Value)-1]
 			} else if "extensions" == item.Name.Name {
@@ -1012,14 +1012,14 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			if isNum {
 				dst.Tab(7).Code("type={\"number\"}\n")
 			}
-			if !isNum && form.textarea {
-				dst.Tab(7).Code("type={\"textarea\"}\n")
+			if !isNum && len(form.mode) > 0 {
+				dst.Tab(7).Code("type={\"").Code(form.mode).Code("\"}\n")
 			}
 
 			if form.onlyRead {
 				dst.Tab(7).Code("disabled\n")
 			}
-			if form.maxLen != nil && !isNum && form.textarea {
+			if form.maxLen != nil && !isNum && form.mode == "textarea" {
 				dst.Tab(7).Code("show-word-limit\n")
 			}
 			if form.maxLen != nil {
@@ -1029,7 +1029,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				dst.Tab(7).Code("minlength={").Code(strconv.FormatInt(*form.minLen, 10)).Code("}\n")
 			}
 
-			if form.maxLine != nil && !isNum && form.textarea {
+			if form.maxLine != nil && !isNum && form.mode == "textarea" {
 				dst.Tab(7).Code("rows={").Code(strconv.FormatInt(*form.maxLine, 10)).Code("}\n")
 			}
 

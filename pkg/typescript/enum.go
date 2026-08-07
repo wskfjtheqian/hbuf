@@ -25,7 +25,7 @@ func (b *Builder) printEnum(dst *build.Writer, typ *ast.EnumType) {
 	dst.Tab(1).Code("private constructor(value: number, name: string, type?: string, cssClass?: string) {\n")
 	dst.Tab(2).Code("this.value = value\n")
 	dst.Tab(2).Code("this.name = name\n")
-	dst.Tab(2).Code("this.type = type || ''\n")
+	dst.Tab(2).Code("this.type = type || 'info'\n")
 	dst.Tab(2).Code("this.cssClass = cssClass || ''\n")
 	dst.Tab(1).Code("}\n")
 
@@ -35,7 +35,7 @@ func (b *Builder) printEnum(dst *build.Writer, typ *ast.EnumType) {
 	dst.Tab(1).Code("			return v\n")
 	dst.Tab(1).Code("		}\n")
 	dst.Tab(1).Code("	}\n")
-	dst.Tab(1).Code("	return { value: value, name: `Unknown ${value}`, type: ``, cssClass: `` }\n")
+	dst.Tab(1).Code("	return { value: value, name: `Unknown ${value}`, type: `info`, cssClass: `` }\n")
 	dst.Tab(1).Code("}\n\n")
 
 	dst.Tab(1).Code("public static nameOf(name: string): " + enumName + " {\n")
@@ -44,7 +44,7 @@ func (b *Builder) printEnum(dst *build.Writer, typ *ast.EnumType) {
 	dst.Tab(1).Code("			return v\n")
 	dst.Tab(1).Code("		}\n")
 	dst.Tab(1).Code("	}\n")
-	dst.Tab(1).Code("	return { value: -1, name: name, type: ``, cssClass: ``  }\n")
+	dst.Tab(1).Code("	return { value: -1, name: name, type: `info`, cssClass: ``  }\n")
 	dst.Tab(1).Code("}\n\n")
 
 	for _, item := range typ.Items {
@@ -58,9 +58,8 @@ func (b *Builder) printEnum(dst *build.Writer, typ *ast.EnumType) {
 		uiEnum := build.GetUiEnum(item.Tags)
 		if nil != uiEnum && len(uiEnum.Typ) > 0 {
 			dst.Code(", \"").Code(uiEnum.Typ).Code("\"")
-
 		} else {
-			dst.Code(", \"\"")
+			dst.Code(", \"info\"")
 		}
 		if nil != uiEnum && len(uiEnum.Class) > 0 {
 			dst.Code(", \"").Code(strings.Join(uiEnum.Class, " ")).Code(" ").Code(item.Name.Name).Code("\"")

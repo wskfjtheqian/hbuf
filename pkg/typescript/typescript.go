@@ -181,7 +181,8 @@ func writerFile(data *build.Writer, out string) error {
 		}
 		sort.Strings(imps)
 		for _, val := range imps {
-			if strings.LastIndex(out, strings.ReplaceAll(val, "./", "/")) != -1 {
+
+			if strings.LastIndex(out, strings.ReplaceAll(val, "./", string(filepath.Separator))) != -1 {
 				continue
 			}
 			_, _ = fc.WriteString("import {")

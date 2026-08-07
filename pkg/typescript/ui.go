@@ -825,6 +825,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			if form.onlyRead {
 				dst.Tab(7).Code("disabled\n")
 			}
+			dst.Tab(7).Code("delimiter=\",\"\n")
 			dst.Tab(7).Code(">\n")
 			dst.Tab(6).Code("</").Code(customTag).Code(">\n")
 		} else if ("number" == formTag && (isNum || isEnum)) || ("text" == formTag && isNum) {

@@ -59,12 +59,13 @@ type ui struct {
 	step         *float64
 	min          *float64
 	max          *float64
-
-	outType string
-	outSize []int
-	fit     string
-	typ     string
-	limit   int
+	tableAttr    []string
+	formAttr     []string
+	outType      string
+	outSize      []int
+	fit          string
+	typ          string
+	limit        int
 }
 
 func (b *Builder) getUI(tags []*ast.Tag) *ui {
@@ -84,6 +85,14 @@ func (b *Builder) getUI(tags []*ast.Tag) *ui {
 			} else if "table" == item.Name.Name {
 				for _, value := range item.Values {
 					form.table = append(form.table, value.Value[1:len(value.Value)-1])
+				}
+			} else if "tableAttr" == item.Name.Name {
+				for _, value := range item.Values {
+					form.tableAttr = append(form.table, value.Value[1:len(value.Value)-1])
+				}
+			} else if "formAttr" == item.Name.Name {
+				for _, value := range item.Values {
+					form.formAttr = append(form.table, value.Value[1:len(value.Value)-1])
 				}
 			} else if "onlyRead" == item.Name.Name {
 				form.onlyRead = "true" == item.Values[0].Value[1:len(item.Values[0].Value)-1]
@@ -287,6 +296,9 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 			width = u.width
 		}
 		dst.Code(" min-width=\"").Code(strconv.FormatFloat(width, 'g', -1, 64)).Code("\"")
+		for _, attr := range table.tableAttr {
+			dst.Code(" ").Code(attr)
+		}
 		dst.Code(">\n")
 
 		tag := ""
@@ -593,6 +605,9 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				b.getPackage(dst, typ.Name, "verify", false, false, "verify", "_"+build.StringToHumpName(field.Name.Name))
 				dst.Code(" rules={[{validator: verify").Code(name).Code("_").Code(build.StringToHumpName(field.Name.Name))
 				dst.Code("(_locale, model.").Code(fieldName).Code("), trigger: 'blur'}]}")
+			}
+			for _, attr := range form.tableAttr {
+				dst.Code(" ").Code(attr)
 			}
 			dst.Code(">\n")
 		}
@@ -974,6 +989,9 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				dst.Tab(5).Code("<>\n")
 				dst.Tab(6).Code("<el-form-item class=\"").Code(className).Code("\" prop=\"").Code(fieldName).Code("\"")
 				dst.Code(" label={ctx.$t(\"").Code(langName).Code("Lang.").Code(fieldName).Code("\")}")
+				for _, attr := range form.tableAttr {
+					dst.Code(" ").Code(attr)
+				}
 				dst.Code("/>\n")
 				ty := field.Type.Type().(*ast.Ident)
 				b.getPackage(dst, ty, "", false, true, "", "FormItems")

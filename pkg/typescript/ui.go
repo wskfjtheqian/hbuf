@@ -606,9 +606,6 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				dst.Code(" rules={[{validator: verify").Code(name).Code("_").Code(build.StringToHumpName(field.Name.Name))
 				dst.Code("(_locale, model.").Code(fieldName).Code("), trigger: 'blur'}]}")
 			}
-			for _, attr := range form.tableAttr {
-				dst.Code(" ").Code(attr)
-			}
 			dst.Code(">\n")
 		}
 
@@ -715,6 +712,9 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			if form.onlyRead {
 				dst.Tab(7).Code(" disabled  \n")
 			}
+			for _, attr := range form.formAttr {
+				dst.Tab(7).Code(attr).Code("\n")
+			}
 			dst.Tab(6).Code("/>\n")
 		} else if "menu" == formTag {
 			if len(customTag) == 0 {
@@ -740,6 +740,9 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			if isArray {
 				dst.Tab(7).Code("multiple\n")
 			}
+			for _, attr := range form.formAttr {
+				dst.Tab(7).Code(attr).Code("\n")
+			}
 			dst.Tab(7).Code(">\n")
 			if build.IsBool(field.Type) {
 				dst.Tab(8).Code("<el-option label={ctx.$t('true')} value={'true'}/>\n")
@@ -763,6 +766,9 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			if form.onlyRead {
 				dst.Code(" disabled")
 			}
+			for _, attr := range form.formAttr {
+				dst.Tab(7).Code(attr).Code("\n")
+			}
 			dst.Tab(6).Code("/>\n")
 		} else if "radio" == formTag {
 			if len(customTag) == 0 {
@@ -779,6 +785,9 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(7).Code("size={props.size}\n")
 			if form.onlyRead {
 				dst.Tab(7).Code("disabled\n")
+			}
+			for _, attr := range form.formAttr {
+				dst.Tab(7).Code(attr).Code("\n")
 			}
 			dst.Tab(7).Code(">\n")
 			b.printMenuItem(dst, field.Type, false, "el-radio")
@@ -798,6 +807,9 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(7).Code("size={props.size}\n")
 			if form.onlyRead {
 				dst.Tab(7).Code("disabled\n")
+			}
+			for _, attr := range form.formAttr {
+				dst.Tab(7).Code(attr).Code("\n")
 			}
 			dst.Tab(7).Code(">\n")
 			b.printMenuItem(dst, field.Type, false, "el-radio-button")
@@ -826,6 +838,9 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			if form.onlyRead {
 				dst.Tab(7).Code("disabled\n")
 			}
+			for _, attr := range form.formAttr {
+				dst.Tab(7).Code(attr).Code("\n")
+			}
 			dst.Tab(6).Code("/>\n")
 		} else if isArray {
 			if len(customTag) == 0 {
@@ -841,6 +856,9 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				dst.Tab(7).Code("disabled\n")
 			}
 			dst.Tab(7).Code("delimiter=\",\"\n")
+			for _, attr := range form.formAttr {
+				dst.Tab(7).Code(attr).Code("\n")
+			}
 			dst.Tab(7).Code(">\n")
 			dst.Tab(6).Code("</").Code(customTag).Code(">\n")
 		} else if ("number" == formTag && (isNum || isEnum)) || ("text" == formTag && isNum) {
@@ -901,6 +919,9 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			if form.step != nil {
 				dst.Tab(7).Code("step={").Code(strconv.FormatFloat(*form.step, 'f', -1, 64)).Code("}\n")
 			}
+			for _, attr := range form.formAttr {
+				dst.Tab(7).Code(attr).Code("\n")
+			}
 			dst.Tab(6).Code(">\n")
 			if len(suffix) > 0 {
 				dst.Tab(7).Code("{{suffix:()=>'").Code(suffix).Code("' }}\n")
@@ -920,6 +941,9 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			if form.onlyRead {
 				dst.Tab(7).Code("disabled\n")
+			}
+			for _, attr := range form.formAttr {
+				dst.Tab(7).Code(attr).Code("\n")
 			}
 			dst.Tab(6).Code("/>\n")
 		} else if "file" == formTag {
@@ -985,19 +1009,22 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				b.printType(dst, field.Type, false, false, true)
 				dst.Code(") => model.").Code(fieldName).Code(" = $event")
 				dst.Code("}\n")
+				for _, attr := range form.formAttr {
+					dst.Tab(7).Code(attr).Code("\n")
+				}
 				dst.Tab(6).Code("/>\n")
 			} else {
 				dst.Tab(5).Code("<>\n")
 				dst.Tab(6).Code("<el-form-item class=\"").Code(className).Code("\" prop=\"").Code(fieldName).Code("\"")
 				dst.Code(" label={ctx.$t(\"").Code(langName).Code("Lang.").Code(fieldName).Code("\")}")
-				for _, attr := range form.tableAttr {
-					dst.Code(" ").Code(attr)
-				}
 				dst.Code("/>\n")
 				ty := field.Type.Type().(*ast.Ident)
 				b.getPackage(dst, ty, "", false, true, "", "FormItems")
 				dst.Tab(6).Code("<").Code(build.StringToHumpName(ty.Name)).Code("FormItems\n")
 				dst.Tab(7).Code("model={model." + fieldName + "}\n")
+				for _, attr := range form.formAttr {
+					dst.Tab(7).Code(attr).Code("\n")
+				}
 				dst.Tab(6).Code("/>\n")
 				dst.Tab(5).Code("</>\n")
 			}
@@ -1050,7 +1077,9 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			if form.maxLine != nil && !isNum && form.mode == "textarea" {
 				dst.Tab(7).Code("rows={").Code(strconv.FormatInt(*form.maxLine, 10)).Code("}\n")
 			}
-
+			for _, attr := range form.formAttr {
+				dst.Tab(7).Code(attr).Code("\n")
+			}
 			dst.Tab(6).Code("/>\n")
 		}
 

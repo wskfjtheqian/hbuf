@@ -583,10 +583,13 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 
 		fieldName := build.StringToFirstLower(field.Name.Name)
 		className := build.StringToMiddleLine(field.Name.Name)
+		//if fieldName == "prizeParams" {
+		//	println("aa")
+		//}
 
 		dst.Tab(4).Code("\"").Code(fieldName).Code("\": () =>(\n")
 
-		if "object" != formTag || len(customTag) > 0 {
+		if "object" != formTag || len(form.form) > 1 {
 			dst.Tab(5).Code("<el-form-item class=\"").Code(className).Code("\" prop=\"").Code(fieldName).Code("\"")
 			dst.Code(" label={ctx.$t(\"").Code(langName).Code("Lang.").Code(fieldName).Code("\")}")
 			if verify {
@@ -1037,7 +1040,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 		}
 
 		lang.Add(fieldName, field.Tags)
-		if "object" != formTag || len(customTag) > 0 {
+		if "object" != formTag || len(form.form) > 1 {
 			dst.Tab(5).Code("</el-form-item>\n")
 		}
 		dst.Tab(4).Code("),\n")

@@ -174,7 +174,7 @@ func (b *Builder) printDescriptor(dst *build.Writer, expr ast.Expr, isNull bool,
 }
 
 func (b *Builder) printDataStruct(dst *build.Writer, typ *ast.DataType) error {
-	dbs, _, _, err := b.getDBField(typ)
+	db, _, _, err := b.getDBField(typ)
 	if err != nil {
 		return err
 	}
@@ -190,8 +190,8 @@ func (b *Builder) printDataStruct(dst *build.Writer, typ *ast.DataType) error {
 	tagLen := 0
 
 	isChange := false
-	if len(dbs) > 0 {
-		val := strings.ToLower(dbs[0].Change)
+	if db != nil {
+		val := strings.ToLower(db.Change)
 		if "self" == val || "parent" == val {
 			isChange = true
 		}
@@ -339,7 +339,7 @@ func (b *Builder) printDataStruct(dst *build.Writer, typ *ast.DataType) error {
 		}
 		if isChange {
 			temp := build.GetDB(field.Name.Name, field.Tags)
-			if len(temp) > 0 {
+			if temp != nil {
 				dst.Tab(1).Code("g.changeFields[int(").Code(uName).Code("Field_").Code(uFieldName).Code(")] = true\n")
 			}
 		}

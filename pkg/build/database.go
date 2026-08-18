@@ -31,6 +31,7 @@ type DB struct {
 	Converter string
 	Group     string
 	Change    string
+	Join      []string
 }
 
 type DBField struct {
@@ -60,9 +61,15 @@ func GetDB(n string, tag []*ast.Tag) *DB {
 			} else if "where" == item.Name.Name {
 				where := make([]string, len(item.Values))
 				for i, val := range item.Values {
-					where[i] = val.Value[1 : len(item.Values[0].Value)-1]
+					where[i] = val.Value[1 : len(val.Value)-1]
 				}
 				db.Where = where
+			} else if "join" == item.Name.Name {
+				join := make([]string, len(item.Values))
+				for i, val := range item.Values {
+					join[i] = val.Value[1 : len(val.Value)-1]
+				}
+				db.Join = join
 			} else if "offset" == item.Name.Name {
 				db.Offset = item.Values[0].Value[1 : len(item.Values[0].Value)-1]
 			} else if "limit" == item.Name.Name {

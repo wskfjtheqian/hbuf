@@ -102,8 +102,11 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 		strings.ToLower(fdb.Map) == "self" ||
 		strings.ToLower(fdb.List) == "self" ||
 		strings.ToLower(fdb.ListAsync) == "self")) {
-		b.printField(dst, fType, wFields)
-		b.printScanData(dst, fType, db, wFields, key)
+		b.printField(dst, fType, db, wFields)
+		err := b.printScanData(dst, fType, db, wFields, key)
+		if err != nil {
+			return err
+		}
 		b.printNameData(dst, fType)
 	}
 	join := len(fdb.Join) > 0 && strings.ToLower(fdb.Join[0]) == "true"
@@ -111,7 +114,10 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 		if typ.Name.Name == "GameInfoClassGameInfo" {
 			println(11)
 		}
-		b.printJoin(dst, typ, db, fType, c)
+		err := b.printJoin(dst, typ, db, fType, c)
+		if err != nil {
+			return err
+		}
 	}
 
 	val := strings.ToLower(fdb.List)
@@ -295,12 +301,64 @@ func (b *Builder) getDBField(typ *ast.DataType) (*build.DB, []*build.DBField, *b
 	return db, fields, key, nil
 }
 
-func (b *Builder) printField(dst *build.Writer, typ *ast.DataType, fields []*build.DBField) {
+func (b *Builder) printField(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField) error {
+	join := len(db.Join) > 0 && strings.ToLower(db.Join[0]) == "true"
+
 	uName := build.StringToHumpName(typ.Name.Name)
 	lName := build.StringToFirstLower(typ.Name.Name)
-	dst.Code("const ").Code(lName).Code("FieldCount uint = ").Code(strconv.Itoa(len(fields))).Code("\n\n")
-
 	dst.Code("type ").Code(uName).Code("Field uint16\n\n")
+
+	if join {
+		dst.Code("func ").Code(uName).Code("FieldBy(")
+		err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
+			db1 := build.GetDB(field.Name.Name, field.Tags)
+			if db1 == nil {
+				return nil
+			}
+			table := b.GetDataType(b.getFile(typ.Name), field.Type.Type().(*ast.Ident).Name)
+			if nil == table {
+				return nil
+			}
+
+			dst.Code("_").Code(build.StringToFirstLower(field.Name.Name)).Code(" []").Code(build.StringToHumpName(table.Name)).Code("Field, ")
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+
+		dst.Code(") []").Code(uName).Code("Field {\n")
+		dst.Tab(1).Code("var result []").Code(uName).Code("Field\n")
+		var before string
+		err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
+			db1 := build.GetDB(field.Name.Name, field.Tags)
+			if db1 == nil {
+				return nil
+			}
+			table := b.GetDataType(b.getFile(typ.Name), field.Type.Type().(*ast.Ident).Name)
+			if nil == table {
+				return nil
+			}
+
+			dst.Tab(1).Code("for _, field := range _").Code(build.StringToFirstLower(field.Name.Name)).Code(" {\n")
+			dst.Tab(2).Code("result = append(result, ").Code(uName).Code("Field(field)")
+			if len(before) > 0 {
+				dst.Code(" + ").Code(uName).Code("Field(").Code(build.StringToFirstLower(before)).Code("FieldCount)")
+			}
+			dst.Code(")\n")
+			dst.Tab(1).Code("}\n")
+			before = table.Name
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+
+		dst.Tab(1).Code("return result\n")
+		dst.Tab(0).Code("}\n\n")
+		return nil
+	}
+	dst.Code("const ").Code(lName).Code("FieldCount uint = ").Code(strconv.Itoa(len(fields))).Code("\n\n")
 	dst.Code("func (f ").Code(uName).Code("Field) Name() string {\n")
 	dst.Tab(1).Code("return ").Code(lName).Code("FieldNames[f]\n")
 	dst.Code("}\n\n")
@@ -395,6 +453,7 @@ func (b *Builder) printField(dst *build.Writer, typ *ast.DataType, fields []*bui
 	dst.Tab(1).Code("return list\n")
 	dst.Code("}\n\n")
 
+	return nil
 }
 
 func (b *Builder) printScanData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField) error {
@@ -403,9 +462,9 @@ func (b *Builder) printScanData(dst *build.Writer, typ *ast.DataType, db *build.
 	name := build.StringToHumpName(typ.Name.Name)
 	_, scan, _ := b.getItemAndValue(fields, "self")
 	dst.Code("func (val *").Code(name).Code(") DbScanColumns(columns ...").Code(name).Code("Field) []any {\n")
-	dst.Tab(1).Code("if len(columns) == 0 {\n")
 	if join {
-		dst.Tab(2).Code("var ret []any\n")
+		dst.Tab(1).Code("var result []any\n")
+		var before string
 		err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 			db1 := build.GetDB(field.Name.Name, field.Tags)
 			if db1 == nil {
@@ -417,40 +476,46 @@ func (b *Builder) printScanData(dst *build.Writer, typ *ast.DataType, db *build.
 			}
 
 			fName := build.StringToHumpName(field.Name.Name)
-			dst.Tab(2).Code("ret = append(ret, val.").Code(fName).Code(".DbScanColumns()...)\n")
-
+			dst.Tab(1).Code("result = append(result, val.").Code(fName).Code(".DbScanColumns(utl.Slice(columns, func(i int, v ").Code(name).Code("Field) ").Code(table.Name).Code("Field {\n")
+			dst.Tab(2).Code("return ").Code(table.Name).Code("Field(v)")
+			if len(before) > 0 {
+				dst.Code(" - ").Code(table.Name).Code("Field(").Code(build.StringToFirstLower(before)).Code("FieldCount)")
+			}
+			dst.Code("\n")
+			dst.Tab(1).Code("})...)...)\n")
+			before = table.Name
 			return nil
 		})
 		if err != nil {
 			return err
 		}
-		dst.Tab(2).Code("return ret\n")
 	} else {
+
+		dst.Tab(1).Code("if len(columns) == 0 {\n")
 		dst.Tab(2).Code("return []any{" + scan.String() + "}\n")
-	}
-	dst.Tab(1).Code("}\n")
+		dst.Tab(1).Code("}\n")
 
-	dst.Tab(1).Code("result := make([]any, 0, len(columns))\n")
-	dst.Tab(1).Code("for _, field := range columns {\n")
-	dst.Tab(2).Code("switch field {\n")
-	for _, field := range fields {
-		fieldName := build.StringToHumpName(field.Field.Name.Name)
-		dst.Tab(2).Code("case ").Code(name).Code("Field_").Code(fieldName).Code(":\n")
-		dst.Tab(3).Code("result = append(result, ").Code(b.converter(field, "val")).Code(")\n")
-	}
+		dst.Tab(1).Code("result := make([]any, 0, len(columns))\n")
+		dst.Tab(1).Code("for _, field := range columns {\n")
+		dst.Tab(2).Code("switch field {\n")
+		for _, field := range fields {
+			fieldName := build.StringToHumpName(field.Field.Name.Name)
+			dst.Tab(2).Code("case ").Code(name).Code("Field_").Code(fieldName).Code(":\n")
+			dst.Tab(3).Code("result = append(result, ").Code(b.converter(field, "val")).Code(")\n")
+		}
 
-	dst.Tab(2).Code("default:\n")
-	dst.Tab(2).Code("}\n")
-	dst.Tab(1).Code("}\n")
+		dst.Tab(2).Code("default:\n")
+		dst.Tab(2).Code("}\n")
+		dst.Tab(1).Code("}\n")
+	}
 	dst.Tab(1).Code("return result\n")
-
 	dst.Code("}\n")
 	dst.Code("\n")
 
 	dst.Code("func (val *").Code(name).Code(") DbScanNames(columns ...").Code(name).Code("Field) []string {\n")
-	dst.Tab(1).Code("if len(columns) == 0 {\n")
 	if join {
-		dst.Tab(2).Code("var ret []string\n")
+		dst.Tab(1).Code("var result []string\n")
+		var before string
 		err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 			db1 := build.GetDB(field.Name.Name, field.Tags)
 			if db1 == nil {
@@ -465,29 +530,37 @@ func (b *Builder) printScanData(dst *build.Writer, typ *ast.DataType, db *build.
 			if len(as) == 0 {
 				as = build.StringToUnderlineName(field.Name.Name)
 			}
-			dst.Tab(2).Code("for _, name := range ").Code(build.StringToFirstLower(table.Name)).Code("FieldDbGets {\n")
-			dst.Tab(3).Code("ret = append(ret, \"").Code(as).Code(".\"+name)\n")
-			dst.Tab(2).Code("}\n")
+
+			fName := build.StringToHumpName(field.Name.Name)
+			dst.Tab(1).Code("for _, name := range val.").Code(fName).Code(".DbScanNames(utl.Slice(columns, func(i int, v ").Code(name).Code("Field) ").Code(table.Name).Code("Field {\n")
+			dst.Tab(2).Code("return ").Code(table.Name).Code("Field(v)")
+			if len(before) > 0 {
+				dst.Code(" - ").Code(table.Name).Code("Field(").Code(build.StringToFirstLower(before)).Code("FieldCount)")
+			}
+			dst.Code("\n")
+			dst.Tab(1).Code("})...) {\n")
+			dst.Tab(2).Code("result = append(result, \"").Code(as).Code(".\"+name)\n")
+			dst.Tab(1).Code("}\n")
+			before = table.Name
 			return nil
 		})
 		if err != nil {
 			return err
 		}
-		dst.Tab(2).Code("return ret\n")
 	} else {
+		dst.Tab(1).Code("if len(columns) == 0 {\n")
 		dst.Tab(2).Code("return ").Code(build.StringToFirstLower(name)).Code("FieldDbGets[:]\n")
+		dst.Tab(1).Code("}\n")
+
+		dst.Tab(1).Code("result := make([]string, 0, len(columns))\n")
+		dst.Tab(1).Code("for _, field := range columns {\n")
+		dst.Tab(2).Code("if int(field) < len(").Code(build.StringToFirstLower(typ.Name.Name)).Code("FieldNames) {\n")
+		dst.Tab(3).Code("result = append(result, ").Code(build.StringToFirstLower(typ.Name.Name)).Code("FieldDbGets[field])\n")
+
+		dst.Tab(2).Code("}\n")
+		dst.Tab(1).Code("}\n")
 	}
-	dst.Tab(1).Code("}\n")
-
-	dst.Tab(1).Code("result := make([]string, 0, len(columns))\n")
-	dst.Tab(1).Code("for _, field := range columns {\n")
-	dst.Tab(2).Code("if int(field) < len(").Code(build.StringToFirstLower(typ.Name.Name)).Code("FieldNames) {\n")
-	dst.Tab(3).Code("result = append(result, ").Code(build.StringToFirstLower(typ.Name.Name)).Code("FieldDbGets[field])\n")
-
-	dst.Tab(2).Code("}\n")
-	dst.Tab(1).Code("}\n")
 	dst.Tab(1).Code("return result\n")
-
 	dst.Code("}\n")
 	dst.Code("\n")
 	return nil
@@ -870,11 +943,20 @@ func (b *Builder) printListAsyncData(dst *build.Writer, typ *ast.DataType, key s
 	dst.AddImports(w.GetImports())
 
 	dst.Code("func (g " + fName + ") DbListAsync(ctx context.Context, fn func(ctx context.Context, ret *").Code(dName).Code(") (bool, error), columns ...").Code(dName).Code("Field) error {\n")
-	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
+	dst.Tab(1).Code("var val ").Code(dName).Code("\n")
 	dst.Tab(1).Code("s := db.NewBuilder()\n")
 
-	dst.Tab(1).Code("var val ").Code(dName).Code("\n")
-	dst.Tab(1).Code("s.T(\"SELECT \").T(strings.Join(val.DbScanNames(columns...), \", \")).T(\" FROM \").T(tableName).T(\" WHERE is_deleted = 0\")\n")
+	dst.Import("strings")
+	dst.Tab(1).Code("s.T(\"SELECT \").T(strings.Join(val.DbScanNames(columns...), \", \")).T(\" FROM \")\n")
+	join := len(db.Join) > 0 && strings.ToLower(db.Join[0]) == "true"
+	if join {
+		dst.Tab(1).Code("s.Join(val.DbJoin(ctx))\n")
+		dst.Tab(1).Code("s.T(\"WHERE\")").Code(".Join(val.DbWhere())\n")
+	} else {
+		dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
+		dst.Tab(1).Code("s.T(tableName)\n")
+		dst.Tab(1).Code("s.T(\"WHERE is_deleted = 0\")\n")
+	}
 	dst.Code(w.GetCode().String())
 
 	tab := 0

@@ -243,6 +243,7 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 		b.printSetData(dst, typ, val, db, w, f, fType, c)
 	}
 
+	isTemp := false
 	val = strings.ToLower(fdb.Change)
 	if "self" == val || "parent" == val {
 		w := wFields
@@ -251,10 +252,28 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 			f = wFields
 		}
 		if typ == fType {
+			isTemp = true
 			key.DB.Where = []string{"AND id = ?"}
 			w = []*build.DBField{key}
 		}
 		b.printUpdateChange(dst, typ, val, db, w, f, fType, c)
+	}
+
+	val = strings.ToLower(fdb.Changes)
+	if "self" == val || "parent" == val {
+		f := fields
+		if "self" == val {
+			f = wFields
+		}
+		if typ == fType {
+			isTemp = true
+			key.DB.Where = []string{"AND id = ?"}
+		}
+		b.printUpdateChanges(dst, typ, val, db, key, f, fType, c)
+	}
+
+	if isTemp {
+		b.printChangesFields(dst, fType)
 	}
 
 	val = strings.ToLower(fdb.Get)
@@ -1390,26 +1409,112 @@ func (b *Builder) printUpdateChange(dst *build.Writer, typ *ast.DataType, key st
 	dst.Code("}\n\n")
 
 	if typ == fType {
-		lName := build.StringToFirstLower(fType.Name.Name)
-		dst.Code("func (g *" + uName + ") DbSetChangeFields(fields ...").Code(uName).Code("Field) {\n")
 
-		dst.Tab(1).Code("g.changeFields = make([]bool, ").Code(lName).Code("FieldCount)\n")
-		dst.Tab(1).Code("for _, item := range fields {\n")
-		dst.Tab(2).Code("g.changeFields[item] = true\n")
-		dst.Tab(1).Code("}\n")
-		dst.Code("}\n\n")
-
-		dst.Code("func (g *" + uName + ") DbAllChangeFields() {\n")
-		dst.Tab(1).Code("g.changeFields = make([]bool, ").Code(lName).Code("FieldCount)\n")
-		dst.Tab(1).Code("for i := 0; i < int(").Code(lName).Code("FieldCount); i++ {\n")
-		dst.Tab(2).Code("g.changeFields[i] = true\n")
-		dst.Tab(1).Code("}\n")
-		dst.Code("}\n\n")
-
-		dst.Code("func (g *" + uName + ") DbClearChangeFields() {\n")
-		dst.Tab(1).Code("g.changeFields = make([]bool, ").Code(lName).Code("FieldCount)\n")
-		dst.Code("}\n\n")
 	}
+}
+func (b *Builder) printChangesFields(dst *build.Writer, fType *ast.DataType) {
+	uName := build.StringToHumpName(fType.Name.Name)
+
+	lName := build.StringToFirstLower(fType.Name.Name)
+	dst.Code("func (g *" + uName + ") DbSetChangeFields(fields ...").Code(uName).Code("Field) {\n")
+
+	dst.Tab(1).Code("g.changeFields = make([]bool, ").Code(lName).Code("FieldCount)\n")
+	dst.Tab(1).Code("for _, item := range fields {\n")
+	dst.Tab(2).Code("g.changeFields[item] = true\n")
+	dst.Tab(1).Code("}\n")
+	dst.Code("}\n\n")
+
+	dst.Code("func (g *" + uName + ") DbAllChangeFields() {\n")
+	dst.Tab(1).Code("g.changeFields = make([]bool, ").Code(lName).Code("FieldCount)\n")
+	dst.Tab(1).Code("for i := 0; i < int(").Code(lName).Code("FieldCount); i++ {\n")
+	dst.Tab(2).Code("g.changeFields[i] = true\n")
+	dst.Tab(1).Code("}\n")
+	dst.Code("}\n\n")
+
+	dst.Code("func (g *" + uName + ") DbClearChangeFields() {\n")
+	dst.Tab(1).Code("g.changeFields = make([]bool, ").Code(lName).Code("FieldCount)\n")
+	dst.Code("}\n\n")
+}
+func (b *Builder) printUpdateChanges(dst *build.Writer, typ *ast.DataType, val string, db *build.DB, key *build.DBField, fields []*build.DBField, fType *ast.DataType, c *cache) {
+	dst.Import("context")
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db")
+
+	uName := build.StringToHumpName(fType.Name.Name)
+	dst.Code("func (g ").Code(uName).Code(") DbUpdateChanges(ctx context.Context")
+	if val == "parent" {
+		dst.Code(", list ...").Code(build.StringToHumpName(typ.Name.Name))
+	} else {
+		dst.Code(", list ...").Code(uName)
+	}
+	dst.Code(") (int64, int64, error) {\n")
+
+	//dst.Tab(1).Code("isChange := false\n")
+	//set := b.printSet(typ, fields, typ == fType || key == "parent", SetWhereChange, object)
+	//dst.AddImports(set.GetImports())
+	//dst.Code(set.String())
+	//
+	//dst.Tab(1).Code("s.T(\"WHERE 1 = 1 \")\n")
+	//dst.Code(w.String())
+	//dst.Code("\n")
+
+	lName := build.StringToFirstLower(fType.Name.Name)
+	dst.Tab(1).Code("builder := make(map[").Code(uName).Code("Field]*db.Builder, ").Code(lName).Code("FieldCount)\n")
+	dst.Tab(1).Code("ids := make([]any, 0, len(list))\n")
+	dst.Tab(1).Code("for i := 0; i < int(").Code(lName).Code("FieldCount); i++ {\n")
+	dst.Tab(2).Code("builder[").Code(uName).Code("Field(i)] = db.NewBuilder()\n")
+	dst.Tab(1).Code("}\n")
+
+	dst.Tab(1).Code("for _, item := range list {\n")
+	dst.Tab(1).Code("isChange := false\n")
+	keyName := build.StringToHumpName(key.Field.Name.Name)
+	//allSet := typ == fType || key == "parent"
+	for _, field := range fields {
+		//set := ""
+		//if 0 < len(field.DB.Set) {
+		//	set = field.DB.Name + " = " + field.DB.Set
+		//} else if allSet {
+		//	set = field.DB.Name + " = ?"
+		//} else {
+		//	continue
+		//}
+		if field == key {
+			continue
+		}
+		name := build.StringToHumpName(field.Field.Name.Name)
+		dst.Tab(2).Code("if item.changeFields[").Code(uName).Code("Field_").Code(name).Code("] {\n")
+		dst.Tab(3).Code("isChange = false\n")
+		dst.Tab(3).Code("builder[").Code(uName).Code("Field_").Code(name).Code("].T(\"WHEN\").V(&item.").Code(keyName).Code(").T(\"THEN\").V(&item.").Code(name).Code(")\n")
+		//_ = b.printParam(dst, set, field, fields, "", "", object)
+
+		dst.Tab(2).Code("}\n")
+	}
+
+	dst.Tab(2).Code("if !isChange {\n")
+	dst.Tab(3).Code("ids = append(ids, &item.").Code(keyName).Code(")\n")
+	dst.Tab(2).Code("}\n")
+	dst.Tab(1).Code("}\n")
+
+	dst.Tab(1).Code("if len(builder)== 0 {\n")
+	dst.Tab(2).Code("return 0, 0, nil\n")
+	dst.Tab(1).Code("}\n")
+
+	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
+	dst.Tab(1).Code("s := db.NewBuilder()\n")
+	dst.Tab(1).Code("s.T(\"UPDATE \").T(tableName).T(\" SET \").Del(\",\")\n")
+
+	dst.Tab(1).Code("for i := 0; i < int(").Code(lName).Code("FieldCount); i++ {\n")
+	dst.Tab(2).Code("if val,ok:= builder[").Code(uName).Code("Field(i)];ok && !val.IsEmpty() {\n")
+	dst.Tab(3).Code("s.T(\", \").T(").Code(uName).Code("Field(i).DbName()).T(\"= CASE id\").Join(val).T(\"ELSE\").T(").Code(uName).Code("Field(i).DbName()).T(\"END\")\n")
+	dst.Tab(2).Code("}\n")
+	dst.Tab(1).Code("}\n")
+
+	dst.Tab(1).Code("s.T(\"WHERE 1 = 1 \")\n")
+	dst.Tab(1).Code("s.T(\"AND id IN(\").L(\",\", ids...).T(\")\")\n")
+	if nil != c {
+		dst.Tab(1).Code("_ = db.ClearCache(ctx, tableName)\n")
+	}
+	dst.Tab(1).Code("return s.Exec(ctx)\n")
+	dst.Code("}\n\n")
 }
 
 type SetWhere int

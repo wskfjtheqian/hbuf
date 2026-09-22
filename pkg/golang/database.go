@@ -679,24 +679,48 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 	}
 
 	if orderBy {
-		isFist := true
+		temp := false
 		for _, field := range fields {
 			order := field.DB.Order
 			if 0 < len(order) {
-				if build.IsNil(field.Field.Type) {
-					where.Tab(1).Code("if nil != g." + build.StringToHumpName(field.Field.Name.Name)).Code(" {\n").Tab(1)
-				}
-				if isFist {
-					where.Tab(1).Code("s.T(\"ORDER BY \")")
-				} else {
-					where.Tab(1).Code("s.T(\", \")")
-				}
-				_ = b.printParam(where, order, field, fields, "", "", "g")
-				if build.IsNil(field.Field.Type) {
-					where.Tab(1).Code("}\n")
-				}
-				isFist = false
+				temp = true
+				break
 			}
+		}
+		if temp {
+			where.Tab(1).Code("order:= db.NewBuilder()\n")
+			for _, field := range fields {
+				order := field.DB.Order
+				if 0 < len(order) {
+					if !build.IsArray(field.Field.Type) {
+						tab := 0
+						if build.IsNil(field.Field.Type) {
+							tab = 1
+							where.Tab(tab).Code("if nil != g.").Code(build.StringToHumpName(field.Field.Name.Name)).Code(" {\n")
+						}
+						where.Tab(tab + 1).Code("if !order.IsEmpty() {\n")
+						where.Tab(tab + 2).Code("order.T(\", \")\n")
+						where.Tab(tab + 1).Code("}\n")
+						where.Tab(tab + 1).Code("order")
+						_ = b.printParam(where, order, field, fields, "", "", "g")
+						if build.IsNil(field.Field.Type) {
+							where.Tab(tab).Code("}\n")
+						}
+					} else {
+						where.Tab(1).Code("for i := 0; i < len(g.").Code(build.StringToHumpName(field.Field.Name.Name)).Code("); i += 2 {\n")
+						where.Tab(2).Code("if strings.ToUpper(g.").Code(build.StringToHumpName(field.Field.Name.Name)).Code("[i+1]) == \"DESC\" || strings.ToUpper(g.").Code(build.StringToHumpName(field.Field.Name.Name)).Code("[i+1]) == \"ASC\" {\n")
+						where.Tab(3).Code("if !order.IsEmpty() {\n")
+						where.Tab(4).Code("order.T(\", \")\n")
+						where.Tab(3).Code("}\n")
+						where.Tab(3).Code("order.T(g.").Code(build.StringToHumpName(field.Field.Name.Name)).Code("[i]).T(\" \").T(strings.ToUpper(g.").Code(build.StringToHumpName(field.Field.Name.Name)).Code("[i+1]))\n")
+						where.Tab(2).Code("}\n")
+						where.Tab(1).Code("}\n")
+					}
+				}
+			}
+			where.Tab(1).Code("if !order.IsEmpty() {\n")
+			where.Tab(2).Code("s.T(\"ORDER BY \").Join(order)\n")
+			where.Tab(1).Code("}\n")
 		}
 	}
 

@@ -669,7 +669,7 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 			}
 		}
 		if temp {
-			where.Tab(1).Code("order:= db.NewBuilder()\n")
+			where.Tab(1).Code("order := db.NewBuilder()\n")
 			for _, field := range fields {
 				order := field.DB.Order
 				if 0 < len(order) {
@@ -930,7 +930,7 @@ func (b *Builder) printListData(dst *build.Writer, typ *ast.DataType, key string
 		dst.Import("time")
 
 		dst.Tab(1).Code("return db.SaveCache(ctx, tableName, s, time.Duration(rand.Intn(").Code(strconv.Itoa(c.max))
-		dst.Code("-").Code(strconv.Itoa(c.min)).Code(")+").Code(strconv.Itoa(c.min)).Code(")*time.Second,")
+		dst.Code("-").Code(strconv.Itoa(c.min)).Code(")+").Code(strconv.Itoa(c.min)).Code(")*time.Second, ")
 		dst.Code("func(ctx context.Context) ([]").Code(dName).Code(", error) {\n")
 	}
 	dst.Import("database/sql")

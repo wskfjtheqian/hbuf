@@ -231,8 +231,7 @@ func (b *Builder) printClient(dst *build.Writer, typ *ast.ServerType) {
 			dst.Code("response")
 		}
 		dst.Code(", err := r.client.Invoke(ctx, 0, \"").Code(name).Code("\", \"")
-		dst.Code(build.StringToUnderlineName(method.Name.Name)).Code("\", \"")
-		dst.Code(b.getFilterTag(method))
+		dst.Code(build.StringToUnderlineName(method.Name.Name))
 		dst.Code("\", req, ")
 		if resultType == "void" || resultType == "stream" {
 			dst.Code("nil")

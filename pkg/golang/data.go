@@ -56,7 +56,7 @@ func (b *Builder) printDataDescriptor(dst *build.Writer, typ *ast.DataType) erro
 		b.printDescriptor(dst, extend.Name, false, name, build.StringToHumpName(extend.Name.Name))
 		dst.Code(",\n")
 	}
-	dst.Code("}, map[uint16]hbuf.Descriptor{")
+	dst.Tab(1).Code("}, map[uint16]hbuf.Descriptor{")
 	if len(typ.Fields.List) > 0 {
 		dst.Code("\n")
 	}
@@ -118,7 +118,7 @@ func (b *Builder) printDescriptor(dst *build.Writer, expr ast.Expr, isNull bool,
 			if ast.Enum == t.Obj.Kind {
 				dst.Code("hbuf.NewInt32Descriptor(").Code(offsetof).Code(", ").Code(isPrt).Code(")")
 			} else {
-				dst.Code("hbuf.CloneDataDescriptor(&").Code(pack + build.StringToHumpName((expr.(*ast.Ident)).Name)).Code("{}, ").Code(offsetof).Code(", ").Code(isPrt).Code(")")
+				dst.Code("hbuf.NewRefDescriptor(&").Code(pack + build.StringToHumpName((expr.(*ast.Ident)).Name)).Code("{}, ").Code(offsetof).Code(", ").Code(isPrt).Code(")")
 			}
 		} else {
 			switch build.BaseType((expr.(*ast.Ident)).Name) {

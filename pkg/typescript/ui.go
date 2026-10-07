@@ -207,13 +207,16 @@ func (b *Builder) getUI(tags []*ast.Tag) *ui {
 	return &form
 }
 
-func (b *Builder) printDataUi(dst *build.Writer, typ *ast.DataType) {
+func (b *Builder) printDataUi(dst *build.Writer, typ *ast.DataType) error {
 	u := b.getUI(typ.Tags)
 	if nil == u {
-		return
+		return nil
 	}
 
-	b.printLang(dst, typ, u)
+	err := b.printLang(dst, typ, u)
+	if err != nil {
+		return err
+	}
 
 	if len(u.form) > 0 && u.form[0] == "true" {
 		b.printForm(dst, typ, u)
@@ -227,7 +230,7 @@ func (b *Builder) printDataUi(dst *build.Writer, typ *ast.DataType) {
 		}
 		b.printTable(dst, typ, u)
 	}
-
+	return nil
 }
 
 func (b *Builder) printLang(dst *build.Writer, typ *ast.DataType, u *ui) error {
@@ -875,7 +878,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 					suffix = ""
 				}
 			}
-			scale := 0
+			scale := 1
 			if suffix == "%" {
 				scale = 100
 			} else if suffix == "‰" {
@@ -914,10 +917,10 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Tab(7).Code("precision={").Code(strconv.Itoa(digit)).Code("}\n")
 			if form.min != nil {
-				dst.Tab(7).Code("min={").Code(strconv.FormatFloat(*form.min, 'f', -1, 64)).Code("}\n")
+				dst.Tab(7).Code("min={").Code(strconv.FormatFloat(*form.min*float64(scale), 'f', -1, 64)).Code("}\n")
 			}
 			if form.max != nil {
-				dst.Tab(7).Code("max={").Code(strconv.FormatFloat(*form.max, 'f', -1, 64)).Code("}\n")
+				dst.Tab(7).Code("max={").Code(strconv.FormatFloat(*form.max*float64(scale), 'f', -1, 64)).Code("}\n")
 			}
 			if form.step != nil {
 				dst.Tab(7).Code("step={").Code(strconv.FormatFloat(*form.step, 'f', -1, 64)).Code("}\n")
@@ -1134,7 +1137,7 @@ func (b *Builder) printMenuItem(dst *build.Writer, expr ast.Expr, empty bool, op
 		t := expr.(*ast.EnumType)
 		b.getPackage(dst, t.Name, "", false, false, "", "")
 		name := build.StringToHumpName(t.Name.Name)
-		dst.Tab(6 + 1).Code("{").Code(name).Code(".values.map((val) => {\n")
+		dst.Tab(6 + 1).Code("{").Code(name).Code(".values.filter((val) => val.cssClass.length > 0).map((val) => {\n")
 		dst.Tab(7 + 1).Code("return <" + option + " key={val.name} class={ 'el-option--' + val.type + ' ' + val.cssClass}\n")
 		dst.Tab(8 + 1).Code("label={ctx.$t(val.toString())}\n")
 		dst.Tab(8 + 1).Code("value={val.name}\n")
@@ -1374,7 +1377,7 @@ func (b *Builder) printGetNumberValue(dst *build.Writer, expr ast.Expr, name str
 			default:
 				dst.Code(name)
 			}
-			if scale > 0 {
+			if scale > 1 {
 				dst.Code(" * ").Code(strconv.Itoa(scale))
 			}
 		}
@@ -1421,7 +1424,7 @@ func (b *Builder) printSetNumberValue(dst *build.Writer, expr ast.Expr, name str
 					dst.Code("0")
 				}
 				dst.Code(" : (").Code(name).Code("! as number")
-				if scale > 0 {
+				if scale > 1 {
 					dst.Code(" / ").Code(strconv.Itoa(scale))
 				}
 				dst.Code("))")

@@ -362,7 +362,7 @@ func (b *Builder) getFile(name *ast.Ident) *ast.File {
 
 func (b *Builder) getLimit(fields []*build.DBField) (*build.DBField, bool) {
 	for _, field := range fields {
-		if 0 < len(field.Dbs[0].Limit) {
+		if 0 < len(field.DB.Limit) {
 			return field, true
 		}
 	}
@@ -371,7 +371,7 @@ func (b *Builder) getLimit(fields []*build.DBField) (*build.DBField, bool) {
 
 func (b *Builder) getOffset(fields []*build.DBField) (*build.DBField, bool) {
 	for _, field := range fields {
-		if 0 < len(field.Dbs[0].Offset) {
+		if 0 < len(field.DB.Offset) {
 			return field, true
 		}
 	}
@@ -396,10 +396,10 @@ func (b *Builder) getKey(dst *build.Writer, fields []*build.DBField, name string
 
 func (b *Builder) converter(field *build.DBField, name string) string {
 	fName := build.StringToHumpName(field.Field.Name.Name)
-	if "json" == field.Dbs[0].Converter {
+	if "json" == field.DB.Converter {
 		return "db.NewJson(&" + name + "." + fName + ")"
 	}
-	if "string" == field.Dbs[0].Converter {
+	if "string" == field.DB.Converter {
 		return "db.NewString(&" + name + "." + fName + ")"
 	}
 

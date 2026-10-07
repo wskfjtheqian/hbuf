@@ -74,66 +74,74 @@ func getCache(name string, tags []*ast.Tag) *cache {
 }
 
 func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error {
-	dbs, wFields, key, err := b.getDBField(typ)
-	if 0 == len(dbs) || nil != err {
+	db, wFields, key, err := b.getDBField(typ)
+	if db == nil || nil != err {
 		return nil
 	}
-
 	c := getCache(typ.Name.Name, typ.Tags)
 
-	fDbs := dbs
+	fdb := db
 	fields := wFields
 	fType := typ
-	if 0 < len(dbs[0].Table) {
-		table := b.build.GetDataType(b.getFile(typ.Name), dbs[0].Table)
+	if 0 < len(db.Table) {
+		table := b.build.GetDataType(b.getFile(typ.Name), db.Table)
 		if nil == table {
 			return nil
 		}
 		typ = table.Decl.(*ast.TypeSpec).Type.(*ast.DataType)
-		dbs, fields, key, err = b.getDBField(typ)
+		db, fields, key, err = b.getDBField(typ)
 		if nil != err {
 			return nil
 		}
-		if len(dbs) == 0 {
+		if db == nil {
 			return nil
 		}
 	}
 
-	if 0 == len(fDbs) {
-		return nil
-	}
-
-	if 0 == len(fDbs[0].Table) || (0 != len(fDbs[0].Table) && (strings.ToLower(fDbs[0].Get) == "self" ||
-		strings.ToLower(fDbs[0].Map) == "self" ||
-		strings.ToLower(fDbs[0].List) == "self" ||
-		strings.ToLower(fDbs[0].ListAsync) == "self")) {
-		b.printField(dst, fType, wFields)
-		b.printScanData(dst, fType, dbs[0], wFields, key)
+	if 0 == len(fdb.Table) || (0 != len(fdb.Table) && (strings.ToLower(fdb.Get) == "self" ||
+		strings.ToLower(fdb.Map) == "self" ||
+		strings.ToLower(fdb.List) == "self" ||
+		strings.ToLower(fdb.ListAsync) == "self")) {
+		b.printField(dst, fType, db, wFields)
+		err := b.printScanData(dst, fType, db, wFields, key)
+		if err != nil {
+			return err
+		}
 		b.printNameData(dst, fType)
 	}
+	join := len(fdb.Join) > 0 && strings.ToLower(fdb.Join[0]) == "true"
+	if join {
+		if typ.Name.Name == "GameInfoClassGameInfo" {
+			println(11)
+		}
+		err := b.printJoin(dst, typ, db, fType, c)
+		if err != nil {
+			return err
+		}
+	}
 
-	val := strings.ToLower(fDbs[0].List)
+	val := strings.ToLower(fdb.List)
 	if "self" == val || "parent" == val {
 		w := wFields
 		f := fields
 		if "self" == val {
 			f = wFields
 		}
-		b.printListData(dst, typ, val, dbs[0], w, f, fType, c)
+		b.printListData(dst, typ, val, db, w, f, fType, c)
 	}
 
-	val = strings.ToLower(fDbs[0].ListAsync)
+	val = strings.ToLower(fdb.ListAsync)
 	if "self" == val || "parent" == val {
 		w := wFields
 		f := fields
 		if "self" == val {
 			f = wFields
 		}
-		b.printListAsyncData(dst, typ, val, dbs[0], w, f, fType, c)
+		b.printListAsyncData(dst, typ, val, db, w, f, fType, c)
 	}
 
-	if 0 < len(fDbs[0].Map) {
-		ks := strings.Split(fDbs[0].Map, ":")
+	if 0 < len(fdb.Map) {
+		ks := strings.Split(fdb.Map, ":")
 		if 1 < len(ks) {
 			val = strings.ToLower(ks[1])
 			if ("self" == val || "parent" == val) && 0 < len(ks[0]) {
@@ -142,72 +150,53 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 				if "self" == val {
 					f = wFields
 				}
-				b.printMapData(dst, val, typ, dbs[0], w, f, fType, ks[0], c)
+				b.printMapData(dst, val, typ, db, w, f, fType, ks[0], c)
 			}
 		}
 	}
 
-	if fDbs[0].Count != nil {
-		b.printCountData(dst, typ, dbs[0], wFields, fType, fields, c, fDbs[0].Count)
+	if fdb.Count != nil {
+		b.printCountData(dst, typ, db, wFields, fType, fields, c, fdb.Count)
 	}
 
-	if fDbs[0].Del {
+	if fdb.Del {
 		w := wFields
 		if typ == fType {
-			key.Dbs[0].Where = []string{"AND id = ?"}
+			key.DB.Where = []string{"AND id = ?"}
 			w = []*build.DBField{key}
 		}
-		b.printDeleteData(dst, dbs[0], w, fType, nil != c)
+		b.printDeleteData(dst, db, w, fType, nil != c)
 	}
 
-	if fDbs[0].Remove {
+	if fdb.Remove {
 		w := wFields
 		if typ == fType {
-			key.Dbs[0].Where = []string{"AND id = ?"}
+			key.DB.Where = []string{"AND id = ?"}
 			w = []*build.DBField{key}
 		}
-		b.printRemoveData(dst, dbs[0], w, fType, nil != c)
+		b.printRemoveData(dst, db, w, fType, nil != c)
 	}
 
-	val = strings.ToLower(fDbs[0].Insert)
+	val = strings.ToLower(fdb.Insert)
 	if "self" == val || "parent" == val {
 		w := wFields
 		f := fields
 		if "self" == val {
 			f = wFields
 		}
-		b.printInsertOrReplaceData(dst, "Insert", typ, val, dbs[0], w, f, fType, key, c)
+		b.printInsertData(dst, typ, val, db, w, f, fType, key, c)
 	}
 
-	val = strings.ToLower(fDbs[0].Inserts)
+	val = strings.ToLower(fdb.Inserts)
 	if "self" == val || "parent" == val {
 		f := fields
 		if "self" == val {
 			f = wFields
 		}
-		b.printInsertOrReplaceBatchData(dst, "Insert", typ, dbs[0], f, key, nil != c)
+		b.printInsertBatchData(dst, typ, db, f, key, nil != c)
 	}
 
-	val = strings.ToLower(fDbs[0].Replace)
-	if "self" == val || "parent" == val {
-		w := wFields
-		f := fields
-		if "self" == val {
-			f = wFields
-		}
-		b.printInsertOrReplaceData(dst, "Replace", typ, val, dbs[0], w, f, fType, key, c)
-	}
-
-	val = strings.ToLower(fDbs[0].Replaces)
-	if "self" == val || "parent" == val {
-		f := fields
-		if "self" == val {
-			f = wFields
-		}
-		b.printInsertOrReplaceBatchData(dst, "Replace", typ, dbs[0], f, key, nil != c)
-	}
-
-	val = strings.ToLower(fDbs[0].Update)
+	val = strings.ToLower(fdb.Update)
 	if "self" == val || "parent" == val {
 		w := wFields
 		f := fields
@@ -215,13 +204,13 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 			f = wFields
 		}
 		if typ == fType {
-			key.Dbs[0].Where = []string{"AND id = ?"}
+			key.DB.Where = []string{"AND id = ?"}
 			w = []*build.DBField{key}
 		}
-		b.printUpdateData(dst, typ, val, dbs[0], w, f, fType, c)
+		b.printUpdateData(dst, typ, val, db, w, f, fType, c)
 	}
 
-	val = strings.ToLower(fDbs[0].Set)
+	val = strings.ToLower(fdb.Set)
 	if "self" == val || "parent" == val {
 		w := wFields
 		f := fields
@@ -229,13 +218,14 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 			f = wFields
 		}
 		if typ == fType {
-			key.Dbs[0].Where = []string{"AND id = ?"}
+			key.DB.Where = []string{"AND id = ?"}
 			w = []*build.DBField{key}
 		}
-		b.printSetData(dst, typ, val, dbs[0], w, f, fType, c)
+		b.printSetData(dst, typ, val, db, w, f, fType, c)
 	}
 
-	val = strings.ToLower(fDbs[0].Change)
+	isTemp := false
+	val = strings.ToLower(fdb.Change)
 	if "self" == val || "parent" == val {
 		w := wFields
 		f := fields
@@ -243,13 +233,31 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 			f = wFields
 		}
 		if typ == fType {
-			key.Dbs[0].Where = []string{"AND id = ?"}
+			isTemp = true
+			key.DB.Where = []string{"AND id = ?"}
 			w = []*build.DBField{key}
 		}
-		b.printUpdateChange(dst, typ, val, dbs[0], w, f, fType, c)
+		b.printUpdateChange(dst, typ, val, db, w, f, fType, c)
 	}
 
-	val = strings.ToLower(fDbs[0].Get)
+	val = strings.ToLower(fdb.Changes)
+	if "self" == val || "parent" == val {
+		f := fields
+		if "self" == val {
+			f = wFields
+		}
+		if typ == fType {
+			isTemp = true
+			key.DB.Where = []string{"AND id = ?"}
+		}
+		b.printUpdateChanges(dst, typ, val, db, key, f, fType, c)
+	}
+
+	if isTemp {
+		b.printChangesFields(dst, fType)
+	}
+
+	val = strings.ToLower(fdb.Get)
 	if "self" == val || "parent" == val {
 		w := wFields
 		f := fields
@@ -257,31 +265,31 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 			f = wFields
 		}
 		if typ == fType {
-			key.Dbs[0].Where = []string{"AND id = ?"}
+			key.DB.Where = []string{"AND id = ?"}
 			w = []*build.DBField{key}
 		}
-		b.printGetData(dst, typ, val, dbs[0], w, f, fType, c)
+		b.printGetData(dst, typ, val, db, w, f, fType, c)
 	}
 	return nil
 }
 
-func (b *Builder) getDBField(typ *ast.DataType) ([]*build.DB, []*build.DBField, *build.DBField, error) {
-	dbs := build.GetDB(typ.Name.Name, typ.Tags)
-	if 0 == len(dbs) {
+func (b *Builder) getDBField(typ *ast.DataType) (*build.DB, []*build.DBField, *build.DBField, error) {
+	db := build.GetDB(typ.Name.Name, typ.Tags)
+	if db == nil {
 		return nil, nil, nil, nil
 	}
 
 	var fields []*build.DBField
 	var key *build.DBField
 	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
-		dbs := build.GetDB(field.Name.Name, field.Tags)
-		if 0 < len(dbs) {
+		db := build.GetDB(field.Name.Name, field.Tags)
+		if db != nil {
 			f := build.DBField{
 				Field: field,
-				Dbs:   dbs,
+				DB:    db,
 			}
 			fields = append(fields, &f)
-			if nil == key || dbs[0].Key {
+			if nil == key || db.Key {
 				key = &f
 			}
 		}
@@ -290,15 +298,67 @@ func (b *Builder) getDBField(typ *ast.DataType) ([]*build.DB, []*build.DBField, 
 	if nil != err {
 		return nil, nil, nil, err
 	}
-	return dbs, fields, key, nil
+	return db, fields, key, nil
 }
 
-func (b *Builder) printField(dst *build.Writer, typ *ast.DataType, fields []*build.DBField) {
+func (b *Builder) printField(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField) error {
+	join := len(db.Join) > 0 && strings.ToLower(db.Join[0]) == "true"
+
 	uName := build.StringToHumpName(typ.Name.Name)
 	lName := build.StringToFirstLower(typ.Name.Name)
-	dst.Code("const ").Code(lName).Code("FieldCount uint = ").Code(strconv.Itoa(len(fields))).Code("\n\n")
-
 	dst.Code("type ").Code(uName).Code("Field uint16\n\n")
+
+	if join {
+		dst.Code("func ").Code(uName).Code("FieldBy(")
+		err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
+			db1 := build.GetDB(field.Name.Name, field.Tags)
+			if db1 == nil {
+				return nil
+			}
+			table := b.GetDataType(b.getFile(typ.Name), field.Type.Type().(*ast.Ident).Name)
+			if nil == table {
+				return nil
+			}
+
+			dst.Code("_").Code(build.StringToFirstLower(field.Name.Name)).Code(" []").Code(build.StringToHumpName(table.Name)).Code("Field, ")
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+
+		dst.Code(") []").Code(uName).Code("Field {\n")
+		dst.Tab(1).Code("var result []").Code(uName).Code("Field\n")
+		var before string
+		err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
+			db1 := build.GetDB(field.Name.Name, field.Tags)
+			if db1 == nil {
+				return nil
+			}
+			table := b.GetDataType(b.getFile(typ.Name), field.Type.Type().(*ast.Ident).Name)
+			if nil == table {
+				return nil
+			}
+
+			dst.Tab(1).Code("for _, field := range _").Code(build.StringToFirstLower(field.Name.Name)).Code(" {\n")
+			dst.Tab(2).Code("result = append(result, ").Code(uName).Code("Field(field)")
+			if len(before) > 0 {
+				dst.Code(" + ").Code(uName).Code("Field(").Code(build.StringToFirstLower(before)).Code("FieldCount)")
+			}
+			dst.Code(")\n")
+			dst.Tab(1).Code("}\n")
+			before = table.Name
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+
+		dst.Tab(1).Code("return result\n")
+		dst.Tab(0).Code("}\n\n")
+		return nil
+	}
+	dst.Code("const ").Code(lName).Code("FieldCount uint = ").Code(strconv.Itoa(len(fields))).Code("\n\n")
 	dst.Code("func (f ").Code(uName).Code("Field) Name() string {\n")
 	dst.Tab(1).Code("return ").Code(lName).Code("FieldNames[f]\n")
 	dst.Code("}\n\n")
@@ -328,7 +388,7 @@ func (b *Builder) printField(dst *build.Writer, typ *ast.DataType, fields []*bui
 	list = make([]databaseField, len(fields))
 	for i, field := range fields {
 		item := databaseField{
-			text:    "\"" + field.Dbs[0].Name + "\",",
+			text:    "\"" + field.DB.Name + "\",",
 			comment: strings.ReplaceAll(field.Field.Doc.Text(), "\n", ""),
 		}
 		list[i] = item
@@ -353,9 +413,9 @@ func (b *Builder) printField(dst *build.Writer, typ *ast.DataType, fields []*bui
 	dst.Code("var ").Code(lName).Code("FieldDbGets = [")
 	dst.Code(lName).Code("FieldCount").Code("]string{")
 	for i, field := range fields {
-		get := field.Dbs[0].Get
+		get := field.DB.Get
 		if len(get) == 0 {
-			get = field.Dbs[0].Name
+			get = field.DB.Name
 		}
 
 		item := databaseField{
@@ -372,7 +432,7 @@ func (b *Builder) printField(dst *build.Writer, typ *ast.DataType, fields []*bui
 	dst.Tab(1).Code("for _, item := range fields {\n")
 	dst.Tab(2).Code("switch item {\n")
 	for _, field := range fields {
-		dst.Tab(2).Code("case \"").Code(field.Dbs[0].Name).Code("\":\n")
+		dst.Tab(2).Code("case \"").Code(field.DB.Name).Code("\":\n")
 		dst.Tab(3).Code("list = append(list, ").Code(uName).Code("Field_").Code(build.StringToHumpName(field.Field.Name.Name)).Code(")\n")
 	}
 	dst.Tab(2).Code("}\n")
@@ -393,49 +453,117 @@ func (b *Builder) printField(dst *build.Writer, typ *ast.DataType, fields []*bui
 	dst.Tab(1).Code("return list\n")
 	dst.Code("}\n\n")
 
+	return nil
 }
 
-func (b *Builder) printScanData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField) {
+func (b *Builder) printScanData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField) error {
+	join := len(db.Join) > 0 && strings.ToLower(db.Join[0]) == "true"
+
 	name := build.StringToHumpName(typ.Name.Name)
 	_, scan, _ := b.getItemAndValue(fields, "self")
 	dst.Code("func (val *").Code(name).Code(") DbScanColumns(columns ...").Code(name).Code("Field) []any {\n")
-	dst.Tab(1).Code("if len(columns) == 0 {\n")
-	dst.Tab(2).Code("return []any{" + scan.String() + "}\n")
-	dst.Tab(1).Code("}\n")
+	if join {
+		dst.Tab(1).Code("var result []any\n")
+		var before string
+		err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
+			db1 := build.GetDB(field.Name.Name, field.Tags)
+			if db1 == nil {
+				return nil
+			}
+			table := b.GetDataType(b.getFile(typ.Name), field.Type.Type().(*ast.Ident).Name)
+			if nil == table {
+				return nil
+			}
 
-	dst.Tab(1).Code("result := make([]any, 0, len(columns))\n")
-	dst.Tab(1).Code("for _, field := range columns {\n")
-	dst.Tab(2).Code("switch field {\n")
-	for _, field := range fields {
-		fieldName := build.StringToHumpName(field.Field.Name.Name)
-		dst.Tab(2).Code("case ").Code(name).Code("Field_").Code(fieldName).Code(":\n")
-		dst.Tab(3).Code("result = append(result, ").Code(b.converter(field, "val")).Code(")\n")
+			fName := build.StringToHumpName(field.Name.Name)
+			dst.Tab(1).Code("result = append(result, val.").Code(fName).Code(".DbScanColumns(utl.Slice(columns, func(i int, v ").Code(name).Code("Field) ").Code(table.Name).Code("Field {\n")
+			dst.Tab(2).Code("return ").Code(table.Name).Code("Field(v)")
+			if len(before) > 0 {
+				dst.Code(" - ").Code(table.Name).Code("Field(").Code(build.StringToFirstLower(before)).Code("FieldCount)")
+			}
+			dst.Code("\n")
+			dst.Tab(1).Code("})...)...)\n")
+			before = table.Name
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+	} else {
+
+		dst.Tab(1).Code("if len(columns) == 0 {\n")
+		dst.Tab(2).Code("return []any{" + scan.String() + "}\n")
+		dst.Tab(1).Code("}\n")
+
+		dst.Tab(1).Code("result := make([]any, 0, len(columns))\n")
+		dst.Tab(1).Code("for _, field := range columns {\n")
+		dst.Tab(2).Code("switch field {\n")
+		for _, field := range fields {
+			fieldName := build.StringToHumpName(field.Field.Name.Name)
+			dst.Tab(2).Code("case ").Code(name).Code("Field_").Code(fieldName).Code(":\n")
+			dst.Tab(3).Code("result = append(result, ").Code(b.converter(field, "val")).Code(")\n")
+		}
+
+		dst.Tab(2).Code("default:\n")
+		dst.Tab(2).Code("}\n")
+		dst.Tab(1).Code("}\n")
 	}
-
-	dst.Tab(2).Code("default:\n")
-	dst.Tab(2).Code("}\n")
-	dst.Tab(1).Code("}\n")
 	dst.Tab(1).Code("return result\n")
-
 	dst.Code("}\n")
 	dst.Code("\n")
 
 	dst.Code("func (val *").Code(name).Code(") DbScanNames(columns ...").Code(name).Code("Field) []string {\n")
-	dst.Tab(1).Code("if len(columns) == 0 {\n")
-	dst.Tab(2).Code("return ").Code(build.StringToFirstLower(name)).Code("FieldDbGets[:]\n")
-	dst.Tab(1).Code("}\n")
+	if join {
+		dst.Tab(1).Code("var result []string\n")
+		var before string
+		err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
+			db1 := build.GetDB(field.Name.Name, field.Tags)
+			if db1 == nil {
+				return nil
+			}
+			table := b.GetDataType(b.getFile(typ.Name), field.Type.Type().(*ast.Ident).Name)
+			if nil == table {
+				return nil
+			}
 
-	dst.Tab(1).Code("result := make([]string, 0, len(columns))\n")
-	dst.Tab(1).Code("for _, field := range columns {\n")
-	dst.Tab(2).Code("if int(field) < len(").Code(build.StringToFirstLower(typ.Name.Name)).Code("FieldNames) {\n")
-	dst.Tab(3).Code("result = append(result, ").Code(build.StringToFirstLower(typ.Name.Name)).Code("FieldDbGets[field])\n")
+			as := db1.Name
+			if len(as) == 0 {
+				as = build.StringToUnderlineName(field.Name.Name)
+			}
 
-	dst.Tab(2).Code("}\n")
-	dst.Tab(1).Code("}\n")
+			fName := build.StringToHumpName(field.Name.Name)
+			dst.Tab(1).Code("for _, name := range val.").Code(fName).Code(".DbScanNames(utl.Slice(columns, func(i int, v ").Code(name).Code("Field) ").Code(table.Name).Code("Field {\n")
+			dst.Tab(2).Code("return ").Code(table.Name).Code("Field(v)")
+			if len(before) > 0 {
+				dst.Code(" - ").Code(table.Name).Code("Field(").Code(build.StringToFirstLower(before)).Code("FieldCount)")
+			}
+			dst.Code("\n")
+			dst.Tab(1).Code("})...) {\n")
+			dst.Tab(2).Code("result = append(result, \"").Code(as).Code(".\"+name)\n")
+			dst.Tab(1).Code("}\n")
+			before = table.Name
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+	} else {
+		dst.Tab(1).Code("if len(columns) == 0 {\n")
+		dst.Tab(2).Code("return ").Code(build.StringToFirstLower(name)).Code("FieldDbGets[:]\n")
+		dst.Tab(1).Code("}\n")
+
+		dst.Tab(1).Code("result := make([]string, 0, len(columns))\n")
+		dst.Tab(1).Code("for _, field := range columns {\n")
+		dst.Tab(2).Code("if int(field) < len(").Code(build.StringToFirstLower(typ.Name.Name)).Code("FieldNames) {\n")
+		dst.Tab(3).Code("result = append(result, ").Code(build.StringToFirstLower(typ.Name.Name)).Code("FieldDbGets[field])\n")
+
+		dst.Tab(2).Code("}\n")
+		dst.Tab(1).Code("}\n")
+	}
 	dst.Tab(1).Code("return result\n")
-
 	dst.Code("}\n")
 	dst.Code("\n")
+	return nil
 }
 
 func (b *Builder) printNameData(dst *build.Writer, typ *ast.DataType) {
@@ -453,16 +581,16 @@ func (b *Builder) getItemAndValue(fields []*build.DBField, key string) ([]string
 	isFist := true
 	for _, field := range fields {
 		get := ""
-		if field.Dbs[0].Get == "-" {
+		if field.DB.Get == "-" {
 			continue
-		} else if 0 < len(field.Dbs[0].Get) {
-			get = strings.ReplaceAll(field.Dbs[0].Get, "?", build.StringToUnderlineName(field.Dbs[0].Name))
+		} else if 0 < len(field.DB.Get) {
+			get = strings.ReplaceAll(field.DB.Get, "?", build.StringToUnderlineName(field.DB.Name))
 		} else if "self" == key {
-			get = build.StringToUnderlineName(field.Dbs[0].Name)
+			get = build.StringToUnderlineName(field.DB.Name)
 		} else {
 			continue
 		}
-		build.StringToUnderlineName(field.Dbs[0].Name)
+		build.StringToUnderlineName(field.DB.Name)
 		if !isFist {
 			scan.WriteString(", ")
 			ques.WriteString(", ")
@@ -481,7 +609,7 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 	where.Packages = dst.Packages
 
 	for _, field := range fields {
-		text := field.Dbs[0].Where
+		text := field.DB.Where
 		fieldName := build.StringToHumpName(field.Field.Name.Name)
 		for i, item := range text {
 			if 1 == len(text) || !build.IsArray(field.Field.Type) {
@@ -512,7 +640,7 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 	if groupBy {
 		isFist := true
 		for _, field := range fields {
-			group := field.Dbs[0].Group
+			group := field.DB.Group
 			if 0 < len(group) {
 				if build.IsNil(field.Field.Type) {
 					where.Tab(1).Code("if nil != g." + build.StringToHumpName(field.Field.Name.Name) + " {\n").Tab(1)
@@ -532,24 +660,48 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 	}
 
 	if orderBy {
-		isFist := true
+		temp := false
 		for _, field := range fields {
-			order := field.Dbs[0].Order
+			order := field.DB.Order
 			if 0 < len(order) {
-				if build.IsNil(field.Field.Type) {
-					where.Tab(1).Code("if nil != g." + build.StringToHumpName(field.Field.Name.Name)).Code(" {\n").Tab(1)
-				}
-				if isFist {
-					where.Tab(1).Code("s.T(\"ORDER BY \")")
-				} else {
-					where.Tab(1).Code("s.T(\", \")")
-				}
-				_ = b.printParam(where, order, field, fields, "", "", "g")
-				if build.IsNil(field.Field.Type) {
-					where.Tab(1).Code("}\n")
-				}
-				isFist = false
+				temp = true
+				break
 			}
+		}
+		if temp {
+			where.Tab(1).Code("order := db.NewBuilder()\n")
+			for _, field := range fields {
+				order := field.DB.Order
+				if 0 < len(order) {
+					if !build.IsArray(field.Field.Type) {
+						tab := 0
+						if build.IsNil(field.Field.Type) {
+							tab = 1
+							where.Tab(tab).Code("if nil != g.").Code(build.StringToHumpName(field.Field.Name.Name)).Code(" {\n")
+						}
+						where.Tab(tab + 1).Code("if !order.IsEmpty() {\n")
+						where.Tab(tab + 2).Code("order.T(\", \")\n")
+						where.Tab(tab + 1).Code("}\n")
+						where.Tab(tab + 1).Code("order")
+						_ = b.printParam(where, order, field, fields, "", "", "g")
+						if build.IsNil(field.Field.Type) {
+							where.Tab(tab).Code("}\n")
+						}
+					} else {
+						where.Tab(1).Code("for i := 0; i < len(g.").Code(build.StringToHumpName(field.Field.Name.Name)).Code("); i += 2 {\n")
+						where.Tab(2).Code("if strings.ToUpper(g.").Code(build.StringToHumpName(field.Field.Name.Name)).Code("[i+1]) == \"DESC\" || strings.ToUpper(g.").Code(build.StringToHumpName(field.Field.Name.Name)).Code("[i+1]) == \"ASC\" {\n")
+						where.Tab(3).Code("if !order.IsEmpty() {\n")
+						where.Tab(4).Code("order.T(\", \")\n")
+						where.Tab(3).Code("}\n")
+						where.Tab(3).Code("order.T(g.").Code(build.StringToHumpName(field.Field.Name.Name)).Code("[i]).T(\" \").T(strings.ToUpper(g.").Code(build.StringToHumpName(field.Field.Name.Name)).Code("[i+1]))\n")
+						where.Tab(2).Code("}\n")
+						where.Tab(1).Code("}\n")
+					}
+				}
+			}
+			where.Tab(1).Code("if !order.IsEmpty() {\n")
+			where.Tab(2).Code("s.T(\"ORDER BY \").Join(order)\n")
+			where.Tab(1).Code("}\n")
 		}
 	}
 
@@ -566,11 +718,11 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 					} else {
 						where.Tab(1).Code("if nil != g." + offsetName + " && nil != g." + limitName + " {\n")
 					}
-					where.Tab(2).Code("s.T(\" LIMIT " + offset.Dbs[0].Offset + ", " + limit.Dbs[0].Limit + "\")")
+					where.Tab(2).Code("s.T(\" LIMIT " + offset.DB.Offset + ", " + limit.DB.Limit + "\")")
 					where.Code(".P(g." + offsetName + ", g." + limitName + ")\n")
 					where.Tab(1).Code("}\n")
 				} else {
-					where.Tab(1).Code("s.T(\" LIMIT " + offset.Dbs[0].Offset + ", " + limit.Dbs[0].Limit + "\")")
+					where.Tab(1).Code("s.T(\" LIMIT " + offset.DB.Offset + ", " + limit.DB.Limit + "\")")
 					where.Code(".P(g." + offsetName + ", g." + limitName + ")\n")
 				}
 
@@ -578,11 +730,11 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 
 				if build.IsNil(limit.Field.Type) {
 					where.Tab(1).Code("if nil != g." + limitName + " {\n")
-					where.Tab(2).Code("s.T(\" LIMIT " + limit.Dbs[0].Limit + "\")")
+					where.Tab(2).Code("s.T(\" LIMIT " + limit.DB.Limit + "\")")
 					where.Code(".P(g." + limitName + ")\n")
 					where.Tab(1).Code("}\n")
 				} else {
-					where.Tab(1).Code("s.T(\" LIMIT " + limit.Dbs[0].Limit + "\")")
+					where.Tab(1).Code("s.T(\" LIMIT " + limit.DB.Limit + "\")")
 					where.Code(".P(g." + limitName + ")\n")
 				}
 			}
@@ -642,7 +794,7 @@ func (b *Builder) printParam(buf *build.Writer, text string, self *build.DBField
 						Msg: "Invalid name: " + t[2:len(t)-1],
 					}
 				}
-				if 0 == len(field.Dbs[0].Converter) && build.IsArray(field.Field.Type) && 0 == len(temp) {
+				if 0 == len(field.DB.Converter) && build.IsArray(field.Field.Type) && 0 == len(temp) {
 					buf.Code(".L(\",\", ")
 					buf.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hutl", "utl")
 					buf.Code("utl.ToAnyList(").Code(object).Code("." + build.StringToHumpName(field.Field.Name.Name) + ")...")
@@ -669,6 +821,76 @@ func (b *Builder) printParam(buf *build.Writer, text string, self *build.DBField
 	return nil
 }
 
+func (b *Builder) printJoin(dst *build.Writer, typ *ast.DataType, db *build.DB, fType *ast.DataType, c *cache) error {
+	dst.Import("context")
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db")
+
+	fName := build.StringToHumpName(fType.Name.Name)
+
+	dst.Code("func (g " + fName + ") DbJoin(ctx context.Context) *db.Builder {\n")
+	dst.Tab(1).Code("s := db.NewBuilder()\n")
+	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
+		db1 := build.GetDB(field.Name.Name, field.Tags)
+		if db1 == nil {
+			return nil
+		}
+		table := b.GetDataType(b.getFile(typ.Name), field.Type.Type().(*ast.Ident).Name)
+		if nil == table {
+			return nil
+		}
+		typ := table.Decl.(*ast.TypeSpec).Type.(*ast.DataType)
+		dName := build.StringToUnderlineName(typ.Name.Name)
+		dst.Tab(1).Code("s")
+		if len(db1.Join) > 0 {
+			dst.Code(".T(\"").Code(db1.Join[0]).Code(" JOIN\")")
+		}
+		name := db1.Name
+		if len(name) == 0 {
+			name = build.StringToUnderlineName(field.Name.Name)
+		}
+		dst.Code(".T(db.TableName(ctx, \"").Code(dName).Code("\"))").Code(".T(\"AS ").Code(name).Code("\")")
+		if len(db1.Join) > 1 {
+			dst.Code(".T(\"").Code(db1.Join[1]).Code("\")")
+		}
+		dst.Code("\n")
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	dst.Tab(1).Code("return s\n")
+	dst.Code("}\n\n")
+
+	dst.Code("func (g " + fName + ") DbWhere() *db.Builder {\n")
+	dst.Tab(1).Code("s := db.NewBuilder()\n")
+	index := 0
+	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
+		db1 := build.GetDB(field.Name.Name, field.Tags)
+		if db1 == nil {
+			return nil
+		}
+		name := db1.Name
+		if len(name) == 0 {
+			name = build.StringToUnderlineName(field.Name.Name)
+		}
+
+		if index == 0 {
+			dst.Tab(1).Code("s.T(\"").Code(name).Code(".is_deleted = 0\")\n")
+		} else {
+			dst.Tab(1).Code("s.T(\"AND ").Code(name).Code(".is_deleted = 0\")\n")
+		}
+		index++
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	dst.Tab(1).Code("return s\n")
+	dst.Code("}\n\n")
+	return nil
+}
+
 func (b *Builder) printListData(dst *build.Writer, typ *ast.DataType, key string, db *build.DB, wFields []*build.DBField, fields []*build.DBField, fType *ast.DataType, c *cache) {
 	dst.Import("context")
 	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db")
@@ -684,21 +906,31 @@ func (b *Builder) printListData(dst *build.Writer, typ *ast.DataType, key string
 	dst.AddImports(w.GetImports())
 
 	dst.Code("func (g " + fName + ") DbList(ctx context.Context, columns ...").Code(dName).Code("Field) ([]").Code(dName).Code(", error) {\n")
-	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
-	dst.Tab(1).Code("s := db.NewBuilder()\n")
-	dst.Import("strings")
 	dst.Tab(1).Code("var val ").Code(dName).Code("\n")
-	dst.Tab(1).Code("s.T(\"SELECT \").T(strings.Join(val.DbScanNames(columns...), \", \")).T(\" FROM \").T(tableName).T(\" WHERE is_deleted = 0\")\n")
+	dst.Tab(1).Code("s := db.NewBuilder()\n")
+
+	dst.Import("strings")
+	dst.Tab(1).Code("s.T(\"SELECT \").T(strings.Join(val.DbScanNames(columns...), \", \")).T(\" FROM \")\n")
+	join := len(db.Join) > 0 && strings.ToLower(db.Join[0]) == "true"
+	if join {
+		dst.Tab(1).Code("s.Join(val.DbJoin(ctx))\n")
+		dst.Tab(1).Code("s.T(\"WHERE\")").Code(".Join(val.DbWhere())\n")
+	} else {
+		dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
+		dst.Tab(1).Code("s.T(tableName)\n")
+		dst.Tab(1).Code("s.T(\"WHERE is_deleted = 0\")\n")
+	}
+
 	dst.Code(w.GetCode().String())
 
 	tab := 0
-	if nil != c {
+	if nil != c && !join {
 		tab = 1
 		dst.Import("math/rand")
 		dst.Import("time")
 
 		dst.Tab(1).Code("return db.SaveCache(ctx, tableName, s, time.Duration(rand.Intn(").Code(strconv.Itoa(c.max))
-		dst.Code("-").Code(strconv.Itoa(c.min)).Code(")+").Code(strconv.Itoa(c.min)).Code(")*time.Second,")
+		dst.Code("-").Code(strconv.Itoa(c.min)).Code(")+").Code(strconv.Itoa(c.min)).Code(")*time.Second, ")
 		dst.Code("func(ctx context.Context) ([]").Code(dName).Code(", error) {\n")
 	}
 	dst.Import("database/sql")
@@ -713,7 +945,7 @@ func (b *Builder) printListData(dst *build.Writer, typ *ast.DataType, key string
 	dst.Tab(tab + 1).Code("})\n")
 
 	dst.Tab(tab + 1).Code("return ret, err\n")
-	if nil != c {
+	if nil != c && !join {
 		dst.Tab(1).Code("})\n")
 	}
 	dst.Code("}\n")
@@ -735,11 +967,20 @@ func (b *Builder) printListAsyncData(dst *build.Writer, typ *ast.DataType, key s
 	dst.AddImports(w.GetImports())
 
 	dst.Code("func (g " + fName + ") DbListAsync(ctx context.Context, fn func(ctx context.Context, ret *").Code(dName).Code(") (bool, error), columns ...").Code(dName).Code("Field) error {\n")
-	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
+	dst.Tab(1).Code("var val ").Code(dName).Code("\n")
 	dst.Tab(1).Code("s := db.NewBuilder()\n")
 
-	dst.Tab(1).Code("var val ").Code(dName).Code("\n")
-	dst.Tab(1).Code("s.T(\"SELECT \").T(strings.Join(val.DbScanNames(columns...), \", \")).T(\" FROM \").T(tableName).T(\" WHERE is_deleted = 0\")\n")
+	dst.Import("strings")
+	dst.Tab(1).Code("s.T(\"SELECT \").T(strings.Join(val.DbScanNames(columns...), \", \")).T(\" FROM \")\n")
+	join := len(db.Join) > 0 && strings.ToLower(db.Join[0]) == "true"
+	if join {
+		dst.Tab(1).Code("s.Join(val.DbJoin(ctx))\n")
+		dst.Tab(1).Code("s.T(\"WHERE\")").Code(".Join(val.DbWhere())\n")
+	} else {
+		dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
+		dst.Tab(1).Code("s.T(tableName)\n")
+		dst.Tab(1).Code("s.T(\"WHERE is_deleted = 0\")\n")
+	}
 	dst.Code(w.GetCode().String())
 
 	tab := 0
@@ -814,7 +1055,7 @@ func (b *Builder) printMapData(dst *build.Writer, key string, typ *ast.DataType,
 	dst.Code("\n")
 }
 
-func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build.DB, wFields []*build.DBField, fType *ast.DataType, fFields []*build.DBField, c *cache, count *ast.BasicLit) {
+func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build.DB, wFields []*build.DBField, fType *ast.DataType, fFields []*build.DBField, c *cache, count *ast.BasicLit) error {
 	dst.Import("context")
 	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db")
 
@@ -824,15 +1065,32 @@ func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build
 	dst.AddImports(w.GetImports())
 
 	dst.Code("func (g " + fName + ") DbCount(ctx context.Context) (int64, error) {\n")
-	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
+	join := len(db.Join) > 0 && strings.ToLower(db.Join[0]) == "true"
+	if join {
+		dName := build.StringToHumpName(typ.Name.Name)
+		dst.Tab(1).Code("var v ").Code(dName).Code("\n")
+	} else {
+		dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
+	}
+
 	dst.Tab(1).Code("s := db.NewBuilder()\n")
 	dst.Tab(1).Code("s.T(\"SELECT COUNT(\")")
-	b.printCount(dst, count, wFields, "", "")
-	dst.Code(".T(\") FROM \").T(tableName).T(\" WHERE is_deleted = 0\")\n")
+
+	err := b.printCount(dst, count, wFields, "", "")
+	if err != nil {
+		return err
+	}
+
+	dst.Code(".T(\") FROM \")")
+	if join {
+		dst.Code(".Join(v.DbJoin(ctx)).T(\"WHERE\").Join(v.DbWhere())\n")
+	} else {
+		dst.Code(".T(tableName).T(\" WHERE is_deleted = 0\")\n")
+	}
 	dst.Code(w.GetCode().String())
 
 	tab := 0
-	if nil != c {
+	if nil != c && !join {
 		tab = 1
 		dst.Import("math/rand")
 		dst.Import("time")
@@ -847,11 +1105,12 @@ func (b *Builder) printCountData(dst *build.Writer, typ *ast.DataType, db *build
 	dst.Tab(tab + 2).Code("return false, rows.Scan(&val)\n")
 	dst.Tab(tab + 1).Code("})\n")
 	dst.Tab(tab + 1).Code("return val, err\n")
-	if nil != c {
+	if nil != c && !join {
 		dst.Tab(1).Code("})\n")
 	}
 	dst.Code("}\n")
 	dst.Code("\n")
+	return nil
 }
 
 var countRex = regexp.MustCompile(`(\${\w+})`)
@@ -938,7 +1197,7 @@ func (b *Builder) printRemoveData(dst *build.Writer, db *build.DB, wFields []*bu
 	dst.Code("}\n\n")
 }
 
-func (b *Builder) printInsertOrReplaceData(dst *build.Writer, s string, typ *ast.DataType, val string, db *build.DB, wFields []*build.DBField, fields []*build.DBField, fType *ast.DataType, key *build.DBField, c *cache) {
+func (b *Builder) printInsertData(dst *build.Writer, typ *ast.DataType, val string, db *build.DB, wFields []*build.DBField, fields []*build.DBField, fType *ast.DataType, key *build.DBField, c *cache) {
 	dst.Import("context")
 	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db")
 
@@ -949,17 +1208,17 @@ func (b *Builder) printInsertOrReplaceData(dst *build.Writer, s string, typ *ast
 	w := b.getParamWhere(dst, wFields, false, false, false, "")
 	dst.AddImports(w.GetImports())
 
-	dst.Code("func (g " + fName + ") Db").Code(s).Code("(ctx context.Context) (int64, int64, error) {\n")
+	dst.Code("func (g " + fName + ") DbInsert(ctx context.Context, action db.InsertAction) (int64, int64, error) {\n")
 	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
 	dst.Tab(1).Code("s := db.NewBuilder()\n")
 	dst.Tab(1).Code("v := db.NewBuilder()\n")
-	dst.Tab(1).Code("s.T(\"").Code(strings.ToUpper(s)).Code(" INTO \").T(tableName).T(\" (\").Del(\",\")\n")
+	dst.Tab(1).Code("s.T(action.String()).T(tableName).T(\" (\").Del(\",\")\n")
 	dst.Tab(1).Code("v.T(\"VALUES(\").Del(\",\")\n")
 
 	for _, field := range fields {
 		set := ""
-		if 0 < len(field.Dbs[0].Set) {
-			set = field.Dbs[0].Set
+		if 0 < len(field.DB.Set) {
+			set = field.DB.Set
 		} else if "self" == val {
 			set = "?"
 		} else {
@@ -968,14 +1227,14 @@ func (b *Builder) printInsertOrReplaceData(dst *build.Writer, s string, typ *ast
 
 		tag := 0
 		name := build.StringToHumpName(field.Field.Name.Name)
-		if build.IsNil(field.Field.Type) && !field.Dbs[0].Force {
+		if build.IsNil(field.Field.Type) && !field.DB.Force {
 			dst.Tab(1).Code("if nil != g.")
 			dst.Code(name)
 			dst.Code(" {\n")
 			tag = 1
 		}
 
-		dst.Tab(tag + 1).Code("s.T(\",\").T(\"").Code(field.Dbs[0].Name).Code("\")\n")
+		dst.Tab(tag + 1).Code("s.T(\",\").T(\"").Code(field.DB.Name).Code("\")\n")
 		dst.Tab(tag + 1).Code("v.T(\",\")")
 		_ = b.printParam(dst, set, field, fields, "", "", "g")
 		if tag > 0 {
@@ -993,12 +1252,12 @@ func (b *Builder) printInsertOrReplaceData(dst *build.Writer, s string, typ *ast
 	dst.Code("}\n\n")
 }
 
-func (b *Builder) printInsertOrReplaceBatchData(dst *build.Writer, s string, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField, isCache bool) {
+func (b *Builder) printInsertBatchData(dst *build.Writer, typ *ast.DataType, db *build.DB, fields []*build.DBField, key *build.DBField, isCache bool) {
 	dst.Import("context")
 	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db")
 
 	name := build.StringToHumpName(typ.Name.Name)
-	dst.Code("func (g " + name + ") Db").Code(s).Code("Batch(ctx context.Context, list ...*" + name + ") (int64, int64, error) {\n")
+	dst.Code("func (g " + name + ") DbInsertBatch(ctx context.Context, action db.InsertAction, list ...*" + name + ") (int64, int64, error) {\n")
 	dst.Tab(1).Code("if nil == list || 0 == len(list) {\n")
 	dst.Tab(2).Code("return 0, 0, nil\n")
 	dst.Tab(1).Code("}\n\n")
@@ -1010,14 +1269,14 @@ func (b *Builder) printInsertOrReplaceBatchData(dst *build.Writer, s string, typ
 
 	dst.Tab(1).Code("for j := 0; j < len(list); j += limit {\n")
 	dst.Tab(2).Code("s := db.NewBuilder()\n")
-	dst.Tab(2).Code("s.T(\"").Code(strings.ToUpper(s)).Code(" INTO \").T(tableName).T(\" (")
+	dst.Tab(2).Code("s.T(action.String()).T(tableName).T(\" (")
 	isFist := true
 	for _, field := range fields {
 		if !isFist {
 			dst.Code(", ")
 		}
 		isFist = false
-		dst.Code(field.Dbs[0].Name)
+		dst.Code(field.DB.Name)
 	}
 	dst.Code(") VALUES\")\n")
 	dst.Tab(2).Code("end := min(j+limit, len(list))\n")
@@ -1155,26 +1414,112 @@ func (b *Builder) printUpdateChange(dst *build.Writer, typ *ast.DataType, key st
 	dst.Code("}\n\n")
 
 	if typ == fType {
-		lName := build.StringToFirstLower(fType.Name.Name)
-		dst.Code("func (g *" + uName + ") DbSetChangeFields(fields ...").Code(uName).Code("Field) {\n")
 
-		dst.Tab(1).Code("g.changeFields = make([]bool, ").Code(lName).Code("FieldCount)\n")
-		dst.Tab(1).Code("for _, item := range fields {\n")
-		dst.Tab(2).Code("g.changeFields[item] = true\n")
-		dst.Tab(1).Code("}\n")
-		dst.Code("}\n\n")
-
-		dst.Code("func (g *" + uName + ") DbAllChangeFields() {\n")
-		dst.Tab(1).Code("g.changeFields = make([]bool, ").Code(lName).Code("FieldCount)\n")
-		dst.Tab(1).Code("for i := 0; i < int(").Code(lName).Code("FieldCount); i++ {\n")
-		dst.Tab(2).Code("g.changeFields[i] = true\n")
-		dst.Tab(1).Code("}\n")
-		dst.Code("}\n\n")
-
-		dst.Code("func (g *" + uName + ") DbClearChangeFields() {\n")
-		dst.Tab(1).Code("g.changeFields = make([]bool, ").Code(lName).Code("FieldCount)\n")
-		dst.Code("}\n\n")
 	}
+}
+func (b *Builder) printChangesFields(dst *build.Writer, fType *ast.DataType) {
+	uName := build.StringToHumpName(fType.Name.Name)
+
+	lName := build.StringToFirstLower(fType.Name.Name)
+	dst.Code("func (g *" + uName + ") DbSetChangeFields(fields ...").Code(uName).Code("Field) {\n")
+
+	dst.Tab(1).Code("g.changeFields = make([]bool, ").Code(lName).Code("FieldCount)\n")
+	dst.Tab(1).Code("for _, item := range fields {\n")
+	dst.Tab(2).Code("g.changeFields[item] = true\n")
+	dst.Tab(1).Code("}\n")
+	dst.Code("}\n\n")
+
+	dst.Code("func (g *" + uName + ") DbAllChangeFields() {\n")
+	dst.Tab(1).Code("g.changeFields = make([]bool, ").Code(lName).Code("FieldCount)\n")
+	dst.Tab(1).Code("for i := 0; i < int(").Code(lName).Code("FieldCount); i++ {\n")
+	dst.Tab(2).Code("g.changeFields[i] = true\n")
+	dst.Tab(1).Code("}\n")
+	dst.Code("}\n\n")
+
+	dst.Code("func (g *" + uName + ") DbClearChangeFields() {\n")
+	dst.Tab(1).Code("g.changeFields = make([]bool, ").Code(lName).Code("FieldCount)\n")
+	dst.Code("}\n\n")
+}
+func (b *Builder) printUpdateChanges(dst *build.Writer, typ *ast.DataType, val string, db *build.DB, key *build.DBField, fields []*build.DBField, fType *ast.DataType, c *cache) {
+	dst.Import("context")
+	dst.Import("github.com/wskfjtheqian/hbuf_golang/pkg/hsql", "db")
+
+	uName := build.StringToHumpName(fType.Name.Name)
+	dst.Code("func (g ").Code(uName).Code(") DbUpdateChanges(ctx context.Context")
+	if val == "parent" {
+		dst.Code(", list ...").Code(build.StringToHumpName(typ.Name.Name))
+	} else {
+		dst.Code(", list ...").Code(uName)
+	}
+	dst.Code(") (int64, int64, error) {\n")
+
+	//dst.Tab(1).Code("isChange := false\n")
+	//set := b.printSet(typ, fields, typ == fType || key == "parent", SetWhereChange, object)
+	//dst.AddImports(set.GetImports())
+	//dst.Code(set.String())
+	//
+	//dst.Tab(1).Code("s.T(\"WHERE 1 = 1 \")\n")
+	//dst.Code(w.String())
+	//dst.Code("\n")
+
+	lName := build.StringToFirstLower(fType.Name.Name)
+	dst.Tab(1).Code("builder := make(map[").Code(uName).Code("Field]*db.Builder, ").Code(lName).Code("FieldCount)\n")
+	dst.Tab(1).Code("ids := make([]any, 0, len(list))\n")
+	dst.Tab(1).Code("for i := 0; i < int(").Code(lName).Code("FieldCount); i++ {\n")
+	dst.Tab(2).Code("builder[").Code(uName).Code("Field(i)] = db.NewBuilder()\n")
+	dst.Tab(1).Code("}\n")
+
+	dst.Tab(1).Code("for _, item := range list {\n")
+	dst.Tab(1).Code("isChange := false\n")
+	keyName := build.StringToHumpName(key.Field.Name.Name)
+	//allSet := typ == fType || key == "parent"
+	for _, field := range fields {
+		//set := ""
+		//if 0 < len(field.DB.Set) {
+		//	set = field.DB.Name + " = " + field.DB.Set
+		//} else if allSet {
+		//	set = field.DB.Name + " = ?"
+		//} else {
+		//	continue
+		//}
+		if field == key {
+			continue
+		}
+		name := build.StringToHumpName(field.Field.Name.Name)
+		dst.Tab(2).Code("if item.changeFields[").Code(uName).Code("Field_").Code(name).Code("] {\n")
+		dst.Tab(3).Code("isChange = false\n")
+		dst.Tab(3).Code("builder[").Code(uName).Code("Field_").Code(name).Code("].T(\"WHEN\").V(&item.").Code(keyName).Code(").T(\"THEN\").V(&item.").Code(name).Code(")\n")
+		//_ = b.printParam(dst, set, field, fields, "", "", object)
+
+		dst.Tab(2).Code("}\n")
+	}
+
+	dst.Tab(2).Code("if !isChange {\n")
+	dst.Tab(3).Code("ids = append(ids, &item.").Code(keyName).Code(")\n")
+	dst.Tab(2).Code("}\n")
+	dst.Tab(1).Code("}\n")
+
+	dst.Tab(1).Code("if len(builder)== 0 {\n")
+	dst.Tab(2).Code("return 0, 0, nil\n")
+	dst.Tab(1).Code("}\n")
+
+	dst.Tab(1).Code("tableName := db.TableName(ctx, \"").Code(db.Name).Code("\")\n")
+	dst.Tab(1).Code("s := db.NewBuilder()\n")
+	dst.Tab(1).Code("s.T(\"UPDATE \").T(tableName).T(\" SET \").Del(\",\")\n")
+
+	dst.Tab(1).Code("for i := 0; i < int(").Code(lName).Code("FieldCount); i++ {\n")
+	dst.Tab(2).Code("if val,ok:= builder[").Code(uName).Code("Field(i)];ok && !val.IsEmpty() {\n")
+	dst.Tab(3).Code("s.T(\", \").T(").Code(uName).Code("Field(i).DbName()).T(\"= CASE id\").Join(val).T(\"ELSE\").T(").Code(uName).Code("Field(i).DbName()).T(\"END\")\n")
+	dst.Tab(2).Code("}\n")
+	dst.Tab(1).Code("}\n")
+
+	dst.Tab(1).Code("s.T(\"WHERE 1 = 1 \")\n")
+	dst.Tab(1).Code("s.T(\"AND id IN(\").L(\",\", ids...).T(\")\")\n")
+	if nil != c {
+		dst.Tab(1).Code("_ = db.ClearCache(ctx, tableName)\n")
+	}
+	dst.Tab(1).Code("return s.Exec(ctx)\n")
+	dst.Code("}\n\n")
 }
 
 type SetWhere int
@@ -1190,10 +1535,10 @@ func (b *Builder) printSet(typ *ast.DataType, fields []*build.DBField, allSet bo
 	dst := build.NewWriter()
 	for _, field := range fields {
 		set := ""
-		if 0 < len(field.Dbs[0].Set) {
-			set = field.Dbs[0].Name + " = " + field.Dbs[0].Set
+		if 0 < len(field.DB.Set) {
+			set = field.DB.Name + " = " + field.DB.Set
 		} else if allSet {
-			set = field.Dbs[0].Name + " = ?"
+			set = field.DB.Name + " = ?"
 		} else {
 			continue
 		}
@@ -1205,7 +1550,7 @@ func (b *Builder) printSet(typ *ast.DataType, fields []*build.DBField, allSet bo
 			dst.Tab(1).Code("if ").Code(object).Code(".changeFields[").Code(uName).Code("Field_").Code(name).Code("] {\n")
 			dst.Tab(2).Code("isChange = true\n")
 			dst.Tab(1)
-		} else if where == SetWhereNil && build.IsNil(field.Field.Type) && !field.Dbs[0].Force {
+		} else if where == SetWhereNil && build.IsNil(field.Field.Type) && !field.DB.Force {
 			isWhere = true
 			dst.Tab(1).Code("if nil != ").Code(object).Code(".")
 			dst.Code(name)

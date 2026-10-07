@@ -61,7 +61,9 @@ func (b *Builder) printEnum(dst *build.Writer, typ *ast.EnumType) {
 		} else {
 			dst.Code(", \"info\"")
 		}
-		if nil != uiEnum && len(uiEnum.Class) > 0 {
+		if nil == uiEnum {
+			dst.Code(", \"\"")
+		} else if len(uiEnum.Class) > 0 {
 			dst.Code(", \"").Code(strings.Join(uiEnum.Class, " ")).Code(" ").Code(item.Name.Name).Code("\"")
 		} else {
 			dst.Code(", \"").Code(item.Name.Name).Code("\"")

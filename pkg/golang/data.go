@@ -213,36 +213,12 @@ func (b *Builder) printDataStruct(dst *build.Writer, typ *ast.DataType) error {
 		b.printType(temp, field.Type, true)
 		dst.AddImports(temp.GetImports())
 
-		marshal := build.GetMarshal(field.Tags)
-
-		inOut := ""
-
-		if marshal != nil {
-			for i, in := range marshal.In {
-				if len(in) > 0 {
-					if i > 0 {
-						inOut += "|"
-					}
-					inOut += "I" + in
-				}
-			}
-			for i, out := range marshal.Out {
-				if len(out) > 0 {
-					if i > 0 {
-						inOut += "|"
-					}
-					inOut += "O" + out
-				}
-			}
-			inOut = ",filter:" + inOut
-		}
-
 		tag := strings.Builder{}
 		tag.WriteString("`")
 		tags := build.GetFieldTag(field.Tags)
 		if len(tags) > 0 {
 			if _, ok := tags["json"]; !ok {
-				tag.WriteString("json:\"" + build.StringToUnderlineName(field.Name.Name) + ",omitempty" + inOut + "\"")
+				tag.WriteString("json:\"" + build.StringToUnderlineName(field.Name.Name) + ",omitempty")
 			}
 			keys := make([]string, 0)
 			for key, _ := range tags {

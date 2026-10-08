@@ -297,7 +297,6 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 
 		dst.Tab(2).Code("&hrpc.Method{\n")
 		dst.Tab(3).Code("Name: \"").Code(build.StringToUnderlineName(method.Name.Name)).Code("\",\n")
-		dst.Tab(3).Code("Tag: \"").Code(b.getFilterTag(method)).Code("\",\n")
 		dst.Tab(3).Code("WithContext: func(ctx context.Context) context.Context {\n")
 		au := b.getTag(method.Tags)
 		if nil != au {
@@ -388,17 +387,4 @@ func (b *Builder) printServerExtend(dst *build.Writer, extends []*ast.Extends, i
 		dst.Code("Default" + build.StringToHumpName(v.Name.Name))
 		dst.Code("\n")
 	}
-}
-
-func (b *Builder) getFilterTag(method *ast.FuncType) string {
-	tag, ok := build.GetTag(method.Tags, "filter")
-	if !ok || nil == tag.KV {
-		return ""
-	}
-	for _, item := range tag.KV {
-		if item.Name.Name == "tag" {
-			return item.Values[0].Value[1 : len(item.Values[0].Value)-1]
-		}
-	}
-	return ""
 }

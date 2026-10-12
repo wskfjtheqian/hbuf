@@ -111,9 +111,6 @@ func (b *Builder) printDatabaseCode(dst *build.Writer, typ *ast.DataType) error 
 	}
 	join := len(fdb.Join) > 0 && strings.ToLower(fdb.Join[0]) == "true"
 	if join {
-		if typ.Name.Name == "GameInfoClassGameInfo" {
-			println(11)
-		}
 		err := b.printJoin(dst, typ, db, fType, c)
 		if err != nil {
 			return err

@@ -1491,19 +1491,19 @@ func (b *Builder) printUpdateChanges(dst *build.Writer, typ *ast.DataType, val s
 		}
 		name := build.StringToHumpName(field.Field.Name.Name)
 		dst.Tab(2).Code("if item.changeFields[").Code(uName).Code("Field_").Code(name).Code("] {\n")
-		dst.Tab(3).Code("isChange = false\n")
+		dst.Tab(3).Code("isChange = true\n")
 		dst.Tab(3).Code("builder[").Code(uName).Code("Field_").Code(name).Code("].T(\"WHEN\").V(&item.").Code(keyName).Code(").T(\"THEN\").V(&item.").Code(name).Code(")\n")
 		//_ = b.printParam(dst, set, field, fields, "", "", object)
 
 		dst.Tab(2).Code("}\n")
 	}
 
-	dst.Tab(2).Code("if !isChange {\n")
+	dst.Tab(2).Code("if isChange {\n")
 	dst.Tab(3).Code("ids = append(ids, &item.").Code(keyName).Code(")\n")
 	dst.Tab(2).Code("}\n")
 	dst.Tab(1).Code("}\n")
 
-	dst.Tab(1).Code("if len(builder)== 0 {\n")
+	dst.Tab(1).Code("if len(ids)== 0 {\n")
 	dst.Tab(2).Code("return 0, 0, nil\n")
 	dst.Tab(1).Code("}\n")
 

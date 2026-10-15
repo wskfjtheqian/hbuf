@@ -669,7 +669,7 @@ func (b *Builder) getParamWhere(dst *build.Writer, fields []*build.DBField, page
 			}
 		}
 		if temp {
-			where.Tab(1).Code("order:= db.NewBuilder()\n")
+			where.Tab(1).Code("order := db.NewBuilder()\n")
 			for _, field := range fields {
 				order := field.DB.Order
 				if 0 < len(order) {
@@ -931,7 +931,7 @@ func (b *Builder) printListData(dst *build.Writer, typ *ast.DataType, key string
 
 		dst.Tab(1).Code("return db.SaveCache(ctx, tableName, s, time.Duration(rand.Intn(").Code(strconv.Itoa(c.max))
 		dst.Code("-").Code(strconv.Itoa(c.min)).Code(")+").Code(strconv.Itoa(c.min)).Code(")*time.Second,")
-		dst.Code("func(ctx context.Context) ([]").Code(dName).Code(", error) {\n")
+		dst.Code(" func(ctx context.Context) ([]").Code(dName).Code(", error) {\n")
 	}
 	dst.Import("database/sql")
 	dst.Tab(tab + 1).Code("var ret []").Code(dName).Code("\n")
@@ -1470,7 +1470,7 @@ func (b *Builder) printUpdateChanges(dst *build.Writer, typ *ast.DataType, val s
 	dst.Tab(1).Code("}\n")
 
 	dst.Tab(1).Code("for _, item := range list {\n")
-	dst.Tab(1).Code("isChange := false\n")
+	dst.Tab(2).Code("isChange := false\n")
 	keyName := build.StringToHumpName(key.Field.Name.Name)
 	//allSet := typ == fType || key == "parent"
 	for _, field := range fields {
@@ -1487,19 +1487,19 @@ func (b *Builder) printUpdateChanges(dst *build.Writer, typ *ast.DataType, val s
 		}
 		name := build.StringToHumpName(field.Field.Name.Name)
 		dst.Tab(2).Code("if item.changeFields[").Code(uName).Code("Field_").Code(name).Code("] {\n")
-		dst.Tab(3).Code("isChange = false\n")
+		dst.Tab(3).Code("isChange = true\n")
 		dst.Tab(3).Code("builder[").Code(uName).Code("Field_").Code(name).Code("].T(\"WHEN\").V(&item.").Code(keyName).Code(").T(\"THEN\").V(&item.").Code(name).Code(")\n")
 		//_ = b.printParam(dst, set, field, fields, "", "", object)
 
 		dst.Tab(2).Code("}\n")
 	}
 
-	dst.Tab(2).Code("if !isChange {\n")
+	dst.Tab(2).Code("if isChange {\n")
 	dst.Tab(3).Code("ids = append(ids, &item.").Code(keyName).Code(")\n")
 	dst.Tab(2).Code("}\n")
 	dst.Tab(1).Code("}\n")
 
-	dst.Tab(1).Code("if len(builder)== 0 {\n")
+	dst.Tab(1).Code("if len(ids) == 0 {\n")
 	dst.Tab(2).Code("return 0, 0, nil\n")
 	dst.Tab(1).Code("}\n")
 
@@ -1508,7 +1508,7 @@ func (b *Builder) printUpdateChanges(dst *build.Writer, typ *ast.DataType, val s
 	dst.Tab(1).Code("s.T(\"UPDATE \").T(tableName).T(\" SET \").Del(\",\")\n")
 
 	dst.Tab(1).Code("for i := 0; i < int(").Code(lName).Code("FieldCount); i++ {\n")
-	dst.Tab(2).Code("if val,ok:= builder[").Code(uName).Code("Field(i)];ok && !val.IsEmpty() {\n")
+	dst.Tab(2).Code("if val, ok := builder[").Code(uName).Code("Field(i)]; ok && !val.IsEmpty() {\n")
 	dst.Tab(3).Code("s.T(\", \").T(").Code(uName).Code("Field(i).DbName()).T(\"= CASE id\").Join(val).T(\"ELSE\").T(").Code(uName).Code("Field(i).DbName()).T(\"END\")\n")
 	dst.Tab(2).Code("}\n")
 	dst.Tab(1).Code("}\n")

@@ -1474,7 +1474,7 @@ func (b *Builder) printUpdateChanges(dst *build.Writer, typ *ast.DataType, val s
 	dst.Tab(1).Code("}\n")
 
 	dst.Tab(1).Code("for _, item := range list {\n")
-	dst.Tab(1).Code("isChange := false\n")
+	dst.Tab(2).Code("isChange := false\n")
 	keyName := build.StringToHumpName(key.Field.Name.Name)
 	//allSet := typ == fType || key == "parent"
 	for _, field := range fields {
@@ -1503,7 +1503,7 @@ func (b *Builder) printUpdateChanges(dst *build.Writer, typ *ast.DataType, val s
 	dst.Tab(2).Code("}\n")
 	dst.Tab(1).Code("}\n")
 
-	dst.Tab(1).Code("if len(ids)== 0 {\n")
+	dst.Tab(1).Code("if len(ids) == 0 {\n")
 	dst.Tab(2).Code("return 0, 0, nil\n")
 	dst.Tab(1).Code("}\n")
 
@@ -1512,7 +1512,7 @@ func (b *Builder) printUpdateChanges(dst *build.Writer, typ *ast.DataType, val s
 	dst.Tab(1).Code("s.T(\"UPDATE \").T(schema).T(\".\").T(table).T(\" SET \").Del(\",\")\n")
 
 	dst.Tab(1).Code("for i := 0; i < int(").Code(lName).Code("FieldCount); i++ {\n")
-	dst.Tab(2).Code("if val,ok:= builder[").Code(uName).Code("Field(i)];ok && !val.IsEmpty() {\n")
+	dst.Tab(2).Code("if val, ok := builder[").Code(uName).Code("Field(i)]; ok && !val.IsEmpty() {\n")
 	dst.Tab(3).Code("s.T(\", \").T(").Code(uName).Code("Field(i).DbName()).T(\"= CASE id\").Join(val).T(\"ELSE\").T(").Code(uName).Code("Field(i).DbName()).T(\"END\")\n")
 	dst.Tab(2).Code("}\n")
 	dst.Tab(1).Code("}\n")

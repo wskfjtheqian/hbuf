@@ -132,7 +132,7 @@ func (b *Builder) printExportDataItemCode(dst *build.Writer, i int, item *ast.Fi
 	}
 
 	if build.IsArray(item.Type) || build.IsMap(item.Type) {
-		dst.Import("encoding/json", "")
+		dst.Import("encoding/json/v2", "")
 		dst.Tab(tab).Code("bytes, err := json.Marshal(g.Get").Code(name).Code("())\n")
 		dst.Tab(tab).Code("if err!= nil {\n")
 		dst.Tab(tab + 1).Code("return nil, err\n")

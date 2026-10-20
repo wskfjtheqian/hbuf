@@ -1282,7 +1282,7 @@ func (b *Builder) printSetStringValue(dst *build.Writer, expr ast.Expr, name str
 				dst.Code(" : (Number.parseFloat(").Code(name).Code("! as string)))")
 
 			case build.Bool:
-				dst.Code("((").Code(name).Code("?.length ?? 0) == 0 ? ")
+				dst.Code("((").Code(name).Code("?.length ?? 0) == false ? ")
 				if isNull {
 					dst.Code("null")
 				} else {

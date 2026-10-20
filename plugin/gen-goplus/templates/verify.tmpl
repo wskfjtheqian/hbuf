@@ -1,0 +1,29 @@
+{{/* verify 生成模板:每个字段的校验函数骨架在模板,
+     校验分支(空值/枚举/数组/数值/字符串等)由上下文预渲染进 Body。 */}}{{range .Verifies}}{{$verify := .}}{{range .Fields}}func (i *{{$verify.Name}}) Verify{{.Name}}(ctx context.Context, fields ...string) error {
+{{.Body}}}
+
+{{end}}{{if .Maps}}var {{.LowName}}VerifyMaps = map[string]func(ctx context.Context, i *{{.Name}} ,fields ...string) error {
+{{range .Fields}}	"{{.Key}}": func(ctx context.Context, i *{{$verify.Name}} ,fields ...string) error {
+		return i.Verify{{.Name}}(ctx, fields...)
+	},
+{{end}}}
+
+func (i *{{.Name}}) Verify(ctx context.Context, fields ...string) error {
+	if len(fields) == 0 {
+		for _, val := range {{.LowName}}VerifyMaps {
+			if err := val(ctx, i); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	for _, field := range fields {
+		if val, ok := {{.LowName}}VerifyMaps[field]; ok {
+			if err := val(ctx, i); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+{{end}}{{end}}

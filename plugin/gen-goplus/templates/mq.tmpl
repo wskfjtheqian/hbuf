@@ -1,0 +1,24 @@
+{{/* mq 生成模板:const 与发布/订阅函数完全由模板组织,
+     上下文仅提供命名与主体名数据。 */}}{{range .Mqs}}const (
+	{{.Name}}Stream  = "stream_{{.Stream}}"
+	{{.Name}}StreamSubject = "stream.{{.Subject}}."
+	{{.Name}}Subject = "{{.Subject}}."
+)
+
+func (g {{.Name}}) Publish(ctx context.Context, subject string) error {
+	return hmq.Publish(ctx, {{.Name}}Subject+subject, &g)
+}
+
+func (g {{.Name}}) Subscribe(ctx context.Context, subject string, handler func(ctx context.Context, subject string, msg *{{.Name}}) error) (*nats.Subscription, error) {
+	return hmq.Subscribe(ctx, {{.Name}}Subject+subject, handler)
+}
+
+func (g {{.Name}}) JsPublish(ctx context.Context, subject string, options ...hmq.PublishOption) (*jetstream.PubAck, error) {
+	return hmq.JetStreamPublish(ctx, {{.Name}}Stream, {{.Name}}StreamSubject+subject, &g, options...)
+}
+
+func (g {{.Name}}) JsSubscribe(ctx context.Context, subject string, durable string, handler func(ctx context.Context, subject, msgId string, msg *{{.Name}}) error, options ...hmq.SubscribeOption) error {
+	return hmq.JetStreamSubscribe(ctx, {{.Name}}Stream, {{.Name}}StreamSubject+subject, durable, handler, options...)
+}
+
+{{end}}

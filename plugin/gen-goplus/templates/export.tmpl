@@ -1,0 +1,29 @@
+{{/* export 生成模板:分组(filters)与字段循环在模板,
+     每个字段的数据行(含空值保护与类型转换)由上下文预渲染进 Line。 */}}{{range .Exports}}func (g {{.Name}}) ExportHeader(key string) []string {
+	switch key {
+{{range .Keys}}	case "{{.Key}}":
+		return []string{
+{{range .Fields}}			"{{.Name}}",
+{{end}}		}
+{{end}}	default :
+		return []string{
+{{range .All}}			"{{.Name}}",
+{{end}}		}
+	}
+}
+
+func (g {{.Name}}) ExportData(key string, zoneOffset int32) ([]any, error){
+{{if .HasDate}}	loc := htime.ZoneByOffset(zoneOffset)
+{{end}}	switch key {
+{{range .Keys}}	case "{{.Key}}":
+		list := make([]any, {{len .Fields}})
+{{range .Fields}}{{.Line}}
+{{end}}		return list, nil
+{{end}}	default :
+		list := make([]any, {{len .All}})
+{{range .All}}{{.Line}}
+{{end}}		return list, nil
+	}
+}
+
+{{end}}

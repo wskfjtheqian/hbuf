@@ -1,0 +1,3 @@
+{{/* database 生成模板:每个 data 类型的各动作代码块按序拼接。
+     动作块(Field/Scan/Join/List/Insert/...)由上下文构建期预渲染,
+     模板负责组装整体结构,外部可覆盖同名模板调整布局。 */}}{{range .Datas}}{{.FieldBlock}}{{.ScanBlock}}{{.NameBlock}}{{.JoinBlock}}{{.ListBlock}}{{.ListAsyncBlock}}{{.MapBlock}}{{.CountBlock}}{{.DeleteBlock}}{{.RemoveBlock}}{{.InsertBlock}}{{.InsertBatchBlock}}{{.UpdateBlock}}{{.SetBlock}}{{.UpdateChangeBlock}}{{.UpdateChangesBlock}}{{.ChangesFieldsBlock}}{{.GetBlock}}{{end}}

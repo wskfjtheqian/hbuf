@@ -11,6 +11,7 @@
 {{if .Doc}}// {{.Name}} {{.Doc}}
 {{end}}type {{.Name}} struct {
 {{range .Extends}}	{{.Name}} `hbuf:"{{.Id}}"`
+{{end}}{{if .HasChange}}	changeFields []bool
 {{end}}{{range .Fields}}	{{.Name}} {{.Type}} {{.Tag}}{{if .Comment}} //{{.Comment}}{{end}}
 {{end}}}
 
@@ -30,6 +31,7 @@ func (g *{{.Name}}) Descriptors() hbuf.Descriptor {
 {{if .Comment}}// Set{{.Name}} Set {{.Comment}}
 {{end}}func (g *{{$data.Name}}) Set{{.Name}}(val {{.GetType}}) {
 	g.{{.Name}} = {{if .Ptr}}&val{{else}}val{{end}}
-}
+{{if and $data.HasChange .HasDB}}	g.changeFields[int({{$data.Name}}Field_{{.Name}})] = true
+{{end}}}
 
 {{end}}{{end}}

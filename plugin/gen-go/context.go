@@ -72,16 +72,18 @@ type FieldContext struct {
 	Tag     string // struct tag
 	Comment string // 文档注释(已压缩单行)
 	Ptr     bool   // 可空且非数组/映射:Getter 判空、Setter 取地址
+	HasDB   bool   // 字段带 db 注解:Setter 需同步置 changeFields
 }
 
 // DataContext data 类型的模板上下文。
 type DataContext struct {
 	*Ctx
-	Name    string // 驼峰类型名
-	LowName string // 小驼峰类型名
-	Extends []*ExtendContext
-	Fields  []*FieldContext
-	Doc     string
+	Name      string // 驼峰类型名
+	LowName   string // 小驼峰类型名
+	Extends   []*ExtendContext
+	Fields    []*FieldContext
+	Doc       string
+	HasChange bool // db 注解 change=self|parent:生成 changeFields 字段
 }
 
 // ExtendContext 继承项的模板上下文。
@@ -100,6 +102,11 @@ func NewDataContext(ctx *Ctx, data *wire.DataType) *DataContext {
 		Name:    tpl.HumpName(data.Name),
 		LowName: tpl.LowerFirstName(data.Name),
 		Doc:     data.Doc,
+	}
+	// 与进程内 printDataStruct 一致:db 注解 change=self|parent 时生成 changeFields 字段
+	if change, ok := tagKV(data.Tags, "db", "change"); ok {
+		change = strings.ToLower(change)
+		dc.HasChange = "self" == change || "parent" == change
 	}
 	for _, e := range data.Extends {
 		if e == nil {
@@ -129,10 +136,39 @@ func NewDataContext(ctx *Ctx, data *wire.DataType) *DataContext {
 			Tag:     ctx.goStructTag(f),
 			Comment: strings.Trim(strings.ReplaceAll(f.Doc, "\n", " "), " "),
 			Ptr:     f.Type.Empty && f.Type.Kind != "array" && f.Type.Kind != "map",
+			HasDB:   hasTag(f.Tags, "db"),
 		}
 		dc.Fields = append(dc.Fields, fc)
 	}
 	return dc
+}
+
+// hasTag 判断注解列表中是否存在指定名称的注解。
+func hasTag(tags []*wire.Tag, name string) bool {
+	for _, t := range tags {
+		if t != nil && t.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+// tagKV 取注解 name 中指定 key 的第一个值,如 [db:change="self"] 的 change。
+func tagKV(tags []*wire.Tag, name, key string) (string, bool) {
+	for _, t := range tags {
+		if t == nil || t.Name != name {
+			continue
+		}
+		for _, kv := range t.KV {
+			if kv == nil || len(kv.Values) == 0 {
+				continue
+			}
+			if kv.Name == key {
+				return kv.Values[0], true
+			}
+		}
+	}
+	return "", false
 }
 
 // extPack 继承引用的目标包名(通过类型索引解析)。

@@ -13,32 +13,57 @@ import (
 
 // PluginConfig 插件调度配置。
 type PluginConfig struct {
-	Path    string   // 显式插件二进制路径(优先于 PATH 查找)
+	Path    string   // 显式插件二进制路径,逗号分隔多个(优先于 PATH 查找)
 	Options []string // 插件参数,如 template=<目录>
 }
 
-// FindPlugin 查找类型对应的插件二进制。
-// 查找顺序:显式路径(可选,带 hbuf-gen-<typ>= 前缀则剥离)→ PATH 中的 hbuf-gen-<typ>。
-// 未找到时返回空路径(调用方回退到进程内后端)。
-func FindPlugin(typ string, cfg *PluginConfig) (string, error) {
+// FindPlugins 查找类型对应的插件二进制列表。
+// 显式路径(逗号分隔多个,条目可选带 hbuf-gen-<name>= 前缀则剥离)
+// 允许同时挂载多个插件(如 hbuf-gen-go 与 hbuf-gen-goplus 一次运行全部生成);
+// 未显式指定时通过 PATH 查找 hbuf-gen-<typ>。未找到时返回空列表(调用方回退到进程内后端)。
+func FindPlugins(typ string, cfg *PluginConfig) ([]string, error) {
 	if cfg != nil && cfg.Path != "" {
-		path := cfg.Path
-		if name, rest, ok := strings.Cut(path, "="); ok {
-			if name != "hbuf-gen-"+typ {
-				return "", fmt.Errorf("plugin name mismatch: %s, expect hbuf-gen-%s", name, typ)
+		var bins []string
+		for _, item := range strings.Split(cfg.Path, ",") {
+			item = strings.TrimSpace(item)
+			if "" == item {
+				continue
 			}
-			path = rest
+			path := item
+			if name, rest, ok := strings.Cut(item, "="); ok {
+				if !strings.HasPrefix(name, "hbuf-gen-") {
+					return nil, fmt.Errorf("plugin name invalid: %s, expect hbuf-gen-<name>", name)
+				}
+				path = rest
+			}
+			if _, err := os.Stat(path); err != nil {
+				return nil, fmt.Errorf("plugin binary: %w", err)
+			}
+			bins = append(bins, path)
 		}
-		if _, err := os.Stat(path); err != nil {
-			return "", fmt.Errorf("plugin binary: %w", err)
-		}
-		return path, nil
+		return bins, nil
 	}
 	path, err := exec.LookPath("hbuf-gen-" + typ)
 	if err != nil {
+		return nil, nil
+	}
+	return []string{path}, nil
+}
+
+// FindPlugin 查找类型对应的单个插件二进制(多插件场景请使用 FindPlugins)。
+// 显式指定多个插件时返回错误,避免静默丢失。
+func FindPlugin(typ string, cfg *PluginConfig) (string, error) {
+	bins, err := FindPlugins(typ, cfg)
+	if err != nil {
+		return "", err
+	}
+	if len(bins) > 1 {
+		return "", fmt.Errorf("multiple plugins specified, use FindPlugins")
+	}
+	if len(bins) == 0 {
 		return "", nil
 	}
-	return path, nil
+	return bins[0], nil
 }
 
 // CallPlugin 启动插件进程,通过 JSON over stdio 传递编译请求并解析响应。

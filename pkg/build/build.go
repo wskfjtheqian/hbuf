@@ -177,13 +177,13 @@ func BuildWithPlugin(out string, in string, typ string, pack string, all bool, l
 		changed = append(changed, path)
 	}
 
-	// 插件调度:优先调用 hbuf-gen-<typ>,未找到插件时回退进程内后端
-	bin, err := FindPlugin(typ, plugin)
+	// 插件调度:优先调用 hbuf-gen-<typ> 系列插件,未找到插件时回退进程内后端
+	bins, err := FindPlugins(typ, plugin)
 	if err != nil {
 		return err
 	}
-	if bin != "" {
-		return buildByPlugin(bin, plugin, build, out, typ, pack, list, changed, fileHash)
+	if len(bins) > 0 {
+		return buildByPlugin(bins, plugin, build, out, typ, pack, list, changed, fileHash)
 	}
 
 	for _, path := range changed {
@@ -203,8 +203,10 @@ func BuildWithPlugin(out string, in string, typ string, pack string, all bool, l
 	return fileHash.Save()
 }
 
-// buildByPlugin 通过插件协议生成并统一落盘。
-func buildByPlugin(bin string, plugin *PluginConfig, build *Builder, out string, typ string, pack string, list string, changed []string, fileHash *FileHash) error {
+// buildByPlugin 依次调用插件并合并输出后统一落盘。
+// 支持一次运行多个插件(如 hbuf-gen-go 生成 data/enum/server、
+// hbuf-gen-goplus 生成 database/verify/export/mq),所有插件共享同一请求。
+func buildByPlugin(bins []string, plugin *PluginConfig, build *Builder, out string, typ string, pack string, list string, changed []string, fileHash *FileHash) error {
 	req := &wire.Request{
 		Protocol:  wire.ProtocolVersion,
 		Type:      typ,
@@ -217,11 +219,15 @@ func buildByPlugin(bin string, plugin *PluginConfig, build *Builder, out string,
 	if plugin != nil {
 		req.Options = plugin.Options
 	}
-	resp, err := CallPlugin(bin, req)
-	if err != nil {
-		return err
+	var respFiles []*wire.GeneratedFile
+	for _, bin := range bins {
+		resp, err := CallPlugin(bin, req)
+		if err != nil {
+			return err
+		}
+		respFiles = append(respFiles, resp.Files...)
 	}
-	if err := WriteGeneratedFiles(out, resp); err != nil {
+	if err := WriteGeneratedFiles(out, &wire.Response{Files: respFiles}); err != nil {
 		return err
 	}
 	return fileHash.Save()

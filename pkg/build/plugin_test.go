@@ -37,13 +37,37 @@ func TestFindPluginNamePrefix(t *testing.T) {
 	if got != bin {
 		t.Errorf("got %s, want %s", got, bin)
 	}
-	// 名称不匹配应报错
-	if _, err := FindPlugin("go", &PluginConfig{Path: "hbuf-gen-dart=" + bin}); err == nil {
-		t.Error("expect name mismatch error")
+	// 非 hbuf-gen- 前缀应报错
+	if _, err := FindPlugin("go", &PluginConfig{Path: "foo-bar=" + bin}); err == nil {
+		t.Error("expect invalid name error")
 	}
 	// 路径不存在应报错
 	if _, err := FindPlugin("go", &PluginConfig{Path: "/no/such/plugin"}); err == nil {
 		t.Error("expect missing binary error")
+	}
+}
+
+// TestFindPluginsMultiple 逗号分隔多个插件一次全部返回。
+func TestFindPluginsMultiple(t *testing.T) {
+	dir := t.TempDir()
+	bins := make([]string, 3)
+	for i, name := range []string{"hbuf-gen-go", "hbuf-gen-goplus", "hbuf-gen-dart"} {
+		bins[i] = filepath.Join(dir, name)
+		if err := os.WriteFile(bins[i], []byte("#!/bin/sh\n"), 0755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	cfg := &PluginConfig{Path: "hbuf-gen-go=" + bins[0] + ",hbuf-gen-goplus=" + bins[1] + "," + bins[2]}
+	got, err := FindPlugins("go", cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 3 || got[0] != bins[0] || got[1] != bins[1] || got[2] != bins[2] {
+		t.Errorf("got %v, want %v", got, bins)
+	}
+	// 多个插件时单插件接口应报错,避免静默丢失
+	if _, err := FindPlugin("go", cfg); err == nil {
+		t.Error("expect multiple plugins error")
 	}
 }
 

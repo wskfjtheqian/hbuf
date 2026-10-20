@@ -33,7 +33,7 @@ echo "打包 hbuf window版本 成功"
 #cp ./bin/hbuf.exe /Users/dev/7.hanber/hbuf.exe
 #cp ./bin/hbuf.darwin /Users/dev/7.hanber/hbuf.darwin
 #cp ./bin/hbuf.linux /Users/dev/7.hanber/hbuf.linux
-#
+#\
 #cp ./bin/hbuf.exe /Users/dev/10.account/hbuf.exe
 #cp ./bin/hbuf.darwin /Users/dev/10.account/hbuf.darwin
 #cp ./bin/hbuf.linux /Users/dev/10.account/hbuf.linux

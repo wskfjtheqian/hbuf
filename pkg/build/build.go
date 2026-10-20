@@ -241,6 +241,16 @@ func (b *Builder) checkFiles() error {
 	return nil
 }
 
+// CheckPackage 校验包内所有文件(类型/字段/方法/继承/引用等),
+// 与命令行构建(BuildWithPlugin)使用完全相同的校验规则。
+// 供语言服务器等需要独立校验的场景复用,保证诊断结果同源。
+func CheckPackage(fset *token.FileSet, pkg *ast.Package) error {
+	b := NewBuilder(nil, &Param{})
+	b.fset = fset
+	b.pkg = pkg
+	return b.checkFiles()
+}
+
 func (b *Builder) checkFile(file *ast.File, imports map[string]void) error {
 	for index, s := range file.Specs {
 		switch s.(type) {

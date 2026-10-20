@@ -121,35 +121,57 @@ func (p *parser) declare(decl, data interface{}, scope *ast.Scope, kind ast.ObjK
 
 var unresolved = new(ast.Object)
 
-func (p *parser) tryResolve(x ast.Expr, collectUnresolved bool) {
-	// nothing to do if x is not an identifier or the blank identifier
+// baseTypes hbuf 语言基础类型(在 pkg 作用域之外)。
+var baseTypes = map[string]bool{
+	"int8": true, "int16": true, "int32": true, "int64": true,
+	"uint8": true, "uint16": true, "uint32": true, "uint64": true,
+	"bool": true, "float": true, "double": true, "decimal": true,
+	"bytes": true, "string": true, "date": true,
+	"void": true, "stream": true,
+}
+
+// resolve 解析类型表达式中的标识符(字段类型、方法参数/返回值、继承、map 键等)。
+// 类型名只在文件(pkg)作用域解析,避免误命中 struct 内的同名字段。
+func (p *parser) resolve(x ast.Expr) {
+	if x == nil {
+		return
+	}
+	// 递归进入复合类型
+	switch t := x.(type) {
+	case *ast.VarType:
+		p.resolve(t.TypeExpr)
+		return
+	case *ast.ArrayType:
+		if t.VType != nil {
+			p.resolve(t.VType)
+		}
+		return
+	case *ast.MapType:
+		if t.VType != nil {
+			p.resolve(t.VType)
+		}
+		p.resolve(t.Key)
+		return
+	}
 	ident, _ := x.(*ast.Ident)
-	if ident == nil {
+	if ident == nil || ident.Name == "_" {
 		return
 	}
-	assert(ident.Obj == nil, "identifier already declared or resolved")
-	if ident.Name == "_" {
-		return
+	if baseTypes[ident.Name] {
+		return // 基础类型无需解析
 	}
-	// try to resolve the identifier
-	for s := p.topScope; s != nil; s = s.Outer {
-		if obj := s.Lookup(ident.Name); obj != nil {
+	if ident.Obj != nil {
+		return // 已解析(如 map key 经 tryType 解析过)或已声明
+	}
+	if p.pkgScope != nil {
+		if obj := p.pkgScope.Lookup(ident.Name); obj != nil {
 			ident.Obj = obj
 			return
 		}
 	}
-	// all local scopes are known, so any unresolved identifier
-	// must be found either in the file scope, package scope
-	// (perhaps in another file), or universe scope --- collect
-	// them so that they can be resolved later
-	if collectUnresolved {
-		ident.Obj = unresolved
-		p.unresolved = append(p.unresolved, ident)
-	}
-}
-
-func (p *parser) resolve(x ast.Expr) {
-	p.tryResolve(x, true)
+	// 本文件尚未声明:留到文件解析完成后统一解析
+	ident.Obj = unresolved
+	p.unresolved = append(p.unresolved, ident)
 }
 
 // ----------------------------------------------------------------------------
@@ -751,6 +773,9 @@ func (p *parser) parseDataSpec(doc *ast.CommentGroup, tags []*ast.Tag) ast.Spec 
 	p.expect(token.DATA)
 	name := p.parseIdent()
 	extends := p.parseExtends()
+	for _, ext := range extends {
+		p.resolve(ext.Name)
+	}
 
 	lbrace := p.expect(token.LBRACE)
 	scope := ast.NewScope(nil) // struct scope
@@ -788,6 +813,7 @@ func (p *parser) parseEnumSpec(doc *ast.CommentGroup, tags []*ast.Tag) ast.Spec 
 		defer un(trace(p, "EnumType"))
 	}
 
+	pos := p.pos
 	p.expect(token.ENUM)
 	name := p.parseIdent()
 
@@ -806,6 +832,7 @@ func (p *parser) parseEnumSpec(doc *ast.CommentGroup, tags []*ast.Tag) ast.Spec 
 		p.next()
 	}
 	spec.Type = &ast.EnumType{
+		Enum:    pos,
 		Name:    name,
 		Opening: lbrace,
 		Closing: rbrace,
@@ -856,6 +883,9 @@ func (p *parser) parseServerSpec(doc *ast.CommentGroup, tags []*ast.Tag) ast.Spe
 	p.expect(token.SERVER)
 	name := p.parseIdent()
 	extends := p.parseExtends()
+	for _, ext := range extends {
+		p.resolve(ext.Name)
+	}
 
 	lbrace := p.expect(token.LBRACE)
 	var list []*ast.FuncType

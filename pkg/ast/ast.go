@@ -150,6 +150,9 @@ func (f *Field) End() token.Pos {
 	if f.Tag != nil {
 		return f.Tag.End()
 	}
+	if f.Id != nil {
+		return f.Id.End()
+	}
 	return f.Type.End()
 }
 
@@ -374,14 +377,32 @@ func (x *FuncLit) End() token.Pos      { return x.Type.End() }
 func (x *CompositeLit) End() token.Pos { return x.Rbrace + 1 }
 func (x *ArrayType) End() token.Pos    { return x.Rbrack }
 func (x *DataType) End() token.Pos     { return x.Fields.End() }
-func (x *FuncType) End() token.Pos     { return x.Param.End() }
-func (x *ServerType) End() token.Pos   { return x.Closing }
-func (x *MapType) End() token.Pos      { return x.GTR }
-func (x *EnumType) End() token.Pos     { return x.Items[len(x.Items)-1].End() }
-func (x *EnumItem) End() token.Pos     { return x.Comment.End() }
-func (x *VarType) End() token.Pos      { return x.TypeExpr.End() }
-func (x *Tag) End() token.Pos          { return x.Closing }
-func (x *KeyValue) End() token.Pos     { return x.Values[len(x.Values)-1].End() }
+func (x *FuncType) End() token.Pos {
+	if x.Id != nil {
+		return x.Id.End()
+	}
+	return x.Param.End()
+}
+func (x *ServerType) End() token.Pos { return x.Closing }
+func (x *MapType) End() token.Pos    { return x.GTR }
+func (x *EnumType) End() token.Pos {
+	if n := len(x.Items); n > 0 {
+		return x.Items[n-1].End()
+	}
+	return x.Closing
+}
+func (x *EnumItem) End() token.Pos {
+	if x.Comment != nil {
+		return x.Comment.End()
+	}
+	if x.Id != nil {
+		return x.Id.End()
+	}
+	return x.Name.End()
+}
+func (x *VarType) End() token.Pos  { return x.TypeExpr.End() }
+func (x *Tag) End() token.Pos      { return x.Closing }
+func (x *KeyValue) End() token.Pos { return x.Values[len(x.Values)-1].End() }
 
 func (*BadExpr) exprNode()      {}
 func (*Ident) exprNode()        {}

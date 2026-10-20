@@ -94,9 +94,21 @@ func (s *Server) notify(method string, params interface{}) {
 func (s *Server) dispatch(method string, params json.RawMessage) (interface{}, *RPCError) {
 	switch method {
 	case "initialize":
-		if err := json.Unmarshal(params, &struct{}{}); err != nil {
+		var p InitializeParams
+		if err := json.Unmarshal(params, &p); err != nil {
 			return nil, &RPCError{Code: ErrInvalidParams, Message: err.Error()}
 		}
+		// 记录工作区根目录(workspace/symbol 扫描用)
+		var roots []string
+		for _, wf := range p.WorkspaceFolders {
+			if wf.URI != "" {
+				roots = append(roots, uriToPath(wf.URI))
+			}
+		}
+		if len(roots) == 0 && p.RootURI != "" {
+			roots = append(roots, uriToPath(p.RootURI))
+		}
+		s.view.SetWorkspaceRoots(roots)
 		s.initialized = true
 		name, version := s.opts.Name, s.opts.Version
 		if name == "" {
@@ -113,6 +125,16 @@ func (s *Server) dispatch(method string, params json.RawMessage) (interface{}, *
 				CompletionProvider: &CompletionOptions{
 					TriggerCharacters: []string{".", ":"},
 				},
+				SemanticTokensProvider: &SemanticTokensOptions{
+					Legend: SemanticTokensLegend{
+						TokenTypes:     semanticTokenTypes,
+						TokenModifiers: semanticTokenModifiers,
+					},
+					Full: true,
+				},
+				CodeActionProvider:      true,
+				InlayHintProvider:       true,
+				WorkspaceSymbolProvider: true,
 			},
 			ServerInfo: &ServerInfo{Name: name, Version: version},
 		}, nil
@@ -233,6 +255,46 @@ func (s *Server) dispatch(method string, params json.RawMessage) (interface{}, *
 			return nil, &RPCError{Code: ErrInternalError, Message: err.Error()}
 		}
 		return edits, nil
+
+	case "textDocument/semanticTokens/full":
+		var p SemanticTokensParams
+		if err := json.Unmarshal(params, &p); err != nil {
+			return nil, &RPCError{Code: ErrInvalidParams, Message: err.Error()}
+		}
+		doc := s.view.Doc(p.TextDocument.URI)
+		if doc == nil {
+			return nil, &RPCError{Code: ErrInvalidParams, Message: "document not open: " + p.TextDocument.URI}
+		}
+		return s.semanticTokens(doc), nil
+
+	case "textDocument/codeAction":
+		var p CodeActionParams
+		if err := json.Unmarshal(params, &p); err != nil {
+			return nil, &RPCError{Code: ErrInvalidParams, Message: err.Error()}
+		}
+		doc := s.view.Doc(p.TextDocument.URI)
+		if doc == nil {
+			return nil, &RPCError{Code: ErrInvalidParams, Message: "document not open: " + p.TextDocument.URI}
+		}
+		return s.codeAction(doc, p), nil
+
+	case "textDocument/inlayHint":
+		var p InlayHintParams
+		if err := json.Unmarshal(params, &p); err != nil {
+			return nil, &RPCError{Code: ErrInvalidParams, Message: err.Error()}
+		}
+		doc := s.view.Doc(p.TextDocument.URI)
+		if doc == nil {
+			return nil, &RPCError{Code: ErrInvalidParams, Message: "document not open: " + p.TextDocument.URI}
+		}
+		return s.inlayHints(doc, p.Range), nil
+
+	case "workspace/symbol":
+		var p WorkspaceSymbolParams
+		if err := json.Unmarshal(params, &p); err != nil {
+			return nil, &RPCError{Code: ErrInvalidParams, Message: err.Error()}
+		}
+		return s.workspaceSymbols(p.Query), nil
 
 	default:
 		return nil, &RPCError{Code: ErrMethodNotFound, Message: fmt.Sprintf("method not found: %s", method)}

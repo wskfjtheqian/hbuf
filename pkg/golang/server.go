@@ -157,9 +157,13 @@ func (b *Builder) printBinding(dst *build.Writer, method *ast.FuncType, bind *bu
 		dst.Tab(1).Code("err := ")
 	}
 	dst.Code(pack)
-	dst.Code("Get").Code(bind.Server.Name.Name).Code("(ctx).").Code(bind.Method.Name.Name).Code("(ctx, &")
-	dst.Code("req.")
-	b.printType(dst, bind.Method.Param.Type(), true)
+	dst.Code("Get").Code(bind.Server.Name.Name).Code("(ctx).").Code(bind.Method.Name.Name).Code("(ctx, &req.")
+	// 嵌入字段名不带包前缀,取纯类型名
+	if param, ok := bind.Method.Param.Type().(*ast.Ident); ok {
+		dst.Code(build.StringToHumpName(param.Name))
+	} else {
+		b.printType(dst, bind.Method.Param.Type(), true)
+	}
 	dst.Code(")\n")
 
 	dst.Tab(1).Code("if err != nil {\n")
@@ -171,7 +175,12 @@ func (b *Builder) printBinding(dst *build.Writer, method *ast.FuncType, bind *bu
 		dst.Code("&")
 		b.printType(dst, method.Result.Type(), true)
 		dst.Code("{")
-		b.printType(dst, bind.Method.Result.Type(), true)
+		// 复合字面量 key 用纯类型名
+		if result, ok := bind.Method.Result.Type().(*ast.Ident); ok {
+			dst.Code(build.StringToHumpName(result.Name))
+		} else {
+			b.printType(dst, bind.Method.Result.Type(), true)
+		}
 		dst.Code(": *resp}, ")
 	}
 	dst.Code("nil\n")

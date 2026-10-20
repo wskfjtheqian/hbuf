@@ -60,10 +60,22 @@ func Generate(req *wire.Request) (*wire.Response, error) {
 		name := baseName(file.Path)
 		ctx := NewCtx(req, file, index, pack)
 		fc := NewFileContext(ctx, file)
+		// 各输出文件构建期登记的 import 集合(data/enum/server 独立,避免互相污染)
+		baseByTemplate := map[string]map[string]bool{
+			"data.tmpl":   fc.dataImports,
+			"enum.tmpl":   fc.enumImports,
+			"server.tmpl": fc.serverImports,
+		}
 		// 与进程内后端一致:输出到 <包名点分转目录>/<name>.<kind>.go
 		packDir := filepath.Join(strings.Split(pack, ".")...)
 
 		for _, tmplName := range []string{"data.tmpl", "enum.tmpl", "server.tmpl"} {
+			// 每个输出文件从对应类别基线 import 开始
+			base := baseByTemplate[tmplName]
+			ctx.Imports = make(map[string]bool, len(base))
+			for k := range base {
+				ctx.Imports[k] = true
+			}
 			body, err := engine.Execute(tmplName, fc)
 			if err != nil {
 				return nil, fmt.Errorf("%s %s: %w", file.Path, tmplName, err)
@@ -98,8 +110,6 @@ func Generate(req *wire.Request) (*wire.Response, error) {
 				Name:    filepath.Join(packDir, name+"."+suffix+".go"),
 				Content: string(formatted),
 			})
-			// 重置 import 集合,避免固定 import 污染下一个输出文件
-			ctx.Imports = map[string]bool{}
 		}
 	}
 	sort.Slice(resp.Files, func(i, j int) bool { return resp.Files[i].Name < resp.Files[j].Name })

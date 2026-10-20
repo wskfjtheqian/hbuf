@@ -7,30 +7,30 @@
 
 | # | 任务 | 状态 |
 |---|---|---|
-| 1 | 创建 pkg/wire 中性描述模型(Request/Response/File/Type 等) | 待办 |
-| 2 | 实现 AST → wire 转换(convert.go,含引用解析与包名标注) | 待办 |
-| 3 | 创建 pkg/build/plugin.go(插件发现、JSON over stdio 调用、统一落盘) | 待办 |
-| 4 | 改造 build.Build:插件调度 + 变更文件列表 + 进程内兼容回退 | 待办 |
-| 5 | cmd/hbuf 增加 -plugin=hbuf-gen-x=/path 参数 | 待办 |
-| 6 | 创建 pkg/plugin SDK(插件侧 stdin/stdout 主循环、协议校验) | 待办 |
-| 7 | 创建 pkg/tpl 模板引擎(内置 embed + 外部覆盖 + 执行缓存) | 待办 |
-| 8 | 创建 pkg/tpl 模板函数库(命名转换、类型映射等 FuncMap) | 待办 |
-| 9 | 设计 golang 模板上下文(DataContext/EnumContext/ServerContext) | 待办 |
-| 10 | 编写内置模板 templates/data.tmpl(descriptor+struct+Getter/Setter) | 待办 |
-| 11 | 编写 templates/enum.tmpl、server.tmpl 模板 | 待办 |
-| 12 | golang 后端接入模板渲染(template.go,与 Writer 并存) | 待办 |
-| 13 | 创建 cmd/hbuf-gen-go 插件入口(plugin.Run + 模板生成) | 待办 |
-| 14 | 创建 cmd/hbuf-gen-dart/java/ts 插件入口 | 待办 |
-| 15 | 构建验证:go build/go vet + 端到端生成测试 | 待办 |
-| 16 | 更新 AGENTS.md(插件协议、模板机制、目录结构) | 待办 |
-| 17 | 创建 plugin/lsp 目录与 cmd/hbuf-lsp 语言服务器入口 | 待办 |
-| 18 | 实现 LSP JSON-RPC 框架(initialize/textDocument/workspace,纯标准库) | 待办 |
-| 19 | 诊断能力:语法/类型校验/未解析引用实时报错 | 待办 |
-| 20 | 补全能力:类型/枚举/字段/方法/注解 tag 名 | 待办 |
-| 21 | 跳转定义与查找引用(跨文件 import) | 待办 |
-| 22 | 悬停提示与文档符号(Doc 注释、大纲) | 待办 |
-| 23 | 格式化接入 pkg/format(textDocument/formatting) | 待办 |
-| 24 | 编辑器集成:hbuf_idea LSP 接入与 VSCode 扩展说明 | 待办 |
+| 1 | 创建 pkg/wire 中性描述模型(Request/Response/File/Type 等,实际落 plugin/core/wire) | 已完成 |
+| 2 | 实现 AST → wire 转换(convert.go,含引用解析与包名标注) | 已完成 |
+| 3 | 创建 pkg/build/plugin.go(插件发现、JSON over stdio 调用、统一落盘) | 已完成 |
+| 4 | 改造 build.Build:插件调度 + 变更文件列表 + 进程内兼容回退 | 已完成 |
+| 5 | cmd/hbuf 增加 -plugin=hbuf-gen-x=/path 参数 | 已完成 |
+| 6 | 创建 pkg/plugin SDK(插件侧 stdin/stdout 主循环、协议校验,实际落 plugin/core/sdk) | 已完成 |
+| 7 | 创建 pkg/tpl 模板引擎(内置 embed + 外部覆盖 + 执行缓存,实际落 plugin/core/tpl) | 已完成 |
+| 8 | 创建 pkg/tpl 模板函数库(命名转换、类型映射等 FuncMap,实际落 plugin/core/tpl) | 已完成 |
+| 9 | 设计 golang 模板上下文(DataContext/EnumContext/ServerContext) | 已完成 |
+| 10 | 编写内置模板 templates/data.tmpl(descriptor+struct+Getter/Setter) | 已完成 |
+| 11 | 编写 templates/enum.tmpl、server.tmpl 模板 | 已完成 |
+| 12 | golang 后端接入模板渲染(template.go,与 Writer 并存) | 已完成 |
+| 13 | 创建 cmd/hbuf-gen-go 插件入口(plugin.Run + 模板生成,实际落 plugin/gen-go/cmd) | 已完成 |
+| 14 | 创建 cmd/hbuf-gen-dart/java/ts 插件入口 | 待办(仅 go 已建) |
+| 15 | 构建验证:go build/go vet + 端到端生成测试 | 已完成 |
+| 16 | 更新 AGENTS.md(插件协议、模板机制、目录结构) | 已完成 |
+| 17 | 创建 plugin/lsp 目录与 cmd/hbuf-lsp 语言服务器入口 | 已完成 |
+| 18 | 实现 LSP JSON-RPC 框架(initialize/textDocument/workspace,纯标准库) | 已完成 |
+| 19 | 诊断能力:语法/类型校验/未解析引用实时报错 | 已完成 |
+| 20 | 补全能力:类型/枚举/字段/方法/注解 tag 名 | 已完成 |
+| 21 | 跳转定义与查找引用(跨文件 import) | 已完成 |
+| 22 | 悬停提示与文档符号(Doc 注释、大纲) | 已完成 |
+| 23 | 格式化接入 pkg/format(textDocument/formatting) | 已完成 |
+| 24 | 编辑器集成:hbuf_idea LSP 接入与 VSCode 扩展说明 | 已完成 |
 | 25 | 二进制序列化(全语言)实现 | 待办 |
 | 26 | 生成后端单元/端到端测试基线 | 待办 |
 | 27 | CI/CD 多平台自动发布(GitHub Actions) | 待办 |
@@ -41,7 +41,7 @@
 | 32 | watch 模式(-w 文件变化自动构建) | 待办 |
 | 33 | JSON Schema / OpenAPI 导出 | 待办 |
 | 34 | examples 示例仓库 | 待办 |
-| 35 | LSP 增强(语义高亮/代码操作/inlay hints/workspace 符号) | 待办 |
+| 35 | LSP 增强(语义高亮/代码操作/inlay hints/workspace 符号) | 已完成 |
 | 36 | 数据库生成增强(迁移/事务/join) | 待办 |
 | 37 | Golang 端多语言文本支持 | 待办 |
 | 38 | parser fuzz 测试 | 待办 |
@@ -128,14 +128,14 @@
 ## 三、实施顺序
 
 ```
-阶段一: 线协议落地      F1→F8 (wire 模型、插件发现/调用、SDK、CLI)
-阶段二: 模板引擎        F10→F15 (tpl 引擎、函数库、上下文、模板)
-阶段三: 插件入口        F9 (hbuf-gen-* 四个入口,后端切模板渲染)
-阶段四: 验证收尾        F16→F17
-阶段五: 语言服务        F18→F24 (LSP 服务器、诊断/补全/跳转/格式化、编辑器接入)
+阶段一: 线协议落地      F1→F8 (wire 模型、插件发现/调用、SDK、CLI)          ✔ 已完成
+阶段二: 模板引擎        F10→F15 (tpl 引擎、函数库、上下文、模板)              ✔ 已完成
+阶段三: 插件入口        F9 (hbuf-gen-* 四个入口,后端切模板渲染)              ◐ 仅 hbuf-gen-go
+阶段四: 验证收尾        F16→F17                                               ✔ 已完成
+阶段五: 语言服务        F18→F24 (LSP 服务器、诊断/补全/跳转/格式化、编辑器接入) ✔ 已完成
 阶段六: 测试与发布      F26→F27 (测试基线、CI/CD,可与阶段一并行,保障重构质量)
 阶段七: 核心功能补全    F25、F28、F29、F37 (二进制序列化、广播 RPC、循环检测、Golang 多语言文本)
-阶段八: 生态建设        F30→F36、F38→F39 (C/C# 插件、远程 import、watch、导出、示例、LSP 增强、数据库、fuzz、文档站)
+阶段八: 生态建设        F30→F36、F38→F39 (C/C# 插件、远程 import、watch、导出、示例、LSP 增强、数据库、fuzz、文档站) ◐ LSP 增强(F35)已完成
 ```
 
 ## 四、目标架构
@@ -202,6 +202,10 @@ hbuf-gen-dart/  hbuf-gen-java/  hbuf-gen-ts/   # 以后各自独立仓库
   - 跳转定义与查找引用(支持跨文件 import)
   - 悬停提示(Doc 注释/类型/ID)与文档符号大纲
   - 格式化:接入 pkg/format(textDocument/formatting)
+  - 语义高亮(textDocument/semanticTokens/full,delta 编码,scanner+AST 分层)
+  - 代码操作(textDocument/codeAction:格式化 quickfix、未使用 import 删除)
+  - 内联提示(textDocument/inlayHint:extends 成员摘要、跨文件类型来源)
+  - 工作区符号(workspace/symbol:扫描工作区 *.hbuf,大小写不敏感过滤)
 - **编辑器集成**:IntelliJ(hbuf_idea 插件 LSP 接入)、VSCode(LSP 客户端扩展)、
   neovim 等标准 LSP 客户端
 - **增量同步**:解析缓存按文件内容 hash 失效,支持未保存文档(内存覆盖)

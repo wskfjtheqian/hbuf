@@ -104,13 +104,17 @@ const TextDocumentSyncFull = 1
 
 // ServerCapabilities 服务器能力声明。
 type ServerCapabilities struct {
-	TextDocumentSync           int                `json:"textDocumentSync"`
-	HoverProvider              bool               `json:"hoverProvider"`
-	DefinitionProvider         bool               `json:"definitionProvider"`
-	ReferencesProvider         bool               `json:"referencesProvider"`
-	DocumentSymbolProvider     bool               `json:"documentSymbolProvider"`
-	DocumentFormattingProvider bool               `json:"documentFormattingProvider"`
-	CompletionProvider         *CompletionOptions `json:"completionProvider,omitempty"`
+	TextDocumentSync           int                    `json:"textDocumentSync"`
+	HoverProvider              bool                   `json:"hoverProvider"`
+	DefinitionProvider         bool                   `json:"definitionProvider"`
+	ReferencesProvider         bool                   `json:"referencesProvider"`
+	DocumentSymbolProvider     bool                   `json:"documentSymbolProvider"`
+	DocumentFormattingProvider bool                   `json:"documentFormattingProvider"`
+	CompletionProvider         *CompletionOptions     `json:"completionProvider,omitempty"`
+	SemanticTokensProvider     *SemanticTokensOptions `json:"semanticTokensProvider,omitempty"`
+	CodeActionProvider         bool                   `json:"codeActionProvider,omitempty"`
+	InlayHintProvider          bool                   `json:"inlayHintProvider,omitempty"`
+	WorkspaceSymbolProvider    bool                   `json:"workspaceSymbolProvider,omitempty"`
 }
 
 type CompletionOptions struct {
@@ -210,4 +214,91 @@ type DocumentFormattingParams struct {
 type FormattingOptions struct {
 	TabSize      int  `json:"tabSize"`
 	InsertSpaces bool `json:"insertSpaces"`
+}
+
+// InitializeParams 初始化参数(提取 workspaceFolders/rootUri 用于工作区符号)。
+type InitializeParams struct {
+	Capabilities     interface{}       `json:"capabilities"`
+	WorkspaceFolders []WorkspaceFolder `json:"workspaceFolders,omitempty"`
+	RootURI          string            `json:"rootUri,omitempty"`
+}
+
+type WorkspaceFolder struct {
+	URI  string `json:"uri"`
+	Name string `json:"name"`
+}
+
+// 语义高亮(SemanticTokens,LSP 3.16)。
+// TokenTypes/TokenModifiers 索引即 LSP 规范顺序,见 semantic_tokens.go。
+type SemanticTokensParams struct {
+	TextDocument TextDocumentIdentifier `json:"textDocument"`
+}
+
+type SemanticTokens struct {
+	ResultID string   `json:"resultId,omitempty"`
+	Data     []uint32 `json:"data"`
+}
+
+type SemanticTokensLegend struct {
+	TokenTypes     []string `json:"tokenTypes"`
+	TokenModifiers []string `json:"tokenModifiers"`
+}
+
+type SemanticTokensOptions struct {
+	Legend SemanticTokensLegend `json:"legend"`
+	Full   bool                 `json:"full"`
+}
+
+// 代码操作(CodeAction,LSP 3.16)。
+type CodeActionParams struct {
+	TextDocument TextDocumentIdentifier `json:"textDocument"`
+	Range        Range                  `json:"range"`
+	Context      CodeActionContext      `json:"context"`
+}
+
+type CodeActionContext struct {
+	Diagnostics []Diagnostic `json:"diagnostics"`
+}
+
+type CodeAction struct {
+	Title string         `json:"title"`
+	Kind  string         `json:"kind,omitempty"`
+	Edit  *WorkspaceEdit `json:"edit,omitempty"`
+}
+
+// WorkspaceEdit 编辑(按 uri 分组的文本变更)。
+type WorkspaceEdit struct {
+	Changes map[string][]TextEdit `json:"changes,omitempty"`
+}
+
+// InlayHint(LSP 3.17)。
+const (
+	InlayHintType      = 1 // 类型提示
+	InlayHintParameter = 2 // 参数名提示
+)
+
+type InlayHintParams struct {
+	TextDocument TextDocumentIdentifier `json:"textDocument"`
+	Range        Range                  `json:"range"`
+}
+
+type InlayHint struct {
+	Position     Position `json:"position"`
+	Label        string   `json:"label"`
+	Kind         int      `json:"kind,omitempty"`
+	PaddingLeft  bool     `json:"paddingLeft,omitempty"`
+	PaddingRight bool     `json:"paddingRight,omitempty"`
+	Tooltip      string   `json:"tooltip,omitempty"`
+}
+
+// 工作区符号(workspace/symbol)。
+type WorkspaceSymbolParams struct {
+	Query string `json:"query"`
+}
+
+type WorkspaceSymbol struct {
+	Name          string   `json:"name"`
+	Kind          int      `json:"kind"`
+	Location      Location `json:"location"`
+	ContainerName string   `json:"containerName,omitempty"`
 }

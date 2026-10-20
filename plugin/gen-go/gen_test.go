@@ -36,6 +36,8 @@ data Student:Base = 2 {
     string[] names = 5;
 
     string phone = 6;
+
+    Status[]? statuses = 7;
 };
 
 data Message {
@@ -109,10 +111,18 @@ func TestGenerateBasic(t *testing.T) {
 		"return *g.No",
 		"SetNo(val int32) {",
 		"g.No = &val",
+		// 可空数组:slice 自身可表示空,字段与 Getter 均不加指针
+		"func (g *Student) GetStatuses() []Status {",
+		"return g.Statuses",
+		"func (g *Student) SetStatuses(val []Status) {",
+		"g.Statuses = val",
 	} {
 		if !strings.Contains(data, want) {
 			t.Errorf("data file missing %q", want)
 		}
+	}
+	if strings.Contains(data, "*[]Status") {
+		t.Error("nullable array should not be rendered as pointer slice")
 	}
 
 	enum := files["admin/base.enum.go"]
@@ -236,6 +246,119 @@ func TestTemplateDirNotExists(t *testing.T) {
 	req.Options = []string{"template=/no/such/dir"}
 	if _, err := Generate(req); err == nil {
 		t.Error("expect error for missing template dir")
+	}
+}
+
+// TestCrossFileImportPath 跨文件类型引用时,import 路径应为 "<构建包前缀>/<目标包名>"。
+func TestCrossFileImportPath(t *testing.T) {
+	fset := htoken.NewFileSet()
+	fileMain, err := hparser.ParseFile(fset, "/a/sms.public.hbuf", `package go = "sms";
+import "public.hbuf";
+data Req {
+    SmsProvider provider = 1;
+};`, hparser.AllErrors|hparser.ParseComments)
+	if err != nil {
+		t.Fatalf("parse main: %v", err)
+	}
+	filePub, err := hparser.ParseFile(fset, "/a/public.hbuf", `package go = "public";
+enum SmsProvider {
+    aliyun = 0;
+};`, hparser.AllErrors|hparser.ParseComments)
+	if err != nil {
+		t.Fatalf("parse public: %v", err)
+	}
+	pkg := &ast.Package{Files: map[string]*ast.File{
+		"/a/sms.public.hbuf": fileMain,
+		"/a/public.hbuf":     filePub,
+	}}
+	req := &wire.Request{
+		Protocol: wire.ProtocolVersion,
+		Type:     "go",
+		Pack:     "github.com/test/hbuf",
+		Files:    wire.Convert(pkg, "go"),
+		Changed:  []string{"/a/sms.public.hbuf"},
+	}
+	resp, err := Generate(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data := filesByName(resp)["sms/sms.public.data.go"]
+	if !strings.Contains(data, `"github.com/test/hbuf/public"`) {
+		t.Errorf("expect cross-file import %q, got:\n%s", "github.com/test/hbuf/public", data)
+	}
+
+	// 构建包前缀为空时,import 退化为末段包名
+	req.Pack = ""
+	resp, err = Generate(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data = filesByName(resp)["sms/sms.public.data.go"]
+	if !strings.Contains(data, "\n\t\"public\"\n") {
+		t.Errorf("expect bare import %q when pack empty, got:\n%s", "public", data)
+	}
+}
+
+// TestBindForward bind 转发调用应取 req 中嵌入的目标参数类型字段,
+// 且跨文件引用的 import 必须出现在 server 文件中。
+func TestBindForward(t *testing.T) {
+	fset := htoken.NewFileSet()
+	fileBase, err := hparser.ParseFile(fset, "/a/base.hbuf", `package go = "base";
+data Student {
+    string name = 1;
+};
+data StudentResp {
+    string name = 1;
+};
+server BaseServer {
+    StudentResp GetStudent(Student req) = 1;
+};`, hparser.AllErrors|hparser.ParseComments)
+	if err != nil {
+		t.Fatalf("parse base: %v", err)
+	}
+	fileManage, err := hparser.ParseFile(fset, "/a/manage.hbuf", `package go = "manage";
+import "base.hbuf";
+data MgStudent:Student = 2 {
+};
+data MgStudentResp:StudentResp = 2 {
+};
+server ManageServer {
+    [bind:value="BaseServer.GetStudent"]
+    MgStudentResp GetStudent(MgStudent req) = 1;
+};`, hparser.AllErrors|hparser.ParseComments)
+	if err != nil {
+		t.Fatalf("parse manage: %v", err)
+	}
+	pkg := &ast.Package{Files: map[string]*ast.File{
+		"/a/base.hbuf":   fileBase,
+		"/a/manage.hbuf": fileManage,
+	}}
+	req := &wire.Request{
+		Protocol: wire.ProtocolVersion,
+		Type:     "go",
+		Pack:     "github.com/test/hbuf",
+		Files:    wire.Convert(pkg, "go"),
+		Changed:  []string{"/a/base.hbuf", "/a/manage.hbuf"},
+	}
+	resp, err := Generate(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := filesByName(resp)["manage/manage.server.go"]
+	for _, want := range []string{
+		// bind 转发:取 req 中嵌入的目标参数类型字段
+		`base.GetBaseServer(ctx).GetStudent(ctx, &req.Student)`,
+		// 响应包装:当前结果内嵌目标结果
+		`return &MgStudentResp{StudentResp: *resp}, nil`,
+		// 跨文件引用的 import 出现在 server 文件
+		`"github.com/test/hbuf/base"`,
+	} {
+		if !strings.Contains(server, want) {
+			t.Errorf("manage server file missing %q, got:\n%s", want, server)
+		}
+	}
+	if strings.Contains(server, "req.MgStudent") {
+		t.Error("bind forward should use target param type field, not current param type")
 	}
 }
 

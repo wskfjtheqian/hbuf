@@ -84,17 +84,21 @@ func TestLSPProcessStdio(t *testing.T) {
 		"textDocument": map[string]interface{}{"uri": uri},
 		"position":     map[string]interface{}{"line": 5, "character": 0},
 	})
-	req(3, "shutdown", nil)
+	req(3, "textDocument/semanticTokens/full", map[string]interface{}{
+		"textDocument": map[string]interface{}{"uri": uri},
+	})
+	req(4, "shutdown", nil)
 	notify("exit", nil)
 	if err := w.Flush(); err != nil {
 		t.Fatal(err)
 	}
 	stdin.Close()
 
-	// 读取 4 条输出:initialize 响应、publishDiagnostics 通知、completion 响应、shutdown 响应
+	// 读取 5 条输出:initialize 响应、publishDiagnostics 通知、completion 响应、
+	// semanticTokens 响应、shutdown 响应
 	wire := NewWire(stdout, io.Discard)
 	var got []*Message
-	for i := 0; i < 4; i++ {
+	for i := 0; i < 5; i++ {
 		msg, err := wire.Read()
 		if err != nil {
 			t.Fatalf("read message %d: %v (stderr: %s)", i, err, stderr)
@@ -117,9 +121,14 @@ func TestLSPProcessStdio(t *testing.T) {
 		!bytes.Contains(got[2].Result, []byte(`"label":"Student"`)) {
 		t.Errorf("completion response mismatch: %+v", got[2])
 	}
-	// 4. shutdown 响应
-	if got[3].ID == nil || string(*got[3].ID) != "3" || !bytes.Equal(bytes.TrimSpace(got[3].Result), []byte("null")) {
-		t.Errorf("shutdown response mismatch: %+v", got[3])
+	// 4. semanticTokens 响应(非空且 5 元组对齐)
+	if got[3].ID == nil || string(*got[3].ID) != "3" ||
+		!bytes.Contains(got[3].Result, []byte(`"data":[`)) {
+		t.Errorf("semanticTokens response mismatch: %+v", got[3])
+	}
+	// 5. shutdown 响应
+	if got[4].ID == nil || string(*got[4].ID) != "4" || !bytes.Equal(bytes.TrimSpace(got[4].Result), []byte("null")) {
+		t.Errorf("shutdown response mismatch: %+v", got[4])
 	}
 
 	// 退出码必须为 0(shutdown 后 exit)

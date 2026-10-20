@@ -58,6 +58,7 @@ hbuf -i <输入目录或通配符,如 ./test/*.hbuf> \
 
 ```
 cmd/main.go            CLI 入口:注册 4 种构建类型,解析 flag,调用 build.BuildWithPlugin
+cmd/hbuf-lsp/         语言服务器入口(-v/-log flags,日志写 stderr)
 pkg/
 ├── scanner/           词法分析(仿 go/scanner,含 ErrorList)
 ├── token/             Token 定义、FileSet、Pos 位置管理
@@ -80,6 +81,16 @@ plugin/                ★ 新插件化架构(详见 plugin/README.md)
 ├── core/wire/         中性描述模型(Request/Response/File/Type 等)+ AST→wire 转换
 ├── core/sdk/          插件侧 SDK(stdio 主循环、协议版本校验)
 ├── core/tpl/          模板引擎(内置模板 embed + 外部覆盖 + 执行缓存)
+├── lsp/               ★ HBUF 语言服务(JSON-RPC over stdio,纯标准库,对标 gopls)
+│   ├── protocol.go / jsonrpc.go   LSP 类型与 JSON-RPC 2.0 帧
+│   ├── server.go       Serve 主循环 + 方法分发(initialize/didOpen/...)
+│   ├── view.go         文档视图 + import 依赖图解析(内存覆盖优先,支持未保存文档)
+│   ├── diagnostics.go  诊断:语法错误 + build.CheckPackage 同源校验
+│   ├── completion.go / definition.go / hover.go / symbols.go / format.go
+│   ├── semantic_tokens.go  语义高亮(scanner 基础 + AST 语义,delta 编码)
+│   ├── code_action.go  代码操作(source.fixAll 格式化、未使用 import 删除)
+│   ├── inlay_hint.go   内联提示(extends 成员摘要、跨文件类型来源)
+│   └── workspace_symbol.go 工作区符号(workspaceFolders 扫描 + 符号搜索)
 └── gen-go/            Go 插件(已完成):funcs.go(类型映射)、context.go(模板上下文)、
                        templates/*.tmpl、cmd/hbuf-gen-go(入口)
 doc/                   hbuf.md(IDL 语法)、hbuf_db.md(数据库注解)、serialize.md、
@@ -109,6 +120,27 @@ doc/                   hbuf.md(IDL 语法)、hbuf_db.md(数据库注解)、seria
 - 插件侧可用 `plugin/core/sdk` 写主循环;第三方可用任意语言实现同一 JSON 协议
 - Go 插件生成基于模板:内置模板 `//go:embed` 打包,`-template <目录>` 下同名文件覆盖
 - 模板输出后经 `go/format` 自动格式化,文件名约定 `<包名点分转目录>/<name>.data.go` 等
+
+### 语言服务(LSP)要点
+
+- 协议输出仅写 stdout,日志(-log)写 stderr;错误绝不可调 `scanner.ErrorList.Error()`
+  (该方法在多个错误时会 fmt.Println 污染协议流,必须遍历 ErrorList 项逐个转换)
+- 位置转换:`token.Position`(1-based 行/字节列)→ LSP `Position`(0-based 行/UTF-16 列),
+  见 `toPosition`/`toOffset`;EOF 位置 token 层 lines 表不含尾随空行,需特判映射到末行行首
+- 诊断与命令行同源:`build.CheckPackage(fset, pkg)` 复用 `checkFiles` 校验规则;
+  存在语法错误时跳过类型校验,避免残缺 AST 误报
+- 文档解析:`view.parse` 递归加载 import 图,打开文档内存内容优先;
+  import 路径归一为绝对路径并回写 spec.Path.Value(与 ParseDir 一致,供跨文件校验);
+  格式化(textDocument/formatting)必须独立解析,避免绝对路径写入输出
+- 同一 Ident 可能被遍历两次(TypeSpec.Name 与 DataType/EnumType 内嵌 Name),
+  references 收集需按 (Pos,End) 去重
+- 语义高亮:关键字/注释/字符串/数字由 scanner 提供(语法错误文档也能尽量着色),
+  AST 只补语义;跨文件 import 类型引用的 Ident.Obj 为 nil(parser 单文件解析),
+  需按名字查 import 文件声明类别;跨行 token(块注释)需按行拆分;delta 编码同 line 0 时列相对
+- codeAction:view.loadFile 已把 spec.Path.Value 改写为无引号绝对路径,
+  还原 import 字面量时需对 strconv.Unquote 失败容错(直接返回原值)
+- workspace/symbol:扫描根目录来自 initialize 的 workspaceFolders/rootUri,
+  未提供时回退为打开文档目录;跳过隐藏目录,上限 1000 文件、结果 100 条
 
 ### 进程内语言后端统一接口(兼容期)
 
@@ -168,3 +200,4 @@ data User = 3 {
 3. **扩展 IDL 语法**:改 `pkg/token/token.go` → `pkg/scanner` → `pkg/parser` → `pkg/ast` → 各后端 + `plugin/core/wire/convert.go`
 4. **修改序列化方案**:见 `pkg/golang/data.go`(JSON/二进制)与 `doc/serialize.md`
 5. **验证 CLI 行为**:`build_test.go` 内含跨平台交叉编译与发布打包流程(仅全量测试运行,`-short` 跳过);插件链路测试见 `pkg/build/plugin_test.go`、`plugin/gen-go/gen_test.go`
+6. **扩展语言服务能力**:LSP 各能力分散在 `plugin/lsp/*.go`(diagnostics/completion/definition/hover/symbols/format),测试见 `lsp_test.go`(能力级)与 `serve_test.go`(协议级集成);编辑器接入说明见 `plugin/lsp/README.md`

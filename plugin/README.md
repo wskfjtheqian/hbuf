@@ -17,10 +17,23 @@ plugin/
 │   └── tpl/                       # 模板引擎(text/template 封装)
 │                                  # 内置模板 embed 打包 + 外部模板覆盖 + 执行缓存
 │
-├── lsp/                           # HBUF 语言服务(规划中,尚未创建)
-│   └── cmd/hbuf-lsp/              # 语言服务器入口(JSON-RPC over stdio)
-│                                  # 诊断/补全/跳转定义/悬停/符号/格式化
+├── lsp/                           # HBUF 语言服务(已完成)
+│   ├── protocol.go                # LSP 类型与常量(Position/Range/Diagnostic/...)
+│   ├── jsonrpc.go                 # JSON-RPC 2.0 帧(Content-Length 头,纯标准库)
+│   ├── server.go                  # Serve 主循环与方法分发
+│   ├── view.go                    # 文档视图与 import 依赖图解析(内存覆盖优先)
+│   ├── diagnostics.go             # 诊断(语法 + build.CheckPackage 同源校验)
+│   ├── completion.go              # 补全(类型/字段/方法/枚举项/tag 名)
+│   ├── definition.go / lookup.go  # 跳转定义与查找引用(跨文件 import)
+│   ├── hover.go / symbols.go      # 悬停提示与文档符号
+│   ├── format.go                  # 格式化(接入 pkg/format)
+│   ├── semantic_tokens.go         # 语义高亮(类型/字段/方法/关键字/注解)
+│   ├── code_action.go             # 代码操作(格式化、未使用 import 删除)
+│   ├── inlay_hint.go              # 内联提示(继承摘要、跨文件类型来源)
+│   ├── workspace_symbol.go        # 工作区符号(workspaceFolders 扫描)
+│   └── *_test.go                  # 单元测试 + 协议级集成测试
 │
+│ (语言服务器入口在根目录 cmd/hbuf-lsp/)
 └── gen-go/                        # Go 插件(已完成,后续迁出为独立仓库 hbuf-gen-go)
     ├── cmd/hbuf-gen-go/           # 插件二进制入口(sdk.Run + 模板生成)
     ├── gen.go                     # Generate 主流程(模板渲染 + go/format 格式化)
@@ -99,6 +112,10 @@ bin/hbuf -i test/*.hbuf -o out -t go -p github.com/test -a \
   - 跳转定义与查找引用(支持跨文件 import)
   - 悬停提示(Doc 注释/类型/ID)与文档符号大纲
   - 格式化:接入 pkg/format(textDocument/formatting)
+  - 语义高亮:textDocument/semanticTokens/full(标准 token 类型)
+  - 代码操作:source.fixAll 格式化、删除未使用 import 的 quickfix
+  - 内联提示:extends 父类型成员摘要、跨文件类型来源
+  - 工作区符号:workspace/symbol(扫描 workspaceFolders)
 - **编辑器集成**:IntelliJ(hbuf_idea 插件 LSP 接入)、VSCode(LSP 客户端扩展)、
   neovim 等标准 LSP 客户端
 - **增量同步**:解析缓存按文件内容 hash 失效,支持未保存文档(内存覆盖)

@@ -119,6 +119,17 @@ func (c *Ctx) Import(path string) string {
 	return path
 }
 
+// clone 复制上下文:共享请求与类型索引,Imports 独立(按输出文件类别收集)。
+func (c *Ctx) clone() *Ctx {
+	return &Ctx{
+		Req:     c.Req,
+		File:    c.File,
+		Pack:    c.Pack,
+		Imports: map[string]bool{},
+		index:   c.index,
+	}
+}
+
 // refPrefix 引用类型的前缀:同包为空,否则为"<末段包名>."并登记 import。
 func (c *Ctx) refPrefix(refPack string) string {
 	if refPack == "" || refPack == c.Pack {
@@ -128,8 +139,14 @@ func (c *Ctx) refPrefix(refPack string) string {
 	if i := strings.LastIndex(refPack, "."); i >= 0 {
 		seg = refPack[i+1:]
 	}
-	// 与进程内后端一致:目标包引用路径 = 构建包前缀 + 末段包名
-	c.Import(c.Req.Pack + seg)
+	// 与进程内后端一致:目标包引用路径 = 构建包前缀 + "/" + 末段包名
+	pkg := c.Req.Pack
+	if pkg == "" {
+		pkg = seg
+	} else {
+		pkg += "/" + seg
+	}
+	c.Import(pkg)
 	return seg + "."
 }
 
@@ -158,7 +175,8 @@ func (c *Ctx) goType(vt *wire.VarType, top bool) string {
 		return "any"
 	}
 	pre := ""
-	if top && vt.Empty {
+	// 数组/映射自身即可表示空(nil slice/map),可空不加指针,与进程内后端一致
+	if top && vt.Empty && vt.Kind != "array" && vt.Kind != "map" {
 		pre = "*"
 	}
 	switch vt.Kind {

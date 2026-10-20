@@ -14,11 +14,24 @@ type FileContext struct {
 	Datas   []*DataContext   // data 类型列表
 	Enums   []*EnumContext   // enum 类型列表
 	Servers []*ServerContext // server 类型列表
+
+	// 各输出文件构建期登记的 import 集合(避免 data 的 import 污染 enum/server 文件)
+	dataImports   map[string]bool
+	enumImports   map[string]bool
+	serverImports map[string]bool
 }
 
 // NewFileContext 构建文件级模板上下文。
+// data/enum/server 三类上下文分别用独立的 import 集合构建,
+// 各输出文件只携带自己类别实际用到的 import。
 func NewFileContext(ctx *Ctx, file *wire.File) *FileContext {
-	fc := &FileContext{Ctx: ctx, Package: ctx.Pack}
+	fc := &FileContext{
+		Ctx:           ctx,
+		Package:       ctx.Pack,
+		dataImports:   map[string]bool{},
+		enumImports:   map[string]bool{},
+		serverImports: map[string]bool{},
+	}
 	for _, t := range file.Types {
 		if t == nil {
 			continue
@@ -26,15 +39,21 @@ func NewFileContext(ctx *Ctx, file *wire.File) *FileContext {
 		switch t.Kind {
 		case "data":
 			if t.Data != nil {
-				fc.Datas = append(fc.Datas, NewDataContext(ctx, t.Data))
+				sub := ctx.clone()
+				sub.Imports = fc.dataImports
+				fc.Datas = append(fc.Datas, NewDataContext(sub, t.Data))
 			}
 		case "enum":
 			if t.Enum != nil {
-				fc.Enums = append(fc.Enums, NewEnumContext(ctx, t.Enum))
+				sub := ctx.clone()
+				sub.Imports = fc.enumImports
+				fc.Enums = append(fc.Enums, NewEnumContext(sub, t.Enum))
 			}
 		case "server":
 			if t.Server != nil {
-				fc.Servers = append(fc.Servers, NewServerContext(ctx, t.Server))
+				sub := ctx.clone()
+				sub.Imports = fc.serverImports
+				fc.Servers = append(fc.Servers, NewServerContext(sub, t.Server))
 			}
 		}
 	}
@@ -322,23 +341,28 @@ func resolveBind(ctx *Ctx, m *wire.Method) *BindContext {
 		pack = ctx.refPrefix(packOf(file, "go"))
 	}
 	bind := &BindContext{}
-	if m.Param != nil && isStream(m.Param) {
-		bind.Call = pack + "Get" + serverName + "(ctx)." + methodName + "(ctx, req)"
-	} else {
-		bind.Call = pack + "Get" + serverName + "(ctx)." + methodName + "(ctx, &req." + ctx.goType(m.Param, false) + ")"
-	}
-	// 找到 bind 目标方法的结果类型用于构造返回
-	var result *wire.VarType
+	// 找到 bind 目标方法的参数与结果类型用于构造转发
+	var bindParam, result *wire.VarType
 	for _, bm := range typ.Server.Methods {
 		if bm != nil && bm.Name == methodName {
+			bindParam = bm.Param
 			result = bm.Result
 		}
+	}
+	if m.Param != nil && isStream(m.Param) {
+		bind.Call = pack + "Get" + serverName + "(ctx)." + methodName + "(ctx, req)"
+	} else if bindParam != nil {
+		// 转发参数取 req 中嵌入的目标参数类型字段(嵌入字段名不带包前缀)
+		bind.Call = pack + "Get" + serverName + "(ctx)." + methodName + "(ctx, &req." + tpl.HumpName(bindParam.Name) + ")"
+	} else {
+		bind.Call = pack + "Get" + serverName + "(ctx)." + methodName + "(ctx, &req." + tpl.HumpName(m.Param.Name) + ")"
 	}
 	if m.Result == nil || isVoid(m.Result) {
 		bind.Result = "nil"
 	} else if result != nil && !isVoid(result) && !isStream(result) {
 		bind.RespVar = true
-		bind.Result = "&" + ctx.goType(m.Result, false) + "{" + ctx.goType(result, false) + ": *resp}, nil"
+		// 响应包装:当前结果内嵌目标结果,复合字面量 key 用纯类型名
+		bind.Result = "&" + ctx.goType(m.Result, false) + "{" + tpl.HumpName(result.Name) + ": *resp}, nil"
 	} else {
 		bind.RespVar = true
 		bind.Result = "nil, nil"

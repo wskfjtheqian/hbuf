@@ -352,7 +352,13 @@ func (b *Builder) getPackage(dst *build.Writer, expr ast.Expr) string {
 	packs := strings.Split(pack, ".")
 	pack = packs[len(packs)-1]
 
-	dst.Import(b.packages+pack, "")
+	pkg := b.packages
+	if pkg == "" {
+		pkg = pack
+	} else {
+		pkg += "/" + pack
+	}
+	dst.Import(pkg, "")
 	return pack + "."
 }
 

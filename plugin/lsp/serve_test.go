@@ -83,6 +83,12 @@ func TestServeSession(t *testing.T) {
 	if !initRes.Capabilities.DefinitionProvider || !initRes.Capabilities.HoverProvider {
 		t.Errorf("missing capabilities: %+v", initRes.Capabilities)
 	}
+	if initRes.Capabilities.SemanticTokensProvider == nil ||
+		!initRes.Capabilities.CodeActionProvider ||
+		!initRes.Capabilities.InlayHintProvider ||
+		!initRes.Capabilities.WorkspaceSymbolProvider {
+		t.Errorf("missing enhanced capabilities: %+v", initRes.Capabilities)
+	}
 	if initRes.ServerInfo == nil || initRes.ServerInfo.Name != "hbuf-lsp" {
 		t.Errorf("server info: %+v", initRes.ServerInfo)
 	}
@@ -130,7 +136,43 @@ func TestServeSession(t *testing.T) {
 		}
 	}
 
-	// 4. didChange 后诊断更新(语法错误)
+	// 4. semanticTokens 请求
+	c.send("3", "textDocument/semanticTokens/full", SemanticTokensParams{
+		TextDocument: TextDocumentIdentifier{URI: uri},
+	})
+	resp = c.recv()
+	if !resp.IsResponse() || string(*resp.ID) != "3" {
+		t.Fatalf("expect semanticTokens response, got %+v", resp)
+	}
+	var sem SemanticTokens
+	if err := json.Unmarshal(resp.Result, &sem); err != nil {
+		t.Fatal(err)
+	}
+	if len(sem.Data) == 0 || len(sem.Data)%5 != 0 {
+		t.Errorf("semanticTokens data: %d", len(sem.Data))
+	}
+
+	// 5. workspace/symbol 请求(回退为打开文档所在目录扫描)
+	c.send("4", "workspace/symbol", WorkspaceSymbolParams{Query: "X"})
+	resp = c.recv()
+	if !resp.IsResponse() || string(*resp.ID) != "4" {
+		t.Fatalf("expect workspace/symbol response, got %+v", resp)
+	}
+	var wsyms []WorkspaceSymbol
+	if err := json.Unmarshal(resp.Result, &wsyms); err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, s := range wsyms {
+		if s.Name == "X" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("workspace/symbol missing X: %+v", wsyms)
+	}
+
+	// 6. didChange 后诊断更新(语法错误)
 	c.notify("textDocument/didChange", DidChangeParams{
 		TextDocument: VersionedTextDocumentIdentifier{URI: uri, Version: 2},
 		ContentChanges: []TextDocumentContentChangeEvent{
@@ -148,10 +190,10 @@ func TestServeSession(t *testing.T) {
 		t.Error("expect syntax diagnostics after change")
 	}
 
-	// 5. shutdown + exit(正常退出码 0)
-	c.send("3", "shutdown", nil)
+	// 7. shutdown + exit(正常退出码 0)
+	c.send("5", "shutdown", nil)
 	resp = c.recv()
-	if !resp.IsResponse() || string(*resp.ID) != "3" {
+	if !resp.IsResponse() || string(*resp.ID) != "5" {
 		t.Fatalf("expect shutdown response, got %+v", resp)
 	}
 	c.notify("exit", nil)

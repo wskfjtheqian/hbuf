@@ -35,6 +35,7 @@ type View struct {
 	mu     sync.Mutex
 	docs   map[string]*Document // uri → doc
 	byPath map[string]string    // 磁盘路径 → uri
+	roots  []string             // 工作区根目录(initialize 的 workspaceFolders)
 }
 
 func NewView() *View {
@@ -103,6 +104,28 @@ func (v *View) Docs() []*Document {
 		docs = append(docs, d)
 	}
 	return docs
+}
+
+// SetWorkspaceRoots 设置工作区根目录(来自 initialize 的 workspaceFolders/rootUri)。
+func (v *View) SetWorkspaceRoots(roots []string) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.roots = append([]string(nil), roots...)
+}
+
+// Roots 返回工作区根目录快照。
+func (v *View) Roots() []string {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	return append([]string(nil), v.roots...)
+}
+
+// PathURI 按磁盘路径查打开文档的 uri(未打开返回 false)。
+func (v *View) PathURI(path string) (string, bool) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	uri, ok := v.byPath[path]
+	return uri, ok
 }
 
 // parse 解析文档及其 import 依赖图。

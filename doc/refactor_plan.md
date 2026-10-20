@@ -31,6 +31,21 @@
 | 22 | 悬停提示与文档符号(Doc 注释、大纲) | 待办 |
 | 23 | 格式化接入 pkg/format(textDocument/formatting) | 待办 |
 | 24 | 编辑器集成:hbuf_idea LSP 接入与 VSCode 扩展说明 | 待办 |
+| 25 | 二进制序列化(全语言)实现 | 待办 |
+| 26 | 生成后端单元/端到端测试基线 | 待办 |
+| 27 | CI/CD 多平台自动发布(GitHub Actions) | 待办 |
+| 28 | 广播 RPC(go/dart)实现 | 待办 |
+| 29 | 循环 import 检测与错误信息优化 | 待办 |
+| 30 | C/C# 插件后端(首个外部插件验证) | 待办 |
+| 31 | 远程 import / 模块仓库 | 待办 |
+| 32 | watch 模式(-w 文件变化自动构建) | 待办 |
+| 33 | JSON Schema / OpenAPI 导出 | 待办 |
+| 34 | examples 示例仓库 | 待办 |
+| 35 | LSP 增强(语义高亮/代码操作/inlay hints/workspace 符号) | 待办 |
+| 36 | 数据库生成增强(迁移/事务/join) | 待办 |
+| 37 | Golang 端多语言文本支持 | 待办 |
+| 38 | parser fuzz 测试 | 待办 |
+| 39 | API 文档站生成 | 待办 |
 
 ## 二、功能清单
 
@@ -78,6 +93,38 @@
 | F23 | 格式化 | textDocument/formatting 接入 pkg/format 现有格式化器 |
 | F24 | 编辑器集成 | IntelliJ(hbuf_idea 通过 LSP 接入)、VSCode LSP 客户端扩展、neovim 等标准 LSP 客户端 |
 
+### 5. 功能补全与生态建设
+
+**高优先级**:
+
+| # | 功能 | 说明 |
+|---|---|---|
+| F25 | 二进制序列化(全语言) | README 功能表中所有语言二进制序列化未完成,是跨语言高效传输的核心能力,hbuf 对标 protobuf 的最大短板 |
+| F26 | 测试基线 | 生成后端(data/server/database 等)几乎无测试;插件化重构前建立单元/端到端测试基线,防止迁移后输出不一致 |
+| F27 | CI/CD 自动发布 | build_test.go 已有交叉编译+打包逻辑,接 GitHub Actions 自动构建并发布 hbuf + hbuf-gen-* 二进制 |
+| F28 | 广播 RPC(go/dart) | README 未完成项,推送类场景(消息通知)必需 |
+| F29 | 循环 import 检测与错误优化 | 确认循环依赖检测;错误信息补充修复建议(也为 LSP 诊断打基础) |
+
+**中优先级**:
+
+| # | 功能 | 说明 |
+|---|---|---|
+| F30 | C/C# 后端 | 插件化后的首个外部插件,验证第三方可用任意语言开发插件 |
+| F31 | 远程 import / 模块仓库 | 目前 import 仅支持本地相对路径;对标 buf registry,支持远程拉取 |
+| F32 | watch 模式 | 基于 FileHash 增量,加 -w 监听文件变化自动重编 |
+| F33 | JSON Schema / OpenAPI 导出 | data/server 定义导出为 JSON Schema/OpenAPI,对接网关与文档工具 |
+| F34 | examples 示例仓库 | 完整示例(含自定义模板、LSP 配置),降低上手门槛 |
+| F35 | LSP 增强 | 语义高亮(semantic tokens)、代码操作(code actions)、inlay hints、workspace 符号搜索 |
+
+**长期/可选**:
+
+| # | 功能 | 说明 |
+|---|---|---|
+| F36 | 数据库生成增强 | 迁移脚本生成、事务封装、join 查询(当前仅单表操作) |
+| F37 | Golang 多语言文本 | README 中 Golang 多语言文本标注未完成 |
+| F38 | fuzz 测试 | Go 原生 fuzzing 适合 parser,提升对异常 .hbuf 输入的健壮性 |
+| F39 | API 文档站 | 基于文档注释生成 API 文档站(可复用 LSP 悬停数据) |
+
 ## 三、实施顺序
 
 ```
@@ -86,6 +133,9 @@
 阶段三: 插件入口        F9 (hbuf-gen-* 四个入口,后端切模板渲染)
 阶段四: 验证收尾        F16→F17
 阶段五: 语言服务        F18→F24 (LSP 服务器、诊断/补全/跳转/格式化、编辑器接入)
+阶段六: 测试与发布      F26→F27 (测试基线、CI/CD,可与阶段一并行,保障重构质量)
+阶段七: 核心功能补全    F25、F28、F29、F37 (二进制序列化、广播 RPC、循环检测、Golang 多语言文本)
+阶段八: 生态建设        F30→F36、F38→F39 (C/C# 插件、远程 import、watch、导出、示例、LSP 增强、数据库、fuzz、文档站)
 ```
 
 ## 四、目标架构

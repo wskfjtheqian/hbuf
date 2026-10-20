@@ -1,0 +1,95 @@
+{{range .Servers}}{{$s := .}}{{if .Doc}}// {{.Name}} {{.Doc}}
+{{end}}type {{.Name}} interface {
+{{range .Extends}}	{{.Name}}
+{{end}}	Init(ctx context.Context)
+
+{{range .Methods}}{{if .Comment}}	//{{.Name}} {{.Comment}}
+{{end}}	{{.Name}}(ctx context.Context, {{.ParamName}}{{.ParamDecl}}) {{.Sig}}
+{{end}}}
+
+type Default{{.Name}} struct {
+{{range .Extends}}	{{printf "Default%s" .Name}}
+{{end}}}
+
+func (s *Default{{.Name}}) Init(ctx context.Context) {
+}
+
+{{range .Methods}}{{if .Comment}}// {{.Name}} {{.Comment}}
+{{end}}func (s *Default{{$s.Name}}) {{.Name}}(ctx context.Context, req{{.ParamDecl}}) {{.Sig}} {
+{{if .Bind}}{{if .Bind.RespVar}}	resp, err := {{.Bind.Call}}
+	if err != nil {
+		return nil, err
+	}
+	return {{.Bind.Result}}
+{{else}}	err := {{.Bind.Call}}
+	if err != nil {
+		return nil, err
+	}
+	return nil
+{{end}}{{else}}{{if .Void}}	return herror.NewError("not find server {{$s.LowName}}")
+{{else}}	return nil, herror.NewError("not find server {{$s.LowName}}")
+{{end}}{{end}}}
+
+{{end}}type {{.Name}}Client struct {
+	client *hrpc.Client
+}
+
+func (p *{{.Name}}Client) Init(ctx context.Context) {
+}
+
+func New{{.Name}}Client(client *hrpc.Client) {{.Name}} {
+	return &{{.Name}}Client{
+		client: client,
+	}
+}
+
+{{range .Methods}}{{if .Comment}}// {{.Name}} {{.Comment}}
+{{end}}func (r *{{$s.Name}}Client) {{.Name}}(ctx context.Context, {{.ParamName}}{{.ParamDecl}}) {{.Sig}} {
+{{if .Void}}	_, err := r.client.Invoke(ctx, 0, "{{$s.LowName}}", "{{.LowName}}", req, nil)
+	if err != nil {
+		return nil
+	}
+	return nil
+{{else}}	response, err := r.client.Invoke(ctx, 0, "{{$s.LowName}}", "{{.LowName}}", req, {{if .StreamOut}}nil{{else}}hrpc.NewResultResponse[*{{.ResultType}}](){{end}})
+	if err != nil {
+		return nil, err
+	}
+	return response.({{if .StreamOut}}io.ReadCloser{{else}}*{{.ResultType}}{{end}}), nil
+{{end}}}
+
+{{end}}func Register{{.Name}}(r hrpc.ServerRegister, server {{.Name}}) {
+	r.Register(0, "{{.LowName}}", server,
+{{range .Methods}}		&hrpc.Method{
+			Name: "{{.LowName}}",
+			WithContext: func(ctx context.Context) context.Context {
+{{range .Tags}}				hrpc.AddTag(ctx, "{{.Key}}"{{range .Values}}, "{{.}}"{{end}})
+{{end}}				return ctx
+			},
+			Handler: func(ctx context.Context, req any) (any, error) {
+				return {{if .Void}}nil, {{end}}server.{{.Name}}(ctx, req.({{if .StreamIn}}io.Reader{{else}}*{{.ParamType}}{{end}}))
+			},
+{{if not .StreamIn}}			Decode: func(decoder func(v hbuf.Data) (hbuf.Data, error)) (hbuf.Data, error) {
+				return decoder(&{{.ParamType}}{})
+			},
+{{end}}		},
+{{end}}	)
+}
+
+var NotFound{{.Name}} = &Default{{.Name}}{}
+
+func Get{{.Name}}(ctx context.Context) {{.Name}} {
+	router := hservice.GetClient(ctx, "{{.LowName}}")
+	if nil == router {
+		return NotFound{{.Name}}
+	}
+	if val, ok := router.({{.Name}}); ok {
+		return val
+	}
+	return NotFound{{.Name}}
+}
+
+func {{.Name}}Name() string {
+	return "{{.LowName}}"
+}
+
+{{end}}

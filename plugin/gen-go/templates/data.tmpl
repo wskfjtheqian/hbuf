@@ -1,0 +1,35 @@
+{{range .Datas}}{{$data := .}}{{if .Doc}}// {{.Name}} {{.Doc}}
+{{end}}var {{.LowName}}Descriptor = hbuf.NewSyncDescriptor(func() hbuf.Descriptor {
+	var {{.LowName}} {{.Name}}
+	return hbuf.NewDataDescriptor(0, false, reflect.TypeOf(&{{.LowName}}), map[uint16]hbuf.Descriptor{
+{{range .Extends}}		{{.Id}}: {{.Desc}},
+{{end}}	}, map[uint16]hbuf.Descriptor{
+{{range .Fields}}		{{.Id}}: {{.Desc}},
+{{end}}	})
+})
+
+{{if .Doc}}// {{.Name}} {{.Doc}}
+{{end}}type {{.Name}} struct {
+{{range .Extends}}	{{.Name}} `hbuf:"{{.Id}}"`
+{{end}}{{range .Fields}}	{{.Name}} {{.Type}} {{.Tag}}{{if .Comment}} //{{.Comment}}{{end}}
+{{end}}}
+
+func (g *{{.Name}}) Descriptors() hbuf.Descriptor {
+	return {{.LowName}}Descriptor.Desc()
+}
+
+{{range .Fields}}{{if .Comment}}// Get{{.Name}} Get {{.Comment}}
+{{end}}func (g *{{$data.Name}}) Get{{.Name}}() {{.GetType}} {
+{{if .Ptr}}	if nil == g.{{.Name}} {
+		return {{.Default}}
+	}
+	return *g.{{.Name}}
+{{else}}	return g.{{.Name}}
+{{end}}}
+
+{{if .Comment}}// Set{{.Name}} Set {{.Comment}}
+{{end}}func (g *{{$data.Name}}) Set{{.Name}}(val {{.GetType}}) {
+	g.{{.Name}} = {{if .Ptr}}&val{{else}}val{{end}}
+}
+
+{{end}}{{end}}

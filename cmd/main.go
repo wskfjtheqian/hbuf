@@ -9,6 +9,7 @@ import (
 	"hbuf/pkg/java"
 	ts "hbuf/pkg/typescript"
 	"log"
+	"strings"
 )
 
 var version = "0.0.1"
@@ -26,6 +27,8 @@ func main() {
 	var list = flag.String("l", "", "build item type list")
 	var showVersion = flag.Bool("v", false, "show version")
 	var all = flag.Bool("a", false, "build all change file")
+	var pluginPath = flag.String("plugin", "", "plugin binary, e.g. hbuf-gen-go=/path/to/hbuf-gen-go")
+	var templateDir = flag.String("template", "", "custom template dir for plugin")
 
 	flag.Parse()
 
@@ -51,7 +54,18 @@ func main() {
 		return
 	}
 
-	err := build.Build(*out, *in, *typ, *pack, *all, *list)
+	var plugin *build.PluginConfig
+	if *pluginPath != "" {
+		plugin = &build.PluginConfig{Path: *pluginPath}
+	}
+	if *templateDir != "" {
+		if plugin == nil {
+			plugin = &build.PluginConfig{}
+		}
+		plugin.Options = append(plugin.Options, "template="+strings.TrimRight(*templateDir, "/"))
+	}
+
+	err := build.BuildWithPlugin(*out, *in, *typ, *pack, *all, *list, plugin)
 	if err != nil {
 		fmt.Println(fmt.Errorf("Build error: %s", err))
 		return

@@ -1,6 +1,3 @@
-我先检索项目记忆并分析代码库结构,然后生成一份 AI 快速理解项目的文档。已获取项目记忆。现在读取关键文件深入了解项目结构。继续深入了解核心包结构和文档。build 目录显示为空,但 main.go 引用了它。我再确认一下并查看语言生成包。奇怪,`pkg/build` 似乎没有文件。检查一下 git 状态和 .gitignore。build 目录文件确实存在。我继续查看其余核心文件,了解整体架构。最后确认 build 目录其余文件和 Java/format 包的功能。我已完成对项目的全面分析。项目是 **HBUF**——一个用 Go 编写的跨语言代码生成器(类似 protobuf/thrift),核心流程是:`.hbuf` IDL 文件 → 词法/语法分析 → AST → 校验 → 按语言后端生成 Go/Dart/Java/TypeScript 代码。现在生成 `AGENTS.md`(AI 通用约定文件)放在项目根目录。
-
-```markdown
 # AGENTS.md — HBUF 项目 AI 开发指南
 
 ## 项目概述
@@ -31,15 +28,19 @@ SQL 数据库操作、表单验证、UI 组件和多语言文本代码。
 
 - **Go 1.27**(`go.mod`: module `hbuf`),纯标准库实现,**无第三方依赖**
 - 词法/语法分析器架构仿 Go 编译器(`go/scanner`、`go/parser`、`go/ast` 风格)
-- 目标语言代码通过字符串拼接生成(不依赖目标语言的 AST 库)
+- 目标语言代码生成分两条路径并存:
+  - 进程内后端(`pkg/golang` 等):字符串拼接(兼容期)
+  - 外部插件(见下文插件架构):JSON over stdio + text/template 模板
 
 ## 构建与运行
 
 ```bash
 # 编译(交叉编译脚本见 build.sh / build.bat)
-go build -ldflags "-X main.version=<version>" -o bin/hbuf.darwin ./cmd/main.go
-# 运行测试(含跨平台交叉编译测试 build_test.go)
+go build -ldflags "-X main.version=<version>" -o bin/hbuf ./cmd
+# 运行测试(根包 build_test.go 含跨平台交叉编译,较慢,可用 -short 跳过)
 go test ./...
+go test -short ./...
+go test ./plugin/... ./pkg/build/
 
 # CLI 用法
 hbuf -i <输入目录或通配符,如 ./test/*.hbuf> \
@@ -48,21 +49,25 @@ hbuf -i <输入目录或通配符,如 ./test/*.hbuf> \
      -p <目标包名,如 admin> \
      [-l <生成项类型列表,如 "DS">] \
      [-a 全量构建,跳过增量检测] \
+     [-plugin hbuf-gen-go=/path/to/binary] \
+     [-template /path/to/custom/templates] \
      [-v 显示版本]
 ```
 
 ## 架构与目录结构
 
 ```
-cmd/main.go            CLI 入口:注册 4 种构建类型,解析 flag,调用 build.Build
+cmd/main.go            CLI 入口:注册 4 种构建类型,解析 flag,调用 build.BuildWithPlugin
 pkg/
 ├── scanner/           词法分析(仿 go/scanner,含 ErrorList)
 ├── token/             Token 定义、FileSet、Pos 位置管理
 ├── parser/            语法分析(递归下降,支持 Trace 调试模式、import 递归解析)
 ├── ast/               AST 节点定义、Scope/Object 符号表、Package
 ├── build/             ★ 构建编排核心
-│   ├── build.go       Build 主流程、BuildType 注册、BaseType 常量、
+│   ├── build.go       Build/BuildWithPlugin 主流程、BuildType 注册、BaseType 常量、
 │   │                  标签/字段/方法遍历工具、命名转换工具
+│   ├── plugin.go      插件协议客户端:FindPlugin(发现)、CallPlugin(JSON over stdio)、
+│   │                  WriteGeneratedFiles(统一落盘 + 目录逃逸防护)
 │   ├── writer.go      Writer:代码输出缓冲 + import 管理 + 多语言文本
 │   ├── hash.go        FileHash:基于 MD5 + .build.json 的增量构建检测
 │   └── ...
@@ -70,8 +75,15 @@ pkg/
 ├── dart/              Dart 后端(data/enum/server/ui/verify)
 ├── java/              Java 后端(data/enum/server)
 ├── typescript/        TS 后端(data/enum/server/lang/ui.tsx/verify)
-└── format/            .hbuf 格式化器
-doc/                   hbuf.md(IDL 语法)、hbuf_db.md(数据库注解)、serialize.md
+└── format/            .hbuf 格式化器(AST → 源码,round-trip 幂等)
+plugin/                ★ 新插件化架构(详见 plugin/README.md)
+├── core/wire/         中性描述模型(Request/Response/File/Type 等)+ AST→wire 转换
+├── core/sdk/          插件侧 SDK(stdio 主循环、协议版本校验)
+├── core/tpl/          模板引擎(内置模板 embed + 外部覆盖 + 执行缓存)
+└── gen-go/            Go 插件(已完成):funcs.go(类型映射)、context.go(模板上下文)、
+                       templates/*.tmpl、cmd/hbuf-gen-go(入口)
+doc/                   hbuf.md(IDL 语法)、hbuf_db.md(数据库注解)、serialize.md、
+                       refactor_plan.md(插件化改造计划)
 ```
 
 ### 数据流(核心处理流程)
@@ -79,11 +91,26 @@ doc/                   hbuf.md(IDL 语法)、hbuf_db.md(数据库注解)、seria
 ```
 .hbuf 源文件 → scanner 词法 → parser 语法(AST) → build.checkFiles 类型校验
     → FileHash 增量检测(MD5 + .build.json,import 变化级联重编)
-    → 按 -t 分发到语言后端 Build(file, fset, param)
-    → 各后端遍历 AST,用 build.Writer 拼代码 → 写出 {name}.data.go 等文件
+    → 收集变更文件列表 changed
+    → 按 -t 查找插件(FindPlugin:显式路径 → PATH 查找 hbuf-gen-<type>)
+        ├─ 找到:AST→wire 转换 → JSON over stdio 调用插件一次
+        │       (请求携带全部文件 + changed,插件无状态)
+        │       → 响应为文件列表,核心统一落盘(WriteGeneratedFiles)+ FileHash.Save
+        └─ 未找到:进程内回退,遍历 changed 调用后端 Build(file, fset, param)
 ```
 
-### 语言后端统一接口(新增语言必看)
+### 插件协议(新增语言生成器必看)
+
+- 协议名 `hbuf-plugin-v1`:JSON over stdio,每次编译调用插件一次,插件无状态
+- 核心请求 `wire.Request{Protocol,Type,OutDir,Pack,BuildList,Options,Files,Changed}`,
+  插件响应 `wire.Response{Files []*wire.GeneratedFile{Name,Content}}`
+- 插件命名 `hbuf-gen-<type>`,核心在 PATH 查找;`-plugin hbuf-gen-go=/path` 显式指定
+- 核心负责落盘与增量,插件只负责生成内容
+- 插件侧可用 `plugin/core/sdk` 写主循环;第三方可用任意语言实现同一 JSON 协议
+- Go 插件生成基于模板:内置模板 `//go:embed` 打包,`-template <目录>` 下同名文件覆盖
+- 模板输出后经 `go/format` 自动格式化,文件名约定 `<包名点分转目录>/<name>.data.go` 等
+
+### 进程内语言后端统一接口(兼容期)
 
 每个后端包实现同名函数并通过注册接入:
 ```go
@@ -100,28 +127,28 @@ func Build(file *ast.File, fset *token.FileSet, param *build.Param) error
 ## .hbuf IDL 语言要点(详见 doc/hbuf.md、doc/hbuf_db.md)
 
 ```hbuf
-package go = "admin"        // 按语言指定包名(dart 不支持)
+package go = "admin"        // 按语言指定包名
 
-enum Status { player = 0; stop = 1 }
+enum Status { player = 0; stop = 1; }
 
-data Base = 0 { int64 id = 0; string name = 1 }      // data 支持多继承
-data Student:Base, Class = 2 { int32? no = 0 }        // ? 表示可空
+data Base { int64 id = 1; string name = 2; }   // data 支持多继承
+data Student:Base = 2 { int32? no = 3; }        // ? 表示可空,extends 带唯一 ID
 
-server StudentServer:BaseServer = 0 {                  // server 支持继承
-    GetClassResp GetClass(GetClassReq req) = 0         // 函数式方法
-    SendMessage(MessageReq req) = 1                    // 广播式方法(无返回值)
+server BaseServer {
+    Student GetStudent(Student req) = 1;        // 方法参数只能是 data 类型
+    void SendMessage(Message message) = 2;      // void 前缀:广播式方法
 }
 
 data User = 3 {
-    @marshal @in string name = 0                       // 注解: marshal/in/out
-    @verify regex="..." string phone = 1               // 验证注解
-    @db { key="true" order="id $ DESC" } int64 id = 2  // 数据库注解(见 hbuf_db.md)
+    [verify: regex="..."];                      // 注解独立分号结尾
+    string phone = 4;
 }
 ```
 
-- 基础类型:`int8..int64`、`uint8..uint64`、`bool`、`float`、`double`、`decimal`、`string`、`date`、`bytes`
-- 复合类型:`数组[]`、`Map`(key 仅限基础类型和 enum)
-- 每个字段/类型必须带唯一整数 ID(序列化用)
+- 基础类型:`int8..int64`、`uint8..uint64`、`bool`、`float`、`double`、`decimal`、`string`、`date`、`bytes`;方法返回值另有 `void`(广播)、`stream`(流式)
+- 复合类型:`数组[]`(后置)、`Map<Key>`(key 仅限基础类型和 enum)
+- 每个字段/类型/方法必须带唯一整数 ID(字段与方法 ID 必须 >= 1,enum 项从 0 开始)
+- 注解 tag 语法:`[tagName: k="v" k2="v2"];`(键值对空格分隔,值逗号分隔)
 - 数据库注解(db):index、key、force、insert/inserts/update/set/del/get/list/map/count、table、rm、where、offset、limit、order、group、converter
 
 ## 代码约定
@@ -131,28 +158,13 @@ data User = 3 {
 - 命名转换统一用 build 包工具:`StringToHumpName`(驼峰)、`StringToUnderlineName`(下划线)、`StringToAllUpper`、`StringToMiddleLine`(中横线)、`StringToFirstLower`
 - 类型判断统一用 `build.IsNumber/IsBool/IsArray/IsMap/IsEnum/IsNil/GetBaseType`
 - 字段/方法遍历用 `build.EnumField/EnumMethod`(自动处理多继承去重)
-- 新增 AST 节点需同步各语言后端的 `printTypeSpec` switch
+- 新增 AST 节点需同步各语言后端的 `printTypeSpec` switch 与 `plugin/core/wire/convert.go`
 - 输出文件在 `test/out/`(已被 .gitignore 忽略)
 
 ## 常见任务指引
 
 1. **给某语言新增 SQL 生成**:参考 `pkg/golang/database.go` 的注解驱动模式
-2. **新增语言后端(如 C#)**:复制 `pkg/java`,改类型映射和 writerFile 模板,在 `cmd/main.go` 注册
-3. **扩展 IDL 语法**:改 `pkg/token/token.go` → `pkg/scanner` → `pkg/parser` → `pkg/ast` → 各后端
+2. **新增语言生成器(如 C#)**:实现 `hbuf-gen-<type>` 插件——可复制 `plugin/gen-go`,用任意语言实现 hbuf-plugin-v1 协议,经 wire 模型 + 模板生成(优先于进程内后端)
+3. **扩展 IDL 语法**:改 `pkg/token/token.go` → `pkg/scanner` → `pkg/parser` → `pkg/ast` → 各后端 + `plugin/core/wire/convert.go`
 4. **修改序列化方案**:见 `pkg/golang/data.go`(JSON/二进制)与 `doc/serialize.md`
-5. **验证 CLI 行为**:`build_test.go` 内含跨平台交叉编译与发布打包流程
-```
-
-已生成 `AGENTS.md`(项目根目录),内容涵盖:
-
-1. **项目概述** — HBUF 是什么、各语言生成能力矩阵、关联运行时库
-2. **技术栈** — Go 1.27、零第三方依赖、仿 Go 编译器架构
-3. **构建与运行** — 编译命令、测试命令、CLI 参数说明
-4. **架构与目录结构** — 11 个包的职责,重点标注 `pkg/build` 编排核心
-5. **数据流** — 从 .hbuf 源文件到多语言代码的完整处理链路
-6. **语言后端扩展指南** — 统一 `Build` 接口、各后端一致的内部模式
-7. **.hbuf IDL 语法要点** — 精简语法示例 + 基础类型 + 注解体系
-8. **代码约定** — 共享工具层原则、命名转换、类型判断工具
-9. **常见任务指引** — 5 类高频改动场景的切入点
-
-你可以直接复制上述内容保存为 `AGENTS.md` 放入项目根目录(现代 AI 编程工具会自动读取该文件)。如需调整详略程度或补充某部分(如序列化协议细节),告诉我即可。
+5. **验证 CLI 行为**:`build_test.go` 内含跨平台交叉编译与发布打包流程(仅全量测试运行,`-short` 跳过);插件链路测试见 `pkg/build/plugin_test.go`、`plugin/gen-go/gen_test.go`

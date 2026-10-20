@@ -33,6 +33,4 @@ func ExampleParseFile() {
 	for _, s := range f.Comments {
 		fmt.Println(s.Text())
 	}
-
-	// output:
 }

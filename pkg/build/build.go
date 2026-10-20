@@ -5,6 +5,7 @@ import (
 	"hbuf/pkg/parser"
 	"hbuf/pkg/scanner"
 	"hbuf/pkg/token"
+	"hbuf/plugin/core/wire"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -117,6 +118,12 @@ func NewBuilder(build Function, param *Param) *Builder {
 }
 
 func Build(out string, in string, typ string, pack string, all bool, list string) error {
+	return BuildWithPlugin(out, in, typ, pack, all, list, nil)
+}
+
+// BuildWithPlugin 与 Build 相同,但支持插件调度:
+// 存在 hbuf-gen-<typ> 插件时通过 JSON over stdio 协议生成,否则回退到进程内后端。
+func BuildWithPlugin(out string, in string, typ string, pack string, all bool, list string, plugin *PluginConfig) error {
 	in = filepath.Clean(in)
 	path := filepath.Dir(in)
 	name := in[len(path)+1:]
@@ -155,7 +162,9 @@ func Build(out string, in string, typ string, pack string, all bool, list string
 		return err
 	}
 
-	for path, file := range build.pkg.Files {
+	// 收集本次需要(重新)生成的文件路径
+	var changed []string
+	for path := range build.pkg.Files {
 		if !all {
 			check, err := fileHash.CheckChange(path, build.pkg.Files)
 			if err != nil {
@@ -165,9 +174,21 @@ func Build(out string, in string, typ string, pack string, all bool, list string
 				continue
 			}
 		}
+		changed = append(changed, path)
+	}
 
+	// 插件调度:优先调用 hbuf-gen-<typ>,未找到插件时回退进程内后端
+	bin, err := FindPlugin(typ, plugin)
+	if err != nil {
+		return err
+	}
+	if bin != "" {
+		return buildByPlugin(bin, plugin, build, out, typ, pack, list, changed, fileHash)
+	}
+
+	for _, path := range changed {
 		_, name := filepath.Split(path)
-		err = build.build(file, build.fset, &Param{
+		err = build.build(build.pkg.Files[path], build.fset, &Param{
 			out:    filepath.Join(build.param.out, name),
 			pkg:    build.pkg,
 			pack:   build.param.pack,
@@ -179,6 +200,30 @@ func Build(out string, in string, typ string, pack string, all bool, list string
 		}
 	}
 
+	return fileHash.Save()
+}
+
+// buildByPlugin 通过插件协议生成并统一落盘。
+func buildByPlugin(bin string, plugin *PluginConfig, build *Builder, out string, typ string, pack string, list string, changed []string, fileHash *FileHash) error {
+	req := &wire.Request{
+		Protocol:  wire.ProtocolVersion,
+		Type:      typ,
+		OutDir:    out,
+		Pack:      pack,
+		BuildList: list,
+		Files:     wire.Convert(build.pkg, typ),
+		Changed:   changed,
+	}
+	if plugin != nil {
+		req.Options = plugin.Options
+	}
+	resp, err := CallPlugin(bin, req)
+	if err != nil {
+		return err
+	}
+	if err := WriteGeneratedFiles(out, resp); err != nil {
+		return err
+	}
 	return fileHash.Save()
 }
 

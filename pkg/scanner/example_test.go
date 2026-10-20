@@ -53,6 +53,4 @@ func ExampleScanner_Scan() {
 		}
 		fmt.Printf("%s\t%s\t%q\n", fset.Position(pot), tok, lit)
 	}
-
-	// output:
 }

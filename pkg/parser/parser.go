@@ -171,15 +171,19 @@ func (p *parser) printTrace(a ...interface{}) {
 }
 
 func trace(p *parser, msg string) *parser {
-	p.printTrace(msg, "(")
-	p.indent++
+	if p.trace {
+		p.printTrace(msg, "(")
+		p.indent++
+	}
 	return p
 }
 
 // Usage pattern: defer un(trace(p, "..."))
 func un(p *parser) {
-	p.indent--
-	p.printTrace(")")
+	if p.trace {
+		p.indent--
+		p.printTrace(")")
+	}
 }
 
 // Advance to the next token.
@@ -227,7 +231,6 @@ func (p *parser) consumeComment() (comment *ast.Comment, endline int) {
 // comments list, and return it together with the line at which
 // the last comment in the group ends. A non-comment token or n
 // empty lines terminate a comment group.
-//
 func (p *parser) consumeCommentGroup(n int) (comments *ast.CommentGroup, endline int) {
 	var list []*ast.Comment
 	endline = p.file.Line(p.pos)
@@ -258,7 +261,6 @@ func (p *parser) consumeCommentGroup(n int) (comments *ast.CommentGroup, endline
 //
 // Lead and line comments may be considered documentation that is
 // stored in the AST.
-//
 func (p *parser) next() {
 	p.leadComment = nil
 	p.lineComment = nil
@@ -357,7 +359,6 @@ func (p *parser) expect2(tok token.Token) (pos token.Pos) {
 
 // expectClosing is like expect but provides a better error message
 // for the common case of a missing comma before a newline.
-//
 func (p *parser) expectClosing(tok token.Token, context string) token.Pos {
 	if p.tok != tok && p.tok == token.SEMICOLON && p.lit == "\n" {
 		p.error(p.pos, "missing ',' before newline in "+context)
@@ -559,7 +560,7 @@ func (p *parser) parseFieldDecl(scope *ast.Scope) *ast.Field {
 	return field
 }
 
-///解析继承的
+// /解析继承的
 func (p *parser) parseExtends() []*ast.Extends {
 	var extends []*ast.Extends
 	if p.tok == token.COLON {
@@ -570,7 +571,7 @@ func (p *parser) parseExtends() []*ast.Extends {
 	return extends
 }
 
-///解析继承的
+// /解析继承的
 func (p *parser) parseExtend() *ast.Extends {
 	ret := &ast.Extends{}
 	p.next()
@@ -966,7 +967,7 @@ func (p *parser) parseFile() *ast.File {
 	}
 }
 
-//解析包名
+// 解析包名
 func (p *parser) parsePackageSpec() *ast.PackageSpec {
 	pos := p.expect(token.PACKAGE)
 	if p.trace {

@@ -17,16 +17,19 @@ plugin/
 │   └── tpl/                       # 模板引擎(text/template 封装)
 │                                  # 内置模板 embed 打包 + 外部模板覆盖 + 执行缓存
 │
-├── lsp/                           # HBUF 语言服务(方便编辑器集成)
+├── lsp/                           # HBUF 语言服务(规划中,尚未创建)
 │   └── cmd/hbuf-lsp/              # 语言服务器入口(JSON-RPC over stdio)
 │                                  # 诊断/补全/跳转定义/悬停/符号/格式化
 │
-└── gen-go/                        # Go 插件(后续迁出为独立仓库 hbuf-gen-go)
-    ├── cmd/hbuf-gen-go/           # 插件二进制入口(plugin.Run + 模板生成)
+└── gen-go/                        # Go 插件(已完成,后续迁出为独立仓库 hbuf-gen-go)
+    ├── cmd/hbuf-gen-go/           # 插件二进制入口(sdk.Run + 模板生成)
+    ├── gen.go                     # Generate 主流程(模板渲染 + go/format 格式化)
+    ├── funcs.go                   # 模板函数(goType/goDefault/goDescriptor/goStructTag 等)
+    ├── context.go                 # 模板上下文(DataContext/EnumContext/ServerContext)
     └── templates/                 # 内置生成模板(*.tmpl,支持外部覆盖)
-        data.tmpl / enum.tmpl / server.tmpl / ...
+        data.tmpl / enum.tmpl / server.tmpl
 
-(规划中,尚未创建)
+(暂未实现,用户要求先只做 go)
 ├── gen-dart/cmd/hbuf-gen-dart     # Dart 插件(后续独立仓库)
 ├── gen-java/cmd/hbuf-gen-java     # Java 插件(后续独立仓库)
 └── gen-ts/cmd/hbuf-gen-ts         # TypeScript 插件(后续独立仓库)
@@ -63,6 +66,26 @@ plugin/
   用户可直接拷贝内置模板修改,不必改 Go 代码
 - 模板可用 FuncMap 函数:hump、lowerFirst、underline、allUpper、middleLine、
   goType、goDefault 等命名转换与类型映射函数
+
+## 快速上手(hbuf-gen-go)
+
+```bash
+# 构建核心与插件
+mkdir -p bin
+CGO_ENABLED=0 go build -o bin/hbuf ./cmd
+go build -o bin/hbuf-gen-go ./plugin/gen-go/cmd/hbuf-gen-go
+
+# 使用插件生成 Go 代码(显式路径)
+bin/hbuf -i test/*.hbuf -o out -t go -p github.com/test -a \
+  -plugin hbuf-gen-go=./bin/hbuf-gen-go
+
+# 自定义模板:拷贝内置模板改好后指定目录
+bin/hbuf -i test/*.hbuf -o out -t go -p github.com/test -a \
+  -plugin hbuf-gen-go=./bin/hbuf-gen-go -template ./mytemplates
+```
+
+输出文件与进程内后端一致:`<包名点分转目录>/<name>.data.go|enum.go|server.go`,
+并经 go/format 自动格式化。
 
 ## 语言服务(LSP)
 

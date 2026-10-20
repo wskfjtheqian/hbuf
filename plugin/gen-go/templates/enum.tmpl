@@ -1,0 +1,41 @@
+{{range .Enums}}{{$enum := .}}{{if .Doc}}// {{.Name}} {{.Doc}}
+{{end}}type {{.Name}} int32
+
+func (t {{.Name}}) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + strconv.FormatInt(int64(t), 10) + `"`), nil
+}
+func (e *{{.Name}}) UnmarshalJSON(data []byte) error {
+	parseInt, err := strconv.ParseInt(strings.Trim(string(data), `"`), 10, 64)
+	if err != nil {
+		parseInt = 0
+		herror.PrintStack(context.Background(), err)
+	}
+	*e = {{.Name}}(parseInt)
+	return nil
+}
+
+{{range .Items}}{{if .Comment}}// {{$enum.Name}}{{.Name}} {{.Comment}}
+{{end}}const {{$enum.Name}}{{.Name}} {{$enum.Name}} = {{.Id}}
+
+{{end}}func (e {{.Name}}) Pointer() *{{.Name}} {
+	pointer := e
+	return &pointer
+}
+
+var {{.LowName}}Map = map[{{.Name}}]string{
+{{range .Items}}	{{$enum.Name}}{{.Name}}: "{{.Name}}",
+{{end}}}
+
+func (e {{.Name}}) ToName() string {
+	return {{.LowName}}Map[e]
+}
+
+var {{.LowName}}Values = map[string]{{.Name}}{
+{{range .Items}}	"{{.Name}}": {{$enum.Name}}{{.Name}},
+{{end}}}
+
+func {{.Name}}Values() map[string]{{.Name}} {
+	return {{.LowName}}Values
+}
+
+{{end}}

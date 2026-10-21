@@ -36,7 +36,7 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) error {
 		return err
 	}
 
-	dst.Tab(1).Code("public static fromMap(_json: Record<string, any>, _tag: string): " + uName + "{\n")
+	dst.Tab(1).Code("public static fromMap(_json: Record<string, any>): " + uName + "{\n")
 	dst.Tab(2).Code("const ret = new " + uName + "()\n")
 	dst.Tab(2).Code("let _temp:any\n")
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
@@ -54,7 +54,7 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) error {
 	dst.Tab(1).Code("}\n\n")
 
 	dst.Code("\n")
-	dst.Tab(1).Code("public toMap(_tag: string): Record<string, any> {\n")
+	dst.Tab(1).Code("public toMap(): Record<string, any> {\n")
 	dst.Tab(2).Code("return {\n")
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 		dst.Tab(3).Code("\"" + build.StringToUnderlineName(field.Name.Name))
@@ -93,7 +93,7 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) error {
 	dst.Tab(2).Code("return ret\n")
 	dst.Tab(1).Code("}\n\n")
 
-	dst.Tab(1).Code("public $getChangeField(val: ").Code(uName).Code(", _tag: string, ignore: string[] = []): {\n")
+	dst.Tab(1).Code("public $getChangeField(val: ").Code(uName).Code(", ignore: string[] = []): {\n")
 	dst.Tab(2).Code("change : ").Code(uName).Code(",\n")
 	dst.Tab(2).Code("fields: string[],\n")
 	dst.Tab(1).Code("} {\n")
@@ -279,9 +279,9 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 				}
 			} else if ast.Data == t.Obj.Kind {
 				if empty {
-					dst.Code("null == ").Code(name).Code(" ? null : " + t.Name + ".fromMap(" + v + ", _tag)")
+					dst.Code("null == ").Code(name).Code(" ? null : " + t.Name + ".fromMap(" + v + ")")
 				} else {
-					dst.Code("null == ").Code(name).Code(" ? " + t.Name + ".fromMap({}, _tag) : " + t.Name + ".fromMap(" + v + ", _tag)")
+					dst.Code("null == ").Code(name).Code(" ? " + t.Name + ".fromMap({}) : " + t.Name + ".fromMap(" + v + ")")
 				}
 			} else {
 				dst.Code("map[\"").Code(name).Code("\"]")
@@ -445,9 +445,9 @@ func (b *Builder) printToMap(dst *build.Writer, key string, name string, expr as
 			} else if ast.Data == t.Obj.Kind {
 				dst.Code(key)
 				if empty {
-					dst.Code(name + "?.toMap(_tag)")
+					dst.Code(name + "?.toMap()")
 				} else {
-					dst.Code(name + ".toMap(_tag)")
+					dst.Code(name + ".toMap()")
 				}
 			} else {
 				dst.Code(name)

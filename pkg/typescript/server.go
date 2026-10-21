@@ -118,7 +118,7 @@ func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 		dst.Code(method.Id.Value)
 		dst.Code(", this.name,  \"")
 		dst.Code(build.StringToUnderlineName(method.Name.Name))
-		dst.Code("\", \"\", ")
+		dst.Code("\", ")
 		dst.Code(build.StringToFirstLower(method.ParamName.Name))
 		dst.Code(", ")
 		if resultType == "void" || resultType == "stream" {
@@ -173,7 +173,6 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 			b.printType(dst, method.Param.Type(), false, false, false)
 			dst.Code(".fromMap,\n")
 		}
-		dst.Tab(3).Code("tag: \"\",\n")
 		dst.Tab(2).Code("},\n")
 		return nil
 	})

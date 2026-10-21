@@ -1,0 +1,46 @@
+{{range .Servers}}{{$s := .}}{{if .Doc}}// {{.Name}} {{.Doc}}
+{{end}}export interface {{.Name}}{{if .Extends}} extends {{range $i, $e := .Extends}}{{if $i}}, {{end}}{{$e}}{{end}}{{end}} {
+{{range .Methods}}{{if .Doc}}    // {{.Doc}}
+{{end}}{{if .ParamName}}    {{.Name}}({{.ParamName}}: {{.ParamType}}, _opt?: Option): Promise<{{.ResultType}}>
+{{else}}    {{.Name}}(_opt?: Option): Promise<{{.ResultType}}>
+{{end}}
+{{end}}}
+
+export class {{.Name}}Client implements {{.Name}} {
+    protected client: Client
+
+    constructor(client: Client) {
+        this.client = client
+    }
+
+{{range .Methods}}{{if .Doc}}    // {{.Doc}}
+{{end}}{{if .ParamName}}    {{.Name}}({{.ParamName}}: {{.ParamType}}, _opt?: Option): Promise<{{.ResultType}}> {
+        return this.client.invoke<{{.ResultType}}>({{.Id}}, "{{$s.Route}}", "{{.Route}}", {{.ParamName}}{{if .FromResult}}, {{.FromResult}}.fromMap{{end}})
+    }
+{{else}}    {{.Name}}(_opt?: Option): Promise<{{.ResultType}}> {
+        return this.client.invoke<{{.ResultType}}>({{.Id}}, "{{$s.Route}}", "{{.Route}}", undefined{{if .FromResult}}, {{.FromResult}}.fromMap{{end}})
+    }
+{{end}}
+{{end}}}
+
+export function Register{{.Name}}(r: Server, server: {{.Name}}) {
+    r.register(0, "{{.Route}}", [
+{{range .Methods}}        {
+            id: {{.Id}},
+            name: "{{.Route}}",
+            handler: (req: RequestType, opt?: Option): Promise<ResponseType> => {
+                return server.{{.Name}}({{if .ParamName}}req as {{.ParamType}}, {{end}}opt)
+            },
+            withContext: (opt?: Option): Option | undefined => {
+                return opt
+            },
+{{if .FromParam}}            from: {{.FromParam}}.fromMap,
+{{end}}        },
+{{end}}    ])
+}
+
+export function UnRegister{{.Name}}(r: Server) {
+    r.unRegister(0, "{{.Route}}")
+}
+
+{{end}}

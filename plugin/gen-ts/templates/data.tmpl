@@ -1,11 +1,75 @@
 {{range .Datas}}{{$data := .}}{{if .Doc}}// {{.Name}} {{.Doc}}
-{{end}}{{.Export}}class {{.Name}} implements HData {
-{{range .Extends}}    {{.Name}}: {{.Type}} = {{.Default}}
+{{end}}{{.Export}}class {{.Name}} implements HData{{range .Extends}}, {{.Type}}{{end}} {
+{{range .ExtendFields}}{{if .Comment}}    // {{.Comment}}
+{{end}}    {{.Name}}: {{.Type}} = {{.Default}}
 {{end}}{{range .Fields}}{{if .Comment}}    // {{.Comment}}
 {{end}}    {{.Name}}: {{.Type}} = {{.Default}}
 {{end}}
     descriptors(): HBufDescriptor {
         return {{.DescName}}
+    }
+
+    static fromMap(map: Record<string, any>): {{.Name}} {
+        const ret = new {{.Name}}()
+{{range .ExtendFields}}        ret.{{.Name}} = {{.FromJSON}}
+{{end}}{{range .Fields}}        ret.{{.Name}} = {{.FromJSON}}
+{{end}}        return ret
+    }
+
+    toMap(): Record<string, any> {
+        return {
+{{range .ExtendFields}}            "{{.JsonKey}}": {{.ToJSON}},
+{{end}}{{range .Fields}}            "{{.JsonKey}}": {{.ToJSON}},
+{{end}}        }
+    }
+
+    public static fromData(data: ArrayBuffer): {{.Name}} {
+        return NewHBufDecoder()(data, {{.Name}}.fromMap) as {{.Name}}
+    }
+
+    public toData(): ArrayBuffer {
+        return NewHBufEncode()(this)
+    }
+
+    public clone(): {{.Name}} {
+        const ret = new {{.Name}}()
+{{range .ExtendFields}}        ret.{{.Name}} = {{.CopyFrom}}
+{{end}}{{range .Fields}}        ret.{{.Name}} = {{.CopyFrom}}
+{{end}}        return ret
+    }
+
+    public $getChangeField(val: {{.Name}}, ignore: string[] = []): {
+        change : {{.Name}},
+        fields: string[],
+    } {
+        const ret: { change : {{.Name}}, fields: string[] } = {
+            change: new {{.Name}}(),
+            fields: [],
+        }
+{{range .ExtendFields}}        if (ignore.includes("{{.Name}}") || {{.Cmp}}) {
+            ret.fields.push("{{.RawName}}")
+            ret.change.{{.Name}} = this.{{.Name}}
+        }
+{{end}}{{range .Fields}}        if (ignore.includes("{{.Name}}") || {{.Cmp}}) {
+            ret.fields.push("{{.RawName}}")
+            ret.change.{{.Name}} = this.{{.Name}}
+        }
+{{end}}        return ret
+    }
+
+    private static $fieldMaps: Record<string, string> = {
+{{range .ExtendFields}}        "{{.Name}}": "{{.RawName}}",
+{{end}}{{range .Fields}}        "{{.Name}}": "{{.RawName}}",
+{{end}}    }
+
+    public static $convertField(fields: string[]): string[] {
+        const list = new Set<string>()
+        for (const field of fields) {
+            if ({{.Name}}.$fieldMaps[field] != null) {
+                list.add({{.Name}}.$fieldMaps[field])
+            }
+        }
+        return Array.from(list)
     }
 }
 
@@ -15,7 +79,7 @@
 {{range .Fields}}        [{{.Id}}, {desc: {{.Desc}}, get: (o: {{$data.Name}}) => o.{{.Name}}, set: (o: {{$data.Name}}, v: {{.Type}}) => o.{{.Name}} = v}],
 {{end}}    ]),
 {{if .Extends}}    new Map<number, FieldDesc>([
-{{range .Extends}}        [{{.Id}}, {desc: {{.Desc}}, get: (o: {{$data.Name}}) => o.{{.Name}}, set: (o: {{$data.Name}}, v: {{.Type}}) => o.{{.Name}} = v}],
+{{range .Extends}}        [{{.Id}}, {desc: {{.Desc}}, get: (o: {{$data.Name}}) => o, set: (o: {{$data.Name}}, v: {{.Type}}) => Object.assign(o, v)}],
 {{end}}    ]),
 {{end}}{{if .Sync}}))
 {{else}})

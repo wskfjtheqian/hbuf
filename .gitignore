@@ -1,4 +1,6 @@
 /test/out/
+/test/ts_old/
 /.idea/workspace.xml
 /bin/
 node_modules/
+/test/

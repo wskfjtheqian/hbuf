@@ -88,7 +88,7 @@ func TestGenerateBasic(t *testing.T) {
 	}
 	for _, want := range []string{
 		`} from "../src"`,
-		"class UserTs implements HData {",
+		"class User implements HData {",
 		"id: bigint = 0n",
 		"name: string | null = null",
 		"active: boolean = false",
@@ -101,13 +101,13 @@ func TestGenerateBasic(t *testing.T) {
 		// enum 字段按 int32 编码
 		"status: number = 0",
 		"const userDesc: DataDescriptor = NewDataDescriptor(",
-		"[1, {desc: NewInt64Descriptor(false), get: (o: UserTs) => o.id, set: (o: UserTs, v: bigint) => o.id = v}]",
-		"[2, {desc: NewStringDescriptor(true), get: (o: UserTs) => o.name, set: (o: UserTs, v: string | null) => o.name = v}]",
-		"[4, {desc: NewBytesDescriptor(false), get: (o: UserTs) => o.avatar, set: (o: UserTs, v: Uint8Array) => o.avatar = v}]",
-		"[5, {desc: NewTimeDescriptor(false), get: (o: UserTs) => o.created, set: (o: UserTs, v: Date | null) => o.created = v}]",
-		"[7, {desc: NewListDescriptor(NewStringDescriptor(false), false), get: (o: UserTs) => o.tags, set: (o: UserTs, v: string[]) => o.tags = v}]",
-		"[8, {desc: NewMapDescriptor(NewInt64Descriptor(false), NewInt8Descriptor(true), false), get: (o: UserTs) => o.scores, set: (o: UserTs, v: Map<bigint, number | null>) => o.scores = v}]",
-		"[9, {desc: NewInt32Descriptor(false), get: (o: UserTs) => o.status, set: (o: UserTs, v: number) => o.status = v}]",
+		"[1, {desc: NewInt64Descriptor(false), get: (o: User) => o.id, set: (o: User, v: bigint) => o.id = v}]",
+		"[2, {desc: NewStringDescriptor(true), get: (o: User) => o.name, set: (o: User, v: string | null) => o.name = v}]",
+		"[4, {desc: NewBytesDescriptor(false), get: (o: User) => o.avatar, set: (o: User, v: Uint8Array) => o.avatar = v}]",
+		"[5, {desc: NewTimeDescriptor(false), get: (o: User) => o.created, set: (o: User, v: Date | null) => o.created = v}]",
+		"[7, {desc: NewListDescriptor(NewStringDescriptor(false), false), get: (o: User) => o.tags, set: (o: User, v: string[]) => o.tags = v}]",
+		"[8, {desc: NewMapDescriptor(NewInt64Descriptor(false), NewInt8Descriptor(true), false), get: (o: User) => o.scores, set: (o: User, v: Map<bigint, number | null>) => o.scores = v}]",
+		"[9, {desc: NewInt32Descriptor(false), get: (o: User) => o.status, set: (o: User, v: number) => o.status = v}]",
 	} {
 		if !strings.Contains(data, want) {
 			t.Errorf("data file missing %q, got:\n%s", want, data)
@@ -127,10 +127,10 @@ func TestGenerateRefs(t *testing.T) {
 	}
 	data := filesByName(resp)["admin/base.data.ts"]
 	for _, want := range []string{
-		"user: UserTs = new UserTs()",
-		"userOpt: UserTs | null = null",
-		"[1, {desc: NewRefDescriptor(userDesc, false), get: (o: OrderTs) => o.user, set: (o: OrderTs, v: UserTs) => o.user = v}]",
-		"[2, {desc: NewRefDescriptor(userDesc, true), get: (o: OrderTs) => o.userOpt, set: (o: OrderTs, v: UserTs | null) => o.userOpt = v}]",
+		"user: User = new User()",
+		"userOpt: User | null = null",
+		"[1, {desc: NewRefDescriptor(userDesc, false), get: (o: Order) => o.user, set: (o: Order, v: User) => o.user = v}]",
+		"[2, {desc: NewRefDescriptor(userDesc, true), get: (o: Order) => o.userOpt, set: (o: Order, v: User | null) => o.userOpt = v}]",
 	} {
 		if !strings.Contains(data, want) {
 			t.Errorf("data file missing %q, got:\n%s", want, data)
@@ -147,10 +147,10 @@ func TestGenerateRecursive(t *testing.T) {
 	data := filesByName(resp)["admin/base.data.ts"]
 	for _, want := range []string{
 		"const nodeDesc: HBufDescriptor = NewSyncDescriptor(() => NewDataDescriptor(",
-		"parent: NodeTs | null = null",
-		"children: NodeTs[] = []",
-		"[2, {desc: NewRefDescriptor(nodeDesc, true), get: (o: NodeTs) => o.parent, set: (o: NodeTs, v: NodeTs | null) => o.parent = v}]",
-		"[3, {desc: NewListDescriptor(NewRefDescriptor(nodeDesc, false), false), get: (o: NodeTs) => o.children, set: (o: NodeTs, v: NodeTs[]) => o.children = v}]",
+		"parent: Node | null = null",
+		"children: Node[] = []",
+		"[2, {desc: NewRefDescriptor(nodeDesc, true), get: (o: Node) => o.parent, set: (o: Node, v: Node | null) => o.parent = v}]",
+		"[3, {desc: NewListDescriptor(NewRefDescriptor(nodeDesc, false), false), get: (o: Node) => o.children, set: (o: Node, v: Node[]) => o.children = v}]",
 	} {
 		if !strings.Contains(data, want) {
 			t.Errorf("data file missing %q, got:\n%s", want, data)
@@ -158,7 +158,7 @@ func TestGenerateRecursive(t *testing.T) {
 	}
 }
 
-// TestGenerateExtends 父类型内嵌字段并挂入 extends_ Map。
+// TestGenerateExtends 类 implements 直接父类,祖先字段展平,extends_ Map 按扩展 ID 挂父 desc。
 func TestGenerateExtends(t *testing.T) {
 	resp, err := Generate(buildRequest(t, genSrc))
 	if err != nil {
@@ -166,16 +166,20 @@ func TestGenerateExtends(t *testing.T) {
 	}
 	data := filesByName(resp)["admin/base.data.ts"]
 	for _, want := range []string{
-		"class StudentTs implements HData {",
-		"base: BaseTs = new BaseTs()",
+		"class Student implements HData, Base {",
+		// 父类字段展平声明(id 不重复在 Student 的 fields Map)
+		"id: bigint = 0n",
 		"no: string | null = null",
-		"[2, {desc: NewRefDescriptor(baseDesc), get: (o: StudentTs) => o.base, set: (o: StudentTs, v: BaseTs) => o.base = v}]",
+		"[2, {desc: baseDesc, get: (o: Student) => o, set: (o: Student, v: Base) => Object.assign(o, v)}]",
 	} {
 		if !strings.Contains(data, want) {
 			t.Errorf("data file missing %q, got:\n%s", want, data)
 		}
 	}
-	// extends_ Map 只在有继承时出现
+	// Student 的 fields Map 只含自身字段 no;extends_ Map 只在有继承时出现
+	if strings.Contains(data, "get: (o: Student) => o.id,") {
+		t.Error("parent field id must not appear in Student fields Map, got:\n" + data)
+	}
 	if strings.Count(data, "new Map<number, FieldDesc>([") != 6 {
 		t.Errorf("expect 6 field maps (5 data + 1 extends), got:\n%s", data)
 	}
@@ -232,7 +236,7 @@ data PublicInfo {
 
 	pub := files["public/public.data.ts"]
 	for _, want := range []string{
-		"export class PublicInfoTs implements HData {",
+		"export class PublicInfo implements HData {",
 		"export const publicInfoDesc: DataDescriptor = NewDataDescriptor(",
 	} {
 		if !strings.Contains(pub, want) {
@@ -243,9 +247,9 @@ data PublicInfo {
 	admin := files["admin/admin.data.ts"]
 	for _, want := range []string{
 		// 当前文件在 admin/ 目录,目标在 public/ 目录:相对路径带目录回溯
-		`import {PublicInfoTs, publicInfoDesc} from "../public/public.data"`,
-		"info: PublicInfoTs = new PublicInfoTs()",
-		"[1, {desc: NewRefDescriptor(publicInfoDesc, false), get: (o: ReqTs) => o.info, set: (o: ReqTs, v: PublicInfoTs) => o.info = v}]",
+		`import {PublicInfo, publicInfoDesc} from "../public/public.data"`,
+		"info: PublicInfo = new PublicInfo()",
+		"[1, {desc: NewRefDescriptor(publicInfoDesc, false), get: (o: Req) => o.info, set: (o: Req, v: PublicInfo) => o.info = v}]",
 	} {
 		if !strings.Contains(admin, want) {
 			t.Errorf("admin file missing %q, got:\n%s", want, admin)
@@ -280,8 +284,8 @@ func TestGenerateNoTsPackage(t *testing.T) {
 	if !ok {
 		t.Fatalf("expect root-level base.data.ts without ts package, got %v", keys(filesByName(resp)))
 	}
-	if !strings.Contains(data, "class UserTs implements HData {") {
-		t.Errorf("missing UserTs, got:\n%s", data)
+	if !strings.Contains(data, "class User implements HData {") {
+		t.Errorf("missing User, got:\n%s", data)
 	}
 }
 
@@ -291,6 +295,288 @@ func TestGenerateBadType(t *testing.T) {
 	req.Type = "go"
 	if _, err := Generate(req); err == nil {
 		t.Error("expect error for non-ts type")
+	}
+}
+
+// TestGenerateEnum 枚举类独立生成到 .enum.ts:value/name/type/cssClass 与 UI 注解。
+func TestGenerateEnum(t *testing.T) {
+	resp, err := Generate(buildRequest(t, genSrc))
+	if err != nil {
+		t.Fatal(err)
+	}
+	enum := filesByName(resp)["admin/base.enum.ts"]
+	for _, want := range []string{
+		"export class Status {",
+		"public readonly value: number",
+		"public readonly name: string",
+		"public readonly type: string",
+		"public readonly cssClass: string",
+		// 无 ui 注解:type 默认 info,cssClass 为空
+		`public static readonly PLAYER = new Status(0, "Player", "info", "")`,
+		`public static readonly STOP = new Status(1, "Stop", "info", "")`,
+		"public static readonly values: Status[] = [",
+		"Status.PLAYER,",
+		"toString(): string {",
+		"return this.name",
+	} {
+		if !strings.Contains(enum, want) {
+			t.Errorf("enum file missing %q, got:\n%s", want, enum)
+		}
+	}
+
+	// ui 注解:type 覆盖默认值,class 追加项名
+	resp, err = Generate(buildRequest(t, `package ts = "admin";
+enum UiStatus {
+    [ui:type="success"; class="round"]
+    ok = 0;
+    fail = 1;
+};`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	enum = filesByName(resp)["admin/base.enum.ts"]
+	for _, want := range []string{
+		`public static readonly OK = new UiStatus(0, "Ok", "success", "round ok")`,
+		`public static readonly FAIL = new UiStatus(1, "Fail", "info", "")`,
+	} {
+		if !strings.Contains(enum, want) {
+			t.Errorf("ui enum missing %q, got:\n%s", want, enum)
+		}
+	}
+}
+
+// TestGenerateServer 服务生成 .server.ts:接口/客户端/注册函数,void 与 stream 特殊处理。
+func TestGenerateServer(t *testing.T) {
+	const serverSrc = `package ts = "admin";
+
+data Req {
+    string name = 1;
+};
+
+data Resp {
+    string message = 1;
+};
+
+server UserServer {
+    Resp Login(Req req) = 1;
+    void Notify(void v) = 2;
+    stream Download(string name) = 3;
+    string Ping(void v) = 4;
+};
+
+server Child:UserServer = 2 {
+    Resp Login2(Req req) = 1;
+};
+`
+	resp, err := Generate(buildRequest(t, serverSrc))
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := filesByName(resp)["admin/base.server.ts"]
+	for _, want := range []string{
+		// data/server 是独立输出文件:同文件引用的 data 类也必须 import
+		`import {Req, Resp} from "./base.data"`,
+		"export interface UserServer {",
+		"login(req: Req, _opt?: Option): Promise<Resp>",
+		"notify(_opt?: Option): Promise<void>",
+		"download(name: string, _opt?: Option): Promise<BufferType>",
+		"ping(_opt?: Option): Promise<string>",
+		"export class UserServerClient implements UserServer {",
+		"protected client: Client",
+		`return this.client.invoke<Resp>(1, "user_server", "login", req, Resp.fromMap)`,
+		`return this.client.invoke<void>(2, "user_server", "notify", undefined)`,
+		`return this.client.invoke<BufferType>(3, "user_server", "download", name)`,
+		`return this.client.invoke<string>(4, "user_server", "ping", undefined)`,
+		"export function RegisterUserServer(r: Server, server: UserServer) {",
+		`r.register(0, "user_server", [`,
+		"id: 1,",
+		`name: "login",`,
+		"return server.login(req as Req, opt)",
+		"return server.notify(opt)",
+		"from: Req.fromMap,",
+		"export function UnRegisterUserServer(r: Server) {",
+		`r.unRegister(0, "user_server")`,
+		// 继承:接口 extends,客户端合并父类方法
+		"export interface Child extends UserServer {",
+		"export class ChildClient implements Child {",
+		"login2(req: Req, _opt?: Option): Promise<Resp>",
+		"export function RegisterChild(r: Server, server: Child) {",
+	} {
+		if !strings.Contains(server, want) {
+			t.Errorf("server file missing %q, got:\n%s", want, server)
+		}
+	}
+	// 同文件 data 被 server 引用时类与 desc 需要 export
+	data := filesByName(resp)["admin/base.data.ts"]
+	for _, want := range []string{
+		"export class Req implements HData {",
+		"export const reqDesc: DataDescriptor = NewDataDescriptor(",
+		"export class Resp implements HData {",
+		"export const respDesc: DataDescriptor = NewDataDescriptor(",
+	} {
+		if !strings.Contains(data, want) {
+			t.Errorf("data file missing %q, got:\n%s", want, data)
+		}
+	}
+}
+
+// TestGenerateServerCrossFile server 引用其他文件的 data 时生成相对 import。
+func TestGenerateServerCrossFile(t *testing.T) {
+	fset := htoken.NewFileSet()
+	fileMain, err := hparser.ParseFile(fset, "/a/admin.hbuf", `package ts = "admin";
+import "public.hbuf";
+data Resp {
+    string message = 1;
+};
+server UserServer {
+    Resp Login(PublicInfo req) = 1;
+};`, hparser.AllErrors|hparser.ParseComments)
+	if err != nil {
+		t.Fatalf("parse main: %v", err)
+	}
+	filePub, err := hparser.ParseFile(fset, "/a/public.hbuf", `package ts = "public";
+data PublicInfo {
+    string name = 1;
+};`, hparser.AllErrors|hparser.ParseComments)
+	if err != nil {
+		t.Fatalf("parse public: %v", err)
+	}
+	pkg := &ast.Package{Files: map[string]*ast.File{
+		"/a/admin.hbuf":  fileMain,
+		"/a/public.hbuf": filePub,
+	}}
+	req := &wire.Request{
+		Protocol: wire.ProtocolVersion,
+		Type:     "ts",
+		Files:    wire.Convert(pkg, "ts"),
+		Changed:  []string{"/a/admin.hbuf", "/a/public.hbuf"},
+	}
+	resp, err := Generate(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := filesByName(resp)
+	server := files["admin/admin.server.ts"]
+	for _, want := range []string{
+		`import {PublicInfo} from "../public/public.data"`,
+		"login(req: PublicInfo, _opt?: Option): Promise<Resp>",
+		"from: PublicInfo.fromMap,",
+	} {
+		if !strings.Contains(server, want) {
+			t.Errorf("server file missing %q, got:\n%s", want, server)
+		}
+	}
+	pub := files["public/public.data.ts"]
+	for _, want := range []string{
+		"export class PublicInfo implements HData {",
+		"export const publicInfoDesc: DataDescriptor = NewDataDescriptor(",
+	} {
+		if !strings.Contains(pub, want) {
+			t.Errorf("public file missing %q, got:\n%s", want, pub)
+		}
+	}
+}
+
+// TestGenerateJson data 类 fromMap/toMap 覆盖基础类型、数组、映射与引用转换。
+func TestGenerateJson(t *testing.T) {
+	resp, err := Generate(buildRequest(t, genSrc))
+	if err != nil {
+		t.Fatal(err)
+	}
+	data := filesByName(resp)["admin/base.data.ts"]
+	for _, want := range []string{
+		"static fromMap(map: Record<string, any>): User {",
+		"toMap(): Record<string, any> {",
+		// int64 非可空:JSON 字符串 -> BigInt
+		`ret.id = null == map["id"] ? 0n : BigInt(map["id"] as string)`,
+		`"id": this.id.toString(),`,
+		// 可空 string
+		`ret.name = null == map["name"] ? null : map["name"].toString()`,
+		// bytes base64 编解码
+		`ret.avatar = null == map["avatar"] ? new Uint8Array(0) : new Uint8Array([...atob(map["avatar"])].map(c => c.charCodeAt(0)))`,
+		`"avatar": btoa(String.fromCharCode(...this.avatar)),`,
+		// date 毫秒时间戳
+		`ret.created = null == map["created"] ? new Date(0) : new Date(Number(map["created"]).valueOf())`,
+		`"created": this.created?.getTime(),`,
+		// 数组用 convertArray
+		`ret.tags = null == map["tags"] ? [] : (!isArray(map["tags"]) ? [] : convertArray(map["tags"], (item) => null == item ? "" : item.toString())!)`,
+		`"tags": convertArray(this.tags, (e) => e),`,
+		// 映射手写循环:JSON 键为字符串,int64 key 转 BigInt
+		`const _v = map["scores"]; if (isRecord(_v)) { for (const _k of Object.keys(_v)) { ret.set(BigInt(_k), null == _v[_k] ? null : Number(_v[_k]).valueOf()) } }`,
+		`for (const [k, e] of this.scores) { ret[String(k)] = e } return ret })()`,
+		// enum 字段按 int32 值(number)存储
+		`ret.status = null == map["status"] ? 0 : (Number(map["status"]).valueOf() ?? 0)`,
+		// 非可空 data 引用递归 fromMap,JSON 缺失时回退空结构
+		`ret.user = null == map["user"] ? User.fromMap({}) : User.fromMap(map["user"] as Record<string, any>)`,
+		`"user": this.user.toMap(),`,
+		// 可空 data 引用
+		`ret.userOpt = null == map["user_opt"] ? null : User.fromMap(map["user_opt"] as Record<string, any>)`,
+		`"user_opt": this.userOpt?.toMap(),`,
+		// 继承字段展平:父类字段与自身字段同层级 JSON 键
+		`ret.id = null == map["id"] ? 0n : BigInt(map["id"] as string)`,
+		`ret.no = null == map["no"] ? null : map["no"].toString()`,
+		`"id": this.id.toString(),`,
+	} {
+		if !strings.Contains(data, want) {
+			t.Errorf("data file missing %q, got:\n%s", want, data)
+		}
+	}
+}
+
+// TestGenerateAuxMethods 辅助方法 clone/$getChangeField/$fieldMaps/$convertField/fromData/toData。
+func TestGenerateAuxMethods(t *testing.T) {
+	resp, err := Generate(buildRequest(t, genSrc))
+	if err != nil {
+		t.Fatal(err)
+	}
+	data := filesByName(resp)["admin/base.data.ts"]
+	for _, want := range []string{
+		// 二进制编解码:新版 hbuf_ts 运行时真实序列化
+		"public static fromData(data: ArrayBuffer): User {",
+		"return NewHBufDecoder()(data, User.fromMap) as User",
+		"public toData(): ArrayBuffer {",
+		"return NewHBufEncode()(this)",
+		// clone:基础类型直接赋值,date/bytes 重建
+		"public clone(): User {",
+		"ret.id = this.id",
+		"ret.created = null == this.created ? null : new Date(this.created.getTime())",
+		"ret.avatar = new Uint8Array([...this.avatar])",
+		// clone:数组递归拷贝
+		"ret.tags = null == this.tags ? [] : convertArray(this.tags, (e) => e)!",
+		// clone:映射键复用、值递归拷贝
+		"for (const [k, e] of this.scores) { ret.set(k, e) }",
+		// clone:非可空 data 引用递归 clone,可空 null 透传
+		"ret.user = this.user.clone()",
+		"ret.userOpt = null == this.userOpt ? null : this.userOpt.clone()",
+		// clone:继承展平字段参与拷贝
+		"ret.no = this.no",
+		// $getChangeField:date 按时间戳比较,其余 !=;字段名取原始 IDL 名
+		"if (ignore.includes(\"created\") || this.created?.getTime() != val.created?.getTime()) {",
+		"ret.fields.push(\"created\")",
+		"ret.change.created = this.created",
+		"if (ignore.includes(\"id\") || this.id != val.id) {",
+		// $fieldMaps 与 $convertField
+		"private static $fieldMaps: Record<string, string> = {",
+		"\"created\": \"created\",",
+		"public static $convertField(fields: string[]): string[] {",
+		"list.add(User.$fieldMaps[field])",
+	} {
+		if !strings.Contains(data, want) {
+			t.Errorf("data file missing %q, got:\n%s", want, data)
+		}
+	}
+	// 展平继承:Student 的 $fieldMaps 含父类字段 id
+	if !strings.Contains(data, "class Student implements HData, Base {") {
+		t.Skip("Student missing")
+	}
+	sd := data[strings.Index(data, "class Student"):]
+	for _, want := range []string{
+		"ret.id = this.id",
+		"if (ignore.includes(\"id\") || this.id != val.id) {",
+	} {
+		if !strings.Contains(sd, want) {
+			t.Errorf("Student missing %q, got:\n%s", want, sd)
+		}
 	}
 }
 
@@ -309,7 +595,7 @@ func TestCustomTemplateOverride(t *testing.T) {
 		t.Fatal(err)
 	}
 	data := filesByName(resp)["admin/base.data.ts"]
-	if !strings.Contains(data, "// CUSTOM UserTs") {
+	if !strings.Contains(data, "// CUSTOM User") {
 		t.Errorf("expect custom template output, got:\n%s", data)
 	}
 }

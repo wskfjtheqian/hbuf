@@ -15,9 +15,9 @@ import (
 // defaultRuntime 运行时包默认 import 路径(可用插件参数 runtime 覆盖)
 const defaultRuntime = "../src"
 
-// Generate hbuf-gen-ts 插件入口:按请求生成 TypeScript 数据类文件。
-// 生成规范见 test/ts/hbuf-ts-codegen.md;输出文件名与进程内 typescript
-// 后端一致:<包名点分转目录>/<name>.data.ts。
+// Generate hbuf-gen-ts 插件入口:按请求生成 TypeScript 数据类/枚举/服务文件。
+// 数据类含 descriptor 与 JSON 编解码(fromMap/toMap),可直接对接 hbuf_ts 运行时;
+// 输出文件名与进程内 typescript 后端一致:<包名点分转目录>/<name>.<data|enum|server>.ts。
 func Generate(req *wire.Request) (*wire.Response, error) {
 	if req.Type != "ts" {
 		return nil, fmt.Errorf("unsupported type: %s", req.Type)
@@ -45,27 +45,52 @@ func Generate(req *wire.Request) (*wire.Response, error) {
 			continue
 		}
 		pack := file.Packages["ts"]
-		ctx := NewCtx(req, file, index, pack, runtime)
-		fc := NewFileContext(ctx, file, exported)
-		body, err := engine.Execute("data.tmpl", fc)
-		if err != nil {
-			return nil, fmt.Errorf("%s data.tmpl: %w", file.Path, err)
-		}
-		if strings.TrimSpace(body) == "" {
-			continue
-		}
-		content := ctx.header() + body
 		// 与进程内 typescript 后端一致:无 ts 包注解时输出到根目录,
-		// 有包注解时输出到 <包名点分转目录>/<name>.data.ts
+		// 有包注解时输出到 <包名点分转目录>/<name>.<data|enum|server>.ts
 		packDir := ""
 		if pack != "" {
 			packDir = filepath.Join(strings.Split(pack, ".")...)
 		}
 		name := baseName(file.Path)
-		resp.Files = append(resp.Files, &wire.GeneratedFile{
-			Name:    filepath.Join(packDir, name+".data.ts"),
-			Content: content,
-		})
+
+		// data 文件
+		dctx := NewCtx(req, file, index, pack, runtime)
+		body, err := engine.Execute("data.tmpl", NewFileContext(dctx, file, exported))
+		if err != nil {
+			return nil, fmt.Errorf("%s data.tmpl: %w", file.Path, err)
+		}
+		if strings.TrimSpace(body) != "" {
+			resp.Files = append(resp.Files, &wire.GeneratedFile{
+				Name:    filepath.Join(packDir, name+".data.ts"),
+				Content: dctx.header() + body,
+			})
+		}
+
+		// enum 文件
+		ectx := NewCtx(req, file, index, pack, runtime)
+		body, err = engine.Execute("enum.tmpl", NewEnumFileContext(ectx, file))
+		if err != nil {
+			return nil, fmt.Errorf("%s enum.tmpl: %w", file.Path, err)
+		}
+		if strings.TrimSpace(body) != "" {
+			resp.Files = append(resp.Files, &wire.GeneratedFile{
+				Name:    filepath.Join(packDir, name+".enum.ts"),
+				Content: ectx.header() + body,
+			})
+		}
+
+		// server 文件
+		sctx := NewCtx(req, file, index, pack, runtime)
+		body, err = engine.Execute("server.tmpl", NewServerFileContext(sctx, file))
+		if err != nil {
+			return nil, fmt.Errorf("%s server.tmpl: %w", file.Path, err)
+		}
+		if strings.TrimSpace(body) != "" {
+			resp.Files = append(resp.Files, &wire.GeneratedFile{
+				Name:    filepath.Join(packDir, name+".server.ts"),
+				Content: sctx.header() + body,
+			})
+		}
 	}
 	sort.Slice(resp.Files, func(i, j int) bool { return resp.Files[i].Name < resp.Files[j].Name })
 	return resp, nil

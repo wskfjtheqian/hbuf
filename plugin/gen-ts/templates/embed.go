@@ -4,5 +4,5 @@ package templates
 
 import "embed"
 
-//go:embed data.tmpl
+//go:embed data.tmpl enum.tmpl server.tmpl
 var FS embed.FS

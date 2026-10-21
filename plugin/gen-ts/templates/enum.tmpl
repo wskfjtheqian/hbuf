@@ -1,0 +1,45 @@
+{{range .Enums}}{{$e := .}}{{if .Doc}}// {{.Name}} {{.Doc}}
+{{end}}export class {{.Name}} {
+    public readonly value: number
+    public readonly name: string
+    public readonly type: string
+    public readonly cssClass: string
+
+    private constructor(value: number, name: string, type?: string, cssClass?: string) {
+        this.value = value
+        this.name = name
+        this.type = type || 'info'
+        this.cssClass = cssClass || ''
+    }
+
+    public static valueOf(value: number): {{.Name}} {
+        for (const v of {{.Name}}.values) {
+            if (v.value == value) {
+                return v
+            }
+        }
+        return { value: value, name: `Unknown ${value}`, type: `info`, cssClass: `` }
+    }
+
+    public static nameOf(name: string): {{.Name}} {
+        for (const v of {{.Name}}.values) {
+            if (v.name == name) {
+                return v
+            }
+        }
+        return { value: -1, name: name, type: `info`, cssClass: `` }
+    }
+
+{{range .Items}}{{if .Doc}}    ///{{.Doc}}
+{{end}}    public static readonly {{.Name}} = new {{$e.Name}}({{.Value}}, "{{.ShowName}}", "{{.Type}}", "{{.CssClass}}")
+{{end}}
+    public static readonly values: {{.Name}}[] = [
+{{range .Items}}        {{$e.Name}}.{{.Name}},
+{{end}}    ]
+
+    toString(): string {
+        return this.name
+    }
+}
+
+{{end}}

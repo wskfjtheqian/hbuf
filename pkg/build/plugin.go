@@ -20,6 +20,8 @@ type PluginConfig struct {
 // FindPlugins 查找类型对应的插件二进制列表。
 // 显式路径(逗号分隔多个,条目可选带 hbuf-gen-<name>= 前缀则剥离)
 // 允许同时挂载多个插件(如 hbuf-gen-go 与 hbuf-gen-goplus 一次运行全部生成);
+// 条目中 k=v 形式且不以 hbuf-gen- 开头者视为插件参数(追加到 cfg.Options),
+// 如 "hbuf-gen-ts=bin/hbuf-gen-ts,runtime=hbuf_ts"。
 // 未显式指定时通过 PATH 查找 hbuf-gen-<typ>。未找到时返回空列表(调用方回退到进程内后端)。
 func FindPlugins(typ string, cfg *PluginConfig) ([]string, error) {
 	if cfg != nil && cfg.Path != "" {
@@ -27,6 +29,15 @@ func FindPlugins(typ string, cfg *PluginConfig) ([]string, error) {
 		for _, item := range strings.Split(cfg.Path, ",") {
 			item = strings.TrimSpace(item)
 			if "" == item {
+				continue
+			}
+			// 插件参数:k=v 形式、不以 hbuf-gen- 前缀且值不含路径分隔符,
+			// 如 "hbuf-gen-ts=bin/hbuf-gen-ts,runtime=hbuf_ts"。
+			// 值含路径分隔符的 k=v 视为插件名不合法(落入下方报错),而非参数。
+			if eq := strings.IndexByte(item, '='); eq >= 0 &&
+				!strings.HasPrefix(item, "hbuf-gen-") &&
+				!strings.ContainsAny(item[eq+1:], `/\`) {
+				cfg.Options = append(cfg.Options, item)
 				continue
 			}
 			path := item

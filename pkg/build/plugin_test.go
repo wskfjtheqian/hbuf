@@ -24,6 +24,31 @@ func TestFindPluginExplicitPath(t *testing.T) {
 	}
 }
 
+// TestFindPluginsOptions 插件声明中附加的 k=v 参数(值不含路径分隔符)收集到 Options。
+func TestFindPluginsOptions(t *testing.T) {
+	bin := filepath.Join(t.TempDir(), "hbuf-gen-ts")
+	if err := os.WriteFile(bin, []byte("#!/bin/sh\n"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	cfg := &PluginConfig{Path: "hbuf-gen-ts=" + bin + ",runtime=hbuf_ts,template=custom"}
+	got, err := FindPlugins("ts", cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0] != bin {
+		t.Errorf("got %v, want [%s]", got, bin)
+	}
+	wantOpts := []string{"runtime=hbuf_ts", "template=custom"}
+	if len(cfg.Options) != len(wantOpts) {
+		t.Fatalf("got options %v, want %v", cfg.Options, wantOpts)
+	}
+	for i, opt := range wantOpts {
+		if cfg.Options[i] != opt {
+			t.Errorf("options[%d] = %q, want %q", i, cfg.Options[i], opt)
+		}
+	}
+}
+
 // TestFindPluginNamePrefix 带 hbuf-gen-x= 前缀的显式路径。
 func TestFindPluginNamePrefix(t *testing.T) {
 	bin := filepath.Join(t.TempDir(), "gen")

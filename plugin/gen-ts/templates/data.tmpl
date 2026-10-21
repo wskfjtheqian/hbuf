@@ -1,0 +1,23 @@
+{{range .Datas}}{{$data := .}}{{if .Doc}}// {{.Name}} {{.Doc}}
+{{end}}{{.Export}}class {{.Name}} implements HData {
+{{range .Extends}}    {{.Name}}: {{.Type}} = {{.Default}}
+{{end}}{{range .Fields}}{{if .Comment}}    // {{.Comment}}
+{{end}}    {{.Name}}: {{.Type}} = {{.Default}}
+{{end}}
+    descriptors(): HBufDescriptor {
+        return {{.DescName}}
+    }
+}
+
+{{.DescOpen}}
+    () => new {{.Name}}(),
+    new Map<number, FieldDesc>([
+{{range .Fields}}        [{{.Id}}, {desc: {{.Desc}}, get: (o: {{$data.Name}}) => o.{{.Name}}, set: (o: {{$data.Name}}, v: {{.Type}}) => o.{{.Name}} = v}],
+{{end}}    ]),
+{{if .Extends}}    new Map<number, FieldDesc>([
+{{range .Extends}}        [{{.Id}}, {desc: {{.Desc}}, get: (o: {{$data.Name}}) => o.{{.Name}}, set: (o: {{$data.Name}}, v: {{.Type}}) => o.{{.Name}} = v}],
+{{end}}    ]),
+{{end}}{{if .Sync}}))
+{{else}})
+{{end}}
+{{end}}

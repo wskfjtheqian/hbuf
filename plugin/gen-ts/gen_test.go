@@ -88,26 +88,37 @@ func TestGenerateBasic(t *testing.T) {
 	}
 	for _, want := range []string{
 		`} from "../src"`,
-		"class User implements HData {",
+		// 类型符号以内联 type 修饰符导入(verbatimModuleSyntax 下避免 TS1484)
+		"    type FieldDesc,",
+		"    type HBufDescriptor,",
+		"    type HData,",
+		// 与旧版后端一致:所有 data 类与 desc 一律 export
+		"export class User implements HData {",
 		"id: bigint = 0n",
 		"name: string | null = null",
 		"active: boolean = false",
 		"avatar: Uint8Array = new Uint8Array(0)",
 		// date 恒为 Date | null(零时间用 null 表示)
 		"created: Date | null = null",
-		"balance: string = \"\"",
+		// decimal 字段用 Decimal 类(与旧版后端一致),第三方模块 import
+		"import {Decimal} from \"decimal.js\"",
+		"balance: Decimal = new Decimal(0)",
 		"tags: string[] = []",
-		"scores: Map<bigint, number | null> = new Map()",
-		// enum 字段按 int32 编码
-		"status: number = 0",
-		"const userDesc: DataDescriptor = NewDataDescriptor(",
+		// map 用 Record 对象(与旧版后端一致),键为 JSON 键语义(int64 -> string)
+		"scores: Record<string, number | null> = {}",
+		// enum 字段用 enum 类(与旧版后端一致),descriptor 仍按 int32 编码
+		"status: Status = Status.valueOf(0)",
+		"export const userDesc: DataDescriptor = NewDataDescriptor(",
 		"[1, {desc: NewInt64Descriptor(false), get: (o: User) => o.id, set: (o: User, v: bigint) => o.id = v}]",
 		"[2, {desc: NewStringDescriptor(true), get: (o: User) => o.name, set: (o: User, v: string | null) => o.name = v}]",
 		"[4, {desc: NewBytesDescriptor(false), get: (o: User) => o.avatar, set: (o: User, v: Uint8Array) => o.avatar = v}]",
 		"[5, {desc: NewTimeDescriptor(false), get: (o: User) => o.created, set: (o: User, v: Date | null) => o.created = v}]",
+		// decimal descriptor 以字符串承载:get 取 toString(),set 用 new Decimal 还原
+		"[6, {desc: NewDecimalDescriptor(false), get: (o: User) => o.balance.toString(), set: (o: User, v: string) => o.balance = new Decimal(v)}]",
 		"[7, {desc: NewListDescriptor(NewStringDescriptor(false), false), get: (o: User) => o.tags, set: (o: User, v: string[]) => o.tags = v}]",
-		"[8, {desc: NewMapDescriptor(NewInt64Descriptor(false), NewInt8Descriptor(true), false), get: (o: User) => o.scores, set: (o: User, v: Map<bigint, number | null>) => o.scores = v}]",
-		"[9, {desc: NewInt32Descriptor(false), get: (o: User) => o.status, set: (o: User, v: number) => o.status = v}]",
+		// map descriptor 层仍操作 Map:get 转 Map(key 恢复 BigInt),set 转回 Record
+		"[8, {desc: NewMapDescriptor(NewInt64Descriptor(false), NewInt8Descriptor(true), false), get: (o: User) => (() => { const m = new Map<any, any>(); const r: any = o.scores; for (const k of Object.keys(r)) { m.set(BigInt(k), r[k]) } return m })(), set: (o: User, v: Map<any, any>) => o.scores = (() => { const r: Record<string, any> = {}; for (const [k, e] of v) { r[String(k)] = e } return r })()}]",
+		"[9, {desc: NewInt32Descriptor(false), get: (o: User) => o.status.value, set: (o: User, v: number) => o.status = Status.valueOf(v)}]",
 	} {
 		if !strings.Contains(data, want) {
 			t.Errorf("data file missing %q, got:\n%s", want, data)
@@ -146,7 +157,7 @@ func TestGenerateRecursive(t *testing.T) {
 	}
 	data := filesByName(resp)["admin/base.data.ts"]
 	for _, want := range []string{
-		"const nodeDesc: HBufDescriptor = NewSyncDescriptor(() => NewDataDescriptor(",
+		"export const nodeDesc: HBufDescriptor = NewSyncDescriptor(() => NewDataDescriptor(",
 		"parent: Node | null = null",
 		"children: Node[] = []",
 		"[2, {desc: NewRefDescriptor(nodeDesc, true), get: (o: Node) => o.parent, set: (o: Node, v: Node | null) => o.parent = v}]",
@@ -166,7 +177,9 @@ func TestGenerateExtends(t *testing.T) {
 	}
 	data := filesByName(resp)["admin/base.data.ts"]
 	for _, want := range []string{
-		"class Student implements HData, Base {",
+		"export class Student implements HData, Base {",
+		// 父类也一律 export(仅被同文件 extends 引用的父类同样可被业务代码 import)
+		"export class Base implements HData {",
 		// 父类字段展平声明(id 不重复在 Student 的 fields Map)
 		"id: bigint = 0n",
 		"no: string | null = null",
@@ -284,7 +297,7 @@ func TestGenerateNoTsPackage(t *testing.T) {
 	if !ok {
 		t.Fatalf("expect root-level base.data.ts without ts package, got %v", keys(filesByName(resp)))
 	}
-	if !strings.Contains(data, "class User implements HData {") {
+	if !strings.Contains(data, "export class User implements HData {") {
 		t.Errorf("missing User, got:\n%s", data)
 	}
 }
@@ -376,6 +389,11 @@ server Child:UserServer = 2 {
 	for _, want := range []string{
 		// data/server 是独立输出文件:同文件引用的 data 类也必须 import
 		`import {Req, Resp} from "./base.data"`,
+		// 类型符号以内联 type 修饰符导入(verbatimModuleSyntax 下避免 TS1484)
+		"    type BufferType,",
+		"    type Option,",
+		"    type RequestType,",
+		"    type ResponseType,",
 		"export interface UserServer {",
 		"login(req: Req, _opt?: Option): Promise<Resp>",
 		"notify(_opt?: Option): Promise<void>",
@@ -498,14 +516,18 @@ func TestGenerateJson(t *testing.T) {
 		// date 毫秒时间戳
 		`ret.created = null == map["created"] ? new Date(0) : new Date(Number(map["created"]).valueOf())`,
 		`"created": this.created?.getTime(),`,
+		// decimal 字段用 Decimal 实例,JSON 层经十进制字符串还原/输出
+		`ret.balance = null == map["balance"] ? new Decimal(0) : new Decimal(map["balance"] as string)`,
+		`"balance": this.balance.toString(),`,
 		// 数组用 convertArray
 		`ret.tags = null == map["tags"] ? [] : (!isArray(map["tags"]) ? [] : convertArray(map["tags"], (item) => null == item ? "" : item.toString())!)`,
 		`"tags": convertArray(this.tags, (e) => e),`,
-		// 映射手写循环:JSON 键为字符串,int64 key 转 BigInt
-		`const _v = map["scores"]; if (isRecord(_v)) { for (const _k of Object.keys(_v)) { ret.set(BigInt(_k), null == _v[_k] ? null : Number(_v[_k]).valueOf()) } }`,
-		`for (const [k, e] of this.scores) { ret[String(k)] = e } return ret })()`,
-		// enum 字段按 int32 值(number)存储
-		`ret.status = null == map["status"] ? 0 : (Number(map["status"]).valueOf() ?? 0)`,
+		// 映射用 convertRecord:JSON 键为字符串,int64 key 原样、值递归转换
+		"ret.scores = null == map[\"scores\"] ? {} : (!isRecord(map[\"scores\"]) ? {} : convertRecord(map[\"scores\"], (key, value) => new RecordEntry(key, null == value ? null : Number(value).valueOf()))!)",
+		`"scores": convertRecord(this.scores, (key, value) => new RecordEntry(key, value)),`,
+		// enum 字段用 enum 类,JSON 层经 value 数字还原/输出
+		"ret.status = null == map[\"status\"] ? Status.valueOf(0) : Status.valueOf(Number(map[\"status\"]).valueOf())",
+		`"status": this.status.value,`,
 		// 非可空 data 引用递归 fromMap,JSON 缺失时回退空结构
 		`ret.user = null == map["user"] ? User.fromMap({}) : User.fromMap(map["user"] as Record<string, any>)`,
 		`"user": this.user.toMap(),`,
@@ -536,21 +558,27 @@ func TestGenerateAuxMethods(t *testing.T) {
 		"return NewHBufDecoder()(data, User.fromMap) as User",
 		"public toData(): ArrayBuffer {",
 		"return NewHBufEncode()(this)",
-		// clone:基础类型直接赋值,date/bytes 重建
+		// clone:基础类型直接赋值,date/bytes/decimal 重建
 		"public clone(): User {",
 		"ret.id = this.id",
 		"ret.created = null == this.created ? null : new Date(this.created.getTime())",
 		"ret.avatar = new Uint8Array([...this.avatar])",
+		// clone:Decimal 实例可变,复制构造
+		"ret.balance = new Decimal(this.balance)",
 		// clone:数组递归拷贝
 		"ret.tags = null == this.tags ? [] : convertArray(this.tags, (e) => e)!",
-		// clone:映射键复用、值递归拷贝
-		"for (const [k, e] of this.scores) { ret.set(k, e) }",
+		// clone:映射 convertRecord 逐项拷贝
+		"ret.scores = convertRecord(this.scores, (key, value) => new RecordEntry(key, value))!",
 		// clone:非可空 data 引用递归 clone,可空 null 透传
 		"ret.user = this.user.clone()",
 		"ret.userOpt = null == this.userOpt ? null : this.userOpt.clone()",
 		// clone:继承展平字段参与拷贝
 		"ret.no = this.no",
-		// $getChangeField:date 按时间戳比较,其余 !=;字段名取原始 IDL 名
+		// clone:enum 实例为单例,引用直接赋值
+		"ret.status = this.status",
+		// $getChangeField:enum 按 value、decimal 按字符串、date 按时间戳比较,其余 !=;字段名取原始 IDL 名
+		"if (ignore.includes(\"status\") || this.status?.value != val.status?.value) {",
+		"if (ignore.includes(\"balance\") || this.balance?.toString() != val.balance?.toString()) {",
 		"if (ignore.includes(\"created\") || this.created?.getTime() != val.created?.getTime()) {",
 		"ret.fields.push(\"created\")",
 		"ret.change.created = this.created",
@@ -566,7 +594,7 @@ func TestGenerateAuxMethods(t *testing.T) {
 		}
 	}
 	// 展平继承:Student 的 $fieldMaps 含父类字段 id
-	if !strings.Contains(data, "class Student implements HData, Base {") {
+	if !strings.Contains(data, "export class Student implements HData, Base {") {
 		t.Skip("Student missing")
 	}
 	sd := data[strings.Index(data, "class Student"):]

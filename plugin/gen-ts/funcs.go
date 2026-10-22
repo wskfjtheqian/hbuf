@@ -93,45 +93,76 @@ func typeName(t *wire.Type) string {
 
 // Ctx 单个 .hbuf 文件的渲染上下文。
 type Ctx struct {
-	Req      *wire.Request
-	File     *wire.File
-	Pack     string                     // 本文件 ts 包名
-	Runtime  string                     // 运行时包 import 路径
-	Imports  map[string]bool            // 运行时符号集合
-	CrossRef map[string]map[string]bool // 跨文件 import:相对路径 -> 符号集合
-	index    *TypeIndex
+	Req         *wire.Request
+	File        *wire.File
+	Pack        string                     // 本文件 ts 包名
+	Runtime     string                     // 运行时包 import 路径
+	Imports     map[string]bool            // 运行时值符号集合
+	TypeImports map[string]bool            // 运行时类型符号集合(verbatimModuleSyntax 下须 import type)
+	CrossRef    map[string]map[string]bool // 跨文件 import:相对路径 -> 符号集合
+	Third       map[string]map[string]bool // 第三方模块 import:模块名 -> 符号集合(如 decimal.js 的 Decimal)
+	index       *TypeIndex
 }
 
 // NewCtx 创建渲染上下文。
 func NewCtx(req *wire.Request, file *wire.File, index *TypeIndex, pack, runtime string) *Ctx {
 	return &Ctx{
-		Req:      req,
-		File:     file,
-		Pack:     pack,
-		Runtime:  runtime,
-		Imports:  map[string]bool{},
-		CrossRef: map[string]map[string]bool{},
-		index:    index,
+		Req:         req,
+		File:        file,
+		Pack:        pack,
+		Runtime:     runtime,
+		Imports:     map[string]bool{},
+		TypeImports: map[string]bool{},
+		CrossRef:    map[string]map[string]bool{},
+		Third:       map[string]map[string]bool{},
+		index:       index,
 	}
 }
 
 // clone 复制上下文:同一输出文件的符号集合共享(import 块按文件汇总)。
 func (c *Ctx) clone() *Ctx {
 	return &Ctx{
-		Req:      c.Req,
-		File:     c.File,
-		Pack:     c.Pack,
-		Runtime:  c.Runtime,
-		Imports:  c.Imports,
-		CrossRef: c.CrossRef,
-		index:    c.index,
+		Req:         c.Req,
+		File:        c.File,
+		Pack:        c.Pack,
+		Runtime:     c.Runtime,
+		Imports:     c.Imports,
+		TypeImports: c.TypeImports,
+		CrossRef:    c.CrossRef,
+		Third:       c.Third,
+		index:       c.index,
 	}
 }
 
-// Import 登记运行时符号(幂等)。
+// importThird 登记第三方模块的符号 import(幂等,如 decimal.js 的 Decimal)。
+func (c *Ctx) importThird(module, symbol string) {
+	if module == "" || symbol == "" {
+		return
+	}
+	if c.Third[module] == nil {
+		c.Third[module] = map[string]bool{}
+	}
+	c.Third[module][symbol] = true
+}
+
+// decimalImport 登记 decimal.js 的 Decimal import(decimal 字段类型用 Decimal 类)。
+func (c *Ctx) decimalImport() {
+	c.importThird("decimal.js", "Decimal")
+}
+
+// Import 登记运行时值符号(幂等)。
 func (c *Ctx) Import(symbol string) {
 	if symbol != "" {
 		c.Imports[symbol] = true
+	}
+}
+
+// TypeImport 登记运行时类型符号(幂等)。
+// verbatimModuleSyntax 开启时类型符号必须以内联 type 修饰符导入,
+// 否则 vue-tsc 报 TS1484;同一 import 块内类型与值符号混排输出。
+func (c *Ctx) TypeImport(symbol string) {
+	if symbol != "" {
+		c.TypeImports[symbol] = true
 	}
 }
 
@@ -171,9 +202,9 @@ func (c *Ctx) tsType(vt *wire.VarType) string {
 	if vt == nil {
 		return "any"
 	}
-	// 规范:数组/映射不因可空改变声明(空容器本身即可表示空)
+	// 规范:数组不因可空改变声明(空容器本身即可表示空);map 与旧版后端一致可空时声明 | null
 	null := ""
-	if vt.Empty && vt.Kind != "array" && vt.Kind != "map" {
+	if vt.Empty && vt.Kind != "array" {
 		null = " | null"
 	}
 	switch vt.Kind {
@@ -181,6 +212,11 @@ func (c *Ctx) tsType(vt *wire.VarType) string {
 		if vt.Name == "date" {
 			// 陷阱:date 恒为 Date | null(零时间用 null 表示)
 			return baseTypes[vt.Name]
+		}
+		if vt.Name == "decimal" {
+			// decimal 字段用 Decimal 类(与旧版后端一致)
+			c.decimalImport()
+			return "Decimal" + null
 		}
 		return c.baseType(vt.Name) + null
 	case "ref":
@@ -192,7 +228,8 @@ func (c *Ctx) tsType(vt *wire.VarType) string {
 		}
 		return elem + "[]"
 	case "map":
-		return "Map<" + c.keyType(vt.Key) + ", " + c.tsType(vt.Value) + ">"
+		// 与旧版后端一致:map 用 Record 对象,键为 JSON 键语义(string/number)
+		return "Record<" + c.keyType(vt.Key) + ", " + c.tsType(vt.Value) + ">" + null
 	}
 	return "any"
 }
@@ -205,10 +242,11 @@ func (c *Ctx) baseType(name string) string {
 	return name
 }
 
-// refType 引用类型的 TS 类型:enum -> number,data -> Xxx(类名无 Ts 后缀,与旧版 typescript 后端一致)。
+// refType 引用类型的 TS 类型:enum -> enum 类(与旧版后端一致),data -> Xxx(类名无 Ts 后缀)。
 func (c *Ctx) refType(vt *wire.VarType) string {
 	if vt.RefKind == "enum" {
-		return "number"
+		c.enumImport(vt.Name)
+		return tpl.HumpName(vt.Name)
 	}
 	name := tpl.HumpName(vt.Name)
 	// 跨文件引用:类的类型名也需要 import
@@ -218,12 +256,11 @@ func (c *Ctx) refType(vt *wire.VarType) string {
 	return name
 }
 
-// keyType map key 的 TS 类型(规范:K 仅 int64 或 string,其余按 number)。
+// keyType map key 的 TS 类型(与旧版后端一致:Record 键为 JSON 键语义)。
+// int64/uint64/decimal/string -> string,其余(数字类/enum/data)-> number。
 func (c *Ctx) keyType(name string) string {
 	switch name {
-	case "int64", "uint64":
-		return "bigint"
-	case "string":
+	case "int64", "uint64", "string", "decimal":
 		return "string"
 	}
 	return "number"
@@ -234,26 +271,33 @@ func (c *Ctx) tsDefault(vt *wire.VarType) string {
 	if vt == nil {
 		return "null"
 	}
-	// 可空字段默认 null;数组/映射外层可空不影响
-	if vt.Empty && vt.Kind != "array" && vt.Kind != "map" {
+	// 可空字段默认 null;数组外层可空不影响
+	if vt.Empty && vt.Kind != "array" {
 		return "null"
 	}
 	switch vt.Kind {
 	case "base":
+		if vt.Name == "decimal" {
+			// decimal 字段默认零值实例(与旧版后端一致)
+			c.decimalImport()
+			return "new Decimal(0)"
+		}
 		if v, ok := baseDefaults[vt.Name]; ok {
 			return v
 		}
 		return "null"
 	case "ref":
 		if vt.RefKind == "enum" {
-			return "0"
+			c.enumImport(vt.Name)
+			return tpl.HumpName(vt.Name) + ".valueOf(0)"
 		}
 		// 陷阱:非可空 data 引用默认零值实例(编码为 3 字节空结构)
 		return "new " + tpl.HumpName(vt.Name) + "()"
 	case "array":
 		return "[]"
 	case "map":
-		return "new Map()"
+		// 与旧版后端一致:非可空 map 默认空对象
+		return "{}"
 	}
 	return "null"
 }
@@ -343,9 +387,10 @@ func baseName(path string) string {
 }
 
 // enumImport 登记 enum 类名的跨文件 import(生成文件后缀 .enum)。
+// enum 与 data 是独立输出文件:即使 enum 与 data 声明在同一 .hbuf 文件也必须 import。
 func (c *Ctx) enumImport(name string) {
 	t, owner := c.index.Find(name)
-	if t == nil || owner == nil || t.Kind != "enum" || owner.Path == c.File.Path {
+	if t == nil || owner == nil || t.Kind != "enum" {
 		return
 	}
 	c.importFrom(c.relImport(owner, ".enum"), tpl.HumpName(name))
@@ -391,8 +436,13 @@ func (c *Ctx) jsonFrom(vt *wire.VarType, v string) string {
 		return c.jsonFromBase(vt.Name, v, vt.Empty)
 	case "ref":
 		if vt.RefKind == "enum" {
-			// 与类型声明一致:enum 字段按 int32 值(number)存储
-			return c.jsonFromBase("int32", v, vt.Empty)
+			// enum 字段为 enum 类实例,JSON 层用 value 数字还原
+			c.enumImport(vt.Name)
+			name := tpl.HumpName(vt.Name)
+			if vt.Empty {
+				return fmt.Sprintf("null == %s ? null : %s.valueOf(Number(%s).valueOf())", v, name, v)
+			}
+			return fmt.Sprintf("null == %s ? %s.valueOf(0) : %s.valueOf(Number(%s).valueOf())", v, name, name, v)
 		}
 		name := tpl.HumpName(vt.Name)
 		c.dataImport(vt.Name)
@@ -406,11 +456,14 @@ func (c *Ctx) jsonFrom(vt *wire.VarType, v string) string {
 		inner := c.jsonFrom(vt.Element, "item")
 		return fmt.Sprintf("null == %s ? [] : (!isArray(%s) ? [] : convertArray(%s, (item) => %s)!)", v, v, v, inner)
 	case "map":
+		// 与旧版后端一致:map 为 Record 对象,convertRecord 逐项转换
+		c.Import("convertRecord")
+		c.Import("RecordEntry")
 		c.Import("isRecord")
-		key := c.mapKeyFrom(vt.Key, "_k")
-		val := c.jsonFrom(vt.Value, "_v[_k]")
-		return fmt.Sprintf("(() => { const ret = new Map<%s, %s>(); const _v = %s; if (isRecord(_v)) { for (const _k of Object.keys(_v)) { ret.set(%s, %s) } } return ret })()",
-			c.keyType(vt.Key), c.tsType(vt.Value), v, key, val)
+		if vt.Empty {
+			return fmt.Sprintf("null == %s ? null : (!isRecord(%s) ? null : convertRecord(%s, (key, value) => new RecordEntry(%s, %s))!)", v, v, v, c.mapKeyFrom(vt.Key, "key"), c.jsonFrom(vt.Value, "value"))
+		}
+		return fmt.Sprintf("null == %s ? {} : (!isRecord(%s) ? {} : convertRecord(%s, (key, value) => new RecordEntry(%s, %s))!)", v, v, v, c.mapKeyFrom(vt.Key, "key"), c.jsonFrom(vt.Value, "value"))
 	}
 	return v
 }
@@ -444,10 +497,12 @@ func (c *Ctx) jsonFromBase(name, v string, empty bool) string {
 		}
 		return fmt.Sprintf("null == %s ? new Date(0) : new Date(Number(%s).valueOf())", v, v)
 	case "decimal":
+		// decimal 字段为 Decimal 实例,JSON 层用字符串承载
+		c.decimalImport()
 		if empty {
-			return fmt.Sprintf("null == %s ? null : %s as string", v, v)
+			return fmt.Sprintf("null == %s ? null : new Decimal(%s as string)", v, v)
 		}
-		return fmt.Sprintf("null == %s ? \"\" : %s as string", v, v)
+		return fmt.Sprintf("null == %s ? new Decimal(0) : new Decimal(%s as string)", v, v)
 	case "bytes":
 		if empty {
 			return fmt.Sprintf("null == %s ? null : new Uint8Array([...atob(%s)].map(c => c.charCodeAt(0)))", v, v)
@@ -473,6 +528,12 @@ func (c *Ctx) jsonTo(vt *wire.VarType, v string) string {
 		case "date":
 			// 陷阱:date 的 TS 类型恒为 Date | null(零时间用 null 表示),统一可选链
 			return fmt.Sprintf("%s?.getTime()", v)
+		case "decimal":
+			// decimal 字段为 Decimal 实例,JSON 输出十进制字符串
+			if vt.Empty {
+				return fmt.Sprintf("%s?.toString()", v)
+			}
+			return fmt.Sprintf("%s.toString()", v)
 		case "bytes":
 			if vt.Empty {
 				return fmt.Sprintf("%s == null ? null : btoa(String.fromCharCode(...%s))", v, v)
@@ -482,8 +543,11 @@ func (c *Ctx) jsonTo(vt *wire.VarType, v string) string {
 		return v
 	case "ref":
 		if vt.RefKind == "enum" {
-			// enum 字段按 int32 值(number)存储,JSON 原样输出
-			return v
+			// enum 字段为 enum 类实例,JSON 输出 value 数字
+			if vt.Empty {
+				return v + "?.value"
+			}
+			return v + ".value"
 		}
 		if vt.Empty {
 			return fmt.Sprintf("%s?.toMap()", v)
@@ -493,30 +557,26 @@ func (c *Ctx) jsonTo(vt *wire.VarType, v string) string {
 		c.Import("convertArray")
 		return fmt.Sprintf("convertArray(%s, (e) => %s)", v, c.jsonTo(vt.Element, "e"))
 	case "map":
-		key := "k"
-		if vt.Key != "string" {
-			key = "String(k)"
-		}
-		return fmt.Sprintf("(() => { const ret: Record<string, any> = {}; for (const [k, e] of %s) { ret[%s] = %s } return ret })()",
-			v, key, c.jsonTo(vt.Value, "e"))
+		// 与旧版后端一致:map 为 Record 对象,键原样输出(JSON 键语义)
+		c.Import("convertRecord")
+		c.Import("RecordEntry")
+		return fmt.Sprintf("convertRecord(%s, (key, value) => new RecordEntry(key, %s))", v, c.jsonTo(vt.Value, "value"))
 	}
 	return v
 }
 
-// mapKeyFrom map key 的 JSON 键转换表达式(JSON 键是字符串)。
+// mapKeyFrom map key 的 JSON 键转换表达式(JSON 键是字符串,Record 键即字符串语义)。
 func (c *Ctx) mapKeyFrom(name, k string) string {
 	switch name {
-	case "string":
+	case "string", "decimal", "int64", "uint64":
 		return k
-	case "int64", "uint64":
-		return "BigInt(" + k + ")"
 	}
-	// 数字类基础类型与 enum:enum key 与 Go 端一致按 int32 值解析
+	// 数字类键(含 enum/data)按 number 解析
 	return "Number(" + k + ")"
 }
 
 // tsCopy 渲染字段的拷贝表达式(v 指代源值,与旧版 typescript 后端 printCopy 语义一致)。
-// 适配新版类型系统:enum 是 number、decimal 是 string、int64/uint64 是 bigint,均不可变直接赋值;
+// 适配新版类型系统:enum 是单例实例直接引用、decimal 是 Decimal 实例复制构造、int64/uint64 是 bigint 直接赋值;
 // date 与 bytes 重新构造;data 引用递归 clone;数组/映射递归拷贝。
 func (c *Ctx) tsCopy(vt *wire.VarType, v string) string {
 	if vt == nil {
@@ -528,6 +588,12 @@ func (c *Ctx) tsCopy(vt *wire.VarType, v string) string {
 		case "date":
 			// date 的 TS 类型恒为 Date | null
 			return fmt.Sprintf("null == %s ? null : new Date(%s.getTime())", v, v)
+		case "decimal":
+			// Decimal 实例可变,复制构造新实例(与旧版后端一致)
+			if vt.Empty {
+				return fmt.Sprintf("null == %s ? null : new Decimal(%s)", v, v)
+			}
+			return fmt.Sprintf("new Decimal(%s)", v)
 		case "bytes":
 			// 用 spread 构造避免 TS 泛型窄化(Uint8Array<ArrayBuffer> 不可赋给 Uint8Array<ArrayBufferLike>)
 			if vt.Empty {
@@ -539,6 +605,7 @@ func (c *Ctx) tsCopy(vt *wire.VarType, v string) string {
 		return v
 	case "ref":
 		if vt.RefKind == "enum" {
+			// enum 实例为单例,引用直接赋值(与旧版后端一致)
 			return v
 		}
 		if vt.Empty {
@@ -549,18 +616,33 @@ func (c *Ctx) tsCopy(vt *wire.VarType, v string) string {
 		c.Import("convertArray")
 		return fmt.Sprintf("null == %s ? [] : convertArray(%s, (e) => %s)!", v, v, c.tsCopy(vt.Element, "e"))
 	case "map":
-		// key 为不可变类型直接复用;值递归拷贝
-		return fmt.Sprintf("(() => { const ret = new Map<%s, %s>(); for (const [k, e] of %s) { ret.set(k, %s) } return ret })()",
-			c.keyType(vt.Key), c.tsType(vt.Value), v, c.tsCopy(vt.Value, "e"))
+		// 与旧版后端一致:map 为 Record 对象,convertRecord 逐项拷贝
+		c.Import("convertRecord")
+		c.Import("RecordEntry")
+		if vt.Empty {
+			return fmt.Sprintf("null == %s ? null : convertRecord(%s, (key, value) => new RecordEntry(key, %s))!", v, v, c.tsCopy(vt.Value, "value"))
+		}
+		return fmt.Sprintf("convertRecord(%s, (key, value) => new RecordEntry(key, %s))!", v, c.tsCopy(vt.Value, "value"))
 	}
 	return v
 }
 
 // tsCmp 渲染 $getChangeField 的变更比较表达式(self/val 为两个实例的同名字段)。
-// 仅 date 需按时间戳比较,其余类型(含 enum number/decimal string/bigint)直接 !=。
+// enum 按 value 比较、decimal 按字符串比较、date 按时间戳比较,其余类型直接 !=。
 func (c *Ctx) tsCmp(vt *wire.VarType, self, val string) string {
-	if vt != nil && vt.Kind == "base" && vt.Name == "date" {
-		return fmt.Sprintf("%s?.getTime() != %s?.getTime()", self, val)
+	if vt == nil {
+		return fmt.Sprintf("%s != %s", self, val)
+	}
+	if vt.Kind == "ref" && vt.RefKind == "enum" {
+		return fmt.Sprintf("%s?.value != %s?.value", self, val)
+	}
+	if vt.Kind == "base" {
+		if vt.Name == "decimal" {
+			return fmt.Sprintf("%s?.toString() != %s?.toString()", self, val)
+		}
+		if vt.Name == "date" {
+			return fmt.Sprintf("%s?.getTime() != %s?.getTime()", self, val)
+		}
 	}
 	return fmt.Sprintf("%s != %s", self, val)
 }

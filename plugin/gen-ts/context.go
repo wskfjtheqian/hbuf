@@ -17,18 +17,18 @@ type FileContext struct {
 
 // NewFileContext 构建文件级模板上下文。
 // 同文件内 data 按 desc 引用关系拓扑排序;环上节点用 NewSyncDescriptor 延迟构建。
-func NewFileContext(ctx *Ctx, file *wire.File, exported map[string]bool) *FileContext {
+func NewFileContext(ctx *Ctx, file *wire.File) *FileContext {
 	// 每个 data 文件恒定依赖的运行时符号
 	ctx.Import("DataDescriptor")
-	ctx.Import("HBufDescriptor")
-	ctx.Import("FieldDesc")
-	ctx.Import("HData")
+	ctx.TypeImport("HBufDescriptor")
+	ctx.TypeImport("FieldDesc")
+	ctx.TypeImport("HData")
 	ctx.Import("NewDataDescriptor")
 	ctx.Import("NewHBufDecoder")
 	ctx.Import("NewHBufEncode")
 	fc := &FileContext{Ctx: ctx, Package: ctx.Pack}
 	for _, od := range orderDatas(ctx, file) {
-		fc.Datas = append(fc.Datas, NewDataContext(ctx, od.Data, od.Sync, exported))
+		fc.Datas = append(fc.Datas, NewDataContext(ctx, od.Data, od.Sync))
 	}
 	return fc
 }
@@ -157,93 +157,13 @@ func collectRefs(vt *wire.VarType, fn func(name string)) {
 	}
 }
 
-// exportedDescs 统计被其他文件引用的 data 名(其类与 desc 需要 export)。
-// 引用来源:data 字段/extends 与 server 方法参数/结果。
-func exportedDescs(files []*wire.File, index *TypeIndex) map[string]bool {
-	exported := map[string]bool{}
-	for _, f := range files {
-		if f == nil {
-			continue
-		}
-		for _, t := range f.Types {
-			if t == nil {
-				continue
-			}
-			switch t.Kind {
-			case "data":
-				if t.Data == nil {
-					continue
-				}
-				for _, e := range t.Data.Extends {
-					if e == nil {
-						continue
-					}
-					if rt, owner := index.Find(e.Name); owner != nil && rt != nil && rt.Kind == "data" && owner.Path != f.Path {
-						exported[e.Name] = true
-					}
-				}
-				// 字段展平后子类文件会引用祖先字段的类型:递归检查展平字段的 data 引用
-				collectDataRefs(index, t.Data, map[string]bool{}, func(name string) {
-					if rt, owner := index.Find(name); owner != nil && rt != nil && rt.Kind == "data" && owner.Path != f.Path {
-						exported[name] = true
-					}
-				})
-			case "server":
-				if t.Server == nil {
-					continue
-				}
-				// data/server 是独立输出文件:server 引用的 data 一律 export,
-				// 即使与 server 声明在同一 .hbuf 文件
-				for _, m := range t.Server.Methods {
-					if m == nil {
-						continue
-					}
-					collectRefs(m.Param, func(name string) {
-						if rt, owner := index.Find(name); owner != nil && rt != nil && rt.Kind == "data" {
-							exported[name] = true
-						}
-					})
-					collectRefs(m.Result, func(name string) {
-						if rt, owner := index.Find(name); owner != nil && rt != nil && rt.Kind == "data" {
-							exported[name] = true
-						}
-					})
-				}
-			}
-		}
-	}
-	return exported
-}
-
-// collectDataRefs 递归收集 data 展平字段的类型引用(自身 + 祖先字段),visited 防环。
-func collectDataRefs(index *TypeIndex, d *wire.DataType, visited map[string]bool, fn func(name string)) {
-	if d == nil || visited[d.Name] {
-		return
-	}
-	visited[d.Name] = true
-	for _, e := range d.Extends {
-		if e == nil {
-			continue
-		}
-		if rt, _ := index.Find(e.Name); rt != nil && rt.Kind == "data" {
-			collectDataRefs(index, rt.Data, visited, fn)
-		}
-	}
-	for _, field := range d.Fields {
-		if field == nil {
-			continue
-		}
-		collectRefs(field.Type, fn)
-	}
-}
-
 // DataContext data 类型的模板上下文。
 type DataContext struct {
 	*Ctx
 	Name         string           // 类名(无 Ts 后缀,与旧版 typescript 后端一致)
 	DescName     string           // descriptor 单例名:xxxDesc
 	DescOpen     string           // descriptor 声明开头(含类型注解与构造调用)
-	Export       string           // 被其他文件引用时为 "export "
+	Export       string           // 恒为 "export "(与旧版后端一致:所有 data 类与 desc 一律导出)
 	Sync         bool             // 递归:NewSyncDescriptor 包裹
 	Extends      []*ExtendContext // 直接父类 implements 列表 + extends_ Map 条目
 	ExtendFields []*FieldContext  // 展平的祖先字段(递归,先父后自身)
@@ -254,16 +174,16 @@ type DataContext struct {
 // NewDataContext 构建 data 类型的模板上下文。
 // 继承采用与旧版 typescript 后端一致的方式:类 implements 直接父类,
 // 祖先字段递归展平声明(desc 的 extends_ Map 仍按扩展 ID 挂父 desc 保证二进制兼容)。
-func NewDataContext(ctx *Ctx, data *wire.DataType, sync bool, exported map[string]bool) *DataContext {
+// 所有类与 desc 一律 export:仅被同文件 extends 引用的父类也可能被业务代码 import,
+// 旧版后端即全量导出,按需导出会破坏 API 兼容。
+func NewDataContext(ctx *Ctx, data *wire.DataType, sync bool) *DataContext {
 	dc := &DataContext{
 		Ctx:      ctx,
 		Name:     tpl.HumpName(data.Name),
 		DescName: lowerCamel(data.Name) + "Desc",
+		Export:   "export ",
 		Sync:     sync,
 		Doc:      data.Doc,
-	}
-	if exported[data.Name] {
-		dc.Export = "export "
 	}
 	if sync {
 		ctx.Import("NewSyncDescriptor")
@@ -336,7 +256,7 @@ func collectExtendFields(ctx *Ctx, name string, out *[]*FieldContext, visited, n
 func newFieldContext(ctx *Ctx, f *wire.Field) *FieldContext {
 	name := lowerCamel(f.Name)
 	key := tpl.UnderlineName(f.Name)
-	return &FieldContext{
+	fc := &FieldContext{
 		Ctx:      ctx,
 		Name:     name,
 		Id:       strconv.FormatInt(f.Id, 10),
@@ -351,6 +271,54 @@ func newFieldContext(ctx *Ctx, f *wire.Field) *FieldContext {
 		Cmp:      ctx.tsCmp(f.Type, "this."+name, "val."+name),
 		RawName:  f.Name,
 	}
+	// enum 字段为 enum 类实例,descriptor 仍按 int32 编码:
+	// get 取 .value 数字,set 用 valueOf 还原实例
+	if f.Type != nil && f.Type.Kind == "ref" && f.Type.RefKind == "enum" {
+		if f.Type.Empty {
+			fc.Get = "o." + name + "?.value"
+		} else {
+			fc.Get = "o." + name + ".value"
+		}
+		fc.Set = "o." + name + " = " + tpl.HumpName(f.Type.Name) + ".valueOf(v)"
+		fc.SetType = "number"
+	} else if f.Type != nil && f.Type.Kind == "base" && f.Type.Name == "decimal" {
+		// decimal 字段为 Decimal 实例,descriptor 以字符串承载(wire 上十进制文本):
+		// get 取 toString(),set 用 new Decimal(v) 还原实例
+		ctx.decimalImport()
+		if f.Type.Empty {
+			fc.Get = "o." + name + "?.toString()"
+		} else {
+			fc.Get = "o." + name + ".toString()"
+		}
+		fc.Set = "o." + name + " = new Decimal(v)"
+		fc.SetType = "string"
+	} else if f.Type != nil && f.Type.Kind == "map" {
+		// map 字段为 Record 对象(与旧版后端一致),descriptor 层仍操作 Map:
+		// get 转 Map 供编码(key 恢复为 descriptor 键类型),set 转回 Record
+		keyConv := "k"
+		switch f.Type.Key {
+		case "int64", "uint64":
+			keyConv = "BigInt(k)"
+		case "string", "decimal":
+			// 字符串键原样
+		default:
+			// 数字类键(含 enum/data)转 number
+			keyConv = "Number(k)"
+		}
+		mk := fmt.Sprintf("(() => { const m = new Map<any, any>(); const r: any = o.%s; for (const k of Object.keys(r)) { m.set(%s, r[k]) } return m })()", name, keyConv)
+		if f.Type.Empty {
+			fc.Get = "null == o." + name + " ? null : " + mk
+		} else {
+			fc.Get = mk
+		}
+		fc.Set = fmt.Sprintf("o.%s = (() => { const r: Record<string, any> = {}; for (const [k, e] of v) { r[String(k)] = e } return r })()", name)
+		fc.SetType = "Map<any, any>"
+	} else {
+		fc.Get = "o." + name
+		fc.Set = "o." + name + " = v"
+		fc.SetType = fc.Type
+	}
+	return fc
 }
 
 // FieldContext 数据字段的模板上下文。
@@ -361,6 +329,9 @@ type FieldContext struct {
 	Type     string // TS 类型声明
 	Default  string // 默认值表达式
 	Desc     string // descriptor 构造表达式
+	Get      string // descriptor get 闭包体(enum 字段取 .value)
+	Set      string // descriptor set 闭包体(enum 字段 valueOf 还原)
+	SetType  string // descriptor set 闭包参数类型(enum 字段恒为 number)
 	Comment  string // 文档注释(已压缩单行)
 	JsonKey  string // JSON 键(下划线形式)
 	FromJSON string // JSON 读取表达式
@@ -445,9 +416,9 @@ func NewServerFileContext(ctx *Ctx, file *wire.File) *ServerFileContext {
 	// 每个 server 文件恒定依赖的运行时符号
 	ctx.Import("Client")
 	ctx.Import("Server")
-	ctx.Import("Option")
-	ctx.Import("RequestType")
-	ctx.Import("ResponseType")
+	ctx.TypeImport("Option")
+	ctx.TypeImport("RequestType")
+	ctx.TypeImport("ResponseType")
 	fc := &ServerFileContext{Ctx: ctx}
 	for _, t := range file.Types {
 		if t == nil || t.Kind != "server" || t.Server == nil {
@@ -532,7 +503,7 @@ func NewServerMethodContext(ctx *Ctx, m *wire.Method) *ServerMethodContext {
 				mc.ParamName = "data"
 			}
 			mc.ParamType = "BufferType"
-			ctx.Import("BufferType")
+			ctx.TypeImport("BufferType")
 		} else {
 			mc.ParamName = lowerCamel(m.ParamName)
 			if mc.ParamName == "" {
@@ -550,7 +521,7 @@ func NewServerMethodContext(ctx *Ctx, m *wire.Method) *ServerMethodContext {
 	if r := m.Result; r != nil && r.Name != "void" {
 		if r.Name == "stream" {
 			mc.ResultType = "BufferType"
-			ctx.Import("BufferType")
+			ctx.TypeImport("BufferType")
 		} else {
 			mc.ResultType = ctx.tsType(r)
 			if r.Kind == "ref" && r.RefKind == "data" {

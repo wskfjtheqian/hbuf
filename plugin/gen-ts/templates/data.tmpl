@@ -76,7 +76,7 @@
 {{.DescOpen}}
     () => new {{.Name}}(),
     new Map<number, FieldDesc>([
-{{range .Fields}}        [{{.Id}}, {desc: {{.Desc}}, get: (o: {{$data.Name}}) => o.{{.Name}}, set: (o: {{$data.Name}}, v: {{.Type}}) => o.{{.Name}} = v}],
+{{range .Fields}}        [{{.Id}}, {desc: {{.Desc}}, get: (o: {{$data.Name}}) => {{.Get}}, set: (o: {{$data.Name}}, v: {{.SetType}}) => {{.Set}}}],
 {{end}}    ]),
 {{if .Extends}}    new Map<number, FieldDesc>([
 {{range .Extends}}        [{{.Id}}, {desc: {{.Desc}}, get: (o: {{$data.Name}}) => o, set: (o: {{$data.Name}}, v: {{.Type}}) => Object.assign(o, v)}],

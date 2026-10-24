@@ -10,17 +10,24 @@ func (b *Builder) printDataCode(dst *build.Writer, typ *ast.DataType) error {
 }
 
 func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) error {
+	// desc 单例（NewSyncDescriptor 包裹，延迟构建，支持循环引用）
+	err := b.printDataDescriptor(dst, typ)
+	if err != nil {
+		return err
+	}
+
 	if nil != typ.Doc && 0 < len(typ.Doc.Text()) {
 		dst.Code("///" + typ.Doc.Text())
 	}
-	uName := build.StringToHumpName(typ.Name.Name)
-	dst.Import("hbuf_ts", "Data")
-	dst.Code("export class " + uName + " implements Data")
+	uName := className(typ.Name.Name)
+	dst.Import("hbuf_ts", "type HData", "type Descriptor", "Marshal", "Unmarshal")
+	dst.Code("export class " + uName + " implements HData")
 	if nil != typ.Extends {
 		b.printExtend(dst, typ.Extends, true)
 	}
 	dst.Code(" {\n")
-	err := build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
+
+	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
 		if nil != field.Doc && 0 < len(field.Doc.Text()) {
 			dst.Tab(1).Code("///" + field.Doc.Text())
 		}
@@ -36,46 +43,29 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) error {
 		return err
 	}
 
-	dst.Tab(1).Code("public static fromMap(_json: Record<string, any>): " + uName + "{\n")
-	dst.Tab(2).Code("const ret = new " + uName + "()\n")
-	dst.Tab(2).Code("let _temp:any\n")
-	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
-		dst.Tab(2).Code("ret." + build.StringToFirstLower(field.Name.Name) + " = ")
-		jsonName := build.StringToUnderlineName(field.Name.Name)
-		b.printFormMap(dst, "(_temp = _json[\""+jsonName+"\"])", "_temp", field.Type, data, false, false)
-		dst.Code("\n")
-		return nil
-	})
-	if err != nil {
-		return err
-	}
+	dName := descName(typ.Name.Name)
 
-	dst.Tab(2).Code("return ret\n")
+	dst.Tab(1).Code("descriptors(): Descriptor {\n")
+	dst.Tab(2).Code("return " + dName + "\n")
+	dst.Tab(1).Code("}\n\n")
+
+	dst.Tab(1).Code("public static fromMap(_json: Record<string, any>): " + uName + "{\n")
+	dst.Tab(2).Code("return ").Code(dName).Code(".fromJson(_json) as " + uName + "\n")
 	dst.Tab(1).Code("}\n\n")
 
 	dst.Code("\n")
 	dst.Tab(1).Code("public toMap(): Record<string, any> {\n")
-	dst.Tab(2).Code("return {\n")
-	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
-		dst.Tab(3).Code("\"" + build.StringToUnderlineName(field.Name.Name))
-		dst.Code("\": ")
-		b.printToMap(dst, "this.", build.StringToFirstLower(field.Name.Name), field.Type, data, false, false)
-		dst.Code(",\n")
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-	dst.Tab(2).Code("};\n")
+	dst.Tab(2).Code("return ").Code(dName).Code(".toJson(this) as Record<string, any> \n")
 	dst.Tab(1).Code("}\n\n")
 
 	dst.Tab(1).Code("public static fromData(_data: ArrayBuffer): " + uName + " {\n")
 	dst.Tab(2).Code("const ret = new " + uName + "()\n")
+	dst.Tab(2).Code("Unmarshal(new Uint8Array(_data), ret)\n")
 	dst.Tab(2).Code("return ret\n")
 	dst.Tab(1).Code("}\n\n")
 
 	dst.Tab(1).Code("public toData(): ArrayBuffer {\n")
-	dst.Tab(2).Code("return new ArrayBuffer(0)\n")
+	dst.Tab(2).Code("return Marshal(this).slice().buffer\n")
 	dst.Tab(1).Code("}\n\n")
 
 	dst.Tab(1).Code("public clone(): ").Code(uName).Code(" {\n")
@@ -112,7 +102,7 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) error {
 		} else if build.IsDate(field.Type) {
 			dst.Code("this.").Code(lName).Code("?.getTime() != val.").Code(lName).Code("?.getTime()) {\n")
 		} else if build.IsDecimal(field.Type) {
-			dst.Code("this.").Code(lName).Code("?.toString() != val.").Code(lName).Code("?.toString()) {\n")
+			dst.Code("this.").Code(lName).Code(" != val.").Code(lName).Code(") {\n")
 		} else {
 			dst.Code("this.").Code(lName).Code(" != val.").Code(lName).Code(") {\n")
 		}
@@ -150,6 +140,7 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) error {
 	dst.Tab(2).Code("return Array.from(list)\n")
 	dst.Tab(1).Code("}\n\n")
 	dst.Code("}\n\n")
+
 	return nil
 }
 
@@ -172,15 +163,7 @@ func (b *Builder) printCopy(dst *build.Writer, self, name string, expr ast.Expr,
 		} else {
 			switch build.BaseType(expr.(*ast.Ident).Name) {
 			case build.Decimal:
-				if isRecordKey {
-					dst.Code(self).Code(name)
-				} else {
-					if empty {
-						dst.Code(self).Code(name).Code(" == null ? null : new Decimal(").Code(self).Code(name).Code(")")
-					} else {
-						dst.Code("new Decimal(").Code(self).Code(name).Code(")")
-					}
-				}
+				dst.Code(self).Code(name)
 			case build.Int64, build.Uint64:
 				if isRecordKey {
 					dst.Code(self).Code(name)
@@ -195,11 +178,8 @@ func (b *Builder) printCopy(dst *build.Writer, self, name string, expr ast.Expr,
 				if isRecordKey {
 					dst.Code(self).Code(name)
 				} else {
-					if empty {
-						dst.Code(self).Code(name).Code(" == null ? null : new Date(").Code(self).Code(name).Code("!.getTime())")
-					} else {
-						dst.Code("new Date(").Code(self).Code(name).Code("!.getTime())")
-					}
+					// date 恒为 Date | null，判空后克隆
+					dst.Code(self).Code(name).Code(" == null ? null : new Date(").Code(self).Code(name).Code("!.getTime())")
 				}
 			case build.Bytes:
 				if isRecordKey {
@@ -222,34 +202,28 @@ func (b *Builder) printCopy(dst *build.Writer, self, name string, expr ast.Expr,
 		dst.Import("hbuf_ts", "convertArray")
 		if empty {
 			dst.Code(self).Code(name).Code(" == null ? null : ")
-			dst.Code("(convertArray(").Code(self).Code(name).Code(", (item) => ")
+			dst.Code("(convertArray(").Code(self).Code(name).Code(", (item: any) => ")
 			b.printCopy(dst, "", "item", t.VType, data, empty, false)
 			dst.Code("))")
 		} else {
 			dst.Code(self).Code(name).Code(" == null ? [] : ")
-			dst.Code("(convertArray(").Code(self).Code(name).Code(", (item) => ")
+			dst.Code("(convertArray(").Code(self).Code(name).Code(", (item: any) => ")
 			b.printCopy(dst, "", "item", t.VType, data, empty, false)
 			dst.Code("))!")
 		}
 	case *ast.MapType:
 		t := expr.(*ast.MapType)
 		empty = t.IsEmpty()
-		dst.Import("hbuf_ts", "convertRecord", "RecordEntry")
 		if empty {
 			dst.Code(self).Code(name).Code(" == null ? null : ")
-			dst.Code("(convertRecord(").Code(self).Code(name).Code(", (key, value) => new RecordEntry(")
-			b.printCopy(dst, "", "key", t.Key, data, empty, true)
-			dst.Code(",")
-			b.printCopy(dst, "", "value", t.VType, data, empty, false)
-			dst.Code(")))")
 		} else {
-			dst.Code(self).Code(name).Code(" == null ? {} : ")
-			dst.Code("(convertRecord(").Code(self).Code(name).Code(", (key, value) => new RecordEntry(")
-			b.printCopy(dst, "", "key", t.Key, data, empty, true)
-			dst.Code(",")
-			b.printCopy(dst, "", "value", t.VType, data, empty, false)
-			dst.Code(")))!")
+			dst.Code(self).Code(name).Code(" == null ? new Map() : ")
 		}
+		dst.Code("(new Map(Array.from(").Code(self).Code(name).Code(".entries()).map(([key, value]) => [")
+		b.printCopy(dst, "", "key", t.Key, data, empty, true)
+		dst.Code(", ")
+		b.printCopy(dst, "", "value", t.VType, data, empty, false)
+		dst.Code("])))")
 
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
@@ -262,7 +236,7 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
-			b.getPackage(dst, t, "", false, false, "", "")
+			b.getPackage(dst, t, "", false, false, "", "", nil)
 			if ast.Enum == t.Obj.Kind {
 				if isRecordKey {
 					if empty {
@@ -297,9 +271,9 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 			case build.Int64, build.Uint64:
 				if isRecordKey {
 					if empty {
-						dst.Code("null == ").Code(name).Code(" ? null : " + v + ".toString()")
+						dst.Code("null == ").Code(name).Code(" ? null : BigInt(" + v + " as string)")
 					} else {
-						dst.Code("null == ").Code(name).Code(" ? \"\" : " + v + ".toString()")
+						dst.Code("null == ").Code(name).Code(" ? BigInt(0) : (BigInt(" + v + " as string) ?? BigInt(0))")
 					}
 				} else {
 					if empty {
@@ -328,11 +302,8 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 						dst.Code("null == ").Code(name).Code(" ? 0 : (Number(" + v + ").valueOf() ?? 0)")
 					}
 				} else {
-					if empty {
-						dst.Code("null == ").Code(name).Code(" ? null : new Date(Number(" + v + ").valueOf())")
-					} else {
-						dst.Code("null == ").Code(name).Code(" ? new Date(0): new Date(Number(" + v + ").valueOf())")
-					}
+					// date 恒为 Date | null，JSON null 保持 null
+					dst.Code("null == ").Code(name).Code(" ? null : new Date(Number(" + v + ").valueOf())")
 				}
 			case build.Bool:
 				if isRecordKey {
@@ -349,19 +320,10 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 					}
 				}
 			case build.Decimal:
-				if isRecordKey {
-					if empty {
-						dst.Code("null == ").Code(name).Code(" ? null : " + v + ".toString()")
-					} else {
-						dst.Code("null == ").Code(name).Code(" ? \"\" : " + v + ".toString()")
-					}
+				if empty {
+					dst.Code("null == ").Code(name).Code(" ? null : " + v + ".toString()")
 				} else {
-					dst.Import("decimal.js", "Decimal")
-					if empty {
-						dst.Code("null == ").Code(name).Code(" ? null : new Decimal(" + v + " as string )")
-					} else {
-						dst.Code("null == ").Code(name).Code(" ? new Decimal(0) : new Decimal(" + v + " as string ) ")
-					}
+					dst.Code("null == ").Code(name).Code(" ? \"\" : " + v + ".toString()")
 				}
 			case build.Bytes:
 				if isRecordKey {
@@ -388,149 +350,36 @@ func (b *Builder) printFormMap(dst *build.Writer, name string, v string, expr as
 		if empty {
 			dst.Code("null == ").Code(name).Code(" ? null : (")
 			dst.Code("!isArray(" + v + ") ? null : ")
-			dst.Code("(convertArray(" + v + ", (item) => ")
+			dst.Code("(convertArray(" + v + ", (item: any) => ")
 			b.printFormMap(dst, "item", "item", t.VType, data, empty, false)
 			dst.Code(")))")
 		} else {
 			dst.Code("null == ").Code(name).Code(" ? [] : (")
 			dst.Code("!isArray(" + v + ") ? [] : ")
-			dst.Code("(convertArray(" + v + ", (item) => ")
+			dst.Code("(convertArray(" + v + ", (item: any) => ")
 			b.printFormMap(dst, "item", "item", t.VType, data, empty, false)
 			dst.Code("))!)")
 		}
 	case *ast.MapType:
 		t := expr.(*ast.MapType)
 		empty = t.IsEmpty()
-		dst.Import("hbuf_ts", "convertArray", "isRecord", "RecordEntry")
+		dst.Import("hbuf_ts", "isRecord")
 		if empty {
 			dst.Code("null == ").Code(name).Code(" ? null : (")
 			dst.Code("!isRecord(" + v + ") ? null : ")
-			dst.Code("(convertRecord(" + v + ", (key, value) => new RecordEntry(")
-			b.printFormMap(dst, "key", "key", t.Key, data, empty, true)
-			dst.Code(",")
-			b.printFormMap(dst, "value", "value", t.VType, data, empty, false)
-			dst.Code("))))")
 		} else {
-			dst.Code("null == ").Code(name).Code(" ? {} : (")
-			dst.Code("!isRecord(" + v + ") ? {} : ")
-			dst.Code("(convertRecord(" + v + ", (key, value) => new RecordEntry(")
-			b.printFormMap(dst, "key", "key", t.Key, data, empty, true)
-			dst.Code(",")
-			b.printFormMap(dst, "value", "value", t.VType, data, empty, false)
-			dst.Code(")))!)")
+			dst.Code("null == ").Code(name).Code(" ? new Map() : (")
+			dst.Code("!isRecord(" + v + ") ? new Map() : ")
 		}
+		dst.Code("(new Map(Object.keys(" + v + ").map((_key) => [")
+		b.printFormMap(dst, "_key", "_key", t.Key, data, empty, true)
+		dst.Code(", ")
+		b.printFormMap(dst, v+"[_key]", v+"[_key]", t.VType, data, empty, false)
+		dst.Code("]))))")
 
 	case *ast.VarType:
 		t := expr.(*ast.VarType)
 		b.printFormMap(dst, name, v, t.Type(), data, t.Empty, isRecordKey)
-	}
-}
-
-func (b *Builder) printToMap(dst *build.Writer, key string, name string, expr ast.Expr, data *ast.DataType, empty bool, isRecordKey bool) {
-	switch expr.(type) {
-	case *ast.Ident:
-		t := expr.(*ast.Ident)
-		if nil != t.Obj {
-			if ast.Enum == t.Obj.Kind {
-				dst.Code(key)
-				if isRecordKey {
-					dst.Code(name)
-				} else {
-					if empty {
-						dst.Code(name + "?.value")
-					} else {
-						dst.Code(name + ".value")
-					}
-				}
-			} else if ast.Data == t.Obj.Kind {
-				dst.Code(key)
-				if empty {
-					dst.Code(name + "?.toMap()")
-				} else {
-					dst.Code(name + ".toMap()")
-				}
-			} else {
-				dst.Code(name)
-			}
-		} else {
-			switch build.BaseType(expr.(*ast.Ident).Name) {
-			case build.Int8, build.Int16, build.Int32, build.Uint32, build.Uint8, build.Uint16, build.Float, build.Double, build.String, build.Bool:
-				dst.Code(key)
-				dst.Code(name)
-			case build.Uint64, build.Int64:
-				dst.Code(key)
-				if isRecordKey {
-					dst.Code(name)
-				} else {
-					if empty {
-						dst.Code(name + "?.toString()")
-					} else {
-						dst.Code(name + ".toString()")
-					}
-				}
-
-			case build.Date:
-				dst.Code(key)
-				if isRecordKey {
-					dst.Code(name)
-				} else {
-					if empty {
-						dst.Code(name + "?.getTime()")
-					} else {
-						dst.Code(name + ".getTime()")
-					}
-				}
-
-			case build.Decimal:
-				dst.Code(key)
-				if empty {
-					dst.Code(name + "?.toString()")
-				} else {
-					dst.Code(name + ".toString()")
-				}
-
-			case build.Bytes:
-				if empty {
-					dst.Code(key).Code(name).Code("==null?null:")
-				}
-				dst.Code("btoa(String.fromCharCode(...").Code(key).Code(name).Code("))")
-			default:
-				dst.Code(name)
-			}
-		}
-	case *ast.ArrayType:
-		t := expr.(*ast.ArrayType)
-		empty = t.IsEmpty()
-		dst.Import("hbuf_ts", "convertArray")
-		if empty {
-			dst.Code("convertArray(" + key + name + ",(e) => ")
-			b.printToMap(dst, "", "e", t.VType, data, empty, false)
-			dst.Code(")")
-		} else {
-			dst.Code("convertArray(" + key + name + ",(e) => ")
-			b.printToMap(dst, "", "e", t.VType, data, empty, false)
-			dst.Code(")")
-		}
-	case *ast.MapType:
-		t := expr.(*ast.MapType)
-		empty = t.IsEmpty()
-		dst.Import("hbuf_ts", "convertRecord", "RecordEntry")
-		if empty {
-			dst.Code("convertRecord(" + key + name + ", (key, value) => new RecordEntry(")
-			b.printToMap(dst, "", "key", t.Key, data, empty, true)
-			dst.Code(",")
-			b.printToMap(dst, "", "value", t.VType, data, empty, false)
-			dst.Code("))")
-		} else {
-			dst.Code("convertRecord(" + key + name + ", (key, value) => new RecordEntry(")
-			b.printToMap(dst, "", "key", t.Key, data, empty, true)
-			dst.Code(",")
-			b.printToMap(dst, "", "value", t.VType, data, empty, false)
-			dst.Code("))")
-		}
-	case *ast.VarType:
-		t := expr.(*ast.VarType)
-		b.printToMap(dst, key, name, t.Type(), data, t.Empty, isRecordKey)
 	}
 }
 
@@ -540,7 +389,7 @@ func (b *Builder) printExtend(dst *build.Writer, extends []*ast.Extends, start b
 			dst.Code(", ")
 		}
 
-		b.getPackage(dst, v.Name, "", true, false, "", "")
+		b.getPackage(dst, v.Name, "", true, false, "", "", nil)
 		dst.Code(build.StringToHumpName(v.Name.Name))
 	}
 }

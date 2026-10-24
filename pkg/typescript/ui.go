@@ -486,7 +486,7 @@ func (b *Builder) printTableString(dst *build.Writer, name string, expr ast.Expr
 	case *ast.Ident:
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
-			b.getPackage(dst, expr, "", false, false, "", "")
+			b.getPackage(dst, expr, "", false, false, "", "", nil)
 			b.printTableString(dst, name, t.Obj.Decl.(*ast.TypeSpec).Type, empty, format, val, isDigit, checkIsNull, true)
 		} else {
 			switch build.BaseType(t.Name) {
@@ -608,7 +608,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(5).Code("<el-form-item class=\"").Code(className).Code("\" prop=\"").Code(fieldName).Code("\"")
 			dst.Code(" label={ctx.$t(\"").Code(langName).Code("Lang.").Code(fieldName).Code("\")}")
 			if verify {
-				b.getPackage(dst, typ.Name, "verify", false, false, "verify", "_"+build.StringToHumpName(field.Name.Name))
+				b.getPackage(dst, typ.Name, "verify", false, false, "verify", "_"+build.StringToHumpName(field.Name.Name), nil)
 				dst.Code(" rules={[{validator: verify").Code(name).Code("_").Code(build.StringToHumpName(field.Name.Name))
 				dst.Code("(_locale, model.").Code(fieldName).Code("), trigger: 'blur'}]}")
 			}
@@ -1025,7 +1025,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 				dst.Code(" label={ctx.$t(\"").Code(langName).Code("Lang.").Code(fieldName).Code("\")}")
 				dst.Code("/>\n")
 				ty := field.Type.Type().(*ast.Ident)
-				b.getPackage(dst, ty, "", false, true, "", "FormItems")
+				b.getPackage(dst, ty, "", false, true, "", "FormItems", nil)
 				dst.Tab(6).Code("<").Code(build.StringToHumpName(ty.Name)).Code("FormItems\n")
 				dst.Tab(7).Code("model={model." + fieldName + "}\n")
 				for _, attr := range form.formAttr {
@@ -1135,7 +1135,7 @@ func (b *Builder) printMenuItem(dst *build.Writer, expr ast.Expr, empty bool, op
 	switch expr.(type) {
 	case *ast.EnumType:
 		t := expr.(*ast.EnumType)
-		b.getPackage(dst, t.Name, "", false, false, "", "")
+		b.getPackage(dst, t.Name, "", false, false, "", "", nil)
 		name := build.StringToHumpName(t.Name.Name)
 		dst.Tab(6 + 1).Code("{").Code(name).Code(".values.filter((val) => val.cssClass.length > 0).map((val) => {\n")
 		dst.Tab(7 + 1).Code("return <" + option + " key={val.name} class={ 'el-option--' + val.type + ' ' + val.cssClass}\n")
@@ -1243,7 +1243,7 @@ func (b *Builder) printSetStringValue(dst *build.Writer, expr ast.Expr, name str
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
 			if ast.Enum == t.Obj.Kind {
-				b.getPackage(dst, t, "", false, false, "", "")
+				b.getPackage(dst, t, "", false, false, "", "", nil)
 				dst.Code("((").Code(name).Code("?.length ?? 0) == 0 ? ")
 				if isNull {
 					dst.Code("null")
@@ -1404,7 +1404,7 @@ func (b *Builder) printSetNumberValue(dst *build.Writer, expr ast.Expr, name str
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
 			if ast.Enum == t.Obj.Kind {
-				b.getPackage(dst, t, "", false, false, "", "")
+				b.getPackage(dst, t, "", false, false, "", "", nil)
 				dst.Code("(").Code(name).Code(" == null ? ")
 				if isNull {
 					dst.Code("null")

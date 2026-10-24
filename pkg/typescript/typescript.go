@@ -18,9 +18,19 @@ var _types = map[build.BaseType]string{
 }
 
 var _typesValue = map[build.BaseType]string{
-	build.Int8: "0", build.Int16: "0", build.Int32: "0", build.Int64: "BigInt(0)", build.Uint8: "0",
-	build.Uint16: "0", build.Uint32: "0", build.Uint64: "BigInt(0)", build.Bool: "false", build.Float: "0.0",
-	build.Double: "0.0", build.String: "\"\"", build.Date: "new Date()", build.Decimal: "new Decimal(0)", build.Bytes: "new Uint8Array()",
+	build.Int8: "0", build.Int16: "0", build.Int32: "0", build.Int64: "0n", build.Uint8: "0",
+	build.Uint16: "0", build.Uint32: "0", build.Uint64: "0n", build.Bool: "false", build.Float: "0.0",
+	build.Double: "0.0", build.String: "\"\"", build.Date: "new Date()", build.Decimal: "new Decimal(0)", build.Bytes: "new Uint8Array(0)",
+}
+
+// className 数据类名 = IDL data 名驼峰
+func className(name string) string {
+	return build.StringToHumpName(name)
+}
+
+// descName descriptor 单例名 = IDL data 名首字母小写 + Desc 后缀
+func descName(name string) string {
+	return build.StringToFirstLower(name) + "Desc"
 }
 
 type DartWriter struct {
@@ -275,7 +285,7 @@ func (b *Builder) printType(dst *build.Writer, expr ast.Expr, notEmpty bool, isR
 			if isRecordKey {
 				dst.Code("number")
 			} else {
-				b.getPackage(dst, expr, "", isType, false, "", "")
+				b.getPackage(dst, expr, "", isType, false, "", "", nil)
 				dst.Code(expr.(*ast.Ident).Name)
 			}
 		} else {
@@ -283,7 +293,7 @@ func (b *Builder) printType(dst *build.Writer, expr ast.Expr, notEmpty bool, isR
 				if build.Decimal == build.BaseType((expr.(*ast.Ident).Name)) {
 					dst.Code("string")
 				} else if build.Int64 == build.BaseType((expr.(*ast.Ident).Name)) || build.Uint64 == build.BaseType((expr.(*ast.Ident).Name)) {
-					dst.Code("string")
+					dst.Code("bigint")
 				} else if build.Date == build.BaseType((expr.(*ast.Ident).Name)) {
 					dst.Code("number")
 				} else {
@@ -307,7 +317,7 @@ func (b *Builder) printType(dst *build.Writer, expr ast.Expr, notEmpty bool, isR
 		}
 	case *ast.MapType:
 		ma := expr.(*ast.MapType)
-		dst.Code("Record<(")
+		dst.Code("Map<(")
 		b.printType(dst, ma.Key, false, true, isType)
 		dst.Code("), (")
 		b.printType(dst, ma.VType, false, false, isType)
@@ -325,7 +335,15 @@ func (b *Builder) printType(dst *build.Writer, expr ast.Expr, notEmpty bool, isR
 	return
 }
 
-func (b *Builder) getPackage(dst *build.Writer, expr ast.Expr, s string, typ bool, ui bool, s2 string, lz string) {
+// isDateType 判断表达式是否为 date 基础类型（date 恒为 Date | null，避免重复拼接 | null）
+func (b *Builder) isDateType(expr ast.Expr) bool {
+	if t, ok := expr.(*ast.Ident); ok {
+		return nil == t.Obj && build.Date == build.BaseType(t.Name)
+	}
+	return false
+}
+
+func (b *Builder) getPackage(dst *build.Writer, expr ast.Expr, s string, typ bool, ui bool, s2 string, lz string, f func(v string) string) {
 	file := (expr.(*ast.Ident)).Obj.Data
 	switch file.(type) {
 	case *ast.File:
@@ -350,10 +368,14 @@ func (b *Builder) getPackage(dst *build.Writer, expr ast.Expr, s string, typ boo
 			name = name + ".server"
 		}
 	}
+	temp := s2 + expr.(*ast.Ident).Name + lz
+	if nil != f {
+		temp = f(temp)
+	}
 	if typ {
-		dst.Import("./"+name, "type "+s2+expr.(*ast.Ident).Name+lz)
+		dst.Import("./"+name, "type "+temp)
 	} else {
-		dst.Import("./"+name, s2+expr.(*ast.Ident).Name+lz)
+		dst.Import("./"+name, temp)
 	}
 	return
 
@@ -365,12 +387,12 @@ func (b *Builder) printDefault(dst *build.Writer, expr ast.Expr, notEmpty bool) 
 		t := expr.(*ast.Ident)
 		if nil != t.Obj {
 			if ast.Enum == t.Obj.Kind {
-				b.getPackage(dst, expr, "", false, false, "", "")
+				b.getPackage(dst, expr, "", false, false, "", "", nil)
 				dst.Code(expr.(*ast.Ident).Name)
 				dst.Code(".valueOf(0)")
 			} else {
 				dst.Code("new ")
-				b.getPackage(dst, expr, "", false, false, "", "")
+				b.getPackage(dst, expr, "", false, false, "", "", nil)
 				dst.Code(expr.(*ast.Ident).Name)
 				dst.Code("()")
 			}
@@ -393,7 +415,7 @@ func (b *Builder) printDefault(dst *build.Writer, expr ast.Expr, notEmpty bool) 
 		if ma.Empty && !notEmpty {
 			dst.Code("null")
 		} else {
-			dst.Code("{}")
+			dst.Code("new Map()")
 		}
 	case *ast.VarType:
 		t := expr.(*ast.VarType)

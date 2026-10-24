@@ -4,9 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"hbuf/pkg/build"
-	"hbuf/pkg/dart"
 	"hbuf/pkg/golang"
-	"hbuf/pkg/java"
 	ts "hbuf/pkg/typescript"
 	"log"
 )
@@ -14,9 +12,7 @@ import (
 var version = "0.0.1"
 
 func main() {
-	build.AddBuildType("dart", dart.Build)
 	build.AddBuildType("go", golang.Build)
-	build.AddBuildType("java", java.Build)
 	build.AddBuildType("ts", ts.Build)
 
 	var out = flag.String("o", "", "out dir")

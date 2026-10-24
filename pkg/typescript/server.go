@@ -57,7 +57,7 @@ func (b *Builder) printServer(dst *build.Writer, typ *ast.ServerType) {
 
 func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 	dst.Code("export class " + build.StringToHumpName(typ.Name.Name) + "Client implements ")
-	b.getPackage(dst, typ.Name, "", false, false, "", "")
+	b.getPackage(dst, typ.Name, "", false, false, "", "", nil)
 	dst.Code(build.StringToHumpName(typ.Name.Name))
 
 	dst.Code("{\n\n")
@@ -124,8 +124,11 @@ func (b *Builder) printServerImp(dst *build.Writer, typ *ast.ServerType) {
 		if resultType == "void" || resultType == "stream" {
 			dst.Code("undefined)\n")
 		} else {
-			b.printType(dst, method.Result.Type(), false, false, true)
-			dst.Code(".fromMap)\n")
+			b.getPackage(dst, method.Result.Type(), "", false, false, "", "Desc", func(v string) string {
+				return build.StringToFirstLower(v)
+			})
+			dName := descName(method.Result.Type().(*ast.Ident).Name)
+			dst.Code(dName).Code(")\n")
 			//b.printType(dst, method.Result.Type(), false, false)
 			//dst.Code(".fromData)\n")
 		}
@@ -169,9 +172,12 @@ func (b *Builder) printServerRouter(dst *build.Writer, typ *ast.ServerType) {
 		if paramType == "void" || paramType == "stream" {
 
 		} else {
-			dst.Tab(3).Code("from: ")
-			b.printType(dst, method.Param.Type(), false, false, false)
-			dst.Code(".fromMap,\n")
+			dst.Tab(3).Code("desc: ")
+			b.getPackage(dst, method.Param.Type(), "", false, false, "", "Desc", func(v string) string {
+				return build.StringToFirstLower(v)
+			})
+			dName := descName(method.Param.Type().(*ast.Ident).Name)
+			dst.Code(dName).Code(",\n")
 		}
 		dst.Tab(2).Code("},\n")
 		return nil

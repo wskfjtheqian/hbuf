@@ -58,16 +58,6 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) error {
 	dst.Tab(2).Code("return ").Code(dName).Code(".toJson(this) as Record<string, any> \n")
 	dst.Tab(1).Code("}\n\n")
 
-	dst.Tab(1).Code("public static fromData(_data: ArrayBuffer): " + uName + " {\n")
-	dst.Tab(2).Code("const ret = new " + uName + "()\n")
-	dst.Tab(2).Code("Unmarshal(new Uint8Array(_data), ret)\n")
-	dst.Tab(2).Code("return ret\n")
-	dst.Tab(1).Code("}\n\n")
-
-	dst.Tab(1).Code("public toData(): ArrayBuffer {\n")
-	dst.Tab(2).Code("return Marshal(this).slice().buffer\n")
-	dst.Tab(1).Code("}\n\n")
-
 	dst.Tab(1).Code("public clone(): ").Code(uName).Code(" {\n")
 	dst.Tab(2).Code("const ret = new ").Code(uName).Code("()\n")
 	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {

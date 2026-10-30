@@ -59,18 +59,7 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) error {
 	dst.Tab(1).Code("}\n\n")
 
 	dst.Tab(1).Code("public clone(): ").Code(uName).Code(" {\n")
-	dst.Tab(2).Code("const ret = new ").Code(uName).Code("()\n")
-	err = build.EnumField(typ, func(field *ast.Field, data *ast.DataType) error {
-		dst.Tab(2).Code("ret.").Code(build.StringToFirstLower(field.Name.Name))
-		dst.Code(" = ")
-		b.printCopy(dst, "this.", build.StringToFirstLower(field.Name.Name), field.Type, data, true, false)
-		dst.Code("\n")
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-	dst.Tab(2).Code("return ret\n")
+	dst.Tab(2).Code("return ").Code(dName).Code(".clone(this) as ").Code(uName).Code(" \n")
 	dst.Tab(1).Code("}\n\n")
 
 	dst.Tab(1).Code("public $getChangeField(val: ").Code(uName).Code(", ignore: string[] = []): {\n")

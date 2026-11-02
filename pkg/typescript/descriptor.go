@@ -14,15 +14,15 @@ func (b *Builder) printDataDescriptor(dst *build.Writer, typ *ast.DataType) erro
 	uName := className(typ.Name.Name)
 
 	dst.Import("hbuf_ts", "type FieldDesc", "DataDescriptor")
-	dst.Code("export const " + name + ": DataDescriptor =  new DataDescriptor(\n")
+	dst.Code("export const " + name + ": DataDescriptor = new DataDescriptor(\n")
 	dst.Tab(1).Code("() => new " + uName + "(),\n")
 	dst.Tab(1).Code("new Map<number, FieldDesc>([\n")
 	for _, field := range typ.Fields.List {
 		dst.Tab(2).Code("[" + field.Id.Value + ", {name: \"" + field.Name.Name + "\", desc: ")
 		b.printDescriptor(dst, field.Type, false)
-		dst.Code(", get: (o: " + uName + ") => ")
+		dst.Code(", get: (o: " + uName + ") => o.").Code(build.StringToFirstLower(field.Name.Name))
 		b.printFieldGet(dst, field.Type, field)
-		dst.Code(", set: (o: " + uName + ", v) => ")
+		dst.Code(", set: (o: " + uName + ", v) => o.").Code(build.StringToFirstLower(field.Name.Name)).Code(" = ")
 		b.printFieldSet(dst, field.Type, field)
 		dst.Code("}],\n")
 	}
@@ -131,30 +131,45 @@ func (b *Builder) printDescriptor(dst *build.Writer, expr ast.Expr, isNull bool)
 
 // printFieldGet 生成字段读取闭包（枚举需取 .value 适配数值描述符；非空枚举不判空）
 func (b *Builder) printFieldGet(dst *build.Writer, expr ast.Expr, field *ast.Field) {
-	lName := build.StringToFirstLower(field.Name.Name)
 	if build.IsEnum(expr) {
 		if build.IsNil(expr) {
-			dst.Code("o." + lName + " == null ? null : o." + lName + ".value")
-		} else {
-			dst.Code("o." + lName + ".value")
+			dst.Code("?")
 		}
-	} else {
-		dst.Code("o." + lName)
+		dst.Code(".value")
+		if build.IsNil(expr) {
+			dst.Code(" ?? null ")
+		}
+	} else if build.IsArray(expr) {
+		if build.IsNil(expr) {
+			dst.Code("?")
+		}
+		dst.Code(".map((v) => v")
+		b.printFieldGet(dst, expr.(*ast.ArrayType).Type(), field)
+		dst.Code(")")
+		//} else if build.IsMap(expr) {
+		//	if build.IsNil(expr) {
+		//		dst.Code("?")
+		//	}
+		//	dst.Code(".map((v) => v")
+		//	b.printFieldGet(dst, expr.(*ast.MapType).VType, field)
+		//	dst.Code(")")
 	}
 }
 
 // printFieldSet 生成字段写入闭包（枚举需 valueOf 还原对象；非空枚举不产生 null 分支）
 func (b *Builder) printFieldSet(dst *build.Writer, expr ast.Expr, field *ast.Field) {
-	lName := build.StringToFirstLower(field.Name.Name)
+	b.getEnumPackage(dst, expr)
+	if build.IsNil(expr) {
+		dst.Code("v == null ? null : ")
+	}
 	if build.IsEnum(expr) {
-		b.getEnumPackage(dst, expr)
-		if build.IsNil(expr) {
-			dst.Code("o." + lName + " = v == null ? null : " + b.enumTypeName(expr) + ".valueOf(v)")
-		} else {
-			dst.Code("o." + lName + " = " + b.enumTypeName(expr) + ".valueOf(v)")
-		}
+		dst.Code(b.enumTypeName(expr)).Code(".valueOf(v)")
+	} else if build.IsArray(expr) {
+		dst.Code("v.map((v) => v")
+		b.printFieldSet(dst, expr.(*ast.ArrayType).Type(), field)
+		dst.Code(")")
 	} else {
-		dst.Code("o." + lName + " = v")
+		dst.Code("v")
 	}
 }
 

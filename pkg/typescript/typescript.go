@@ -286,25 +286,25 @@ func (b *Builder) printType(dst *build.Writer, expr ast.Expr, notEmpty bool, isR
 				dst.Code("number")
 			} else {
 				b.getPackage(dst, expr, "", isType, false, "", "", nil)
-				dst.Code(expr.(*ast.Ident).Name)
+				dst.Code(t.Name)
 			}
 		} else {
 			if isRecordKey {
-				if build.Decimal == build.BaseType((expr.(*ast.Ident).Name)) {
+				if build.Decimal == build.BaseType((t.Name)) {
 					dst.Code("string")
-				} else if build.Int64 == build.BaseType((expr.(*ast.Ident).Name)) || build.Uint64 == build.BaseType((expr.(*ast.Ident).Name)) {
+				} else if build.Int64 == build.BaseType((t.Name)) || build.Uint64 == build.BaseType((t.Name)) {
 					dst.Code("bigint")
-				} else if build.Date == build.BaseType((expr.(*ast.Ident).Name)) {
+				} else if build.Date == build.BaseType((t.Name)) {
 					dst.Code("number")
 				} else {
-					dst.Code(_types[build.BaseType((expr.(*ast.Ident).Name))])
+					dst.Code(_types[build.BaseType((t.Name))])
 				}
 			} else {
-				if build.Decimal == build.BaseType((expr.(*ast.Ident).Name)) {
+				if build.Decimal == build.BaseType((t.Name)) {
 					dst.Import("decimal.js", "Decimal")
-				} else if build.Int64 == build.BaseType((expr.(*ast.Ident).Name)) || build.Uint64 == build.BaseType((expr.(*ast.Ident).Name)) {
+				} else if build.Int64 == build.BaseType((t.Name)) || build.Uint64 == build.BaseType((t.Name)) {
 				}
-				dst.Code(_types[build.BaseType((expr.(*ast.Ident).Name))])
+				dst.Code(_types[build.BaseType((t.Name))])
 			}
 		}
 	case *ast.ArrayType:

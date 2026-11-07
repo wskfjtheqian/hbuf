@@ -20,10 +20,10 @@ func (b *Builder) printDataDescriptor(dst *build.Writer, typ *ast.DataType) erro
 	for _, field := range typ.Fields.List {
 		dst.Tab(2).Code("[" + field.Id.Value + ", {name: \"" + field.Name.Name + "\", desc: ")
 		b.printDescriptor(dst, field.Type, false)
-		dst.Code(", get: (o: " + uName + ") => o.").Code(build.StringToFirstLower(field.Name.Name))
-		b.printFieldGet(dst, field.Type, field)
+		dst.Code(", get: (o: " + uName + ") => ")
+		b.printFieldGet(dst, field.Type, field, "o."+build.StringToFirstLower(field.Name.Name), false, false)
 		dst.Code(", set: (o: " + uName + ", v) => o.").Code(build.StringToFirstLower(field.Name.Name)).Code(" = ")
-		b.printFieldSet(dst, field.Type, field)
+		b.printFieldSet(dst, field.Type, field, "v", false, false)
 		dst.Code("}],\n")
 	}
 	dst.Tab(1).Code("]),\n")
@@ -130,47 +130,92 @@ func (b *Builder) printDescriptor(dst *build.Writer, expr ast.Expr, isNull bool)
 }
 
 // printFieldGet 生成字段读取闭包（枚举需取 .value 适配数值描述符；非空枚举不判空）
-func (b *Builder) printFieldGet(dst *build.Writer, expr ast.Expr, field *ast.Field) {
-	if build.IsEnum(expr) {
-		if build.IsNil(expr) {
-			dst.Code("?")
+func (b *Builder) printFieldGet(dst *build.Writer, expr ast.Expr, field *ast.Field, name string, notEmpty bool, isMapKey bool) {
+	switch expr.(type) {
+	case *ast.Ident:
+		t := expr.(*ast.Ident)
+		if nil != t.Obj && ast.Enum == t.Obj.Kind {
+			dst.Code(name).Code(".value")
+		} else {
+			dst.Code(name)
 		}
-		dst.Code(".value")
-		if build.IsNil(expr) {
-			dst.Code(" ?? null ")
+	case *ast.ArrayType:
+		ar := expr.(*ast.ArrayType)
+		if ar.Empty && !notEmpty {
+			dst.Code(name).Code(" == null ? null : ")
 		}
-	} else if build.IsArray(expr) {
-		if build.IsNil(expr) {
-			dst.Code("?")
-		}
-		dst.Code(".map((v) => v")
-		b.printFieldGet(dst, expr.(*ast.ArrayType).Type(), field)
+		dst.Code("(").Code(name).Code(").map((v) => ")
+		b.printFieldGet(dst, ar.Type(), field, "v", false, false)
 		dst.Code(")")
-		//} else if build.IsMap(expr) {
-		//	if build.IsNil(expr) {
-		//		dst.Code("?")
-		//	}
-		//	dst.Code(".map((v) => v")
-		//	b.printFieldGet(dst, expr.(*ast.MapType).VType, field)
-		//	dst.Code(")")
+	case *ast.MapType:
+		ar := expr.(*ast.MapType)
+		if ar.Empty && !notEmpty {
+			dst.Code(name).Code(" == null ? null : ")
+		}
+		dst.Import("hbuf_ts", "convertMap")
+		dst.Code("convertMap(").Code(name).Code(", (k) => ")
+		b.printFieldGet(dst, ar.Key, field, "k", false, true)
+		dst.Code(", (v) => ")
+		b.printFieldGet(dst, ar.VType, field, "v", false, false)
+		dst.Code(")!")
+	case *ast.VarType:
+		t := expr.(*ast.VarType)
+		if t.Empty && !notEmpty {
+			dst.Code(name).Code(" == null ? null : ")
+		}
+		b.printFieldGet(dst, t.Type(), field, name, t.Empty, isMapKey)
 	}
 }
 
 // printFieldSet 生成字段写入闭包（枚举需 valueOf 还原对象；非空枚举不产生 null 分支）
-func (b *Builder) printFieldSet(dst *build.Writer, expr ast.Expr, field *ast.Field) {
-	b.getEnumPackage(dst, expr)
-	if build.IsNil(expr) {
-		dst.Code("v == null ? null : ")
-	}
-	if build.IsEnum(expr) {
-		dst.Code(b.enumTypeName(expr)).Code(".valueOf(v)")
-	} else if build.IsArray(expr) {
-		dst.Code("v.map((v) => v")
-		b.printFieldSet(dst, expr.(*ast.ArrayType).Type(), field)
+func (b *Builder) printFieldSet(dst *build.Writer, expr ast.Expr, field *ast.Field, name string, notEmpty bool, isMapKey bool) {
+	switch expr.(type) {
+	case *ast.Ident:
+		t := expr.(*ast.Ident)
+		if nil != t.Obj {
+			if ast.Enum == t.Obj.Kind {
+				if isMapKey {
+					dst.Code(name).Code(" as number")
+				} else {
+					b.getPackage(dst, expr, "", false, false, "", "", nil)
+					dst.Code(t.Name).Code(".valueOf(v as number)")
+				}
+			} else if ast.Data == t.Obj.Kind {
+				b.getPackage(dst, expr, "", false, false, "", "", nil)
+				dst.Code(name).Code(" as ").Code(t.Name)
+			} else {
+				dst.Code(name).Code(" as ").Code(_types[build.BaseType(t.Name)])
+			}
+		} else {
+			dst.Code(name).Code(" as ").Code(_types[build.BaseType(t.Name)])
+		}
+	case *ast.ArrayType:
+		ar := expr.(*ast.ArrayType)
+		if ar.Empty && !notEmpty {
+			dst.Code(name).Code(" == null ? null : ")
+		}
+		dst.Code("(").Code(name).Code(" as Array<any>).map((v: any) => ")
+		b.printFieldSet(dst, ar.Type(), field, "v", false, false)
 		dst.Code(")")
-	} else {
-		dst.Code("v")
+	case *ast.MapType:
+		ar := expr.(*ast.MapType)
+		if ar.Empty && !notEmpty {
+			dst.Code(name).Code(" == null ? null : ")
+		}
+		dst.Import("hbuf_ts", "convertMap")
+		dst.Code("convertMap(").Code(name).Code(" as Map<any, any>, (k: any) => ")
+		b.printFieldSet(dst, ar.Key, field, "k", false, true)
+		dst.Code(", (v: any) => ")
+		b.printFieldSet(dst, ar.VType, field, "v", false, false)
+		dst.Code(")!")
+	case *ast.VarType:
+		t := expr.(*ast.VarType)
+		if t.Empty && !notEmpty {
+			dst.Code(name).Code(" == null ? null : ")
+		}
+		b.printFieldSet(dst, t.Type(), field, name, t.Empty, isMapKey)
 	}
+
 }
 
 // getEnumPackage 注册枚举类 import 并返回枚举类名

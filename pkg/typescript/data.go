@@ -64,8 +64,7 @@ func (b *Builder) printData(dst *build.Writer, typ *ast.DataType) error {
 
 	dst.Tab(1).Code("public $getChangeField(val: ").Code(uName).Code(", ignore: string[] = []): ")
 	dst.Code("{ change : ").Code(uName).Code(", ").Code("fields: string[]").Code(" } {\n")
-	dst.Tab(2).Code("return ").Code(dName).Code(".getChangeField(this, val, ignore)")
-	dst.Code(" as { change : ").Code(uName).Code(", ").Code("fields: string[]").Code(" }\n")
+	dst.Tab(2).Code("return ").Code(dName).Code(".getChangeField(this, val, ignore)\n")
 	dst.Tab(1).Code("}\n\n")
 
 	dst.Tab(1).Code("public static $convertField(fields: string[]): string[] {\n")

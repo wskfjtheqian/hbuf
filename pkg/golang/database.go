@@ -1173,9 +1173,10 @@ func (b *Builder) printDeleteData(dst *build.Writer, db *build.DB, wFields []*bu
 	dst.Code(w.GetCode().String())
 
 	if c {
-		dst.Tab(1).Code("_ = db.ClearCache(ctx, schema, table)\n")
+		dst.Tab(1).Code("return db.ClearCache(ctx, schema, table, s.Exec)\n")
+	} else {
+		dst.Tab(1).Code("return s.Exec(ctx)\n")
 	}
-	dst.Tab(1).Code("return s.Exec(ctx)\n")
 	dst.Code("}\n\n")
 }
 
@@ -1195,9 +1196,10 @@ func (b *Builder) printRemoveData(dst *build.Writer, db *build.DB, wFields []*bu
 	dst.Code(w.GetCode().String())
 
 	if c {
-		dst.Tab(1).Code("_ = db.ClearCache(ctx, schema, table)\n")
+		dst.Tab(1).Code("return db.ClearCache(ctx, schema, table, s.Exec)\n")
+	} else {
+		dst.Tab(1).Code("return s.Exec(ctx)\n")
 	}
-	dst.Tab(1).Code("return s.Exec(ctx)\n")
 	dst.Code("}\n\n")
 }
 
@@ -1250,9 +1252,10 @@ func (b *Builder) printInsertData(dst *build.Writer, typ *ast.DataType, val stri
 	dst.Tab(1).Code("v.T(\") \")\n")
 	dst.Tab(1).Code("s.Join(v)\n")
 	if nil != c {
-		dst.Tab(1).Code("_ = db.ClearCache(ctx, schema, table)\n")
+		dst.Tab(1).Code("return db.ClearCache(ctx, schema, table, s.Exec)\n")
+	} else {
+		dst.Tab(1).Code("return s.Exec(ctx)\n")
 	}
-	dst.Tab(1).Code("return s.Exec(ctx)\n")
 	dst.Code("}\n\n")
 }
 
@@ -1266,14 +1269,13 @@ func (b *Builder) printInsertBatchData(dst *build.Writer, typ *ast.DataType, db 
 	dst.Tab(2).Code("return 0, 0, nil\n")
 	dst.Tab(1).Code("}\n\n")
 
-	dst.Tab(1).Code("var total int64\n")
-	dst.Tab(1).Code("var lastId int64\n")
 	dst.Tab(1).Code("limit := int(db.BatchLimit(ctx))\n")
 	dst.Tab(1).Code("schema, table := db.SchemaTable(ctx, \"").Code(db.Name).Code("\")\n\n")
 
-	dst.Tab(1).Code("for j := 0; j < len(list); j += limit {\n")
-	dst.Tab(2).Code("s := db.NewBuilder()\n")
-	dst.Tab(2).Code("s.T(action.String()).T(schema).T(\".\").T(table).T(\" (")
+	dst.Tab(1).Code("exec := func(ctx context.Context) (total int64, lastId int64, err error) {\n")
+	dst.Tab(2).Code("for j := 0; j < len(list); j += limit {\n")
+	dst.Tab(3).Code("s := db.NewBuilder()\n")
+	dst.Tab(3).Code("s.T(action.String()).T(schema).T(\".\").T(table).T(\" (")
 	isFist := true
 	for _, field := range fields {
 		if !isFist {
@@ -1283,12 +1285,12 @@ func (b *Builder) printInsertBatchData(dst *build.Writer, typ *ast.DataType, db 
 		dst.Code(field.DB.Name)
 	}
 	dst.Code(") VALUES\")\n")
-	dst.Tab(2).Code("end := min(j+limit, len(list))\n")
-	dst.Tab(2).Code("for i, val := range list[j:end] {\n")
-	dst.Tab(3).Code("if 0 != i {\n")
-	dst.Tab(4).Code("s.T(\",\")\n")
-	dst.Tab(3).Code("}\n")
-	dst.Tab(3).Code("s.T(\"(\").L(\",\", ")
+	dst.Tab(3).Code("end := min(j+limit, len(list))\n")
+	dst.Tab(3).Code("for i, val := range list[j:end] {\n")
+	dst.Tab(4).Code("if 0 != i {\n")
+	dst.Tab(5).Code("s.T(\",\")\n")
+	dst.Tab(4).Code("}\n")
+	dst.Tab(4).Code("s.T(\"(\").L(\",\", ")
 	isFist = true
 	for _, field := range fields {
 		if !isFist {
@@ -1298,20 +1300,23 @@ func (b *Builder) printInsertBatchData(dst *build.Writer, typ *ast.DataType, db 
 		dst.Code(b.converter(field, "val"))
 	}
 	dst.Code(").T(\")\")\n")
-	dst.Tab(2).Code("}\n")
-	dst.Tab(2).Code("count, id, err := s.Exec(ctx)\n")
-	dst.Tab(2).Code("if err != nil {\n")
-	dst.Tab(3).Code("return 0, 0, err\n")
-	dst.Tab(2).Code("}\n")
-	dst.Tab(2).Code("total += count\n")
-	dst.Tab(2).Code("lastId = id\n")
+	dst.Tab(3).Code("}\n")
+	dst.Tab(3).Code("count, id, err := s.Exec(ctx)\n")
+	dst.Tab(3).Code("if err != nil {\n")
+	dst.Tab(4).Code("return 0, 0, err\n")
+	dst.Tab(3).Code("}\n")
+	dst.Tab(3).Code("total += count\n")
+	dst.Tab(3).Code("lastId = id\n")
 
+	dst.Tab(2).Code("}\n")
+	dst.Tab(2).Code("return\n")
 	dst.Tab(1).Code("}\n")
 
 	if isCache {
-		dst.Tab(1).Code("_ = db.ClearCache(ctx, schema, table)\n")
+		dst.Tab(1).Code("return db.ClearCache(ctx, schema, table, exec)\n")
+	} else {
+		dst.Tab(1).Code("return exec(ctx)\n")
 	}
-	dst.Tab(1).Code("return total, lastId, nil\n")
 	dst.Code("}\n\n")
 }
 
@@ -1342,9 +1347,10 @@ func (b *Builder) printUpdateData(dst *build.Writer, typ *ast.DataType, key stri
 	dst.Code(w.String())
 	dst.Code("\n")
 	if nil != c {
-		dst.Tab(1).Code("_ = db.ClearCache(ctx, schema, table)\n")
+		dst.Tab(1).Code("return db.ClearCache(ctx, schema, table, s.Exec)\n")
+	} else {
+		dst.Tab(1).Code("return s.Exec(ctx)\n")
 	}
-	dst.Tab(1).Code("return s.Exec(ctx)\n")
 	dst.Code("}\n\n")
 }
 
@@ -1375,9 +1381,10 @@ func (b *Builder) printSetData(dst *build.Writer, typ *ast.DataType, key string,
 	dst.Code(w.String())
 	dst.Code("\n")
 	if nil != c {
-		dst.Tab(1).Code("_ = db.ClearCache(ctx, schema, table)\n")
+		dst.Tab(1).Code("return db.ClearCache(ctx, schema, table, s.Exec)\n")
+	} else {
+		dst.Tab(1).Code("return s.Exec(ctx)\n")
 	}
-	dst.Tab(1).Code("return s.Exec(ctx)\n")
 	dst.Code("}\n\n")
 }
 
@@ -1412,9 +1419,10 @@ func (b *Builder) printUpdateChange(dst *build.Writer, typ *ast.DataType, key st
 	dst.Tab(2).Code("return 0, 0, nil\n")
 	dst.Tab(1).Code("}\n")
 	if nil != c {
-		dst.Tab(1).Code("_ = db.ClearCache(ctx, schema, table)\n")
+		dst.Tab(1).Code("return db.ClearCache(ctx, schema, table, s.Exec)\n")
+	} else {
+		dst.Tab(1).Code("return s.Exec(ctx)\n")
 	}
-	dst.Tab(1).Code("return s.Exec(ctx)\n")
 	dst.Code("}\n\n")
 
 	if typ == fType {
@@ -1520,9 +1528,10 @@ func (b *Builder) printUpdateChanges(dst *build.Writer, typ *ast.DataType, val s
 	dst.Tab(1).Code("s.T(\"WHERE 1 = 1 \")\n")
 	dst.Tab(1).Code("s.T(\"AND id IN(\").L(\",\", ids...).T(\")\")\n")
 	if nil != c {
-		dst.Tab(1).Code("_ = db.ClearCache(ctx, schema, table)\n")
+		dst.Tab(1).Code("return db.ClearCache(ctx, schema, table, s.Exec)\n")
+	} else {
+		dst.Tab(1).Code("return s.Exec(ctx)\n")
 	}
-	dst.Tab(1).Code("return s.Exec(ctx)\n")
 	dst.Code("}\n\n")
 }
 

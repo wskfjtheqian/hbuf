@@ -288,17 +288,38 @@ func (b *Builder) printTable(dst *build.Writer, typ *ast.DataType, u *ui) {
 		dst.Tab(4).Code("\"").Code(fieldName).Code("\": () =>(\n")
 		fl := lang.Add(fieldName, field.Tags)
 
-		dst.Tab(5).Code("<el-table-column prop=\"").Code(fieldName).Code("\"")
+		isCord := func(dst *build.Writer, tab int, name string, fu func(dst *build.Writer, name string)) {
+			name1 := strings.Trim(strings.ToLower(name), " ")
+			for _, attr := range table.tableAttr {
+				if name1 == strings.ToLower(attr) || strings.HasPrefix(attr, name1+"=") || strings.HasPrefix(attr, name1+" ") {
+					return
+				}
+			}
+			dst.Tab(tab).Code(name)
+			if fu != nil {
+				fu(dst, name)
+			}
+		}
+
+		dst.Tab(5).Code("<el-table-column")
+		isCord(dst, 5, " prop", func(dst *build.Writer, name string) {
+			dst.Code("=\"").Code(fieldName).Code("\"")
+		})
 
 		if table.sortable {
-			dst.Code(" sortable=\"custom\"")
+			isCord(dst, 5, " sortable", func(dst *build.Writer, name string) {
+				dst.Code("=\"custom\"")
+			})
 		}
-		dst.Code(" show-overflow-tooltip")
+		isCord(dst, 5, " show-overflow-tooltip", nil)
+
 		width := table.width
 		if width == 0 {
 			width = u.width
 		}
-		dst.Code(" min-width=\"").Code(strconv.FormatFloat(width, 'g', -1, 64)).Code("\"")
+		isCord(dst, 5, " min-width", func(dst *build.Writer, name string) {
+			dst.Code("=\"").Code(strconv.FormatFloat(width, 'g', -1, 64)).Code("\"")
+		})
 		for _, attr := range table.tableAttr {
 			dst.Code(" ").Code(attr)
 		}
@@ -604,13 +625,38 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 
 		dst.Tab(4).Code("\"").Code(fieldName).Code("\": () =>(\n")
 
+		isCord := func(dst *build.Writer, tab int, name string, fu func(dst *build.Writer, name string)) {
+			name1 := strings.Trim(strings.ToLower(name), " ")
+			for _, attr := range form.formAttr {
+				if name1 == strings.ToLower(attr) || strings.HasPrefix(attr, name1+"=") || strings.HasPrefix(attr, name1+" ") {
+					return
+				}
+			}
+			dst.Tab(tab).Code(name)
+			if fu != nil {
+				fu(dst, name)
+			}
+		}
+
 		if "object" != formTag || len(form.form) > 1 {
-			dst.Tab(5).Code("<el-form-item class=\"").Code(className).Code("\" prop=\"").Code(fieldName).Code("\"")
-			dst.Code(" label={ctx.$t(\"").Code(langName).Code("Lang.").Code(fieldName).Code("\")}")
+			dst.Tab(5).Code("<el-form-item")
+			isCord(dst, 0, " class", func(dst *build.Writer, name string) {
+				dst.Code("=\"").Code(className).Code("\"")
+			})
+			isCord(dst, 0, " prop", func(dst *build.Writer, name string) {
+				dst.Code("=\"").Code(fieldName).Code("\"")
+			})
+
+			isCord(dst, 0, " label", func(dst *build.Writer, name string) {
+				dst.Code("={ctx.$t(\"").Code(langName).Code("Lang.").Code(fieldName).Code("\")}")
+			})
+
 			if verify {
-				b.getPackage(dst, typ.Name, "verify", false, false, "verify", "_"+build.StringToHumpName(field.Name.Name))
-				dst.Code(" rules={[{validator: verify").Code(name).Code("_").Code(build.StringToHumpName(field.Name.Name))
-				dst.Code("(_locale, model.").Code(fieldName).Code("), trigger: 'blur'}]}")
+				isCord(dst, 0, " rules", func(dst *build.Writer, _ string) {
+					b.getPackage(dst, typ.Name, "verify", false, false, "verify", "_"+build.StringToHumpName(field.Name.Name))
+					dst.Code("={[{validator: verify").Code(name).Code("_").Code(build.StringToHumpName(field.Name.Name))
+					dst.Code("(_locale, model.").Code(fieldName).Code("), trigger: 'blur'}]}")
+				})
 			}
 			dst.Code(">\n")
 		}
@@ -671,9 +717,10 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Code("}\n")
 			if isArray {
-				dst.Tab(7).Code("default-time={[new Date(2000, 1, 1, 0, 0, 0, 0), new Date(2000, 1, 1, 23, 59, 59, 999)]}\n")
+				isCord(dst, 7, "default", func(dst *build.Writer, name string) {
+					dst.Code("={[new Date(2000, 1, 1, 0, 0, 0, 0), new Date(2000, 1, 1, 23, 59, 59, 999)]}\n")
+				})
 			}
-			dst.Tab(7).Code("type=\"")
 			dateType := ""
 			if isArray {
 				format := ""
@@ -706,18 +753,32 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 					dateType = "datetime"
 				}
 			}
-			dst.Code(dateType).Code("\"\n")
-			dst.Tab(7).Code("shortcuts={ctx.$datePackerShortcuts(\"").Code(dateType).Code("\", ctx.$t)}\n")
-			dst.Tab(7).Code("size={props.size}\n")
-			dst.Tab(7).Code("clearable=")
-			if isNull {
-				dst.Code("{true}\n")
-			} else {
-				dst.Code("{false}\n")
-			}
+
+			isCord(dst, 7, "type", func(dst *build.Writer, name string) {
+				dst.Code("=\"").Code(dateType).Code("\"\n")
+			})
+			isCord(dst, 7, "shortcuts", func(dst *build.Writer, name string) {
+				dst.Code("={ctx.$datePackerShortcuts(\"").Code(dateType).Code("\", ctx.$t)}\n")
+			})
+
+			isCord(dst, 7, "shortcuts", func(dst *build.Writer, name string) {
+				dst.Code("size={props.size}\n")
+			})
+
+			isCord(dst, 7, "clearable", func(dst *build.Writer, name string) {
+				if isNull {
+					dst.Code("={true}\n")
+				} else {
+					dst.Code("={false}\n")
+				}
+			})
+
 			if form.onlyRead {
-				dst.Tab(7).Code(" disabled  \n")
+				isCord(dst, 7, "disabled", func(dst *build.Writer, name string) {
+					dst.Code("\n")
+				})
 			}
+
 			for _, attr := range form.formAttr {
 				dst.Tab(7).Code(attr).Code("\n")
 			}
@@ -734,17 +795,30 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			b.printSetStringValue(dst, field.Type, "$event", isNull)
 			dst.Code("}\n")
 
-			dst.Tab(7).Code("style={\"min-width:180px\"}\n")
-			dst.Tab(7).Code("size={props.size}\n")
-			dst.Tab(7).Code("filterable\n")
+			isCord(dst, 7, "style", func(dst *build.Writer, name string) {
+				dst.Code("={\"min-width:180px\"}\n")
+			})
+			isCord(dst, 7, "size", func(dst *build.Writer, name string) {
+				dst.Code("={props.size}\n")
+			})
+			isCord(dst, 7, "filterable", func(dst *build.Writer, name string) {
+				dst.Code("\n")
+			})
+
 			if isNull {
-				dst.Tab(7).Code("clearable\n")
+				isCord(dst, 7, "clearable", func(dst *build.Writer, name string) {
+					dst.Code("\n")
+				})
 			}
 			if form.onlyRead {
-				dst.Tab(7).Code("disabled\n")
+				isCord(dst, 7, "disabled", func(dst *build.Writer, name string) {
+					dst.Code("\n")
+				})
 			}
 			if isArray {
-				dst.Tab(7).Code("multiple\n")
+				isCord(dst, 7, "multiple", func(dst *build.Writer, name string) {
+					dst.Code("\n")
+				})
 			}
 			for _, attr := range form.formAttr {
 				dst.Tab(7).Code(attr).Code("\n")
@@ -770,7 +844,9 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Code("}\n")
 
 			if form.onlyRead {
-				dst.Code(" disabled")
+				isCord(dst, 7, "disabled", func(dst *build.Writer, name string) {
+					dst.Code("\n")
+				})
 			}
 			for _, attr := range form.formAttr {
 				dst.Tab(7).Code(attr).Code("\n")
@@ -788,9 +864,13 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			b.printSetStringValue(dst, field.Type, "$event", isNull)
 			dst.Code("}\n")
 
-			dst.Tab(7).Code("size={props.size}\n")
+			isCord(dst, 7, "size", func(dst *build.Writer, name string) {
+				dst.Code("={props.size}\n")
+			})
 			if form.onlyRead {
-				dst.Tab(7).Code("disabled\n")
+				isCord(dst, 7, "disabled", func(dst *build.Writer, name string) {
+					dst.Code("\n")
+				})
 			}
 			for _, attr := range form.formAttr {
 				dst.Tab(7).Code(attr).Code("\n")
@@ -810,9 +890,13 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			b.printSetStringValue(dst, field.Type, "$event", isNull)
 			dst.Code("}\n")
 
-			dst.Tab(7).Code("size={props.size}\n")
+			isCord(dst, 7, "size", func(dst *build.Writer, name string) {
+				dst.Code("={props.size}\n")
+			})
 			if form.onlyRead {
-				dst.Tab(7).Code("disabled\n")
+				isCord(dst, 7, "disabled", func(dst *build.Writer, name string) {
+					dst.Code("\n")
+				})
 			}
 			for _, attr := range form.formAttr {
 				dst.Tab(7).Code(attr).Code("\n")
@@ -832,17 +916,24 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			b.printSetStringValue(dst, field.Type, "$event", isNull)
 			dst.Code("}\n")
 
-			dst.Tab(7).Code("size={props.size}\n")
-			dst.Tab(7).Code("type=\"password\"\n")
-			dst.Tab(7).Code("show-password\n")
+			isCord(dst, 7, "size", func(dst *build.Writer, name string) {
+				dst.Code("={props.size}\n")
+			})
+			isCord(dst, 7, "type", func(dst *build.Writer, name string) {
+				dst.Code("=\"password\"\n")
+			})
+			isCord(dst, 7, "show-password", func(dst *build.Writer, name string) {
+				dst.Code("\n")
+			})
 			if isNull {
-				dst.Tab(7).Code("clearable\n")
-			}
-			if isNull {
-				dst.Tab(7).Code("clearable\n")
+				isCord(dst, 7, "clearable", func(dst *build.Writer, name string) {
+					dst.Code("\n")
+				})
 			}
 			if form.onlyRead {
-				dst.Tab(7).Code("disabled\n")
+				isCord(dst, 7, "disabled", func(dst *build.Writer, name string) {
+					dst.Code("\n")
+				})
 			}
 			for _, attr := range form.formAttr {
 				dst.Tab(7).Code(attr).Code("\n")
@@ -856,12 +947,18 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 
 			dst.Tab(7).Code("v-model={model.").Code(fieldName).Code("}\n")
 			if isNull {
-				dst.Tab(7).Code("clearable\n")
+				isCord(dst, 7, "clearable", func(dst *build.Writer, name string) {
+					dst.Code("\n")
+				})
 			}
 			if form.onlyRead {
-				dst.Tab(7).Code("disabled\n")
+				isCord(dst, 7, "disabled", func(dst *build.Writer, name string) {
+					dst.Code("\n")
+				})
 			}
-			dst.Tab(7).Code("delimiter=\",\"\n")
+			isCord(dst, 7, "delimiter", func(dst *build.Writer, name string) {
+				dst.Code("=\",\"\n")
+			})
 			for _, attr := range form.formAttr {
 				dst.Tab(7).Code(attr).Code("\n")
 			}
@@ -895,16 +992,24 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			b.printSetNumberValue(dst, field.Type, "$event", isNull, scale)
 			dst.Code("}\n")
 
-			dst.Tab(7).Code("size={props.size}\n")
+			isCord(dst, 7, "size", func(dst *build.Writer, name string) {
+				dst.Code("={props.size}\n")
+			})
 			if "text" == formTag {
-				dst.Tab(7).Code("controls={false}\n")
+				isCord(dst, 7, "controls", func(dst *build.Writer, name string) {
+					dst.Code("={false}\n")
+				})
 			}
 
 			if isNull {
-				dst.Tab(7).Code("clearable\n")
+				isCord(dst, 7, "clearable", func(dst *build.Writer, name string) {
+					dst.Code("\n")
+				})
 			}
 			if form.onlyRead {
-				dst.Tab(7).Code("disabled\n")
+				isCord(dst, 7, "disabled", func(dst *build.Writer, name string) {
+					dst.Code("\n")
+				})
 			}
 			digit := 0
 			if len(form.format) > 0 {
@@ -915,15 +1020,23 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 					digit = len(format) - index - 1
 				}
 			}
-			dst.Tab(7).Code("precision={").Code(strconv.Itoa(digit)).Code("}\n")
+			isCord(dst, 7, "precision", func(dst *build.Writer, name string) {
+				dst.Code("={").Code(strconv.Itoa(digit)).Code("}\n")
+			})
 			if form.min != nil {
-				dst.Tab(7).Code("min={").Code(strconv.FormatFloat(*form.min*float64(scale), 'f', -1, 64)).Code("}\n")
+				isCord(dst, 7, "min", func(dst *build.Writer, name string) {
+					dst.Code("={").Code(strconv.FormatFloat(*form.min*float64(scale), 'f', -1, 64)).Code("}\n")
+				})
 			}
 			if form.max != nil {
-				dst.Tab(7).Code("max={").Code(strconv.FormatFloat(*form.max*float64(scale), 'f', -1, 64)).Code("}\n")
+				isCord(dst, 7, "max", func(dst *build.Writer, name string) {
+					dst.Code("={").Code(strconv.FormatFloat(*form.max*float64(scale), 'f', -1, 64)).Code("}\n")
+				})
 			}
 			if form.step != nil {
-				dst.Tab(7).Code("step={").Code(strconv.FormatFloat(*form.step, 'f', -1, 64)).Code("}\n")
+				isCord(dst, 7, "step", func(dst *build.Writer, name string) {
+					dst.Code("={").Code(strconv.FormatFloat(*form.step, 'f', -1, 64)).Code("}\n")
+				})
 			}
 			for _, attr := range form.formAttr {
 				dst.Tab(7).Code(attr).Code("\n")
@@ -943,10 +1056,14 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			dst.Tab(7).Code("size={props.size}\n")
 			dst.Tab(7).Code("show-alpha color-format=\"hex\"\n")
 			if isNull {
-				dst.Tab(7).Code("clearable\n")
+				isCord(dst, 7, "clearable", func(dst *build.Writer, name string) {
+					dst.Code("\n")
+				})
 			}
 			if form.onlyRead {
-				dst.Tab(7).Code("disabled\n")
+				isCord(dst, 7, "disabled", func(dst *build.Writer, name string) {
+					dst.Code("\n")
+				})
 			}
 			for _, attr := range form.formAttr {
 				dst.Tab(7).Code(attr).Code("\n")
@@ -964,44 +1081,61 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			b.printSetStringValue(dst, field.Type, "$event", isNull)
 			dst.Code("}\n")
 
-			dst.Tab(7).Code("size={props.size}\n")
-			if isNull {
-				dst.Tab(7).Code("clearable\n")
-			}
+			isCord(dst, 7, "size", func(dst *build.Writer, name string) {
+				dst.Code("={props.size}\n")
+			})
 			if len(form.typ) > 0 {
-				dst.Tab(7).Code("type=\"").Code(form.typ).Code("\"\n")
+				isCord(dst, 7, "type", func(dst *build.Writer, name string) {
+					dst.Code("=\"").Code(form.typ).Code("\"\n")
+				})
 			}
 
 			if form.limit > 0 {
-				dst.Tab(7).Code("limit={").Code(strconv.Itoa(form.limit)).Code("}\n")
+				isCord(dst, 7, "limit", func(dst *build.Writer, name string) {
+					dst.Code("={").Code(strconv.Itoa(form.limit)).Code("}\n")
+				})
 			}
 
 			if len(form.outSize) > 0 {
-				dst.Tab(7).Code("outWidth={").Code(strconv.Itoa(form.outSize[0])).Code("}\n")
+				isCord(dst, 7, "outWidth", func(dst *build.Writer, name string) {
+					dst.Code("={").Code(strconv.Itoa(form.outSize[0])).Code("}\n")
+				})
 			}
 
 			if len(form.outSize) > 1 {
-				dst.Tab(7).Code("outHeight={").Code(strconv.Itoa(form.outSize[1])).Code("}\n")
+				isCord(dst, 7, "outHeight", func(dst *build.Writer, name string) {
+					dst.Code("={").Code(strconv.Itoa(form.outSize[1])).Code("}\n")
+				})
 			}
 
 			if len(form.outType) > 0 {
-				dst.Tab(7).Code("outType={").Code(form.outType).Code("}\n")
+				isCord(dst, 7, "outType", func(dst *build.Writer, name string) {
+					dst.Code("={").Code(form.outType).Code("}\n")
+				})
 			}
 
 			if form.onlyRead {
-				dst.Tab(7).Code("readonly\n")
+				isCord(dst, 7, "readonly", func(dst *build.Writer, name string) {
+					dst.Code("\n")
+				})
 			}
 
 			if form.clip {
-				dst.Tab(7).Code("clip\n")
+				isCord(dst, 7, "clip", func(dst *build.Writer, name string) {
+					dst.Code("\n")
+				})
 			}
 
 			if isArray {
-				dst.Tab(7).Code("multiple\n")
+				isCord(dst, 7, "multiple", func(dst *build.Writer, name string) {
+					dst.Code("\n")
+				})
 			}
 
 			if form.onlyRead {
-				dst.Tab(7).Code("disabled\n")
+				isCord(dst, 7, "disabled", func(dst *build.Writer, name string) {
+					dst.Code("\n")
+				})
 			}
 			dst.Tab(6).Code("/>\n")
 
@@ -1056,32 +1190,49 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			b.printSetStringValue(dst, field.Type, "$event", isNull)
 			dst.Code("}\n")
 
-			dst.Tab(7).Code("size={props.size}\n")
+			isCord(dst, 7, "size", func(dst *build.Writer, name string) {
+				dst.Code("={props.size}\n")
+			})
 			if isNull {
-				dst.Tab(7).Code("clearable\n")
+				isCord(dst, 7, "clearable", func(dst *build.Writer, name string) {
+					dst.Code("\n")
+				})
 			}
 			if isNum {
-				dst.Tab(7).Code("type={\"number\"}\n")
+				isCord(dst, 7, "type", func(dst *build.Writer, name string) {
+					dst.Code("={\"number\"}\n")
+				})
 			}
 			if !isNum && len(form.mode) > 0 {
-				dst.Tab(7).Code("type={\"").Code(form.mode).Code("\"}\n")
+				isCord(dst, 7, "type", func(dst *build.Writer, name string) {
+					dst.Code("={\"").Code(form.mode).Code("\"}\n")
+				})
 			}
 
 			if form.onlyRead {
-				dst.Tab(7).Code("disabled\n")
+				isCord(dst, 7, "disabled", func(dst *build.Writer, name string) {
+					dst.Code("\n")
+				})
 			}
 			if form.maxLen != nil && !isNum && form.mode == "textarea" {
-				dst.Tab(7).Code("show-word-limit\n")
+				isCord(dst, 7, "show-word-limit", func(dst *build.Writer, name string) {
+					dst.Code("\n")
+				})
 			}
 			if form.maxLen != nil {
-				dst.Tab(7).Code("maxlength={").Code(strconv.FormatInt(*form.maxLen, 10)).Code("}\n")
+				isCord(dst, 7, "maxlength", func(dst *build.Writer, name string) {
+					dst.Code("={").Code(strconv.FormatInt(*form.maxLen, 10)).Code("}\n")
+				})
 			}
 			if form.minLen != nil {
-				dst.Tab(7).Code("minlength={").Code(strconv.FormatInt(*form.minLen, 10)).Code("}\n")
+				isCord(dst, 7, "minlength", func(dst *build.Writer, name string) {
+					dst.Code("={").Code(strconv.FormatInt(*form.minLen, 10)).Code("}\n")
+				})
 			}
-
 			if form.maxLine != nil && !isNum && form.mode == "textarea" {
-				dst.Tab(7).Code("rows={").Code(strconv.FormatInt(*form.maxLine, 10)).Code("}\n")
+				isCord(dst, 7, "rows", func(dst *build.Writer, name string) {
+					dst.Code("={").Code(strconv.FormatInt(*form.maxLine, 10)).Code("}\n")
+				})
 			}
 			for _, attr := range form.formAttr {
 				dst.Tab(7).Code(attr).Code("\n")

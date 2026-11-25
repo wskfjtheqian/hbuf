@@ -717,7 +717,7 @@ func (b *Builder) printForm(dst *build.Writer, typ *ast.DataType, u *ui) {
 			}
 			dst.Code("}\n")
 			if isArray {
-				isCord(dst, 7, "default", func(dst *build.Writer, name string) {
+				isCord(dst, 7, "default-time", func(dst *build.Writer, name string) {
 					dst.Code("={[new Date(2000, 1, 1, 0, 0, 0, 0), new Date(2000, 1, 1, 23, 59, 59, 999)]}\n")
 				})
 			}
